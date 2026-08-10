@@ -1,0 +1,16 @@
+# 微信开发者工具
+project.private.config.json
+*.local
+
+# npm 构建产物（微信小程序 npm 构建生成，重新构建即可）
+miniprogram_npm/
+
+# Node
+node_modules/
+npm-debug.log*
+
+# 系统文件
+.DS_Store
+
+# 本地配置（腾讯地图 key、API 地址等，用 config.example.js 提供模板）
+config/*.local.js
