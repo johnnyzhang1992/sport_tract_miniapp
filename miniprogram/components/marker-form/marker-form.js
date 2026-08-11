@@ -32,13 +32,22 @@ Component({
     'visible, marker': function (visible, marker) {
       if (!visible) return;
       if (this.data.editMode && marker) {
+        // 已有照片：photos + photoUrl 合并，按裸 URL（去 query）去重
+        // 注意：签名 URL 每次生成不同，必须按去参数后的地址判断是否同一张图
+        const merged = [...(marker.photos || []), ...(marker.photoUrl ? [marker.photoUrl] : [])];
+        const seen = new Set();
+        const existingPhotos = merged.filter((u) => {
+          if (!u) return false;
+          const bare = String(u).split('?')[0];
+          if (seen.has(bare)) return false;
+          seen.add(bare);
+          return true;
+        });
         this.setData({
           selectedType: marker.type || 'checkpoint',
           note: marker.note || '',
           photos: [],
-          existingPhotos: [...(marker.photos || []), ...(marker.photoUrl ? [marker.photoUrl] : [])].filter(
-            (u, i, arr) => u && arr.indexOf(u) === i,
-          ),
+          existingPhotos,
         });
       } else {
         this.setData({ selectedType: 'checkpoint', note: '', photos: [], existingPhotos: [] });
