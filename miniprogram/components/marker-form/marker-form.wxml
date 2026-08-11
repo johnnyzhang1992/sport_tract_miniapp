@@ -1,0 +1,41 @@
+<view class="mask" wx:if="{{visible}}" bindtap="cancel">
+  <view class="sheet" catchtap="noop">
+    <view class="sheet-title">打点</view>
+
+    <!-- 类型选择 -->
+    <view class="type-row">
+      <view
+        wx:for="{{typeOptions}}"
+        wx:key="type"
+        class="type-pill {{selectedType === item.type ? 'type-pill-active' : ''}}"
+        data-type="{{item.type}}"
+        bindtap="selectType"
+      >
+        {{item.icon}} {{item.label}}
+      </view>
+    </view>
+
+    <!-- 备注 -->
+    <view class="input-wrap">
+      <textarea
+        class="note-input"
+        placeholder="添加备注（可选）"
+        maxlength="200"
+        value="{{note}}"
+        bindinput="onNoteInput"
+      />
+    </view>
+
+    <!-- 照片 -->
+    <view class="photo-row" wx:if="{{photoTempFile}}">
+      <image class="photo-preview" src="{{photoTempFile}}" mode="aspectFill" />
+      <view class="photo-remove" bindtap="removePhoto">✕</view>
+    </view>
+    <view class="photo-add" wx:else bindtap="choosePhoto">📷 拍照 / 相册</view>
+
+    <view class="actions">
+      <button class="btn-cancel" bindtap="cancel">取消</button>
+      <button class="btn-confirm" bindtap="confirm">确定</button>
+    </view>
+  </view>
+</view>

@@ -1,3 +1,9 @@
 {
-  "navigationBarTitleText": "运动进行中"
+  "navigationBarTitleText": "运动进行中",
+  "usingComponents": {
+    "track-map": "/components/track-map/track-map",
+    "live-stats": "/components/live-stats/live-stats",
+    "marker-form": "/components/marker-form/marker-form"
+  },
+  "disableScroll": true
 }

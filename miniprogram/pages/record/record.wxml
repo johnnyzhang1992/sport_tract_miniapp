@@ -1,8 +1,75 @@
-<view class="container">
-  <view class="card placeholder">
-    <view class="placeholder-icon">📍</view>
-    <view class="placeholder-title">{{typeLabel}} · 记录页</view>
-    <view class="placeholder-desc">实时地图轨迹 + 数据面板 + 打点</view>
-    <view class="placeholder-tip text-muted">M2 里程碑实现：定位采集 / 增量上传 / 暂停继续</view>
+<view class="record-page">
+  <!-- 全屏地图 -->
+  <view class="map-wrap">
+    <track-map
+      id="trackMap"
+      points="{{mapPoints}}"
+      markers="{{mapMarkers}}"
+      currentLocation="{{currentLocation}}"
+      followMode="{{followMode}}"
+      mapType="{{mapType}}"
+      mode="record"
+    />
+    <!-- 图层切换 -->
+    <view class="layer-btn" bindtap="switchLayer">
+      {{mapType === 'standard' ? '🛰️ 卫星' : '🗺️ 标准'}}
+    </view>
+  </view>
+
+  <!-- 实时数据面板 -->
+  <view class="stats-wrap">
+    <live-stats
+      distanceKm="{{stats.distanceKm}}"
+      durationText="{{stats.durationText}}"
+      paceText="{{stats.paceText}}"
+      altitude="{{stats.altitude}}"
+      climb="{{stats.climb}}"
+      calories="{{stats.calories}}"
+      paused="{{paused}}"
+    />
+  </view>
+
+  <!-- 底部操作栏 -->
+  <view class="action-bar">
+    <view class="action-item" bindtap="openMarkerForm">
+      <view class="action-icon">📍</view>
+      <view class="action-label">打点</view>
+    </view>
+    <view class="action-item" bindtap="togglePause">
+      <view class="action-icon big">{{paused ? '▶️' : '⏸️'}}</view>
+      <view class="action-label">{{paused ? '继续' : '暂停'}}</view>
+    </view>
+    <view class="action-item" bindtap="openEndConfirm">
+      <view class="action-icon big danger">⏹️</view>
+      <view class="action-label">结束</view>
+    </view>
+  </view>
+
+  <!-- 打点弹窗 -->
+  <marker-form
+    visible="{{markerFormVisible}}"
+    currentLocation="{{currentLocation}}"
+    bindconfirm="onMarkerConfirm"
+    bindcancel="onMarkerCancel"
+  />
+
+  <!-- 结束确认 -->
+  <view class="mask" wx:if="{{endConfirmVisible}}">
+    <view class="confirm-dialog">
+      <view class="confirm-title">结束本次运动？</view>
+      <view class="confirm-sub text-muted">将跳转到摘要页，保存后不可再补充轨迹点</view>
+      <view class="confirm-actions">
+        <button class="btn-cancel" bindtap="cancelEnd">继续运动</button>
+        <button class="btn-confirm" bindtap="confirmEnd">结束</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 初始化/错误状态 -->
+  <view class="init-mask" wx:if="{{starting || error}}">
+    <view class="init-box">
+      <view wx:if="{{error}}">{{error}}</view>
+      <view wx:else>{{typeIcon}} {{typeLabel}} · 定位中…</view>
+    </view>
   </view>
 </view>

@@ -1,0 +1,29 @@
+<view class="live-stats {{paused ? 'paused' : ''}}">
+  <view class="stats-grid">
+    <view class="stat stat-main">
+      <view class="stat-value">{{distanceKm}}</view>
+      <view class="stat-unit">公里</view>
+    </view>
+    <view class="stat">
+      <view class="stat-value">{{durationText}}</view>
+      <view class="stat-unit">时长</view>
+    </view>
+    <view class="stat">
+      <view class="stat-value">{{paceText}}</view>
+      <view class="stat-unit">配速 /km</view>
+    </view>
+    <view class="stat" wx:if="{{altitude !== null && altitude !== undefined}}">
+      <view class="stat-value">{{altitude}}</view>
+      <view class="stat-unit">海拔 m</view>
+    </view>
+    <view class="stat">
+      <view class="stat-value">{{climb}}</view>
+      <view class="stat-unit">爬升 m</view>
+    </view>
+    <view class="stat">
+      <view class="stat-value">{{calories}}</view>
+      <view class="stat-unit">千卡</view>
+    </view>
+  </view>
+  <view class="pause-tip" wx:if="{{paused}}">⏸ 已暂停</view>
+</view>

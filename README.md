@@ -16,10 +16,9 @@
 
 > 所有**代码内配置**集中在 `miniprogram/config/index.js`，填好后即可联调。
 
-### 1️⃣ 微信小程序 AppID（必填）
-- 获取：微信公众平台 → 小程序 → 开发管理 → 开发设置 → AppID
-- 填入：`project.config.json` 的 `appid` 字段（当前为游客模式 `touristappid`）
-- ⚠️ 未填正式 AppID 前：登录接口需后端开启 `WX_MOCK_LOGIN=true`（见第 4 项）
+### 1️⃣ 微信小程序 AppID（✅ 已填：wx68ebe78cca4dc17c）
+- 填入：`project.config.json` 的 `appid` 字段（已配置）
+- ⚠️ 配套：后端 `.env.local` 需填 `WX_APPID` + `WX_SECRET`（secret 在公众平台获取）才能走真实微信登录；未填前保持 `WX_MOCK_LOGIN=true`
 
 ### 2️⃣ 后端 API 地址（必填）
 - 填入：`miniprogram/config/index.js` → `API_BASE_URL`
@@ -100,7 +99,7 @@ sport_track_miniapp/
 ## 里程碑进度
 
 - [x] 骨架：tabBar 三页、静默登录（wx.login → JWT）、网络层（401 刷新）、轨迹列表联调
-- [ ] M2 前端：record 实时地图 + 数据面板 + 增量上传 + 暂停/继续/结束
-- [ ] M3 前端：track-map 组件、轨迹详情地图、回放、打点交互
+- [x] M2 前端：record 实时记录（定位采集/节流/漂移过滤/指标计算/增量上传/打点/暂停结束）→ 摘要页（保存 finish 对账）
+- [ ] M3 前端：track-map 完善、轨迹详情地图、回放、打点编辑交互
 - [ ] M4：统计图表、轨迹图导出、分享海报、资料编辑、设置
 - [ ] M5：真机验证（后台定位/耗电/海拔）、权限引导、提审发布

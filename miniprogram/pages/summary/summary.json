@@ -1,1 +1,6 @@
-{"navigationBarTitleText": "运动摘要"}
+{
+  "navigationBarTitleText": "运动摘要",
+  "usingComponents": {
+    "track-map": "/components/track-map/track-map"
+  }
+}

@@ -1,0 +1,15 @@
+<map
+  id="trackMap"
+  class="track-map"
+  latitude="{{currentLocation.latitude || points[0].lat || 31.2304}}"
+  longitude="{{currentLocation.longitude || points[0].lng || 121.4737}}"
+  scale="{{15}}"
+  markers="{{displayMarkers}}"
+  polyline="{{polyline}}"
+  show-location="{{false}}"
+  enable-3D="{{false}}"
+  map-type="{{mapType}}"
+  bindtap="onMapTap"
+  bindmarkertap="onMarkerTap"
+  bindcallouttap="onMapCalloutTap"
+></map>

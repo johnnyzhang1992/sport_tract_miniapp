@@ -1,7 +1,50 @@
-<view class="container">
-  <view class="card placeholder">
-    <view class="placeholder-icon">📊</view>
-    <view class="placeholder-title">运动摘要</view>
-    <view class="placeholder-desc">轨迹图 + 完整指标 + 打点列表（M2 里程碑）</view>
+<view class="container" wx:if="{{stats}}">
+  <!-- 轨迹图（静态模式自动 fitView） -->
+  <view class="map-card">
+    <track-map points="{{mapPoints}}" markers="{{markers}}" mode="view" />
+  </view>
+
+  <!-- 指标 -->
+  <view class="card">
+    <view class="summary-title">{{typeIcon}} {{typeLabel}} 完成</view>
+    <view class="metrics-grid">
+      <view class="metric">
+        <view class="metric-num">{{stats.distanceKm}}</view>
+        <view class="metric-label">公里</view>
+      </view>
+      <view class="metric">
+        <view class="metric-num">{{stats.durationText}}</view>
+        <view class="metric-label">时长</view>
+      </view>
+      <view class="metric">
+        <view class="metric-num">{{stats.paceText}}</view>
+        <view class="metric-label">配速</view>
+      </view>
+      <view class="metric">
+        <view class="metric-num">{{stats.calories}}</view>
+        <view class="metric-label">千卡</view>
+      </view>
+    </view>
+    <view class="text-muted sub" wx:if="{{stats.elevationGain}}">
+      累计爬升 {{stats.elevationGain}}m · 最高海拔 {{stats.maxAltitude || '—'}}m
+    </view>
+  </view>
+
+  <!-- 打点时间线 -->
+  <view class="card" wx:if="{{markers.length > 0}}">
+    <view class="summary-title">打点 ({{markers.length}})</view>
+    <view wx:for="{{markers}}" wx:key="id" class="marker-item">
+      <view class="marker-icon">{{item.typeMeta.icon || '📍'}}</view>
+      <view class="marker-body">
+        <view class="marker-note">{{item.note || item.typeMeta.label || '打点'}}</view>
+        <view class="text-muted">{{item.timeText}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 操作 -->
+  <view class="actions">
+    <button class="btn-discard" bindtap="discard" disabled="{{saving}}">放弃</button>
+    <button class="btn-save" bindtap="save" disabled="{{saving}}">保存</button>
   </view>
 </view>
