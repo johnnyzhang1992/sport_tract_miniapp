@@ -224,15 +224,37 @@ Component({
         ctx.beginPath();
         ctx.roundRect ? ctx.roundRect(x, top, cardW, cardH, 12) : ctx.rect(x, top, cardW, cardH);
         ctx.fill();
-        // 值
-        ctx.fillStyle = '#1a4fd0';
-        ctx.font = 'bold 16px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(c.value, x + cardW / 2, top + 24);
+
+        // 配速：数值大字 + /公里 单位小字（水平整体居中）
+        const match = c.label === '配速' ? /^(.*?)(\/.*)$/.exec(String(c.value)) : null;
+        if (match) {
+          const num = match[1];
+          const unit = match[2];
+          ctx.font = 'bold 16px sans-serif';
+          const numW = ctx.measureText(num).width;
+          ctx.font = '11px sans-serif';
+          const unitW = ctx.measureText(unit).width;
+          const startX = x + cardW / 2 - (numW + unitW) / 2;
+          ctx.fillStyle = '#1a4fd0';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.font = 'bold 16px sans-serif';
+          ctx.fillText(num, startX, top + 24);
+          ctx.font = '11px sans-serif';
+          ctx.fillText(unit, startX + numW, top + 24);
+          ctx.textAlign = 'center';
+        } else {
+          // 值
+          ctx.fillStyle = '#1a4fd0';
+          ctx.font = 'bold 16px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(c.value, x + cardW / 2, top + 24);
+        }
         // 标签
         ctx.fillStyle = '#8a93a6';
         ctx.font = '11px sans-serif';
+        ctx.textAlign = 'center';
         ctx.fillText(c.label, x + cardW / 2, top + 48);
         ctx.textBaseline = 'alphabetic';
       });
