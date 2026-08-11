@@ -48,10 +48,12 @@
 }
 .preview-actions {
   display: flex;
+  justify-content: space-between;
   margin-top: 20rpx;
 }
 .preview-btn {
-  flex: 1;
+  flex: 0 0 48%;
+  width: 48%;
   height: 68rpx;
   line-height: 68rpx;
   border-radius: 999rpx;
@@ -64,7 +66,6 @@
 .preview-save {
   background: #2b6cf6;
   color: #fff;
-  margin-right: 24rpx;
 }
 .preview-share {
   background: #07c160;
