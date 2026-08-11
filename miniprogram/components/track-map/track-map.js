@@ -25,11 +25,16 @@ Component({
   },
 
   observers: {
-    'points, markers, currentLocation': function () {
+    'points, markers, currentLocation': function (points, markers, currentLocation) {
       this.buildPolyline();
       this.buildMarkers();
       if (this.data.mode === 'view') {
         this.fitView();
+      }
+      // 动态追点：map 组件的 latitude/longitude 属性初始化后不再生效，
+      // 必须用 MapContext.includePoints 移动视野（节流 1.5s，避免频繁跳动）
+      if (this.data.followMode && currentLocation) {
+        this.followLocation();
       }
     },
   },
@@ -90,6 +95,21 @@ Component({
         });
       }
       this.setData({ displayMarkers: base });
+    },
+
+    /** 动态追点：视野跟随当前位置（节流） */
+    followLocation() {
+      const now = Date.now();
+      if (this._lastFollow && now - this._lastFollow < 1500) return;
+      this._lastFollow = now;
+
+      const loc = this.data.currentLocation;
+      if (!loc || !Number.isFinite(loc.latitude) || !Number.isFinite(loc.longitude)) return;
+      const mapCtx = wx.createMapContext('trackMap', this);
+      mapCtx.includePoints({
+        points: [{ latitude: loc.latitude, longitude: loc.longitude }],
+        padding: [80, 40, 80, 40],
+      });
     },
 
     /** 自适应视野（fitView 思路：include-points） */
