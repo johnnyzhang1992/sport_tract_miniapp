@@ -15,6 +15,8 @@ const MAX_SPEED_MPS = 30;
 const CLIMB_DEAD_ZONE_M = 2;
 /** 配速最小有效距离（米）：低于此值配速无意义（如刚起步/静止），显示 “—” */
 const MIN_PACE_DISTANCE_M = 200;
+/** 精度过滤阈值（米）：wx.onLocationChange 返回 accuracy（水平精度），超过则丢弃（室内/弱信号） */
+const MAX_ACCURACY_M = 30;
 
 /** Haversine 球面距离（米），兼容 {lat,lng} 与 {latitude,longitude} 两种字段 */
 function haversine(a, b) {
@@ -66,6 +68,10 @@ class Tracker {
    */
   addPoint(loc) {
     if (this.paused || !loc) return null;
+
+    // 精度过滤：accuracy 超阈值（室内/弱信号）直接丢弃，避免轨迹乱跳
+    if (typeof loc.accuracy === 'number' && loc.accuracy > MAX_ACCURACY_M) return null;
+
     // 防御：模拟器/部分机型 timestamp 可能是字符串，统一转数字
     const now = Number(loc.timestamp) || this.now();
 
