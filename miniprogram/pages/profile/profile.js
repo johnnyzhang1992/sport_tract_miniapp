@@ -75,7 +75,10 @@ Page({
 
       // 头像：有新选择才上传（uploadPhoto 内含微信合规检测，违规返回 blocked）
       if (this.data.avatarTemp) {
-        const up = await uploadPhoto(this.data.avatarTemp);
+        const up = await uploadPhoto(this.data.avatarTemp, {
+          dir: 'avatar',
+          prefix: 'avatar_',
+        });
         if (up && up.blocked) {
           wx.hideLoading();
           wx.showToast({ title: '头像包含不当内容', icon: 'none' });
