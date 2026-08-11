@@ -64,7 +64,8 @@ class Tracker {
    */
   addPoint(loc) {
     if (this.paused || !loc) return null;
-    const now = loc.timestamp || this.now();
+    // 防御：模拟器/部分机型 timestamp 可能是字符串，统一转数字
+    const now = Number(loc.timestamp) || this.now();
 
     if (this.lastPoint) {
       const d = haversine(this.lastPoint, loc);
