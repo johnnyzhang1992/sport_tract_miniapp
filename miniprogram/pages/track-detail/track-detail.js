@@ -164,13 +164,13 @@ Page({
   },
 
   async onMarkerConfirm(e) {
-    const { markerId, type, note, photos } = e.detail;
+    const { markerId, type, note, photos, existingPhotos } = e.detail;
     if (this.data.markerBusy) return;
     this.setData({ markerBusy: true });
 
     wx.showLoading({ title: '保存中…' });
     try {
-      // 多图直传（合规检测已内置；编辑模式通常不带新照片）
+      // 新图直传（合规检测内置；违规中止）
       const urls = [];
       if (photos && photos.length) {
         for (const f of photos) {
@@ -185,10 +185,13 @@ Page({
       }
 
       if (markerId) {
-        // 编辑：仅更新传入字段（新图追加到已有 photos 之后）
-        const body = { type, note };
-        if (urls.length > 0) body.photos = urls;
-        await api.put(`/activities/${this.data.id}/markers/${markerId}`, body);
+        // 编辑：保留已有照片（含删除后剩余）+ 新上传 → photos 全量替换
+        const finalPhotos = (existingPhotos || []).concat(urls).slice(0, 3);
+        await api.put(`/activities/${this.data.id}/markers/${markerId}`, {
+          type,
+          note,
+          photos: finalPhotos,
+        });
       } else {
         // 补打点：坐标用最后一个轨迹点
         const pts = (this.activity && this.activity.trackPoints) || [];

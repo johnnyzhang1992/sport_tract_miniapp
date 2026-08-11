@@ -1,6 +1,6 @@
 <view class="mask" wx:if="{{visible}}" bindtap="cancel">
   <view class="sheet" catchtap="noop">
-    <view class="sheet-title">打点</view>
+    <view class="sheet-title">{{editMode ? '编辑打点' : '打点'}}</view>
 
     <!-- 类型选择 -->
     <view class="type-row">
@@ -26,16 +26,32 @@
       />
     </view>
 
-    <!-- 多图预览 -->
+    <!-- 已有照片（编辑模式，可删除） -->
+    <view class="photo-section" wx:if="{{editMode && existingPhotos.length > 0}}">
+      <view class="photo-label">已有照片</view>
+      <view class="photo-grid">
+        <view wx:for="{{existingPhotos}}" wx:key="*this" class="photo-item">
+          <image class="photo-img" src="{{item}}" mode="aspectFill" />
+          <view class="photo-remove" data-idx="{{index}}" bindtap="removeExistingPhoto">✕</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 新选照片 -->
     <view class="photo-grid" wx:if="{{photos.length > 0}}">
       <view wx:for="{{photos}}" wx:key="*this" class="photo-item">
         <image class="photo-img" src="{{item}}" mode="aspectFill" />
         <view class="photo-remove" data-idx="{{index}}" bindtap="removePhoto">✕</view>
       </view>
     </view>
-    <!-- 添加照片（新增模式；编辑模式保留原照片不重选） -->
-    <view class="photo-add" wx:if="{{!editMode && photos.length < maxPhotos}}" bindtap="choosePhoto">
-      📷 拍照 / 相册（{{photos.length}}/{{maxPhotos}}）
+
+    <!-- 添加照片（总量 ≤3） -->
+    <view
+      class="photo-add"
+      wx:if="{{existingPhotos.length + photos.length < maxPhotos}}"
+      bindtap="choosePhoto"
+    >
+      📷 拍照 / 相册（{{existingPhotos.length + photos.length}}/{{maxPhotos}}）
     </view>
 
     <view class="actions">
