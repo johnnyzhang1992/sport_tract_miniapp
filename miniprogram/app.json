@@ -20,11 +20,26 @@
     "color": "#999999",
     "selectedColor": "#2b6cf6",
     "backgroundColor": "#ffffff",
-    "borderStyle": "black",
+    "borderStyle": "white",
     "list": [
-      { "pagePath": "pages/index/index", "text": "首页" },
-      { "pagePath": "pages/tracks/tracks", "text": "轨迹" },
-      { "pagePath": "pages/my/my", "text": "我的" }
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "assets/icons/tab-home-gray.png",
+        "selectedIconPath": "assets/icons/tab-home-blue.png"
+      },
+      {
+        "pagePath": "pages/tracks/tracks",
+        "text": "轨迹",
+        "iconPath": "assets/icons/tab-tracks-gray.png",
+        "selectedIconPath": "assets/icons/tab-tracks-blue.png"
+      },
+      {
+        "pagePath": "pages/my/my",
+        "text": "我的",
+        "iconPath": "assets/icons/tab-my-gray.png",
+        "selectedIconPath": "assets/icons/tab-my-blue.png"
+      }
     ]
   },
   "permission": {
