@@ -71,15 +71,25 @@ Component({
 
     buildMarkers() {
       // 微信 map 组件：marker id 必须是 number（字符串会报渲染层错误）
+      // anchor 用中心 {0.5, 0.5}：默认底部锚点会让图标悬在坐标点上方（打点不贴轨迹线）
       const base = this.data.markers.map((m, idx) => ({
         id: idx + 1,
         latitude: m.lat,
         longitude: m.lng,
         iconPath: m.iconPath || defaultMarkerIcon(),
-        width: m.width || 28,
-        height: m.height || 28,
+        width: m.width || 18,
+        height: m.height || 18,
+        anchor: { x: 0.5, y: 0.5 },
         label: m.label
-          ? { content: m.label, color: '#fff', fontSize: 10, bgColor: '#2B6CF6', borderRadius: 8, padding: 4 }
+          ? {
+              content: m.label,
+              color: '#fff',
+              fontSize: 9,
+              bgColor: '#2B6CF6',
+              borderRadius: 6,
+              padding: 2,
+              anchorY: -14,
+            }
           : undefined,
       }));
 
@@ -90,8 +100,9 @@ Component({
           latitude: this.data.currentLocation.latitude,
           longitude: this.data.currentLocation.longitude,
           iconPath: defaultCurrentIcon(),
-          width: 22,
-          height: 22,
+          width: 18,
+          height: 18,
+          anchor: { x: 0.5, y: 0.5 },
         });
       }
       this.setData({ displayMarkers: base });
