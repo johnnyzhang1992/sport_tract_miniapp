@@ -42,6 +42,13 @@ Page({
 
       this.activity = activity; // 保留原始数据（回放用）
 
+      // 海拔曲线数据（抽稀到 ≤ 60 点，只有有效海拔才展示）
+      const altPts = (activity.trackPoints || []).filter((p) => p.altitude != null);
+      const step = Math.max(1, Math.ceil(altPts.length / 60));
+      const altitudeChart = altPts
+        .filter((_, i) => i % step === 0)
+        .map((p, i) => ({ label: String(i), value: p.altitude }));
+
 
       this.setData({
         activity: {
@@ -71,6 +78,7 @@ Page({
             minute: '2-digit',
           }),
         })),
+        altitudeChart,
       });
     } catch (e) {
       wx.showToast({ title: '加载详情失败', icon: 'none' });
