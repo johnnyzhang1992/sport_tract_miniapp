@@ -25,4 +25,12 @@ function formatPace(secPerKm) {
   return `${m}'${String(s).padStart(2, '0')}" /公里`;
 }
 
-module.exports = { formatDuration, formatKm, formatPace };
+/** 配速拆分为值 + 单位（页面可分别控制字号，如 “2'13\”” + “/公里”） */
+function formatPaceParts(secPerKm) {
+  if (!secPerKm || secPerKm <= 0) return null;
+  const m = Math.floor(secPerKm / 60);
+  const s = Math.round(secPerKm % 60);
+  return { value: `${m}'${String(s).padStart(2, '0')}"`, unit: '/公里' };
+}
+
+module.exports = { formatDuration, formatKm, formatPace, formatPaceParts };

@@ -8,7 +8,7 @@ const api = require('../../services/api');
 const config = require('../../config/index');
 const storage = require('../../services/storage');
 const { uploadPhoto } = require('../../services/oss-upload');
-const { formatDuration, formatPace } = require('../../utils/format');
+const { formatDuration, formatPaceParts } = require('../../utils/format');
 
 Page({
   data: {
@@ -56,7 +56,8 @@ Page({
           label: meta.label || activity.type,
           distanceKm: (activity.distance / 1000).toFixed(2),
           durationText: formatDuration(activity.duration),
-          paceText: formatPace(activity.avgPace),
+          paceValue: (formatPaceParts(activity.avgPace) || {}).value || '—',
+          paceUnit: (formatPaceParts(activity.avgPace) || {}).unit || '',
           startTimeText: new Date(activity.startTime).toLocaleString('zh-CN', {
             month: 'numeric',
             day: 'numeric',
