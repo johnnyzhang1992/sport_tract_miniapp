@@ -2,8 +2,10 @@
   <!-- 预览弹窗：canvas 直接渲染海报（可见区域，canvasToTempFilePath 才可靠） -->
   <view class="preview-mask" wx:if="{{previewVisible}}" catchtouchmove="noop">
     <view class="preview-box">
-      <view class="preview-title">分享海报</view>
-      <view class="preview-close" bindtap="closePreview">✕</view>
+      <view class="preview-head">
+        <view class="preview-title">分享海报</view>
+        <view class="preview-close" bindtap="closePreview">✕</view>
+      </view>
       <canvas
         type="2d"
         id="posterCanvas"
