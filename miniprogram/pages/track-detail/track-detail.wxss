@@ -1,12 +1,30 @@
-.map-placeholder {
-  height: 360rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.map-wrap {
+  position: relative;
+  height: 460rpx;
+  border-radius: 16rpx;
+  overflow: hidden;
+  margin-bottom: 24rpx;
   background: #eef1f5;
 }
-.map-placeholder-text {
-  color: #999;
+.layer-btn,
+.replay-btn {
+  position: absolute;
+  top: 24rpx;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 999rpx;
+  padding: 10rpx 22rpx;
+  font-size: 24rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
+}
+.layer-btn {
+  right: 24rpx;
+}
+.replay-btn {
+  left: 24rpx;
+}
+.replay-btn-active {
+  background: #2b6cf6;
+  color: #fff;
 }
 .detail-title {
   font-size: 32rpx;
@@ -44,6 +62,9 @@
 .marker-item:last-child {
   border-bottom: none;
 }
+.marker-hover {
+  opacity: 0.7;
+}
 .marker-icon {
   font-size: 40rpx;
   margin-right: 20rpx;
@@ -56,4 +77,10 @@
 }
 .actions {
   display: flex;
+}
+.actions t-button {
+  flex: 1;
+}
+.actions t-button:first-child {
+  margin-right: 20rpx;
 }

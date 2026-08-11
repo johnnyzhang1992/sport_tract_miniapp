@@ -1,16 +1,23 @@
 /**
- * marker-form 打点弹窗（决策 F10/F11：类型 + 备注 + 可选拍照 + 地址）
- * props: visible, typeOptions, currentLocation
- * events: confirm({type, note, photoTempFile}) / cancel
- * 照片先由页面调用 services/oss-upload 上传，这里只选择临时文件
+ * marker-form 打点弹窗（决策 F10/F11/F13）
+ * - 新增模式：类型 + 备注 + 可选拍照（照片先由页面调 services/oss-upload 上传）
+ * - 编辑模式（editMode=true + marker 传入）：类型/备注预填，显示删除按钮
+ * events:
+ *   confirm({markerId?, type, note, photoTempFile})  新增或编辑确认
+ *   delete({markerId})                               编辑模式点删除
+ *   cancel()
  */
 const config = require('../../config/index');
 
 Component({
   properties: {
     visible: { type: Boolean, value: false },
-    /** 当前位置（打点坐标来源） */
+    /** 当前位置（新增模式打点坐标来源） */
     currentLocation: { type: Object, value: null },
+    /** 编辑模式 */
+    editMode: { type: Boolean, value: false },
+    /** 编辑的打点（editMode 时传入） */
+    marker: { type: Object, value: null },
   },
 
   data: {
@@ -21,8 +28,16 @@ Component({
   },
 
   observers: {
-    visible(v) {
-      if (v) {
+    'visible, marker': function (visible, marker) {
+      if (!visible) return;
+      if (this.data.editMode && marker) {
+        // 编辑模式：预填
+        this.setData({
+          selectedType: marker.type || 'checkpoint',
+          note: marker.note || '',
+          photoTempFile: '',
+        });
+      } else {
         this.setData({ selectedType: 'checkpoint', note: '', photoTempFile: '' });
       }
     },
@@ -59,10 +74,19 @@ Component({
 
     confirm() {
       this.triggerEvent('confirm', {
+        markerId: this.data.editMode && this.data.marker ? this.data.marker.id : undefined,
         type: this.data.selectedType,
         note: this.data.note.trim(),
         photoTempFile: this.data.photoTempFile,
       });
+    },
+
+    /** 编辑模式删除 */
+    del() {
+      const marker = this.data.marker;
+      if (marker && marker.id) {
+        this.triggerEvent('delete', { markerId: marker.id });
+      }
     },
 
     cancel() {

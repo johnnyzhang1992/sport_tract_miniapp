@@ -82,6 +82,7 @@
   display: flex;
   margin-top: 28rpx;
 }
+.btn-del,
 .btn-cancel,
 .btn-confirm {
   flex: 1;
@@ -89,6 +90,12 @@
   line-height: 88rpx;
   border-radius: 999rpx;
   font-size: 30rpx;
+}
+.btn-del {
+  background: #fff;
+  color: #ff4d4f;
+  border: 2rpx solid #ff4d4f;
+  margin-right: 20rpx;
 }
 .btn-cancel {
   background: #f2f3f5;
