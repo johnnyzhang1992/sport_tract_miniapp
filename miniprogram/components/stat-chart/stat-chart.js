@@ -160,15 +160,17 @@ Component({
       );
     },
 
-    /** 折线图 */
+    /** 折线图（Y 轴基于数据 min~max 范围，曲线占满绘图区） */
     drawLine(ctx, data, values, width) {
       const H = this.data.height;
       const axis = this.drawAxis(ctx, values, width, H);
       const n = data.length;
-      const norm = this.normalize(values);
+      const span = axis.maxV - axis.minV || 1;
       const stepX = n > 1 ? axis.chartW / (n - 1) : axis.chartW;
       const X = (i) => axis.padLeft + i * stepX;
-      const Y = (i) => H - axis.padBottom - norm[i] * axis.chartH;
+      // 以最低海拔为起点：值映射到 minV~maxV 区间占满高度
+      const Y = (i) =>
+        H - axis.padBottom - ((values[i] - axis.minV) / span) * axis.chartH;
 
       // 折线
       ctx.strokeStyle = this.data.color;
