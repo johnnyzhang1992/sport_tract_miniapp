@@ -27,6 +27,10 @@
   border-radius: 12rpx;
   border: 2rpx solid transparent;
 }
+.type-item-hover {
+  background: #eef4ff;
+  border-color: #2b6cf6;
+}
 .type-item-active {
   background: #eef4ff;
   border-color: #2b6cf6;

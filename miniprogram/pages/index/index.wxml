@@ -13,6 +13,8 @@
         wx:for="{{activityTypes}}"
         wx:key="type"
         class="type-item {{selectedType === item.type ? 'type-item-active' : ''}}"
+        hover-class="type-item-hover"
+        hover-stay-time="80"
         data-type="{{item.type}}"
         bindtap="selectType"
       >
