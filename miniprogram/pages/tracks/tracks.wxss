@@ -5,8 +5,15 @@
   font-size: 40rpx;
   margin-right: 12rpx;
 }
-.track-cell {
+.track-cell-wrap {
   margin-bottom: 16rpx;
+  border-radius: 16rpx;
+  overflow: hidden;
+}
+.track-cell-hover {
+  opacity: 0.7;
+}
+.track-cell {
   border-radius: 16rpx;
   overflow: hidden;
 }

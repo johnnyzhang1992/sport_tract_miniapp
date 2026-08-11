@@ -92,11 +92,12 @@ Page({
     return params;
   },
 
-  /** 列表项装饰：原始聚合数据 → 展示字段 */
+  /** 列表项装饰：原始聚合数据 → 展示字段（后端返回 _id，补 id 映射） */
   decorate(item) {
     const meta = config.ACTIVITY_TYPES.find((t) => t.type === item.type) || {};
     return {
       ...item,
+      id: String(item._id || item.id || ''),
       icon: meta.icon || '🏃',
       label: meta.label || item.type,
       distanceKm: (item.distance / 1000).toFixed(2),
