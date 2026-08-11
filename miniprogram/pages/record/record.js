@@ -191,7 +191,7 @@ Page({
   },
 
   async onMarkerConfirm(e) {
-    const { type, note, photoTempFile } = e.detail;
+    const { type, note, photos } = e.detail;
     const loc = this.data.currentLocation;
     if (!loc) {
       wx.showToast({ title: '暂未获取到位置', icon: 'none' });
@@ -201,17 +201,19 @@ Page({
     this.setData({ markerBusy: true, markerFormVisible: false });
 
     try {
-      // 照片直传 OSS（先微信合规检测，违规拦截；未配置降级）
+      // 多图直传 OSS（每张先微信合规检测，违规中止）
       wx.showLoading({ title: '保存打点…' });
-      let photoUrl = '';
-      if (photoTempFile) {
-        const up = await uploadPhoto(photoTempFile);
-        if (up && up.blocked) {
-          wx.hideLoading();
-          wx.showToast({ title: '图片包含不当内容', icon: 'none' });
-          return;
+      const urls = [];
+      if (photos && photos.length) {
+        for (const f of photos) {
+          const up = await uploadPhoto(f);
+          if (up && up.blocked) {
+            wx.hideLoading();
+            wx.showToast({ title: '图片包含不当内容', icon: 'none' });
+            return;
+          }
+          if (up && up.url) urls.push(up.url);
         }
-        photoUrl = up ? up.url : '';
       }
 
       const marker = {
@@ -221,7 +223,8 @@ Page({
         timestamp: Date.now(),
         type,
         note,
-        photoUrl: photoUrl || '',
+        photoUrl: urls[0] || '',
+        photos: urls,
         address: '',
       };
 
@@ -243,7 +246,6 @@ Page({
       reverseGeocode(marker.lat, marker.lng).then((address) => {
         if (address) {
           marker.address = address;
-          // 更新本地记录（final 包带地址）
         }
       });
 
