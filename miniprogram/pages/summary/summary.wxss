@@ -23,9 +23,11 @@
 .metric-num {
   font-size: 34rpx;
   font-weight: 600;
+  white-space: nowrap;
 }
 .metric-label {
-  font-size: 22rpx;
+  font-size: 20rpx;
+  white-space: nowrap;
   color: #999;
   margin-top: 4rpx;
 }
