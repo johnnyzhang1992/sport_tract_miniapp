@@ -1,9 +1,9 @@
 /**
  * share-card 分享海报组件（决策 F21/F22）
- * - 点击「分享海报」→ 生成海报 → 预览弹窗展示 → 用户选择「保存到相册」或「取消」
- * - 不再点击立即导出
+ * - 点击「分享海报」→ 预览弹窗内 Canvas 绘制海报 → 保存到相册 / 分享给朋友
+ * - canvas 放在预览弹窗内（可见区域），canvasToTempFilePath 转换可靠
  * props: activityId, activity(指标), mapPoints, miniCodeUrl
- * 方法: preview() —— 拉小程序码 → 绘制 → 预览弹窗
+ * 方法: preview()；事件: posterready({ path }) 海报临时路径
  */
 const api = require('../../services/api');
 
@@ -17,15 +17,19 @@ Component({
 
   data: {
     previewVisible: false,
-    previewPath: '',
+    previewPath: '', // 海报临时文件（保存/分享用）
     saving: false,
   },
 
   methods: {
-    /** 生成海报并展示预览弹窗 */
+    /** 打开预览弹窗并绘制海报 */
     async preview() {
+      this.setData({ previewVisible: true });
       wx.showLoading({ title: '生成海报…' });
       try {
+        // 等弹窗渲染出 canvas
+        await new Promise((r) => setTimeout(r, 150));
+
         let codeUrl = this.data.miniCodeUrl;
         if (!codeUrl && this.data.activityId) {
           try {
@@ -36,23 +40,21 @@ Component({
           }
         }
 
-        const tempPath = await this.drawPoster(codeUrl);
+        await this.drawPoster(codeUrl);
+        // 转临时文件（保存/分享用）
+        const path = await this.toTempFile();
+        this.setData({ previewPath: path });
+        this.triggerEvent('posterready', { path });
         wx.hideLoading();
-        if (tempPath) {
-          this.setData({ previewPath: tempPath, previewVisible: true });
-          // 海报路径交给页面（分享卡片/朋友圈封面用）
-          this.triggerEvent('posterready', { path: tempPath });
-        } else {
-          wx.showToast({ title: '海报生成失败', icon: 'none' });
-        }
       } catch (e) {
         wx.hideLoading();
+        this.setData({ previewVisible: false });
         wx.showToast({ title: '海报生成失败', icon: 'none' });
         console.error('[share-card]', e);
       }
     },
 
-    /** 绘制海报 → 返回临时文件路径 */
+    /** 绘制海报到预览弹窗内的 canvas */
     drawPoster(codeUrl) {
       return new Promise((resolve, reject) => {
         wx.createSelectorQuery()
@@ -84,24 +86,16 @@ Component({
             // 标题
             const act = this.data.activity || {};
             ctx.fillStyle = '#fff';
-            ctx.font = 'bold 26px sans-serif';
+            ctx.font = 'bold 24px sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText(`${act.label || '运动'} · ${act.distanceKm || '0.00'} 公里`, width / 2, 56);
+            ctx.fillText(`${act.label || '运动'} · ${act.distanceKm || '0.00'} 公里`, width / 2, 44);
 
             // 轨迹线
             this.drawTrack(ctx, width, height);
             // 指标
             this.drawMetrics(ctx, width, height, act);
 
-            // 小程序码
-            const finish = () => {
-              // canvas → 临时文件
-              wx.canvasToTempFilePath({
-                canvas: this._canvasNode,
-                success: (r) => resolve(r.tempFilePath),
-                fail: reject,
-              });
-            };
+            const finish = () => resolve();
             if (codeUrl) {
               this.drawCode(ctx, codeUrl, width, height).then(finish).catch(finish);
             } else {
@@ -111,12 +105,22 @@ Component({
       });
     },
 
+    toTempFile() {
+      return new Promise((resolve, reject) => {
+        wx.canvasToTempFilePath({
+          canvas: this._canvasNode,
+          success: (r) => resolve(r.tempFilePath),
+          fail: reject,
+        });
+      });
+    },
+
     drawTrack(ctx, width, height) {
       const pts = this.data.mapPoints || [];
       if (pts.length < 2) return;
-      const pad = 40;
-      const top = 90;
-      const bottom = height - 130;
+      const pad = 30;
+      const top = 70;
+      const bottom = height - 120;
       const lats = pts.map((p) => p.lat);
       const lngs = pts.map((p) => p.lng);
       const minLat = Math.min(...lats);
@@ -127,8 +131,6 @@ Component({
       const spanLng = maxLng - minLng || 0.001;
 
       ctx.fillStyle = 'rgba(255,255,255,0.15)';
-      ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-      ctx.lineWidth = 1;
       const card = { x: pad / 2, y: top, w: width - pad, h: bottom - top };
       ctx.beginPath();
       ctx.roundRect ? ctx.roundRect(card.x, card.y, card.w, card.h, 16) : ctx.rect(card.x, card.y, card.w, card.h);
@@ -153,16 +155,16 @@ Component({
       const lX = pad / 2 + ((last.lng - minLng) / spanLng) * (width - pad);
       const lY = bottom - ((last.lat - minLat) / spanLat) * (bottom - top);
       ctx.fillStyle = '#fff';
-      ctx.font = '16px sans-serif';
+      ctx.font = '14px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('起', fX, fY - 8);
-      ctx.fillText('终', lX, lY - 8);
+      ctx.fillText('起', fX, fY - 6);
+      ctx.fillText('终', lX, lY - 6);
     },
 
     drawMetrics(ctx, width, height, act) {
-      const y = height - 90;
+      const y = height - 82;
       ctx.fillStyle = '#fff';
-      ctx.font = '15px sans-serif';
+      ctx.font = '14px sans-serif';
       ctx.textAlign = 'center';
       const items = [
         `时长 ${act.durationText || '—'}`,
@@ -173,9 +175,9 @@ Component({
         ctx.fillText(t, (width / items.length) * i + width / items.length / 2, y);
       });
       if (act.startTimeText) {
-        ctx.font = '12px sans-serif';
+        ctx.font = '11px sans-serif';
         ctx.fillStyle = 'rgba(255,255,255,0.75)';
-        ctx.fillText(act.startTimeText, width / 2, height - 24);
+        ctx.fillText(act.startTimeText, width / 2, height - 22);
       }
     },
 
@@ -184,16 +186,16 @@ Component({
         wx.getImageInfo({
           src: codeUrl,
           success: (img) => {
-            const size = 110;
-            const x = width - size - 24;
-            const y = height - size - 40;
+            const size = 90;
+            const x = width - size - 20;
+            const y = height - size - 36;
             ctx.fillStyle = '#fff';
-            ctx.fillRect(x - 6, y - 6, size + 12, size + 12);
+            ctx.fillRect(x - 5, y - 5, size + 10, size + 10);
             ctx.drawImage(img.path, x, y, size, size);
             ctx.fillStyle = 'rgba(255,255,255,0.75)';
-            ctx.font = '11px sans-serif';
+            ctx.font = '10px sans-serif';
             ctx.textAlign = 'right';
-            ctx.fillText('长按识别小程序', width - 20, y + size + 18);
+            ctx.fillText('长按识别小程序', width - 16, y + size + 16);
             resolve();
           },
           fail: resolve,
@@ -201,7 +203,7 @@ Component({
       });
     },
 
-    /** 保存到相册（预览弹窗内操作） */
+    /** 保存到相册 */
     save() {
       if (this.data.saving || !this.data.previewPath) return;
       this.setData({ saving: true });
