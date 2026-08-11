@@ -186,7 +186,7 @@ Page({
 
       if (markerId) {
         // 编辑：仅更新传入字段（新图追加到已有 photos 之后）
-        const body: Record<string, unknown> = { type, note };
+        const body = { type, note };
         if (urls.length > 0) body.photos = urls;
         await api.put(`/activities/${this.data.id}/markers/${markerId}`, body);
       } else {
