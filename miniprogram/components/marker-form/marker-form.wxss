@@ -87,9 +87,19 @@
 .btn-confirm {
   flex: 1;
   height: 88rpx;
-  line-height: 88rpx;
   border-radius: 999rpx;
   font-size: 30rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+}
+/* 去掉原生 button 默认边框（::after）与圆角冲突 */
+.btn-del::after,
+.btn-cancel::after,
+.btn-confirm::after {
+  border: none;
 }
 .btn-del {
   background: #fff;
