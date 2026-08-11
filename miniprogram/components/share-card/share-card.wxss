@@ -64,7 +64,7 @@
 .preview-save {
   background: #2b6cf6;
   color: #fff;
-  margin-right: 16rpx;
+  margin-right: 24rpx;
 }
 .preview-share {
   background: #07c160;
