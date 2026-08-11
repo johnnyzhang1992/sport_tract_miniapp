@@ -102,7 +102,7 @@
   white-space: nowrap;
 }
 .pace-unit {
-  font-size: 18rpx;
+  font-size: 24rpx;
   color: #999;
   margin-left: 2rpx;
 }
