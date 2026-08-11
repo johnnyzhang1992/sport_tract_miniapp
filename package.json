@@ -1,7 +1,7 @@
 {
   "name": "sport-track-miniapp",
   "version": "0.1.0",
-  "description": "运动轨迹记录小程序（tdesign-miniprogram）",
+  "description": "小迹一下，每一次walk都值得被记录",
   "private": true,
   "scripts": {
     "test": "node --test"
