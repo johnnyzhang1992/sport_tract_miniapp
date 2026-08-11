@@ -250,11 +250,36 @@ Page({
   /** 分享海报 */
   sharePoster() {
     const card = this.selectComponent('#shareCard');
-    if (card && typeof card.generate === 'function') {
-      card.generate();
+    if (card && typeof card.preview === 'function') {
+      card.preview();
     } else {
       wx.showToast({ title: '组件未就绪', icon: 'none' });
     }
+  },
+
+  /** 海报生成完成：记录路径（分享卡片/朋友圈封面） */
+  onPosterReady(e) {
+    this.shareImagePath = e.detail.path;
+  },
+
+  /** 分享给朋友（海报作为卡片封面） */
+  onShareAppMessage() {
+    const act = this.data.activity || {};
+    return {
+      title: `我的${act.label || '运动'}轨迹 · ${act.distanceKm || ''}公里`,
+      path: `/pages/track-detail/track-detail?id=${this.data.id}`,
+      imageUrl: this.shareImagePath || '',
+    };
+  },
+
+  /** 分享到朋友圈（右上角菜单，海报作封面） */
+  onShareTimeline() {
+    const act = this.data.activity || {};
+    return {
+      title: `我的${act.label || '运动'}轨迹 · ${act.distanceKm || ''}公里`,
+      query: `id=${this.data.id}`,
+      imageUrl: this.shareImagePath || '',
+    };
   },
 
   /** 全屏展示地图 */
