@@ -68,7 +68,17 @@ Page({
     this.setData({ saving: true });
     wx.showLoading({ title: '保存中…' });
     try {
-      await this.sync.finish(this.finalPack);
+      // 清洗 final 包：负 speed（微信异常值）→ null，负 pausedMs → 0（兜底历史数据）
+      const pack = this.finalPack;
+      const cleanPack = {
+        ...pack,
+        trackPoints: (pack.trackPoints || []).map((p) => ({
+          ...p,
+          speed: p.speed != null && p.speed < 0 ? null : p.speed,
+        })),
+        pausedMs: pack.pausedMs != null && pack.pausedMs < 0 ? 0 : pack.pausedMs,
+      };
+      await this.sync.finish(cleanPack);
       wx.hideLoading();
       wx.removeStorageSync('pending_summary');
       wx.removeStorageSync('pending_sync_activity');
