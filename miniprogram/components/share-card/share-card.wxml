@@ -11,8 +11,8 @@
         style="width: 300px; height: 400px;"
       ></canvas>
       <view class="preview-actions">
-        <button class="preview-btn preview-save" loading="{{saving}}" bindtap="save">保存到相册</button>
-        <button class="preview-btn preview-share" open-type="share">分享给朋友</button>
+        <button class="preview-btn preview-save" loading="{{saving}}" bindtap="save">保存</button>
+        <button class="preview-btn preview-share" open-type="share">分享</button>
       </view>
       <view class="preview-tip">朋友圈：保存后手动发布</view>
     </view>
