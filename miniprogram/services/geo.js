@@ -1,41 +1,23 @@
 /**
- * 地理编码封装（QQMapWX，决策：仅用于逆地理编码/POI 数据服务）
- * TENCENT_MAP_KEY 未配置时优雅降级（返回空字符串）
+ * 逆地理编码（决策：后端持 key 调用腾讯 WebService，前端不再暴露 key）
+ * 统一走后端 GET /api/geo/reverse，失败/未配置时返回空字符串
  */
-const config = require('../config/index');
-
-let geo = null;
-let loaded = false;
-
-function getGeo() {
-  if (!loaded) {
-    loaded = true;
-    if (config.TENCENT_MAP_KEY) {
-      try {
-        const QQMapWX = require('qqmap-wx-jssdk');
-        geo = new QQMapWX({ key: config.TENCENT_MAP_KEY });
-      } catch {
-        geo = null;
-      }
-    }
-  }
-  return geo;
-}
+const api = require('./api');
 
 /**
  * 逆地理编码：经纬度 → 地址
- * @returns {Promise<string>} 地址文本（未配置/失败返回 ''）
+ * @returns {Promise<string>} 地址文本（失败/后端未配置返回 ''）
  */
-function reverseGeocode(latitude, longitude) {
-  return new Promise((resolve) => {
-    const q = getGeo();
-    if (!q) return resolve('');
-    q.reverseGeocoder({
-      location: { latitude, longitude },
-      success: (res) => resolve((res && res.result && res.result.address) || ''),
-      fail: () => resolve(''),
+async function reverseGeocode(latitude, longitude) {
+  try {
+    const res = await api.get('/geo/reverse', {
+      lat: latitude,
+      lng: longitude,
     });
-  });
+    return (res && res.address) || '';
+  } catch {
+    return '';
+  }
 }
 
 module.exports = { reverseGeocode };
