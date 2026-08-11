@@ -5,8 +5,6 @@
  * props: activityId, activity(指标), mapPoints, miniCodeUrl
  * 方法: preview()；事件: posterready({ path }) 海报临时路径
  */
-const api = require('../../services/api');
-
 Component({
   properties: {
     activityId: { type: String, value: '' },
@@ -30,17 +28,7 @@ Component({
         // 等弹窗渲染出 canvas
         await new Promise((r) => setTimeout(r, 150));
 
-        let codeUrl = this.data.miniCodeUrl;
-        if (!codeUrl && this.data.activityId) {
-          try {
-            const res = await api.post('/share/mini-code', { activityId: this.data.activityId });
-            codeUrl = res.url || '';
-          } catch {
-            codeUrl = '';
-          }
-        }
-
-        await this.drawPoster(codeUrl);
+        await this.drawPoster();
         // 转临时文件（保存/分享用）
         const path = await this.toTempFile();
         this.setData({ previewPath: path });
@@ -54,8 +42,8 @@ Component({
       }
     },
 
-    /** 绘制海报到预览弹窗内的 canvas */
-    drawPoster(codeUrl) {
+    /** 绘制海报到预览弹窗内的 canvas（无小程序码） */
+    drawPoster() {
       return new Promise((resolve, reject) => {
         wx.createSelectorQuery()
           .in(this)
@@ -95,12 +83,7 @@ Component({
             // 指标卡片（时长/配速/消耗 独立卡）
             this.drawStatsCards(ctx, width, height, act);
 
-            const finish = () => resolve();
-            if (codeUrl) {
-              this.drawCode(ctx, codeUrl, width, height).then(finish).catch(finish);
-            } else {
-              finish();
-            }
+            resolve();
           });
       });
     },
@@ -259,8 +242,8 @@ Component({
         ctx.textBaseline = 'alphabetic';
       });
 
-      // 品牌行（码上方）：左时间 + 右 @小迹一下（水平居右）
-      const brandY = height - 80;
+      // 品牌行（底部）：左时间 + 右 @小迹一下（水平居右）
+      const brandY = height - 20;
       if (act.startTimeText) {
         ctx.fillStyle = 'rgba(255,255,255,0.8)';
         ctx.font = '11px sans-serif';
@@ -271,25 +254,6 @@ Component({
       ctx.font = '13px sans-serif';
       ctx.textAlign = 'right';
       ctx.fillText('@小迹一下', width - 14, brandY);
-    },
-
-    drawCode(ctx, codeUrl, width, height) {
-      return new Promise((resolve) => {
-        // Canvas 2D 必须用 canvas.createImage() 加载图片（img.path 字符串不合法）
-        const canvas = this._canvasNode;
-        const image = canvas.createImage();
-        image.onload = () => {
-          const size = 64;
-          const x = width - size - 14;
-          const y = height - size - 10; // 右下角（品牌行下方）
-          ctx.fillStyle = '#fff';
-          ctx.fillRect(x - 5, y - 5, size + 10, size + 10);
-          ctx.drawImage(image, x, y, size, size);
-          resolve();
-        };
-        image.onerror = () => resolve(); // 码加载失败不阻塞海报
-        image.src = codeUrl;
-      });
     },
 
     /** 保存到相册 */
