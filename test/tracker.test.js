@@ -55,17 +55,26 @@ test('指标：配速/卡路里/爬升死区/最高海拔', () => {
   const t = new Tracker('hiking', 65, () => clock);
   t.addPoint(P(30, 120, 100));
   clock += 5000;
-  t.addPoint(P(30.0001, 120, 105)); // +5m
+  t.addPoint(P(30.001, 120, 105)); // +5m（间隔 ~111m，> 200m 配速有效）
   clock += 5000;
-  t.addPoint(P(30.0002, 120, 102)); // -3m 不计
+  t.addPoint(P(30.002, 120, 102)); // -3m 不计
   clock += 5000;
-  t.addPoint(P(30.0003, 120, 107)); // +5m
+  t.addPoint(P(30.003, 120, 107)); // +5m
   const s = t.getStats();
   assert.equal(s.elevationGain, 10);
   assert.equal(s.maxAltitude, 107);
-  assert.ok(s.distance > 0);
+  assert.ok(s.distance > 300);
   assert.ok(s.calories > 0);
   assert.ok(s.pace !== null, 'hiking 应展示配速');
+});
+
+test('配速：距离过短（<200m）不展示（显示 —）', () => {
+  let clock = 0;
+  const t = new Tracker('running', 60, () => clock);
+  t.addPoint(P(30, 120));
+  clock += 5000;
+  t.addPoint(P(30.0005, 120)); // 约 55m < 200m
+  assert.equal(t.getStats().pace, null);
 });
 
 test('配速：游泳/骑行返回 null（不展示配速）', () => {
