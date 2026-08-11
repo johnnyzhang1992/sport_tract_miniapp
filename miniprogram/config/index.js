@@ -1,9 +1,19 @@
 /**
  * ============================================================
- *  全局配置中心 —— 所有需要"填真值"的配置项集中在这里
+ *  全局配置中心 —— 所有需要“填真值”的配置项集中在这里
  *  每一项的取值说明与准备方式见项目根 README.md「待配置清单」
  * ============================================================
  */
+
+/** 读取本地私有配置（config/index.local.js，已被 gitignore，放敏感 key） */
+function loadLocalConfig() {
+  try {
+    return require('./index.local.js') || {};
+  } catch {
+    return {};
+  }
+}
+
 module.exports = {
   /**
    * 后端 API 地址（必填）
@@ -14,11 +24,11 @@ module.exports = {
   API_BASE_URL: 'http://192.168.31.138:3004',
 
   /**
-   * 腾讯位置服务 Key（必填，逆地理编码/地址解析用）
-   * 申请：https://lbs.qq.com → 控制台 → 创建应用（微信小程序类型，需填 AppID）
-   * 配套依赖 qqmap-wx-jssdk（见 docs/03-前端页面架构.md），后续在 services/geo.js 引入
+   * 腾讯位置服务 Key（逆地理编码/地址解析用，敏感配置：
+   * 实际值在 config/index.local.js（已被 gitignore），这里从本地文件读取）
+   * 申请：https://lbs.qq.com → 控制台 → 创建应用（勾选 WebService API，绑定 AppID）
    */
-  TENCENT_MAP_KEY: "TENCENT_KEY_REMOVED",
+  TENCENT_MAP_KEY: loadLocalConfig().TENCENT_MAP_KEY || '',
 
   /**
    * 阿里云 OSS 直传（配合后端 /api/oss/sts 签发凭证；后端见 sport_track_api/.env）
