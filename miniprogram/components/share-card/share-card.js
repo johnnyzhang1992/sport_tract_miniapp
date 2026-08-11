@@ -211,7 +211,7 @@ Component({
       const cards = [
         { label: '时长', value: act.durationText || '—' },
         { label: '配速', value: paceText },
-        { label: '消耗', value: `${act.calories || 0} kcal` },
+        { label: '消耗', value: `${act.calories || 0} 千卡` },
       ];
       const top = 248;
       const cardH = 66;
