@@ -197,9 +197,18 @@ Page({
     this.setData({ markerBusy: true, markerFormVisible: false });
 
     try {
-      // 照片直传 OSS（未配置时返回 null 降级）
+      // 照片直传 OSS（先微信合规检测，违规拦截；未配置降级）
       wx.showLoading({ title: '保存打点…' });
-      const photoUrl = photoTempFile ? await uploadPhoto(photoTempFile) : '';
+      let photoUrl = '';
+      if (photoTempFile) {
+        const up = await uploadPhoto(photoTempFile);
+        if (up && up.blocked) {
+          wx.hideLoading();
+          wx.showToast({ title: '图片包含不当内容', icon: 'none' });
+          return;
+        }
+        photoUrl = up ? up.url : '';
+      }
 
       const marker = {
         id: `m_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
