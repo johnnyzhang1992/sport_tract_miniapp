@@ -96,7 +96,7 @@
   white-space: nowrap;
 }
 .metric-label {
-  font-size: 18rpx;
+  font-size: 22rpx;
   color: #999;
   margin-top: 4rpx;
   white-space: nowrap;
