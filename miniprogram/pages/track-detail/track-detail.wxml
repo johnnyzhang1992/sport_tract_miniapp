@@ -57,15 +57,9 @@
         <view class="metric-label">千卡</view>
       </view>
     </view>
-    <view class="text-muted detail-sub" wx:if="{{activity.elevationGain}}">
-      累计爬升 {{activity.elevationGain}}m · 最高海拔 {{activity.maxAltitude || '—'}}m · 打点 {{markerList.length}} 个
+    <view class="text-muted detail-sub" wx:if="{{markerList.length > 0}}">
+      打点 {{markerList.length}} 个
     </view>
-  </view>
-
-  <!-- 海拔曲线（决策 F31：仅供参考） -->
-  <view class="card" wx:if="{{altitudeChart.length > 1}}">
-    <view class="detail-title">海拔曲线 <text class="text-muted" style="font-size:22rpx">（GPS 参考，可能有偏差）</text></view>
-    <stat-chart data="{{altitudeChart}}" type="line" unit="m" height="{{150}}" empty-text="暂无海拔数据" />
   </view>
 
   <!-- 打点时间线（点击可编辑） -->

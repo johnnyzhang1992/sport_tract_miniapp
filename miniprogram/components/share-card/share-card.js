@@ -154,11 +154,23 @@ Component({
       const plotTop = card.y + innerPad;
       const plotBottom = card.y + card.h - innerPad;
 
-      // 轨迹线（完整展示，收在框内）
-      ctx.strokeStyle = '#ffd24d';
-      ctx.lineWidth = 5;
+      // 轨迹线：双层描边（白色底层 + 黄色主体），与蓝色背景对比强烈
       ctx.lineJoin = 'round';
       ctx.lineCap = 'round';
+      // 白色底层
+      ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+      ctx.lineWidth = 8;
+      ctx.beginPath();
+      pts.forEach((p, i) => {
+        const x = plotLeft + ((p.lng - minLng) / sLng) * (plotRight - plotLeft);
+        const y = plotBottom - ((p.lat - minLat) / sLat) * (plotBottom - plotTop);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+      // 黄色主体
+      ctx.strokeStyle = '#FFE066';
+      ctx.lineWidth = 4;
       ctx.beginPath();
       pts.forEach((p, i) => {
         const x = plotLeft + ((p.lng - minLng) / sLng) * (plotRight - plotLeft);
@@ -177,16 +189,17 @@ Component({
       const lY = plotBottom - ((last.lat - minLat) / sLat) * (plotBottom - plotTop);
       ctx.fillStyle = '#fff';
       ctx.beginPath();
-      ctx.arc(fX, fY, 6, 0, Math.PI * 2);
+      ctx.arc(fX, fY, 7, 0, Math.PI * 2);
       ctx.fill();
       ctx.beginPath();
-      ctx.arc(lX, lY, 6, 0, Math.PI * 2);
+      ctx.arc(lX, lY, 7, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = '#1a4fd0';
-      ctx.font = 'bold 14px sans-serif';
+      // 起/终标签：深蓝底白字（对比强）
+      ctx.fillStyle = '#0d2b7a';
+      ctx.font = 'bold 12px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('起', fX, fY - 10);
-      ctx.fillText('终', lX, lY - 10);
+      ctx.fillText('起', fX, fY + 4);
+      ctx.fillText('终', lX, lY + 4);
     },
 
     /** 指标独立卡片：时长 / 配速 / 消耗 */
@@ -271,6 +284,9 @@ Component({
     closePreview() {
       this.setData({ previewVisible: false });
     },
+
+    /** 弹窗内触摸穿透拦截 */
+    noop() {},
 
     handleAlbumFail(e) {
       if (String(e.errMsg || '').includes('auth deny') || String(e.errMsg || '').includes('authorize')) {
