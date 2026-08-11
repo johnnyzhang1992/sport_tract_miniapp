@@ -37,11 +37,14 @@
       </view>
     </view>
 
-    <!-- 新选照片 -->
-    <view class="photo-grid" wx:if="{{photos.length > 0}}">
-      <view wx:for="{{photos}}" wx:key="*this" class="photo-item">
-        <image class="photo-img" src="{{item}}" mode="aspectFill" />
-        <view class="photo-remove" data-idx="{{index}}" bindtap="removePhoto">✕</view>
+    <!-- 新选照片（未上传） -->
+    <view class="photo-section" wx:if="{{photos.length > 0}}">
+      <view class="photo-label">新照片（未上传）</view>
+      <view class="photo-grid">
+        <view wx:for="{{photos}}" wx:key="*this" class="photo-item">
+          <image class="photo-img" src="{{item}}" mode="aspectFill" />
+          <view class="photo-remove" data-idx="{{index}}" bindtap="removePhoto">✕</view>
+        </view>
       </view>
     </view>
 
