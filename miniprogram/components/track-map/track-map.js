@@ -189,6 +189,7 @@ Component({
      */
     startReplay(points, opts = {}) {
       this.stopReplay();
+      this._replayStopped = false;
       const pts = (points || []).filter(
         (p) => p && Number.isFinite(p.lat) && Number.isFinite(p.lng),
       );
@@ -227,17 +228,24 @@ Component({
     },
 
     stopReplay() {
-      if (this._replayIdx == null) return;
+      if (this._replayIdx == null && !this._replayStopped) return;
+      // 标记停止：正在进行的 translateMarker 动画让其自然结束，回调检测标志不再继续
+      this._replayStopped = true;
       this._replayIdx = null;
       this._replayPoints = null;
-      // 移除回放 marker
-      this.setData({
-        displayMarkers: (this.data.displayMarkers || []).filter((m) => m.id !== 100001),
-      });
+      // 延迟移除回放 marker：避免动画中途移除 marker 触发渲染层崩溃（faceTo）
+      setTimeout(() => {
+        if (this._replayStopped) {
+          this.setData({
+            displayMarkers: (this.data.displayMarkers || []).filter((m) => m.id !== 100001),
+          });
+        }
+      }, 400);
     },
 
     _moveNextReplaySegment() {
-      if (this._replayIdx == null || !this._replayPoints) return;
+      // 停止标记或状态已清空则不再继续
+      if (this._replayStopped || this._replayIdx == null || !this._replayPoints) return;
       const pts = this._replayPoints;
       const idx = this._replayIdx;
       if (idx >= pts.length - 1) {
@@ -256,6 +264,10 @@ Component({
         destination: { latitude: to.lat, longitude: to.lng },
         duration,
         animationEnd: () => {
+          if (this._replayStopped) {
+            this._replayIdx = null;
+            return;
+          }
           this._replayIdx = idx + 1;
           this._moveNextReplaySegment();
         },
