@@ -1,0 +1,4 @@
+<view class="stat-chart">
+  <canvas type="2d" id="chartCanvas" class="chart-canvas" style="height: {{height}}px"></canvas>
+  <view class="chart-empty" wx:if="{{!hasData}}">{{emptyText}}</view>
+</view>

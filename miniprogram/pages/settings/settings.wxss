@@ -1,16 +1,58 @@
-.placeholder {
-  text-align: center;
-  padding: 100rpx 40rpx;
-}
-.placeholder-icon {
-  font-size: 80rpx;
-}
-.placeholder-title {
-  font-size: 34rpx;
-  font-weight: 600;
-  margin: 24rpx 0 12rpx;
-}
-.placeholder-desc {
+.field-label {
   font-size: 28rpx;
   color: #666;
+  margin-bottom: 16rpx;
+}
+.gender-row {
+  display: flex;
+}
+.gender-item {
+  flex: 1;
+  text-align: center;
+  padding: 20rpx 0;
+  border-radius: 12rpx;
+  background: #f7f8fa;
+  margin-right: 16rpx;
+  font-size: 28rpx;
+}
+.gender-item:last-child {
+  margin-right: 0;
+}
+.gender-active {
+  background: #eef4ff;
+  color: #2b6cf6;
+  border: 2rpx solid #2b6cf6;
+}
+.type-grid {
+  display: flex;
+  flex-wrap: wrap;
+}
+.type-item {
+  width: 33.33%;
+  box-sizing: border-box;
+  padding: 16rpx 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-radius: 12rpx;
+  border: 2rpx solid transparent;
+}
+.type-item-active {
+  background: #eef4ff;
+  border-color: #2b6cf6;
+}
+.type-icon {
+  font-size: 44rpx;
+}
+.type-label {
+  font-size: 24rpx;
+  margin-top: 6rpx;
+}
+.switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.switch-title {
+  font-size: 30rpx;
 }

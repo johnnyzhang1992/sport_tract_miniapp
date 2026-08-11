@@ -1,7 +1,44 @@
 <view class="container">
-  <view class="card placeholder">
-    <view class="placeholder-icon">⚙️</view>
-    <view class="placeholder-title">设置</view>
-    <view class="placeholder-desc">单位切换 / 默认运动类型 / 高精度定位开关（M4）</view>
+  <!-- 单位 -->
+  <view class="card">
+    <view class="field-label">单位制式</view>
+    <view class="gender-row">
+      <view class="gender-item {{settings.unit === 'metric' ? 'gender-active' : ''}}" data-value="metric" bindtap="onUnitChange">公制（km）</view>
+      <view class="gender-item {{settings.unit === 'imperial' ? 'gender-active' : ''}}" data-value="imperial" bindtap="onUnitChange">英制（mi）</view>
+    </view>
   </view>
+
+  <!-- 默认运动类型 -->
+  <view class="card">
+    <view class="field-label">默认运动类型</view>
+    <view class="type-grid">
+      <view
+        wx:for="{{activityTypes}}"
+        wx:key="type"
+        class="type-item {{settings.defaultType === item.type ? 'type-item-active' : ''}}"
+        data-type="{{item.type}}"
+        bindtap="onDefaultTypeChange"
+      >
+        <view class="type-icon">{{item.icon}}</view>
+        <view class="type-label">{{item.label}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 高精度定位 -->
+  <view class="card switch-row">
+    <view class="switch-info">
+      <view class="switch-title">高精度定位</view>
+      <view class="text-muted">采集海拔与更准轨迹，更耗电</view>
+    </view>
+    <t-switch value="{{settings.highAccuracy}}" bind:change="onHighAccuracyChange" />
+  </view>
+
+  <t-button
+    theme="primary"
+    size="large"
+    block
+    loading="{{saving}}"
+    bind:tap="save"
+  >保存</t-button>
 </view>

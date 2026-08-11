@@ -3,6 +3,7 @@
   "usingComponents": {
     "track-map": "/components/track-map/track-map",
     "marker-form": "/components/marker-form/marker-form",
+    "stat-chart": "/components/stat-chart/stat-chart",
     "t-button": "tdesign-miniprogram/button/button",
     "t-tag": "tdesign-miniprogram/tag/tag"
   }
