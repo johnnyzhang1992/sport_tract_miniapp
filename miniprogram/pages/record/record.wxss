@@ -1,19 +1,122 @@
-.placeholder {
+.record-page {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+.map-wrap {
+  position: absolute;
+  inset: 0;
+}
+.layer-btn {
+  position: absolute;
+  top: 24rpx;
+  right: 24rpx;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 999rpx;
+  padding: 12rpx 24rpx;
+  font-size: 24rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
+}
+.stats-wrap {
+  position: absolute;
+  left: 24rpx;
+  right: 24rpx;
+  top: 100rpx;
+  z-index: 10;
+}
+.action-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 24rpx 0 calc(24rpx + env(safe-area-inset-bottom));
+  background: linear-gradient(transparent, rgba(255, 255, 255, 0.95) 30%);
+  display: flex;
+  justify-content: space-around;
+  z-index: 10;
+}
+.action-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.action-icon {
+  font-size: 44rpx;
+  width: 96rpx;
+  height: 96rpx;
+  background: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.12);
+}
+.action-icon.big {
+  font-size: 52rpx;
+}
+.action-icon.danger {
+  color: #ff4d4f;
+}
+.action-label {
+  font-size: 22rpx;
+  color: #666;
+  margin-top: 8rpx;
+}
+.mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.confirm-dialog {
+  width: 600rpx;
+  background: #fff;
+  border-radius: 24rpx;
+  padding: 48rpx 40rpx 40rpx;
   text-align: center;
-  padding: 100rpx 40rpx;
 }
-.placeholder-icon {
-  font-size: 80rpx;
-}
-.placeholder-title {
+.confirm-title {
   font-size: 34rpx;
   font-weight: 600;
-  margin: 24rpx 0 12rpx;
 }
-.placeholder-desc {
-  font-size: 28rpx;
+.confirm-sub {
+  margin-top: 16rpx;
+}
+.confirm-actions {
+  display: flex;
+  margin-top: 40rpx;
+}
+.btn-cancel,
+.btn-confirm {
+  flex: 1;
+  height: 88rpx;
+  line-height: 88rpx;
+  border-radius: 999rpx;
+  font-size: 30rpx;
+}
+.btn-cancel {
+  background: #f2f3f5;
   color: #666;
+  margin-right: 20rpx;
 }
-.placeholder-tip {
-  margin-top: 24rpx;
+.btn-confirm {
+  background: #2b6cf6;
+  color: #fff;
+}
+.init-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.9);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.init-box {
+  font-size: 32rpx;
+  color: #666;
 }

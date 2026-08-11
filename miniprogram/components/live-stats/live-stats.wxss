@@ -1,0 +1,37 @@
+.live-stats {
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 20rpx;
+  padding: 24rpx;
+  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.08);
+}
+.stats-grid {
+  display: flex;
+  flex-wrap: wrap;
+}
+.stat {
+  width: 33.33%;
+  text-align: center;
+  padding: 12rpx 0;
+}
+.stat-main .stat-value {
+  color: #2b6cf6;
+}
+.stat-value {
+  font-size: 36rpx;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.stat-unit {
+  font-size: 22rpx;
+  color: #999;
+  margin-top: 4rpx;
+}
+.pause-tip {
+  text-align: center;
+  color: #ff9800;
+  font-size: 26rpx;
+  margin-top: 8rpx;
+}
+.paused {
+  opacity: 0.85;
+}

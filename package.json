@@ -3,7 +3,11 @@
   "version": "0.1.0",
   "description": "运动轨迹记录小程序（tdesign-miniprogram）",
   "private": true,
+  "scripts": {
+    "test": "node --test"
+  },
   "dependencies": {
+    "qqmap-wx-jssdk": "^1.0.0",
     "tdesign-miniprogram": "^1.16.0"
   }
 }

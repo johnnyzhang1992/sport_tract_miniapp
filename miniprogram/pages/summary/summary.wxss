@@ -1,16 +1,72 @@
-.placeholder {
+.map-card {
+  height: 420rpx;
+  border-radius: 16rpx;
+  overflow: hidden;
+  margin-bottom: 24rpx;
+  background: #eef1f5;
+}
+.summary-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  margin-bottom: 20rpx;
+}
+.metrics-grid {
+  display: flex;
+  background: #f7f8fa;
+  border-radius: 12rpx;
+  padding: 24rpx 0;
+}
+.metric {
+  flex: 1;
   text-align: center;
-  padding: 100rpx 40rpx;
 }
-.placeholder-icon {
-  font-size: 80rpx;
-}
-.placeholder-title {
+.metric-num {
   font-size: 34rpx;
   font-weight: 600;
-  margin: 24rpx 0 12rpx;
 }
-.placeholder-desc {
+.metric-label {
+  font-size: 22rpx;
+  color: #999;
+  margin-top: 4rpx;
+}
+.sub {
+  margin-top: 16rpx;
+}
+.marker-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+.marker-item:last-child {
+  border-bottom: none;
+}
+.marker-icon {
+  font-size: 36rpx;
+  margin-right: 16rpx;
+}
+.marker-note {
   font-size: 28rpx;
+}
+.actions {
+  display: flex;
+  padding-bottom: 40rpx;
+}
+.btn-discard,
+.btn-save {
+  flex: 1;
+  height: 92rpx;
+  line-height: 92rpx;
+  border-radius: 999rpx;
+  font-size: 32rpx;
+}
+.btn-discard {
+  background: #fff;
   color: #666;
+  border: 2rpx solid #ddd;
+  margin-right: 20rpx;
+}
+.btn-save {
+  background: #2b6cf6;
+  color: #fff;
 }
