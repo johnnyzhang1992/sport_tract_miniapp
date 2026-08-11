@@ -26,6 +26,7 @@ Page({
     editMode: false,
     editMarker: null,
     markerBusy: false,
+    fullscreen: false,
   },
 
   onLoad(options) {
@@ -250,6 +251,24 @@ Page({
       wx.showToast({ title: '组件未就绪', icon: 'none' });
     }
   },
+
+  /** 全屏展示地图 */
+  openFullscreen() {
+    this.setData({ fullscreen: true });
+  },
+
+  closeFullscreen() {
+    this.setData({ fullscreen: false });
+  },
+
+  /** 全屏地图图层切换（与页面 mapType 同步） */
+  fsSwitchLayer() {
+    this.setData({ mapType: this.data.mapType === 'standard' ? 'satellite' : 'standard' });
+    const map = this.selectComponent('#fullscreenMap');
+    if (map && typeof map.switchLayer === 'function') map.switchLayer();
+  },
+
+  noop() {},
 
   /** 导出 GPX */
   exportGpx() {

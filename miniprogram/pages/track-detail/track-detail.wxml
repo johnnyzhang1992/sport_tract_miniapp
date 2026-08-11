@@ -1,5 +1,5 @@
 <view class="container" wx:if="{{activity}}">
-  <!-- 轨迹图（view 模式自动 fitView）+ 图层切换 + 回放 -->
+  <!-- 轨迹图（view 模式自动 fitView）+ 图层切换 + 回放 + 全屏 -->
   <view class="map-wrap">
     <track-map
       id="detailMap"
@@ -15,6 +15,24 @@
     </view>
     <view class="replay-btn {{replaying ? 'replay-btn-active' : ''}}" bindtap="startReplay">
       {{replaying ? '⏹ 停止' : '▶️ 回放'}}
+    </view>
+    <view class="fullscreen-btn" bindtap="openFullscreen">⛶ 全屏</view>
+  </view>
+
+  <!-- 全屏地图弹窗 -->
+  <view class="fullscreen-mask" wx:if="{{fullscreen}}" catchtouchmove="noop">
+    <view class="fullscreen-close" bindtap="closeFullscreen">✕</view>
+    <view class="fullscreen-layer" bindtap="fsSwitchLayer">
+      {{mapType === 'standard' ? '🛰️ 卫星' : '🗺️ 标准'}}
+    </view>
+    <view class="fullscreen-map-wrap">
+      <track-map
+        id="fullscreenMap"
+        points="{{mapPoints}}"
+        markers="{{markers}}"
+        mapType="{{mapType}}"
+        mode="view"
+      />
     </view>
   </view>
 
