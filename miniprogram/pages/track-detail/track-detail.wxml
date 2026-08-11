@@ -88,8 +88,8 @@
     </view>
   </view>
 
-  <!-- 操作 -->
-  <view class="card actions">
+  <!-- 操作（固定底部） -->
+  <view class="fixed-actions">
     <t-button variant="outline" size="medium" block bind:tap="addMarker">＋ 补打点</t-button>
     <t-button variant="outline" size="medium" block bind:tap="sharePoster">🎨 分享海报</t-button>
     <t-button variant="outline" size="medium" block bind:tap="exportGpx">导出 GPX</t-button>

@@ -123,12 +123,24 @@
 .marker-note {
   font-size: 28rpx;
 }
-.actions {
-  display: flex;
+.container {
+  padding-bottom: 180rpx;
 }
-.actions t-button {
+/* 固定底部操作栏 */
+.fixed-actions {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  padding: 16rpx 24rpx calc(16rpx + env(safe-area-inset-bottom));
+  background: #fff;
+  box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.06);
+  z-index: 100;
+}
+.fixed-actions t-button {
   flex: 1;
 }
-.actions t-button:first-child {
-  margin-right: 20rpx;
+.fixed-actions t-button + t-button {
+  margin-left: 16rpx;
 }
