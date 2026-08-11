@@ -1,0 +1,18 @@
+.stat-chart {
+  position: relative;
+  width: 100%;
+}
+.chart-canvas {
+  width: 100%;
+}
+.chart-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #bbb;
+  font-size: 24rpx;
+  background: #fafbfc;
+  border-radius: 12rpx;
+}

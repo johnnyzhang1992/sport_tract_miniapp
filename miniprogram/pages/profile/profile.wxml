@@ -1,7 +1,42 @@
 <view class="container">
-  <view class="card placeholder">
-    <view class="placeholder-icon">👤</view>
-    <view class="placeholder-title">资料编辑</view>
-    <view class="placeholder-desc">头像上传 OSS + 昵称修改（M4）</view>
+  <!-- 头像 -->
+  <view class="card avatar-card">
+    <view class="avatar-wrap" bindtap="chooseAvatar" hover-class="avatar-hover">
+      <image wx:if="{{avatarTemp || avatarUrl}}" class="avatar-img" src="{{avatarTemp || avatarUrl}}" mode="aspectFill" />
+      <view wx:else class="avatar-placeholder">👤</view>
+      <view class="avatar-edit">更换头像</view>
+    </view>
   </view>
+
+  <!-- 昵称 -->
+  <view class="card">
+    <view class="field-label">昵称</view>
+    <input
+      class="field-input"
+      type="nickname"
+      placeholder="请输入昵称"
+      value="{{nickname}}"
+      bindinput="onNicknameInput"
+      maxlength="30"
+    />
+    <view class="text-muted field-tip">昵称将经过微信内容安全检测</view>
+  </view>
+
+  <!-- 性别 -->
+  <view class="card">
+    <view class="field-label">性别</view>
+    <view class="gender-row">
+      <view class="gender-item {{gender === 0 ? 'gender-active' : ''}}" data-gender="0" bindtap="onGenderTap">保密</view>
+      <view class="gender-item {{gender === 1 ? 'gender-active' : ''}}" data-gender="1" bindtap="onGenderTap">男</view>
+      <view class="gender-item {{gender === 2 ? 'gender-active' : ''}}" data-gender="2" bindtap="onGenderTap">女</view>
+    </view>
+  </view>
+
+  <t-button
+    theme="primary"
+    size="large"
+    block
+    loading="{{saving}}"
+    bind:tap="save"
+  >保存</t-button>
 </view>

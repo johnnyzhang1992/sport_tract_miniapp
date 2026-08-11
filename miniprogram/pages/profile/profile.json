@@ -1,1 +1,6 @@
-{"navigationBarTitleText": "资料编辑"}
+{
+  "navigationBarTitleText": "资料编辑",
+  "usingComponents": {
+    "t-button": "tdesign-miniprogram/button/button"
+  }
+}

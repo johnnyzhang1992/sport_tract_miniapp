@@ -1,7 +1,54 @@
-<view class="container">
-  <view class="card placeholder">
-    <view class="placeholder-icon">📈</view>
-    <view class="placeholder-title">数据统计</view>
-    <view class="placeholder-desc">今日/本周/本月概览 + 7/30 天趋势图（M4）</view>
+<view class="container" wx:if="{{overview}}">
+  <!-- 累计概览 -->
+  <view class="card">
+    <view class="section-title">累计</view>
+    <view class="overview-grid">
+      <view class="ov-item">
+        <view class="ov-num">{{overview.total.distanceKm}}</view>
+        <view class="ov-label">公里</view>
+      </view>
+      <view class="ov-item">
+        <view class="ov-num">{{overview.total.durationText}}</view>
+        <view class="ov-label">时长</view>
+      </view>
+      <view class="ov-item">
+        <view class="ov-num">{{overview.total.count}}</view>
+        <view class="ov-label">次数</view>
+      </view>
+      <view class="ov-item">
+        <view class="ov-num">{{overview.total.elevationGain}}</view>
+        <view class="ov-label">爬升 m</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 周期明细 -->
+  <view class="card">
+    <view class="period-row">
+      <view class="period-item">
+        <view class="period-num">{{overview.today.distanceKm}}</view>
+        <view class="period-label">今日 km</view>
+      </view>
+      <view class="period-item">
+        <view class="period-num">{{overview.week.distanceKm}}</view>
+        <view class="period-label">本周 km</view>
+      </view>
+      <view class="period-item">
+        <view class="period-num">{{overview.month.distanceKm}}</view>
+        <view class="period-label">本月 km</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 趋势柱状图 -->
+  <view class="card">
+    <view class="chart-head">
+      <view class="section-title">距离趋势（公里）</view>
+      <view class="days-toggle">
+        <view class="day-btn {{days === 7 ? 'day-btn-active' : ''}}" data-days="7" bindtap="onDaysChange">7天</view>
+        <view class="day-btn {{days === 30 ? 'day-btn-active' : ''}}" data-days="30" bindtap="onDaysChange">30天</view>
+      </view>
+    </view>
+    <stat-chart data="{{chartData}}" type="bar" unit="km" height="{{230}}" empty-text="暂无运动数据" />
   </view>
 </view>

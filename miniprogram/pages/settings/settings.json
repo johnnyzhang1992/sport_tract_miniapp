@@ -1,1 +1,7 @@
-{"navigationBarTitleText": "设置"}
+{
+  "navigationBarTitleText": "设置",
+  "usingComponents": {
+    "t-button": "tdesign-miniprogram/button/button",
+    "t-switch": "tdesign-miniprogram/switch/switch"
+  }
+}

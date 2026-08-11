@@ -1,1 +1,10 @@
-{"navigationBarTitleText": "数据统计"}
+{
+  "navigationBarTitleText": "数据统计",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark",
+  "usingComponents": {
+    "stat-chart": "/components/stat-chart/stat-chart",
+    "t-tabs": "tdesign-miniprogram/tabs/tabs",
+    "t-tab-panel": "tdesign-miniprogram/tab-panel/tab-panel"
+  }
+}
