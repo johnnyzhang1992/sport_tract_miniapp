@@ -1,6 +1,6 @@
 <view class="container">
   <!-- 用户卡片 -->
-  <view class="card user-card" bindtap="goProfile">
+  <view class="card user-card hover-card" hover-class="card-hover" hover-stay-time="100" bindtap="goProfile">
     <t-avatar
       class="user-avatar"
       image="{{user.avatarUrl || ''}}"

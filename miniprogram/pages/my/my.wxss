@@ -3,6 +3,10 @@
   align-items: center;
   padding: 40rpx 28rpx;
 }
+.card-hover {
+  opacity: 0.7;
+  transform: scale(0.99);
+}
 .user-avatar {
   margin-right: 24rpx;
 }
