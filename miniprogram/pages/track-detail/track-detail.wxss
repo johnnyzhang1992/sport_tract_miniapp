@@ -1,0 +1,66 @@
+.map-placeholder {
+  height: 360rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #eef1f5;
+}
+.map-placeholder-text {
+  color: #999;
+}
+.detail-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  margin-bottom: 20rpx;
+}
+.track-metrics {
+  display: flex;
+  background: #f7f8fa;
+  border-radius: 12rpx;
+  padding: 24rpx 0;
+}
+.metric {
+  flex: 1;
+  text-align: center;
+}
+.metric-num {
+  font-size: 34rpx;
+  font-weight: 600;
+}
+.metric-label {
+  font-size: 22rpx;
+  color: #999;
+  margin-top: 4rpx;
+}
+.detail-sub {
+  margin-top: 16rpx;
+}
+.marker-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+.marker-item:last-child {
+  border-bottom: none;
+}
+.marker-icon {
+  font-size: 40rpx;
+  margin-right: 20rpx;
+}
+.marker-note {
+  font-size: 28rpx;
+}
+.actions {
+  display: flex;
+}
+.btn-outline {
+  flex: 1;
+  background: #fff;
+  border: 2rpx solid #2b6cf6;
+  color: #2b6cf6;
+  border-radius: 999rpx;
+  height: 84rpx;
+  line-height: 84rpx;
+  font-size: 30rpx;
+}

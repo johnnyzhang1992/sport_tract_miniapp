@@ -1,0 +1,19 @@
+.placeholder {
+  text-align: center;
+  padding: 100rpx 40rpx;
+}
+.placeholder-icon {
+  font-size: 80rpx;
+}
+.placeholder-title {
+  font-size: 34rpx;
+  font-weight: 600;
+  margin: 24rpx 0 12rpx;
+}
+.placeholder-desc {
+  font-size: 28rpx;
+  color: #666;
+}
+.placeholder-tip {
+  margin-top: 24rpx;
+}

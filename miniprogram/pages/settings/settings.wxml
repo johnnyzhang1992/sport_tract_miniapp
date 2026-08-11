@@ -1,0 +1,7 @@
+<view class="container">
+  <view class="card placeholder">
+    <view class="placeholder-icon">⚙️</view>
+    <view class="placeholder-title">设置</view>
+    <view class="placeholder-desc">单位切换 / 默认运动类型 / 高精度定位开关（M4）</view>
+  </view>
+</view>
