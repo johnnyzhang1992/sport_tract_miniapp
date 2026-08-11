@@ -216,8 +216,9 @@ Component({
             latitude: first.lat,
             longitude: first.lng,
             iconPath: defaultCurrentIcon(),
-            width: 24,
-            height: 24,
+            width: 12,
+            height: 12,
+            anchor: { x: 0.5, y: 0.5 },
           },
         ]),
       });
