@@ -24,7 +24,8 @@ Page({
       this.setData({ loading: true });
       // 刷新资料（PUT/GET /users/me 已实现）
       const user = await api.get('/users/me');
-      this.setData({ user, loggedIn: true });
+      // WXML 不支持字符串下标，预处理好头像首字
+      this.setData({ user: { ...user, avatarText: user.nickname ? user.nickname[0] : '' }, loggedIn: true });
     } catch (e) {
       console.error('加载用户信息失败', e);
     } finally {
