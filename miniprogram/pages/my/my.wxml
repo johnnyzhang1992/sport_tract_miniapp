@@ -1,7 +1,13 @@
 <view class="container">
   <!-- 用户卡片 -->
   <view class="card user-card" bindtap="goProfile">
-    <view class="avatar">{{user.avatarText || '👤'}}</view>
+    <t-avatar
+      class="user-avatar"
+      image="{{user.avatarUrl || ''}}"
+      size="96rpx"
+    >
+      {{user.avatarText || '👤'}}
+    </t-avatar>
     <view class="user-info">
       <view class="user-name">{{user.nickname || '微信用户'}}</view>
       <view class="text-muted">点击编辑资料</view>
@@ -9,18 +15,14 @@
   </view>
 
   <!-- 菜单 -->
-  <view class="card menu">
-    <view class="menu-item" bindtap="goStats">
-      <text class="menu-icon">📈</text>
-      <text class="menu-text">数据统计</text>
-      <text class="menu-arrow">›</text>
-    </view>
-    <view class="menu-item" bindtap="goSettings">
-      <text class="menu-icon">⚙️</text>
-      <text class="menu-text">设置</text>
-      <text class="menu-arrow">›</text>
-    </view>
-  </view>
+  <t-cell-group class="card menu-card">
+    <t-cell title="数据统计" arrow bind:click="goStats">
+      <view slot="left-icon" class="cell-icon">📈</view>
+    </t-cell>
+    <t-cell title="设置" arrow bind:click="goSettings">
+      <view slot="left-icon" class="cell-icon">⚙️</view>
+    </t-cell>
+  </t-cell-group>
 
   <view class="text-muted version-tip">运动轨迹 v0.1 · 骨架版</view>
 </view>

@@ -44,7 +44,21 @@
 
   <!-- 操作 -->
   <view class="actions">
-    <button class="btn-discard" bindtap="discard" disabled="{{saving}}">放弃</button>
-    <button class="btn-save" bindtap="save" disabled="{{saving}}">保存</button>
+    <t-button
+      class="btn-discard"
+      variant="outline"
+      size="large"
+      block
+      disabled="{{saving}}"
+      bind:tap="discard"
+    >放弃</t-button>
+    <t-button
+      class="btn-save"
+      theme="primary"
+      size="large"
+      block
+      loading="{{saving}}"
+      bind:tap="save"
+    >保存</t-button>
   </view>
 </view>

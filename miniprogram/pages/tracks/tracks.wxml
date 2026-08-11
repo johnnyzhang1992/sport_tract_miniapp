@@ -1,16 +1,17 @@
 <view class="container">
-  <!-- 类型筛选 -->
-  <scroll-view scroll-x class="filter-bar" enhanced show-scrollbar="{{false}}">
-    <view
+  <!-- 类型筛选（t-tabs） -->
+  <t-tabs
+    class="filter-tabs"
+    value="{{activeFilter}}"
+    bind:change="onTabChange"
+  >
+    <t-tab-panel
       wx:for="{{filters}}"
       wx:key="type"
-      class="filter-item {{activeFilter === item.type ? 'filter-active' : ''}}"
-      data-type="{{item.type}}"
-      bindtap="onFilterTap"
-    >
-      {{item.label}}
-    </view>
-  </scroll-view>
+      label="{{item.label}}"
+      value="{{item.type}}"
+    />
+  </t-tabs>
 
   <!-- 轨迹列表 -->
   <view wx:if="{{items.length === 0 && !loading}}">
@@ -18,42 +19,19 @@
     <view class="empty" wx:else>加载中…</view>
   </view>
 
-  <view
+  <t-cell
     wx:for="{{items}}"
     wx:key="id"
-    class="card track-card"
+    class="track-cell"
+    hover
+    title="{{item.label}} · {{item.startTimeText}}"
+    description="{{item.distanceKm}}km · {{item.durationText}} · 配速 {{item.paceText}} · {{item.calories}}kcal{{item.markerCount > 0 ? ' · 📍' + item.markerCount : ''}}"
+    arrow
+    bind:click="onTapItem"
     data-id="{{item.id}}"
-    bindtap="onTapItem"
   >
-    <view class="track-head">
-      <view class="track-icon">{{item.icon}}</view>
-      <view class="track-title">
-        <view class="track-label">{{item.label}}</view>
-        <view class="track-time text-muted">{{item.startTimeText}}</view>
-      </view>
-    </view>
-    <view class="track-metrics">
-      <view class="metric">
-        <view class="metric-num">{{item.distanceKm}}</view>
-        <view class="metric-label">公里</view>
-      </view>
-      <view class="metric">
-        <view class="metric-num">{{item.durationText}}</view>
-        <view class="metric-label">时长</view>
-      </view>
-      <view class="metric">
-        <view class="metric-num">{{item.paceText}}</view>
-        <view class="metric-label">配速</view>
-      </view>
-      <view class="metric">
-        <view class="metric-num">{{item.calories}}</view>
-        <view class="metric-label">千卡</view>
-      </view>
-    </view>
-    <view class="track-foot text-muted" wx:if="{{item.markerCount > 0}}">
-      📍 {{item.markerCount}} 个打点
-    </view>
-  </view>
+    <view slot="left-icon" class="cell-icon">{{item.icon}}</view>
+  </t-cell>
 
   <view wx:if="{{loading}}" class="text-muted loading-tip">加载中…</view>
   <view wx:if="{{!hasMore && items.length > 0}}" class="text-muted loading-tip">没有更多了</view>

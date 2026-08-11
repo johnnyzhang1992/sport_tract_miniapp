@@ -39,11 +39,17 @@
         <view class="marker-note">{{item.note || item.typeMeta.label || '打点'}}</view>
         <view class="text-muted">{{item.timeText}}{{item.address ? ' · ' + item.address : ''}}</view>
       </view>
+      <t-tag size="small" variant="light">{{item.typeMeta.label || '打点'}}</t-tag>
     </view>
   </view>
 
   <!-- 操作 -->
   <view class="card actions">
-    <button class="btn-outline" bindtap="exportGpx">导出 GPX</button>
+    <t-button
+      variant="outline"
+      size="medium"
+      block
+      bind:tap="exportGpx"
+    >导出 GPX</t-button>
   </view>
 </view>

@@ -46,5 +46,11 @@
   </view>
 
   <!-- 开始按钮 -->
-  <button class="btn-primary start-btn" bindtap="startRecord">开始运动</button>
+  <t-button
+    class="start-btn"
+    theme="primary"
+    size="large"
+    block
+    bind:tap="startRecord"
+  >开始运动</t-button>
 </view>

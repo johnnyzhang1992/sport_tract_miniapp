@@ -3,7 +3,8 @@
   "usingComponents": {
     "track-map": "/components/track-map/track-map",
     "live-stats": "/components/live-stats/live-stats",
-    "marker-form": "/components/marker-form/marker-form"
+    "marker-form": "/components/marker-form/marker-form",
+    "t-dialog": "tdesign-miniprogram/dialog/dialog"
   },
   "disableScroll": true
 }
