@@ -1,23 +1,20 @@
 <view class="share-card">
-  <!-- 离屏海报画布（不可见） -->
-  <canvas
-    type="2d"
-    id="posterCanvas"
-    class="poster-canvas"
-    style="width: 300px; height: 400px;"
-  ></canvas>
-
-  <!-- 预览弹窗 -->
+  <!-- 预览弹窗：canvas 直接渲染海报（可见区域，canvasToTempFilePath 才可靠） -->
   <view class="preview-mask" wx:if="{{previewVisible}}" catchtouchmove="noop">
     <view class="preview-box">
       <view class="preview-title">分享海报</view>
-      <image class="preview-img" src="{{previewPath}}" mode="widthFix" />
+      <canvas
+        type="2d"
+        id="posterCanvas"
+        class="poster-canvas"
+        style="width: 300px; height: 400px;"
+      ></canvas>
       <view class="preview-actions">
         <button class="preview-btn preview-cancel" bindtap="closePreview">取消</button>
-        <button class="preview-btn preview-save" loading="{{saving}}" bindtap="save">保存到相册</button>
+        <button class="preview-btn preview-save" loading="{{saving}}" bindtap="save">保存</button>
         <button class="preview-btn preview-share" open-type="share">分享给朋友</button>
       </view>
-      <view class="preview-tip">朋友圈：保存到相册后手动发布</view>
+      <view class="preview-tip">朋友圈：保存后手动发布</view>
     </view>
   </view>
 
