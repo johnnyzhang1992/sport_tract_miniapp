@@ -1,0 +1,7 @@
+<view class="container">
+  <view class="card placeholder">
+    <view class="placeholder-icon">📊</view>
+    <view class="placeholder-title">运动摘要</view>
+    <view class="placeholder-desc">轨迹图 + 完整指标 + 打点列表（M2 里程碑）</view>
+  </view>
+</view>

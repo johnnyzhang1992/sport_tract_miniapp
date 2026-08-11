@@ -1,0 +1,50 @@
+<view class="container">
+  <!-- 欢迎语 -->
+  <view class="welcome">
+    <view class="welcome-title">开始一次运动</view>
+    <view class="welcome-sub text-muted">选择类型，记录你的轨迹与风景</view>
+  </view>
+
+  <!-- 运动类型选择 -->
+  <view class="card">
+    <view class="section-title">运动类型</view>
+    <view class="type-grid">
+      <view
+        wx:for="{{activityTypes}}"
+        wx:key="type"
+        class="type-item {{selectedType === item.type ? 'type-item-active' : ''}}"
+        data-type="{{item.type}}"
+        bindtap="selectType"
+      >
+        <view class="type-icon">{{item.icon}}</view>
+        <view class="type-label">{{item.label}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 今日概览 -->
+  <view class="card" wx:if="{{overview}}">
+    <view class="section-title">今日概览</view>
+    <view class="stats-row">
+      <view class="stat-item">
+        <view class="stat-num">{{overview.today.count}}</view>
+        <view class="stat-label">次数</view>
+      </view>
+      <view class="stat-item">
+        <view class="stat-num">{{(overview.today.distance / 1000).toFixed(2)}}</view>
+        <view class="stat-label">公里</view>
+      </view>
+      <view class="stat-item">
+        <view class="stat-num">{{(overview.today.duration / 60).toFixed(0)}}</view>
+        <view class="stat-label">分钟</view>
+      </view>
+      <view class="stat-item">
+        <view class="stat-num">{{overview.today.calories}}</view>
+        <view class="stat-label">千卡</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 开始按钮 -->
+  <button class="btn-primary start-btn" bindtap="startRecord">开始运动</button>
+</view>

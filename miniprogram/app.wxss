@@ -1,0 +1,36 @@
+/**app.wxss 全局样式**/
+page {
+  background: #f6f7f9;
+  color: #333;
+  font-size: 28rpx;
+  line-height: 1.6;
+}
+
+.container {
+  padding: 24rpx;
+}
+
+.card {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 24rpx;
+}
+
+.btn-primary {
+  background: #2b6cf6;
+  color: #fff;
+  border-radius: 999rpx;
+}
+
+.text-muted {
+  color: #999;
+  font-size: 24rpx;
+}
+
+.empty {
+  text-align: center;
+  color: #bbb;
+  padding: 120rpx 0;
+  font-size: 26rpx;
+}

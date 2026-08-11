@@ -1,0 +1,49 @@
+<view class="container" wx:if="{{activity}}">
+  <!-- 轨迹图占位（track-map 组件：M3 实现 polyline + markers + 图层切换） -->
+  <view class="card map-placeholder">
+    <view class="map-placeholder-text">🗺️ 轨迹地图（track-map 组件待实现）</view>
+  </view>
+
+  <!-- 指标 -->
+  <view class="card">
+    <view class="detail-title">{{activity.icon}} {{activity.label}} · {{activity.startTimeText || ''}}</view>
+    <view class="track-metrics">
+      <view class="metric">
+        <view class="metric-num">{{activity.distanceKm}}</view>
+        <view class="metric-label">公里</view>
+      </view>
+      <view class="metric">
+        <view class="metric-num">{{activity.durationText}}</view>
+        <view class="metric-label">时长</view>
+      </view>
+      <view class="metric">
+        <view class="metric-num">{{activity.paceText}}</view>
+        <view class="metric-label">配速</view>
+      </view>
+      <view class="metric">
+        <view class="metric-num">{{activity.calories}}</view>
+        <view class="metric-label">千卡</view>
+      </view>
+    </view>
+    <view class="text-muted detail-sub" wx:if="{{activity.elevationGain}}">
+      累计爬升 {{activity.elevationGain}}m · 最高海拔 {{activity.maxAltitude || '—'}}m
+    </view>
+  </view>
+
+  <!-- 打点时间线 -->
+  <view class="card" wx:if="{{markers.length > 0}}">
+    <view class="detail-title">打点 ({{markers.length}})</view>
+    <view wx:for="{{markers}}" wx:key="id" class="marker-item">
+      <view class="marker-icon">{{item.typeMeta.icon || '📍'}}</view>
+      <view class="marker-body">
+        <view class="marker-note">{{item.note || item.typeMeta.label || '打点'}}</view>
+        <view class="text-muted">{{item.timeText}}{{item.address ? ' · ' + item.address : ''}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 操作 -->
+  <view class="card actions">
+    <button class="btn-outline" bindtap="exportGpx">导出 GPX</button>
+  </view>
+</view>

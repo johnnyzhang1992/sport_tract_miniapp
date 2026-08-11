@@ -1,0 +1,49 @@
+.user-card {
+  display: flex;
+  align-items: center;
+  padding: 40rpx 28rpx;
+}
+.avatar {
+  width: 100rpx;
+  height: 100rpx;
+  border-radius: 50%;
+  background: #eef4ff;
+  color: #2b6cf6;
+  font-size: 44rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 24rpx;
+}
+.user-name {
+  font-size: 34rpx;
+  font-weight: 600;
+}
+.menu {
+  padding: 8rpx 28rpx;
+}
+.menu-item {
+  display: flex;
+  align-items: center;
+  padding: 28rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+.menu-item:last-child {
+  border-bottom: none;
+}
+.menu-icon {
+  font-size: 36rpx;
+  margin-right: 20rpx;
+}
+.menu-text {
+  flex: 1;
+  font-size: 30rpx;
+}
+.menu-arrow {
+  color: #ccc;
+  font-size: 36rpx;
+}
+.version-tip {
+  text-align: center;
+  padding: 40rpx 0;
+}

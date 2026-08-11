@@ -1,0 +1,46 @@
+const api = require('../../services/api');
+
+Page({
+  data: {
+    user: null,
+    loggedIn: false,
+    loading: false,
+  },
+
+  onShow() {
+    this.refreshUser();
+  },
+
+  onPullDownRefresh() {
+    this.refreshUser().finally(() => wx.stopPullDownRefresh());
+  },
+
+  async refreshUser() {
+    const app = getApp();
+    try {
+      if (!app.globalData.loggedIn) {
+        await app.login();
+      }
+      this.setData({ loading: true });
+      // 刷新资料（PUT/GET /users/me 已实现）
+      const user = await api.get('/users/me');
+      this.setData({ user, loggedIn: true });
+    } catch (e) {
+      console.error('加载用户信息失败', e);
+    } finally {
+      this.setData({ loading: false });
+    }
+  },
+
+  goStats() {
+    wx.navigateTo({ url: '/pages/stats/stats' });
+  },
+
+  goSettings() {
+    wx.navigateTo({ url: '/pages/settings/settings' });
+  },
+
+  goProfile() {
+    wx.navigateTo({ url: '/pages/profile/profile' });
+  },
+});

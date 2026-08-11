@@ -1,0 +1,28 @@
+/**
+ * 通用格式化工具
+ */
+
+/** 秒 → "1:23:45"（超 1 小时）或 "23:45" */
+function formatDuration(sec) {
+  const s = Math.max(0, Math.round(sec || 0));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const ss = s % 60;
+  const pad = (n) => String(n).padStart(2, '0');
+  return h > 0 ? `${h}:${pad(m)}:${pad(ss)}` : `${pad(m)}:${pad(ss)}`;
+}
+
+/** 米 → 公里字符串 */
+function formatKm(meters) {
+  return (meters / 1000).toFixed(2);
+}
+
+/** 秒/公里 → "5'30\"" */
+function formatPace(secPerKm) {
+  if (!secPerKm || secPerKm <= 0) return '—';
+  const m = Math.floor(secPerKm / 60);
+  const s = Math.round(secPerKm % 60);
+  return `${m}'${String(s).padStart(2, '0')}"`;
+}
+
+module.exports = { formatDuration, formatKm, formatPace };

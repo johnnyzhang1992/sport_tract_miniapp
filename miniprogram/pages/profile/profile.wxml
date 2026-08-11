@@ -1,0 +1,7 @@
+<view class="container">
+  <view class="card placeholder">
+    <view class="placeholder-icon">👤</view>
+    <view class="placeholder-title">资料编辑</view>
+    <view class="placeholder-desc">头像上传 OSS + 昵称修改（M4）</view>
+  </view>
+</view>

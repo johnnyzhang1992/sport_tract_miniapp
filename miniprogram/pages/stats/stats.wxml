@@ -1,0 +1,7 @@
+<view class="container">
+  <view class="card placeholder">
+    <view class="placeholder-icon">📈</view>
+    <view class="placeholder-title">数据统计</view>
+    <view class="placeholder-desc">今日/本周/本月概览 + 7/30 天趋势图（M4）</view>
+  </view>
+</view>

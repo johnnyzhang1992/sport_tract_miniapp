@@ -1,0 +1,8 @@
+<view class="container">
+  <view class="card placeholder">
+    <view class="placeholder-icon">📍</view>
+    <view class="placeholder-title">{{typeLabel}} · 记录页</view>
+    <view class="placeholder-desc">实时地图轨迹 + 数据面板 + 打点</view>
+    <view class="placeholder-tip text-muted">M2 里程碑实现：定位采集 / 增量上传 / 暂停继续</view>
+  </view>
+</view>
