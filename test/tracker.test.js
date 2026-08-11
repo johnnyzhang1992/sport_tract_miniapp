@@ -113,6 +113,20 @@ test('增量协议：getNewPoints 按 seq 过滤', () => {
   assert.equal(t.getNewPoints(1)[0].seq, 2);
 });
 
+test('精度过滤：accuracy 超阈值（室内/弱信号）的点被丢弃', () => {
+  let clock = 0;
+  const t = new Tracker('running', 60, () => clock);
+  t.addPoint({ latitude: 30, longitude: 120, accuracy: 10, timestamp: 1000 });
+  clock += 5000;
+  const before = t.points.length;
+  t.addPoint({ latitude: 30.001, longitude: 120, accuracy: 150, timestamp: 6000 }); // 150m 精度，丢弃
+  assert.equal(t.points.length, before);
+  clock += 5000;
+  t.addPoint({ latitude: 30.002, longitude: 120, accuracy: 15, timestamp: 11000 }); // 15m 精度，接受
+  assert.equal(t.points.length, 2);
+});
+
+// 保留旧用例（顺序追加，避免重名）
 test('final 包：完整点集 + 地址 + 体重', () => {
   let clock = 0;
   const t = new Tracker('running', 65, () => clock);
