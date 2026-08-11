@@ -139,7 +139,7 @@
   padding: 16rpx 24rpx calc(16rpx + env(safe-area-inset-bottom));
   background: #fff;
   box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.06);
-  z-index: 100;
+  z-index: 9999; /* 高于所有内容/canvas，杜绝被原生 canvas 穿透 */
 }
 .fixed-actions t-button {
   flex: 1;

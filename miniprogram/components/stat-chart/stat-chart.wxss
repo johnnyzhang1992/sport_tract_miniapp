@@ -1,7 +1,9 @@
 .stat-chart {
   position: relative;
+  z-index: 0; /* 独立合成层，防止滚动时与固定按钮组穿插 */
   width: 100%;
   overflow: hidden; /* 防止绘制溢出影响布局/穿透 */
+  transform: translateZ(0); /* 强制 GPU 合成，缓解滚动抖动 */
 }
 .chart-canvas {
   width: 100%;
