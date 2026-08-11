@@ -53,11 +53,7 @@ Page({
     }
     try {
       this.setData({ loading: true, page: 1 });
-      const data = await api.get('/activities', {
-        page: 1,
-        pageSize: PAGE_SIZE,
-        type: this.data.activeFilter,
-      });
+      const data = await api.get('/activities', this.buildParams(1));
       this.setData({
         items: data.items.map(this.decorate),
         hasMore: data.items.length >= PAGE_SIZE,
@@ -74,11 +70,7 @@ Page({
     const next = this.data.page + 1;
     try {
       this.setData({ loading: true });
-      const data = await api.get('/activities', {
-        page: next,
-        pageSize: PAGE_SIZE,
-        type: this.data.activeFilter,
-      });
+      const data = await api.get('/activities', this.buildParams(next));
       this.setData({
         items: this.data.items.concat(data.items.map(this.decorate)),
         page: next,
@@ -89,6 +81,15 @@ Page({
     } finally {
       this.setData({ loading: false });
     }
+  },
+
+  /** 构造查询参数：空筛选不传 type（后端 enum 校验不接受空串） */
+  buildParams(page) {
+    const params = { page, pageSize: PAGE_SIZE };
+    if (this.data.activeFilter) {
+      params.type = this.data.activeFilter;
+    }
+    return params;
   },
 
   /** 列表项装饰：原始聚合数据 → 展示字段 */
