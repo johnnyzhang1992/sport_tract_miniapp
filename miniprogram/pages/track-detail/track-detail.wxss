@@ -146,9 +146,9 @@
   box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.06);
   z-index: 9999; /* 高于所有内容/canvas，杜绝被原生 canvas 穿透 */
 }
-.fixed-actions t-button {
+.fixed-actions .act-btn {
   flex: 1;
 }
-.fixed-actions t-button + t-button {
+.fixed-actions .act-btn + .act-btn {
   margin-left: 16rpx;
 }
