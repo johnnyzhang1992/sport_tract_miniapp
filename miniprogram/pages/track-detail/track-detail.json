@@ -4,6 +4,7 @@
     "track-map": "/components/track-map/track-map",
     "marker-form": "/components/marker-form/marker-form",
     "stat-chart": "/components/stat-chart/stat-chart",
+    "share-card": "/components/share-card/share-card",
     "t-button": "tdesign-miniprogram/button/button",
     "t-tag": "tdesign-miniprogram/tag/tag"
   }

@@ -56,6 +56,12 @@ Page({
           distanceKm: (activity.distance / 1000).toFixed(2),
           durationText: formatDuration(activity.duration),
           paceText: formatPace(activity.avgPace),
+          startTimeText: new Date(activity.startTime).toLocaleString('zh-CN', {
+            month: 'numeric',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
         },
         mapPoints: (activity.trackPoints || []).map((p) => ({ lat: p.lat, lng: p.lng })),
         markers: (activity.markers || []).map((m) => ({ id: m.id, lat: m.lat, lng: m.lng })),
@@ -233,6 +239,16 @@ Page({
 
   onMarkerCancel() {
     this.setData({ markerFormVisible: false });
+  },
+
+  /** 分享海报 */
+  sharePoster() {
+    const card = this.selectComponent('#shareCard');
+    if (card && typeof card.generate === 'function') {
+      card.generate();
+    } else {
+      wx.showToast({ title: '组件未就绪', icon: 'none' });
+    }
   },
 
   /** 导出 GPX */

@@ -1,0 +1,10 @@
+<view class="share-card">
+  <!-- 离屏海报画布（不可见） -->
+  <canvas
+    type="2d"
+    id="posterCanvas"
+    class="poster-canvas"
+    style="width: 300px; height: 400px;"
+  ></canvas>
+  <slot />
+</view>
