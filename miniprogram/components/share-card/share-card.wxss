@@ -1,0 +1,9 @@
+.share-card {
+  width: 100%;
+}
+.poster-canvas {
+  position: fixed;
+  left: -9999px;
+  top: -9999px;
+  /* 离屏绘制，不占布局 */
+}
