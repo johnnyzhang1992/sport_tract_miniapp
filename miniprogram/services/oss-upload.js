@@ -15,13 +15,17 @@ function extOf(path) {
 /**
  * 上传临时文件到 OSS（含合规检测）
  * @param {string} tempFilePath wx.chooseMedia 返回的临时路径
+ * @param {object} [opts] { dir: OSS 子目录（默认 markers）, prefix: 文件名前缀（默认 marker_） }
  * @returns {Promise<{url: string} | {blocked: true} | null>}
  *   - { url } 上传成功
  *   - { blocked: true } 违规被拦截（调用方提示用户）
  *   - null 降级（未配置）
  */
-async function uploadPhoto(tempFilePath) {
+async function uploadPhoto(tempFilePath, opts = {}) {
   try {
+    const dir = opts.dir || 'markers';
+    const prefix = opts.prefix || 'marker_';
+
     // 1. 微信内容安全检测（图片 ≤1MB；违规拒绝上传）
     const sec = await api.checkImage(tempFilePath);
     if (sec.risky) {
@@ -29,8 +33,8 @@ async function uploadPhoto(tempFilePath) {
     }
 
     // 2. 拿签名凭证（OSS 未配置时后端 503 → 降级 null）
-    const creds = await api.post('/oss/credential', { dir: 'markers' });
-    const filename = `marker_${Date.now()}_${Math.floor(Math.random() * 10000)}.${extOf(tempFilePath)}`;
+    const creds = await api.post('/oss/credential', { dir });
+    const filename = `${prefix}${Date.now()}_${Math.floor(Math.random() * 10000)}.${extOf(tempFilePath)}`;
     const key = `${creds.dir}${filename}`;
     const base = creds.endpoint.replace(/\/$/, '');
     const url = `${base}/${key}`;
