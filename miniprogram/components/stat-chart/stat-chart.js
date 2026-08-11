@@ -1,19 +1,17 @@
 /**
- * stat-chart 图表组件（决策 D8：轻量 Canvas 自绘，不引入重量级图表库）
+ * stat-chart 图表组件（决策 D8：轻量 Canvas 自绘）
  * - type=bar：柱状图（统计趋势）
  * - type=line：折线图（海拔/配速曲线）
- * props: data[{label, value}], type, unit, height, color
- * 注意：value 全为 0 时显示空态提示
+ * - 布局：左侧 Y 轴刻度（min/mid/max）+ 网格线，底部 X 标签（左右留白不裁剪）
+ * - 折线图数据点小圆 + 最大值标注数值
  */
 Component({
   properties: {
-    /** [{label: '08-11', value: 3.2}] */
     data: { type: Array, value: [] },
-    type: { type: String, value: 'bar' }, // bar | line
+    type: { type: String, value: 'bar' },
     unit: { type: String, value: '' },
-    height: { type: Number, value: 220 }, // px
+    height: { type: Number, value: 220 },
     color: { type: String, value: '#2B6CF6' },
-    /** 空态文案 */
     emptyText: { type: String, value: '暂无数据' },
   },
 
@@ -34,7 +32,6 @@ Component({
   },
 
   methods: {
-    /** 归一化：0~1 区间（max 为 0 时全 0 返回 []） */
     normalize(values) {
       const max = Math.max(...values, 0);
       if (max === 0) return values.map(() => 0);
@@ -46,7 +43,6 @@ Component({
       const values = data.map((d) => Number(d.value) || 0);
       const hasData = values.some((v) => v > 0);
       this.setData({ hasData });
-
       if (!hasData || values.length === 0) return;
 
       wx.createSelectorQuery()
@@ -72,113 +68,169 @@ Component({
         });
     },
 
+    /** 绘制 Y 轴刻度 + 网格（返回绘图区左右 padding） */
+    drawAxis(ctx, values, width, height) {
+      const padLeft = 34; // Y 轴刻度区
+      const padRight = 10;
+      const padTop = 18;
+      const padBottom = 26; // X 标签区
+      const chartW = width - padLeft - padRight;
+      const chartH = height - padTop - padBottom;
+      const maxV = Math.max(...values);
+      const minV = Math.min(...values);
+      const span = maxV - minV || 1;
+
+      // 3 条水平网格 + Y 轴刻度（max / mid / min）
+      ctx.font = '10px sans-serif';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      const labels = [maxV, minV + span / 2, minV];
+      labels.forEach((v, i) => {
+        const y = padTop + (chartH * i) / 2;
+        // 网格线
+        ctx.strokeStyle = i === 0 ? '#e8e8e8' : '#f2f2f2';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(padLeft, y);
+        ctx.lineTo(width - padRight, y);
+        ctx.stroke();
+        // 刻度文字
+        ctx.fillStyle = '#999';
+        const text = this.formatValue(v);
+        ctx.fillText(text, padLeft - 6, y);
+      });
+
+      return { padLeft, padRight, padTop, padBottom, chartW, chartH, maxV, minV };
+    },
+
     /** 柱状图 */
     drawBar(ctx, data, values, width) {
       const H = this.data.height;
-      const padTop = 12;
-      const padBottom = 26; // 底部 label 区
-      const chartH = H - padTop - padBottom;
+      const axis = this.drawAxis(ctx, values, width, H);
       const n = data.length;
-      const slotW = width / n;
-      const barW = Math.min(18, slotW * 0.6);
+      const slotW = axis.chartW / n;
+      const barW = Math.min(16, slotW * 0.55);
       const norm = this.normalize(values);
 
-      // 坐标轴
-      ctx.strokeStyle = '#eee';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(0, H - padBottom + 6);
-      ctx.lineTo(width, H - padBottom + 6);
-      ctx.stroke();
+      // X 标签（左右留白，首尾不裁剪）
+      ctx.font = '10px sans-serif';
+      ctx.fillStyle = '#999';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      values.forEach((_, i) => {
+        if (n <= 15 || i % 2 === 0) {
+          const x = axis.padLeft + i * slotW + slotW / 2;
+          const label = String(data[i].label);
+          // 首尾 label 用边缘对齐防裁剪
+          if (i === 0) {
+            ctx.textAlign = 'left';
+            ctx.fillText(label, axis.padLeft, H - axis.padBottom + 8);
+            ctx.textAlign = 'center';
+          } else if (i === n - 1) {
+            ctx.textAlign = 'right';
+            ctx.fillText(label, width - axis.padRight, H - axis.padBottom + 8);
+            ctx.textAlign = 'center';
+          } else {
+            ctx.fillText(label, x, H - axis.padBottom + 8);
+          }
+        }
+      });
 
+      // 柱子
       values.forEach((v, i) => {
-        const h = norm[i] * chartH;
-        const x = i * slotW + (slotW - barW) / 2;
-        const y = H - padBottom - h;
-
-        // 柱子
+        const h = norm[i] * axis.chartH;
+        const x = axis.padLeft + i * slotW + (slotW - barW) / 2;
+        const y = H - axis.padBottom - h;
         ctx.fillStyle = this.data.color;
         ctx.globalAlpha = v > 0 ? 0.85 : 0.15;
         ctx.fillRect(x, y, barW, h);
         ctx.globalAlpha = 1;
-
-        // label（每 2 个显示一个，避免拥挤）
-        if (n <= 15 || i % 2 === 0) {
-          ctx.fillStyle = '#999';
-          ctx.font = '10px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText(String(data[i].label), i * slotW + slotW / 2, H - 8);
-        }
       });
 
       // 最大值标注
-      if (n > 0) {
-        const maxV = Math.max(...values);
-        const maxIdx = values.indexOf(maxV);
-        ctx.fillStyle = '#999';
-        ctx.font = '10px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(this.formatValue(maxV), maxIdx * slotW + slotW / 2, H - padBottom - norm[maxIdx] * chartH - 6);
-      }
+      const maxV = Math.max(...values);
+      const maxIdx = values.indexOf(maxV);
+      ctx.fillStyle = '#999';
+      ctx.font = '10px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(
+        this.formatValue(maxV),
+        axis.padLeft + maxIdx * slotW + slotW / 2,
+        H - axis.padBottom - norm[maxIdx] * axis.chartH - 8,
+      );
     },
 
     /** 折线图 */
     drawLine(ctx, data, values, width) {
       const H = this.data.height;
-      const padTop = 16;
-      const padBottom = 26;
-      const chartH = H - padTop - padBottom;
+      const axis = this.drawAxis(ctx, values, width, H);
       const n = data.length;
       const norm = this.normalize(values);
-      const stepX = n > 1 ? width / (n - 1) : width;
-
-      // 参考线（1/2 处）
-      ctx.strokeStyle = '#f0f0f0';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([4, 4]);
-      ctx.beginPath();
-      ctx.moveTo(0, H - padBottom - chartH / 2);
-      ctx.lineTo(width, H - padBottom - chartH / 2);
-      ctx.stroke();
-      ctx.setLineDash([]);
+      const stepX = n > 1 ? axis.chartW / (n - 1) : axis.chartW;
+      const X = (i) => axis.padLeft + i * stepX;
+      const Y = (i) => H - axis.padBottom - norm[i] * axis.chartH;
 
       // 折线
       ctx.strokeStyle = this.data.color;
       ctx.lineWidth = 2;
+      ctx.lineJoin = 'round';
       ctx.beginPath();
-      values.forEach((v, i) => {
-        const x = i * stepX;
-        const y = H - padBottom - norm[i] * chartH;
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
+      values.forEach((_, i) => {
+        if (i === 0) ctx.moveTo(X(i), Y(i));
+        else ctx.lineTo(X(i), Y(i));
       });
       ctx.stroke();
 
-      // 数据点
-      values.forEach((v, i) => {
-        const x = i * stepX;
-        const y = H - padBottom - norm[i] * chartH;
+      // 数据点圆点 + 关键点数值标注
+      const maxV = Math.max(...values);
+      const maxIdx = values.indexOf(maxV);
+      ctx.font = '10px sans-serif';
+      values.forEach((_, i) => {
+        // 点
         ctx.fillStyle = '#fff';
         ctx.strokeStyle = this.data.color;
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(x, y, 3, 0, Math.PI * 2);
+        ctx.arc(X(i), Y(i), 3, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
-        // label（每 3 个显示一个）
-        if (n <= 12 || i % 3 === 0) {
-          ctx.fillStyle = '#999';
-          ctx.font = '9px sans-serif';
+        // 标注：最大值 + 首尾 + 每 5 个点
+        const annotate = i === maxIdx || i === 0 || i === n - 1 || (n > 10 && i % 5 === 0);
+        if (annotate) {
+          ctx.fillStyle = '#666';
           ctx.textAlign = 'center';
-          ctx.fillText(String(data[i].label), x, H - 8);
+          ctx.textBaseline = 'bottom';
+          ctx.fillText(this.formatValue(values[i]), X(i), Y(i) - 5);
+        }
+      });
+
+      // X 标签（左右留白）
+      ctx.font = '10px sans-serif';
+      ctx.fillStyle = '#999';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      values.forEach((_, i) => {
+        if (n <= 12 || i % 3 === 0) {
+          const label = String(data[i].label);
+          if (i === 0) {
+            ctx.textAlign = 'left';
+            ctx.fillText(label, axis.padLeft, H - axis.padBottom + 8);
+            ctx.textAlign = 'center';
+          } else if (i === n - 1) {
+            ctx.textAlign = 'right';
+            ctx.fillText(label, width - axis.padRight, H - axis.padBottom + 8);
+            ctx.textAlign = 'center';
+          } else {
+            ctx.fillText(label, X(i), H - axis.padBottom + 8);
+          }
         }
       });
     },
 
     formatValue(v) {
-      if (this.data.unit === 'km') return `${v.toFixed(1)}`;
+      if (this.data.unit === 'km') return `${Number(v).toFixed(1)}`;
       if (this.data.unit === 'min') return `${Math.round(v)}`;
-      return `${v}`;
+      return `${Math.round(Number(v))}`;
     },
   },
 });

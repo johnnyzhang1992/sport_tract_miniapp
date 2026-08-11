@@ -1,9 +1,11 @@
 .stat-chart {
   position: relative;
   width: 100%;
+  overflow: hidden; /* 防止绘制溢出影响布局/穿透 */
 }
 .chart-canvas {
   width: 100%;
+  display: block;
 }
 .chart-empty {
   position: absolute;
