@@ -259,13 +259,17 @@ Component({
         ctx.textBaseline = 'alphabetic';
       });
 
-      // 底部时间
+      // 底部行：左时间 + 右品牌标识
       if (act.startTimeText) {
         ctx.fillStyle = 'rgba(255,255,255,0.8)';
         ctx.font = '11px sans-serif';
         ctx.textAlign = 'left';
         ctx.fillText(act.startTimeText, 24, height - 20);
       }
+      ctx.fillStyle = 'rgba(255,255,255,0.8)';
+      ctx.font = '12px sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText('@小迹一下', width - 100, height - 20);
     },
 
     drawCode(ctx, codeUrl, width, height) {
@@ -273,16 +277,12 @@ Component({
         wx.getImageInfo({
           src: codeUrl,
           success: (img) => {
-            const size = 84;
-            const x = width - size - 20;
-            const y = height - size - 12; // 右下角（时间在左下，不冲突）
+            const size = 70;
+            const x = width - size - 14;
+            const y = height - size - 10; // 右下角
             ctx.fillStyle = '#fff';
             ctx.fillRect(x - 5, y - 5, size + 10, size + 10);
             ctx.drawImage(img.path, x, y, size, size);
-            ctx.fillStyle = 'rgba(255,255,255,0.75)';
-            ctx.font = '10px sans-serif';
-            ctx.textAlign = 'right';
-            ctx.fillText('长按识别小程序', width - 16, y + size + 16);
             resolve();
           },
           fail: resolve,
