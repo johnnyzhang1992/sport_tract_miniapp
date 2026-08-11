@@ -133,6 +133,86 @@ Component({
       });
     },
 
+    /**
+     * 轨迹回放（决策 F16：marker 沿轨迹移动）
+     * 用 translateMarker 逐段移动回放 marker，每段时长按“目标速度”计算
+     * @param {Array<{lat:number,lng:number}>} points 轨迹点序列
+     * @param {object} opts { speedMps?: 移动速度(米/秒, 默认 8), onEnd? }
+     */
+    startReplay(points, opts = {}) {
+      this.stopReplay();
+      const pts = (points || []).filter(
+        (p) => p && Number.isFinite(p.lat) && Number.isFinite(p.lng),
+      );
+      if (pts.length < 2) {
+        this.triggerEvent('replayend');
+        return;
+      }
+      this._replayPoints = pts;
+      this._replayIdx = 0;
+      this._replaySpeed = opts.speedMps || 8;
+
+      const mapCtx = wx.createMapContext('trackMap', this);
+      // 视野包含整条轨迹
+      mapCtx.includePoints({
+        points: pts.map((p) => ({ latitude: p.lat, longitude: p.lng })),
+        padding: [80, 40, 80, 40],
+      });
+
+      // 回放 marker（独立 id，与打点/当前位置区分）
+      const first = pts[0];
+      this.setData({
+        displayMarkers: (this.data.displayMarkers || []).concat([
+          {
+            id: 100001,
+            latitude: first.lat,
+            longitude: first.lng,
+            iconPath: defaultCurrentIcon(),
+            width: 24,
+            height: 24,
+          },
+        ]),
+      });
+
+      this._moveNextReplaySegment();
+    },
+
+    stopReplay() {
+      if (this._replayIdx == null) return;
+      this._replayIdx = null;
+      this._replayPoints = null;
+      // 移除回放 marker
+      this.setData({
+        displayMarkers: (this.data.displayMarkers || []).filter((m) => m.id !== 100001),
+      });
+    },
+
+    _moveNextReplaySegment() {
+      if (this._replayIdx == null || !this._replayPoints) return;
+      const pts = this._replayPoints;
+      const idx = this._replayIdx;
+      if (idx >= pts.length - 1) {
+        this.stopReplay();
+        this.triggerEvent('replayend');
+        return;
+      }
+      const from = pts[idx];
+      const to = pts[idx + 1];
+      const d = haversineKm(from, to);
+      // 每段动画时长：距离/速度（最小 200ms）
+      const duration = Math.max(200, Math.round((d / this._replaySpeed) * 1000));
+      const mapCtx = wx.createMapContext('trackMap', this);
+      mapCtx.translateMarker({
+        markerId: 100001,
+        destination: { latitude: to.lat, longitude: to.lng },
+        duration,
+        animationEnd: () => {
+          this._replayIdx = idx + 1;
+          this._moveNextReplaySegment();
+        },
+      });
+    },
+
     onMapTap(e) {
       this.triggerEvent('maptap', e.detail);
     },
@@ -153,4 +233,16 @@ function defaultMarkerIcon() {
 }
 function defaultCurrentIcon() {
   return '/assets/icons/current-dot.png';
+}
+
+/** 两点球面距离（公里），兼容 {lat,lng} */
+function haversineKm(a, b) {
+  const R = 6371;
+  const toRad = (deg) => (deg * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const s =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(s));
 }

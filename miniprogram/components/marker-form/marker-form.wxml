@@ -26,14 +26,15 @@
       />
     </view>
 
-    <!-- 照片 -->
+    <!-- 照片：编辑模式保留原照片不重选；新增模式可拍照 -->
     <view class="photo-row" wx:if="{{photoTempFile}}">
       <image class="photo-preview" src="{{photoTempFile}}" mode="aspectFill" />
       <view class="photo-remove" bindtap="removePhoto">✕</view>
     </view>
-    <view class="photo-add" wx:else bindtap="choosePhoto">📷 拍照 / 相册</view>
+    <view class="photo-add" wx:elif="{{!editMode}}" bindtap="choosePhoto">📷 拍照 / 相册</view>
 
     <view class="actions">
+      <button class="btn-del" wx:if="{{editMode}}" bindtap="del">删除</button>
       <button class="btn-cancel" bindtap="cancel">取消</button>
       <button class="btn-confirm" bindtap="confirm">确定</button>
     </view>

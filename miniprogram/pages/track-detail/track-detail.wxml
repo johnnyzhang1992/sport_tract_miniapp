@@ -1,12 +1,26 @@
 <view class="container" wx:if="{{activity}}">
-  <!-- 轨迹图占位（track-map 组件：M3 实现 polyline + markers + 图层切换） -->
-  <view class="card map-placeholder">
-    <view class="map-placeholder-text">🗺️ 轨迹地图（track-map 组件待实现）</view>
+  <!-- 轨迹图（view 模式自动 fitView）+ 图层切换 + 回放 -->
+  <view class="map-wrap">
+    <track-map
+      id="detailMap"
+      points="{{mapPoints}}"
+      markers="{{markers}}"
+      mapType="{{mapType}}"
+      mode="view"
+      bindmarkertap="onMarkerTap"
+      bindreplayend="onReplayEnd"
+    />
+    <view class="layer-btn" bindtap="switchLayer">
+      {{mapType === 'standard' ? '🛰️ 卫星' : '🗺️ 标准'}}
+    </view>
+    <view class="replay-btn {{replaying ? 'replay-btn-active' : ''}}" bindtap="startReplay">
+      {{replaying ? '⏹ 停止' : '▶️ 回放'}}
+    </view>
   </view>
 
   <!-- 指标 -->
   <view class="card">
-    <view class="detail-title">{{activity.icon}} {{activity.label}} · {{activity.startTimeText || ''}}</view>
+    <view class="detail-title">{{activity.icon}} {{activity.label}}</view>
     <view class="track-metrics">
       <view class="metric">
         <view class="metric-num">{{activity.distanceKm}}</view>
@@ -26,14 +40,21 @@
       </view>
     </view>
     <view class="text-muted detail-sub" wx:if="{{activity.elevationGain}}">
-      累计爬升 {{activity.elevationGain}}m · 最高海拔 {{activity.maxAltitude || '—'}}m
+      累计爬升 {{activity.elevationGain}}m · 最高海拔 {{activity.maxAltitude || '—'}}m · 打点 {{markerList.length}} 个
     </view>
   </view>
 
-  <!-- 打点时间线 -->
-  <view class="card" wx:if="{{markers.length > 0}}">
-    <view class="detail-title">打点 ({{markers.length}})</view>
-    <view wx:for="{{markers}}" wx:key="id" class="marker-item">
+  <!-- 打点时间线（点击可编辑） -->
+  <view class="card" wx:if="{{markerList.length > 0}}">
+    <view class="detail-title">打点 ({{markerList.length}})</view>
+    <view
+      wx:for="{{markerList}}"
+      wx:key="id"
+      class="marker-item"
+      data-marker="{{item}}"
+      bindtap="onTapMarkerItem"
+      hover-class="marker-hover"
+    >
       <view class="marker-icon">{{item.typeMeta.icon || '📍'}}</view>
       <view class="marker-body">
         <view class="marker-note">{{item.note || item.typeMeta.label || '打点'}}</view>
@@ -45,11 +66,17 @@
 
   <!-- 操作 -->
   <view class="card actions">
-    <t-button
-      variant="outline"
-      size="medium"
-      block
-      bind:tap="exportGpx"
-    >导出 GPX</t-button>
+    <t-button variant="outline" size="medium" block bind:tap="addMarker">＋ 补打点</t-button>
+    <t-button variant="outline" size="medium" block bind:tap="exportGpx">导出 GPX</t-button>
   </view>
+
+  <!-- 打点弹窗（编辑/新增） -->
+  <marker-form
+    visible="{{markerFormVisible}}"
+    editMode="{{editMode}}"
+    marker="{{editMarker}}"
+    bindconfirm="onMarkerConfirm"
+    binddelete="onMarkerDelete"
+    bindcancel="onMarkerCancel"
+  />
 </view>
