@@ -25,8 +25,8 @@
         <view class="metric-label">千卡</view>
       </view>
     </view>
-    <view class="text-muted sub" wx:if="{{stats.elevationGain}}">
-      累计爬升 {{stats.elevationGain}}m · 最高海拔 {{stats.maxAltitude || '—'}}m
+    <view class="text-muted sub" wx:if="{{stats.markerCount}}">
+      打点 {{stats.markerCount}} 个
     </view>
   </view>
 
