@@ -13,6 +13,35 @@ App({
     this.login();
   },
 
+  onShow() {
+    // 检测未保存的运动（保存失败/中途退出时数据在 storage，提供恢复入口）
+    this.checkPendingSummary();
+  },
+
+  /** 有未保存运动 → 提示跳 summary 继续保存 */
+  checkPendingSummary() {
+    const pending = wx.getStorageSync('pending_summary');
+    if (!pending || this._summaryPrompted) return;
+    this._summaryPrompted = true;
+    wx.showModal({
+      title: '有未保存的运动',
+      content: '上次运动尚未保存，是否现在保存？',
+      confirmText: '去保存',
+      cancelText: '忽略',
+      success: (res) => {
+        if (res.confirm) {
+          wx.navigateTo({ url: '/pages/summary/summary' });
+        }
+      },
+      complete: () => {
+        // 短时间内避免重复弹窗
+        setTimeout(() => {
+          this._summaryPrompted = false;
+        }, 8000);
+      },
+    });
+  },
+
   /**
    * 静默登录：wx.login → 后端换 JWT → 存 token + 用户信息
    * 防重入：并发调用只发起一次
