@@ -94,6 +94,15 @@ class Tracker {
       timestamp: now,
     };
 
+    // 海拔突变过滤（GPS 误差）：短时间变化率过大 → 该点海拔视为无效置 null
+    if (point.altitude != null && this.lastPoint && this.lastPoint.altitude != null) {
+      const dt = (now - this.lastSampleTime) / 1000;
+      const dAlt = Math.abs(point.altitude - this.lastPoint.altitude);
+      if (dt > 0 && dAlt > 5 && dAlt / dt > 0.8) {
+        point.altitude = null;
+      }
+    }
+
     if (this.lastPoint) {
       this.distance += haversine(this.lastPoint, point);
       // 爬升：死区阈值滤波（决策 D16）
