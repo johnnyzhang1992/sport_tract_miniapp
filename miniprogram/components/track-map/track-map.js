@@ -53,45 +53,82 @@ Component({
     buildPolyline() {
       // 过滤非法坐标点（undefined/NaN），空点集时传空数组避免渲染异常
       const pts = this.data.points
-        .map((p) => ({ latitude: p.lat, longitude: p.lng }))
-        .filter((p) => Number.isFinite(p.latitude) && Number.isFinite(p.longitude));
+        .map((p) => ({ lat: p.lat, lng: p.lng }))
+        .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng));
+      if (pts.length < 2) {
+        this.setData({ polyline: [] });
+        return;
+      }
+
+      // 按打点分段：每个打点投影到最近的轨迹点作为分段索引，轨迹切成多段
+      const segs = this.splitByMarkers(pts);
+
+      const colors = ['#2B6CF6', '#34A853', '#FF9800', '#9C27B0'];
       this.setData({
-        polyline:
-          pts.length >= 2
-            ? [
-                {
-                  points: pts,
-                  color: '#2B6CF6',
-                  width: 6,
-                },
-              ]
-            : [],
+        polyline: segs.map((seg, i) => ({
+          points: seg.map((p) => ({ latitude: p.lat, longitude: p.lng })),
+          color: colors[i % colors.length],
+          width: 6,
+          arrowLine: false,
+        })),
       });
+    },
+
+    /** 以打点为分段点切分轨迹点序列 */
+    splitByMarkers(pts) {
+      const markers = (this.data.markers || []).filter(
+        (m) => m && Number.isFinite(m.lat) && Number.isFinite(m.lng),
+      );
+      if (markers.length === 0) return [pts];
+
+      // 每个打点 → 最近轨迹点索引
+      const cutIdx = markers
+        .map((m) => this.nearestPointIndex(pts, m))
+        .sort((a, b) => a - b);
+      const uniq = [...new Set(cutIdx)].filter((i) => i > 0 && i < pts.length - 1);
+
+      const segs = [];
+      let start = 0;
+      for (const idx of uniq) {
+        if (idx > start) segs.push(pts.slice(start, idx + 1));
+        start = idx;
+      }
+      if (start < pts.length - 1) segs.push(pts.slice(start));
+      return segs.length > 0 ? segs : [pts];
+    },
+
+    /** 点到轨迹点序列的最近索引（平方距离近似） */
+    nearestPointIndex(pts, marker) {
+      let best = 0;
+      let bestD = Infinity;
+      for (let i = 0; i < pts.length; i++) {
+        const d =
+          (pts[i].lat - marker.lat) ** 2 + (pts[i].lng - marker.lng) ** 2;
+        if (d < bestD) {
+          bestD = d;
+          best = i;
+        }
+      }
+      return best;
     },
 
     buildMarkers() {
       // 微信 map 组件：marker id 必须是 number（字符串会报渲染层错误）
+      // 打点图标：按打卡顺序用带数字的圆圈（marker-1.png ~ marker-20.png）
       // anchor 用中心 {0.5, 0.5}：默认底部锚点会让图标悬在坐标点上方（打点不贴轨迹线）
-      const base = this.data.markers.map((m, idx) => ({
-        id: idx + 1,
-        latitude: m.lat,
-        longitude: m.lng,
-        iconPath: m.iconPath || defaultMarkerIcon(),
-        width: m.width || 18,
-        height: m.height || 18,
-        anchor: { x: 0.5, y: 0.5 },
-        label: m.label
-          ? {
-              content: m.label,
-              color: '#fff',
-              fontSize: 9,
-              bgColor: '#2B6CF6',
-              borderRadius: 6,
-              padding: 2,
-              anchorY: -14,
-            }
-          : undefined,
-      }));
+      const base = this.data.markers.map((m, idx) => {
+        const num = idx + 1;
+        return {
+          id: num,
+          latitude: m.lat,
+          longitude: m.lng,
+          iconPath:
+            num <= 20 ? `/assets/icons/marker-${num}.png` : defaultMarkerIcon(),
+          width: m.width || 24,
+          height: m.height || 24,
+          anchor: { x: 0.5, y: 0.5 },
+        };
+      });
 
       // 当前位置 marker（动态追点）
       if (this.data.currentLocation) {
