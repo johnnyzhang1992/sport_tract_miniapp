@@ -1,6 +1,6 @@
 .map-wrap {
   position: relative;
-  height: 460rpx;
+  height: 620rpx;
   border-radius: 16rpx;
   overflow: hidden;
   margin-bottom: 24rpx;
