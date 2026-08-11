@@ -46,25 +46,28 @@ Component({
 
   methods: {
     buildPolyline() {
-      const pts = this.data.points.map((p) => ({
-        latitude: p.lat,
-        longitude: p.lng,
-      }));
+      // 过滤非法坐标点（undefined/NaN），空点集时传空数组避免渲染异常
+      const pts = this.data.points
+        .map((p) => ({ latitude: p.lat, longitude: p.lng }))
+        .filter((p) => Number.isFinite(p.latitude) && Number.isFinite(p.longitude));
       this.setData({
-        polyline: [
-          {
-            points: pts,
-            color: '#2B6CF6',
-            width: 6,
-            arrowLine: true,
-          },
-        ],
+        polyline:
+          pts.length >= 2
+            ? [
+                {
+                  points: pts,
+                  color: '#2B6CF6',
+                  width: 6,
+                },
+              ]
+            : [],
       });
     },
 
     buildMarkers() {
-      const base = this.data.markers.map((m) => ({
-        id: m.id,
+      // 微信 map 组件：marker id 必须是 number（字符串会报渲染层错误）
+      const base = this.data.markers.map((m, idx) => ({
+        id: idx + 1,
         latitude: m.lat,
         longitude: m.lng,
         iconPath: m.iconPath || defaultMarkerIcon(),
@@ -78,7 +81,7 @@ Component({
       // 当前位置 marker（动态追点）
       if (this.data.currentLocation) {
         base.push({
-          id: '__current__',
+          id: 999999,
           latitude: this.data.currentLocation.latitude,
           longitude: this.data.currentLocation.longitude,
           iconPath: defaultCurrentIcon(),
