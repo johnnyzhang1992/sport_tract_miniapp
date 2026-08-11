@@ -286,10 +286,7 @@ Page({
   },
 
   openEndConfirm() {
-    if (this.tracker.points.length < 2) {
-      wx.showToast({ title: '轨迹点太少，无法结束', icon: 'none' });
-      return;
-    }
+    // 随时可结束，不做轨迹点数限制
     this.setData({ endConfirmVisible: true });
   },
 
