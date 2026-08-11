@@ -53,7 +53,7 @@ Page({
     const token = storage.getToken();
     wx.showLoading({ title: '生成中…' });
     wx.request({
-      url: config.API_BASE_URL + `/activities/${this.data.id}/gpx`,
+      url: config.API_BASE_URL + '/api' + `/activities/${this.data.id}/gpx`,
       method: 'GET',
       header: { Authorization: `Bearer ${(token && token.accessToken) || ''}` },
       success: (res) => {
