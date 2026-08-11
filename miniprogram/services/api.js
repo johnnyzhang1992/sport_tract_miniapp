@@ -5,6 +5,11 @@
 const config = require('../config/index');
 const storage = require('./storage');
 
+/** 统一拼接后端地址（后端路由统一 /api 前缀） */
+function buildUrl(path) {
+  return config.API_BASE_URL + '/api' + (path.startsWith('/') ? path : '/' + path);
+}
+
 let refreshing = false;
 let refreshWaiters = [];
 
@@ -12,7 +17,7 @@ let refreshWaiters = [];
 function rawRequest({ url, method = 'GET', data, header = {} }) {
   return new Promise((resolve, reject) => {
     wx.request({
-      url: config.API_BASE_URL + url,
+      url: buildUrl(url),
       method,
       data,
       header: Object.assign({ 'Content-Type': 'application/json' }, header),
@@ -140,7 +145,7 @@ function checkImage(filePath) {
   return new Promise((resolve, reject) => {
     const token = storage.getToken();
     wx.uploadFile({
-      url: config.API_BASE_URL + '/users/check-image',
+      url: buildUrl('/users/check-image'),
       filePath,
       name: 'file',
       header: token && token.accessToken ? { Authorization: `Bearer ${token.accessToken}` } : {},
