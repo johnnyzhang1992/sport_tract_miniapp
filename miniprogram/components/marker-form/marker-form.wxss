@@ -48,6 +48,14 @@
   font-size: 28rpx;
 }
 /* 多图预览网格 */
+.photo-section {
+  margin-top: 8rpx;
+}
+.photo-label {
+  font-size: 24rpx;
+  color: #999;
+  margin-bottom: 8rpx;
+}
 .photo-grid {
   display: flex;
   flex-wrap: wrap;
