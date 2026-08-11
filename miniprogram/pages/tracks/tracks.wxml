@@ -19,19 +19,25 @@
     <view class="empty" wx:else>加载中…</view>
   </view>
 
-  <t-cell
+  <view
     wx:for="{{items}}"
     wx:key="id"
-    class="track-cell"
-    hover
-    title="{{item.label}} · {{item.startTimeText}}"
-    description="{{item.distanceKm}}km · {{item.durationText}} · 配速 {{item.paceText}} · {{item.calories}}kcal{{item.markerCount > 0 ? ' · 📍' + item.markerCount : ''}}"
-    arrow
-    bind:click="onTapItem"
+    class="track-cell-wrap"
+    hover-class="track-cell-hover"
+    hover-stay-time="80"
     data-id="{{item.id}}"
+    bindtap="onTapItem"
   >
-    <view slot="left-icon" class="cell-icon">{{item.icon}}</view>
-  </t-cell>
+    <t-cell
+      class="track-cell"
+      hover
+      title="{{item.label}} · {{item.startTimeText}}"
+      description="{{item.distanceKm}}km · {{item.durationText}} · 配速 {{item.paceText}} · {{item.calories}}kcal{{item.markerCount > 0 ? ' · 📍' + item.markerCount : ''}}"
+      arrow
+    >
+      <view slot="left-icon" class="cell-icon">{{item.icon}}</view>
+    </t-cell>
+  </view>
 
   <view wx:if="{{loading}}" class="text-muted loading-tip">加载中…</view>
   <view wx:if="{{!hasMore && items.length > 0}}" class="text-muted loading-tip">没有更多了</view>
