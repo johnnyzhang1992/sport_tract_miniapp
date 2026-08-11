@@ -64,14 +64,15 @@ Component({
       const segs = this.splitByMarkers(pts);
 
       const colors = ['#2B6CF6', '#34A853', '#FF9800', '#9C27B0'];
-      this.setData({
-        polyline: segs.map((seg, i) => ({
-          points: seg.map((p) => ({ latitude: p.lat, longitude: p.lng })),
-          color: colors[i % colors.length],
-          width: 6,
-          arrowLine: false,
-        })),
+      // 双层抗锯齿：底层浅色宽线平滑边缘，上层 4px 彩色主体线
+      const polylines = [];
+      segs.forEach((seg, i) => {
+        const segPts = seg.map((p) => ({ latitude: p.lat, longitude: p.lng }));
+        const color = colors[i % colors.length];
+        polylines.push({ points: segPts, color: '#D6E4FF', width: 9, arrowLine: false });
+        polylines.push({ points: segPts, color, width: 4, arrowLine: false });
       });
+      this.setData({ polyline: polylines });
     },
 
     /** 以打点为分段点切分轨迹点序列 */
