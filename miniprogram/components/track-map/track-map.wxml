@@ -8,7 +8,7 @@
   polyline="{{polyline}}"
   show-location="{{false}}"
   enable-3D="{{false}}"
-  map-type="{{mapType}}"
+  enable-satellite="{{mapType === 'satellite'}}"
   bindtap="onMapTap"
   bindmarkertap="onMarkerTap"
   bindcallouttap="onMapCalloutTap"
