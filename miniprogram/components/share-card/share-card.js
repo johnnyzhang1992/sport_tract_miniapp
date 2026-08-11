@@ -275,19 +275,20 @@ Component({
 
     drawCode(ctx, codeUrl, width, height) {
       return new Promise((resolve) => {
-        wx.getImageInfo({
-          src: codeUrl,
-          success: (img) => {
-            const size = 64;
-            const x = width - size - 14;
-            const y = height - size - 10; // 右下角（品牌行下方）
-            ctx.fillStyle = '#fff';
-            ctx.fillRect(x - 5, y - 5, size + 10, size + 10);
-            ctx.drawImage(img.path, x, y, size, size);
-            resolve();
-          },
-          fail: resolve,
-        });
+        // Canvas 2D 必须用 canvas.createImage() 加载图片（img.path 字符串不合法）
+        const canvas = this._canvasNode;
+        const image = canvas.createImage();
+        image.onload = () => {
+          const size = 64;
+          const x = width - size - 14;
+          const y = height - size - 10; // 右下角（品牌行下方）
+          ctx.fillStyle = '#fff';
+          ctx.fillRect(x - 5, y - 5, size + 10, size + 10);
+          ctx.drawImage(image, x, y, size, size);
+          resolve();
+        };
+        image.onerror = () => resolve(); // 码加载失败不阻塞海报
+        image.src = codeUrl;
       });
     },
 
