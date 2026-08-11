@@ -52,21 +52,6 @@
   display: flex;
   padding-bottom: 40rpx;
 }
-.btn-discard,
-.btn-save {
-  flex: 1;
-  height: 92rpx;
-  line-height: 92rpx;
-  border-radius: 999rpx;
-  font-size: 32rpx;
-}
 .btn-discard {
-  background: #fff;
-  color: #666;
-  border: 2rpx solid #ddd;
   margin-right: 20rpx;
-}
-.btn-save {
-  background: #2b6cf6;
-  color: #fff;
 }

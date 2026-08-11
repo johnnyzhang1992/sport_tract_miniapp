@@ -49,9 +49,10 @@
 - 前端：`miniprogram/config/index.js` → `OSS.ENDPOINT` 与后端 `OSS_ENDPOINT` 一致
 - 生产：小程序后台配置 **uploadFile 合法域名**
 
-### 7️⃣ tdesign-miniprogram npm 构建
-- 开发者工具 → 工具 → **「构建 npm」**（会生成 `miniprogram_npm/`，已 gitignore）
-- 页面引用 tdesign 组件时按需在页面 `.json` 声明
+### 7️⃣ tdesign-miniprogram npm 构建（✅ 页面已使用，需构建后才能跑）
+- 开发者工具 → 工具 → **「构建 npm」**（生成 `miniprogram_npm/`，已 gitignore）
+- 已接入组件：t-button / t-cell / t-cell-group / t-tabs / t-tab-panel / t-dialog / t-avatar / t-tag（页面 json 的 usingComponents 声明）
+- 组件 API 以官方文档为准（开发时通过 TDesign MCP server 获取：`npx tdesign-mcp-server`）
 
 ---
 

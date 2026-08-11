@@ -37,7 +37,7 @@
 }
 .marker-item {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   padding: 20rpx 0;
   border-bottom: 1rpx solid #f0f0f0;
 }
@@ -48,19 +48,12 @@
   font-size: 40rpx;
   margin-right: 20rpx;
 }
+.marker-body {
+  flex: 1;
+}
 .marker-note {
   font-size: 28rpx;
 }
 .actions {
   display: flex;
-}
-.btn-outline {
-  flex: 1;
-  background: #fff;
-  border: 2rpx solid #2b6cf6;
-  color: #2b6cf6;
-  border-radius: 999rpx;
-  height: 84rpx;
-  line-height: 84rpx;
-  font-size: 30rpx;
 }

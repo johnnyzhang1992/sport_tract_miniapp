@@ -1,6 +1,7 @@
 {
   "navigationBarTitleText": "运动摘要",
   "usingComponents": {
-    "track-map": "/components/track-map/track-map"
+    "track-map": "/components/track-map/track-map",
+    "t-button": "tdesign-miniprogram/button/button"
   }
 }

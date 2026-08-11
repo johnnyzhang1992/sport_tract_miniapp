@@ -1,5 +1,5 @@
 const api = require('../../services/api');
-const { formatDuration } = require('../../utils/format');
+const { formatDuration, formatPace } = require('../../utils/format');
 const config = require('../../config/index');
 
 const PAGE_SIZE = 20;
@@ -33,9 +33,10 @@ Page({
     }
   },
 
-  /** 切换类型筛选 */
-  onFilterTap(e) {
-    const type = e.currentTarget.dataset.type;
+  /** 切换类型筛选（t-tabs） */
+  onTabChange(e) {
+    const type = e.detail.value;
+    if (type === this.data.activeFilter) return;
     this.setData({ activeFilter: type, page: 1, items: [], hasMore: true });
     this.refresh();
   },
@@ -111,14 +112,10 @@ Page({
 
   /** 进入轨迹详情 */
   onTapItem(e) {
+    const id = e.currentTarget.dataset.id;
+    if (!id) return;
     wx.navigateTo({
-      url: `/pages/track-detail/track-detail?id=${e.currentTarget.dataset.id}`,
+      url: `/pages/track-detail/track-detail?id=${id}`,
     });
   },
 });
-
-function formatPace(secPerKm) {
-  const m = Math.floor(secPerKm / 60);
-  const s = Math.round(secPerKm % 60);
-  return `${m}'${String(s).padStart(2, '0')}"`;
-}

@@ -53,17 +53,16 @@
     bindcancel="onMarkerCancel"
   />
 
-  <!-- 结束确认 -->
-  <view class="mask" wx:if="{{endConfirmVisible}}">
-    <view class="confirm-dialog">
-      <view class="confirm-title">结束本次运动？</view>
-      <view class="confirm-sub text-muted">将跳转到摘要页，保存后不可再补充轨迹点</view>
-      <view class="confirm-actions">
-        <button class="btn-cancel" bindtap="cancelEnd">继续运动</button>
-        <button class="btn-confirm" bindtap="confirmEnd">结束</button>
-      </view>
-    </view>
-  </view>
+  <!-- 结束确认（t-dialog） -->
+  <t-dialog
+    visible="{{endConfirmVisible}}"
+    title="结束本次运动？"
+    content="将跳转到摘要页，保存后不可再补充轨迹点"
+    confirm-btn="结束"
+    cancel-btn="继续运动"
+    bind:confirm="confirmEnd"
+    bind:cancel="cancelEnd"
+  />
 
   <!-- 初始化/错误状态 -->
   <view class="init-mask" wx:if="{{starting || error}}">
