@@ -90,16 +90,16 @@
 
   <!-- 操作（固定底部） -->
   <view class="fixed-actions">
-    <t-button variant="outline" size="medium" block bind:tap="addMarker">＋ 补打点</t-button>
-    <t-button variant="outline" size="medium" block bind:tap="sharePoster">🎨 分享海报</t-button>
-    <t-button variant="outline" size="medium" block bind:tap="exportGpx">导出 GPX</t-button>
+    <t-button class="act-btn" variant="outline" size="medium" block bind:tap="addMarker">＋ 补打点</t-button>
+    <t-button class="act-btn" variant="outline" size="medium" block bind:tap="sharePoster">🎨 分享海报</t-button>
+    <t-button class="act-btn" variant="outline" size="medium" block bind:tap="exportGpx">导出 GPX</t-button>
   </view>
 
   <!-- 分享海报（离屏绘制，无可见 UI） -->
   <share-card
     id="shareCard"
     activityId="{{id}}"
-    activity="{{shareMeta}}"
+    activity="{{activity}}"
     mapPoints="{{mapPoints}}"
   />
 
