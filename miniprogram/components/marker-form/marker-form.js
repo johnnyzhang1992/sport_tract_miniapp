@@ -1,22 +1,20 @@
 /**
  * marker-form 打点弹窗（决策 F10/F11/F13）
- * - 新增模式：类型 + 备注 + 可选拍照（照片先由页面调 services/oss-upload 上传）
+ * - 新增模式：类型 + 备注 + 多张照片（≤3，可逐张删除）
  * - 编辑模式（editMode=true + marker 传入）：类型/备注预填，显示删除按钮
  * events:
- *   confirm({markerId?, type, note, photoTempFile})  新增或编辑确认
- *   delete({markerId})                               编辑模式点删除
- *   cancel()
+ *   confirm({markerId?, type, note, photos})   photos: 待上传的本地临时路径数组
+ *   delete({markerId}) / cancel()
  */
 const config = require('../../config/index');
+
+const MAX_PHOTOS = 3;
 
 Component({
   properties: {
     visible: { type: Boolean, value: false },
-    /** 当前位置（新增模式打点坐标来源） */
     currentLocation: { type: Object, value: null },
-    /** 编辑模式 */
     editMode: { type: Boolean, value: false },
-    /** 编辑的打点（editMode 时传入） */
     marker: { type: Object, value: null },
   },
 
@@ -24,21 +22,17 @@ Component({
     typeOptions: config.MARKER_TYPES,
     selectedType: 'checkpoint',
     note: '',
-    photoTempFile: '',
+    photos: [], // 待上传的本地临时路径（新增模式）
+    maxPhotos: MAX_PHOTOS,
   },
 
   observers: {
     'visible, marker': function (visible, marker) {
       if (!visible) return;
       if (this.data.editMode && marker) {
-        // 编辑模式：预填
-        this.setData({
-          selectedType: marker.type || 'checkpoint',
-          note: marker.note || '',
-          photoTempFile: '',
-        });
+        this.setData({ selectedType: marker.type || 'checkpoint', note: marker.note || '', photos: [] });
       } else {
-        this.setData({ selectedType: 'checkpoint', note: '', photoTempFile: '' });
+        this.setData({ selectedType: 'checkpoint', note: '', photos: [] });
       }
     },
   },
@@ -52,24 +46,31 @@ Component({
       this.setData({ note: e.detail.value });
     },
 
-    /** 拍照/相册 */
+    /** 拍照/相册（多选，最多 MAX_PHOTOS 张，与已选去重） */
     choosePhoto() {
+      const remaining = MAX_PHOTOS - this.data.photos.length;
+      if (remaining <= 0) {
+        wx.showToast({ title: `最多 ${MAX_PHOTOS} 张照片`, icon: 'none' });
+        return;
+      }
       wx.chooseMedia({
-        count: 1,
+        count: remaining,
         mediaType: ['image'],
         sourceType: ['camera', 'album'],
         sizeType: ['compressed'],
         success: (res) => {
-          const file = res.tempFiles && res.tempFiles[0];
-          if (file) {
-            this.setData({ photoTempFile: file.tempFilePath });
-          }
+          const paths = (res.tempFiles || []).map((f) => f.tempFilePath);
+          // 去重后拼接
+          const merged = this.data.photos.concat(paths.filter((p) => !this.data.photos.includes(p)));
+          this.setData({ photos: merged.slice(0, MAX_PHOTOS) });
         },
       });
     },
 
-    removePhoto() {
-      this.setData({ photoTempFile: '' });
+    removePhoto(e) {
+      const idx = Number(e.currentTarget.dataset.idx);
+      const photos = this.data.photos.filter((_, i) => i !== idx);
+      this.setData({ photos });
     },
 
     confirm() {
@@ -77,11 +78,10 @@ Component({
         markerId: this.data.editMode && this.data.marker ? this.data.marker.id : undefined,
         type: this.data.selectedType,
         note: this.data.note.trim(),
-        photoTempFile: this.data.photoTempFile,
+        photos: this.data.photos,
       });
     },
 
-    /** 编辑模式删除 */
     del() {
       const marker = this.data.marker;
       if (marker && marker.id) {

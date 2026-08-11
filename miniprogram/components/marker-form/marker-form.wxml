@@ -26,12 +26,17 @@
       />
     </view>
 
-    <!-- 照片：编辑模式保留原照片不重选；新增模式可拍照 -->
-    <view class="photo-row" wx:if="{{photoTempFile}}">
-      <image class="photo-preview" src="{{photoTempFile}}" mode="aspectFill" />
-      <view class="photo-remove" bindtap="removePhoto">✕</view>
+    <!-- 多图预览 -->
+    <view class="photo-grid" wx:if="{{photos.length > 0}}">
+      <view wx:for="{{photos}}" wx:key="*this" class="photo-item">
+        <image class="photo-img" src="{{item}}" mode="aspectFill" />
+        <view class="photo-remove" data-idx="{{index}}" bindtap="removePhoto">✕</view>
+      </view>
     </view>
-    <view class="photo-add" wx:elif="{{!editMode}}" bindtap="choosePhoto">📷 拍照 / 相册</view>
+    <!-- 添加照片（新增模式；编辑模式保留原照片不重选） -->
+    <view class="photo-add" wx:if="{{!editMode && photos.length < maxPhotos}}" bindtap="choosePhoto">
+      📷 拍照 / 相册（{{photos.length}}/{{maxPhotos}}）
+    </view>
 
     <view class="actions">
       <button class="btn-del" wx:if="{{editMode}}" bindtap="del">删除</button>

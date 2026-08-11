@@ -164,36 +164,36 @@ Page({
   },
 
   async onMarkerConfirm(e) {
-    const { markerId, type, note, photoTempFile } = e.detail;
+    const { markerId, type, note, photos } = e.detail;
     if (this.data.markerBusy) return;
     this.setData({ markerBusy: true });
 
     wx.showLoading({ title: '保存中…' });
     try {
-      // 照片直传（合规检测已内置；编辑模式通常不带新照片）
-      let photoUrl = '';
-      if (photoTempFile) {
-        const up = await uploadPhoto(photoTempFile);
-        if (up && up.blocked) {
-          wx.hideLoading();
-          wx.showToast({ title: '图片包含不当内容', icon: 'none' });
-          return;
+      // 多图直传（合规检测已内置；编辑模式通常不带新照片）
+      const urls = [];
+      if (photos && photos.length) {
+        for (const f of photos) {
+          const up = await uploadPhoto(f);
+          if (up && up.blocked) {
+            wx.hideLoading();
+            wx.showToast({ title: '图片包含不当内容', icon: 'none' });
+            return;
+          }
+          if (up && up.url) urls.push(up.url);
         }
-        photoUrl = up ? up.url : '';
       }
 
       if (markerId) {
-        // 编辑：仅更新传入字段
-        const body = { type, note };
-        if (photoUrl) body.photoUrl = photoUrl;
+        // 编辑：仅更新传入字段（新图追加到已有 photos 之后）
+        const body: Record<string, unknown> = { type, note };
+        if (urls.length > 0) body.photos = urls;
         await api.put(`/activities/${this.data.id}/markers/${markerId}`, body);
       } else {
-        // 补打点：坐标用最后一个轨迹点（或地图中心）
+        // 补打点：坐标用最后一个轨迹点
         const pts = (this.activity && this.activity.trackPoints) || [];
         const last = pts[pts.length - 1];
-        const loc = last
-          ? { lat: last.lat, lng: last.lng }
-          : { lat: 0, lng: 0 };
+        const loc = last ? { lat: last.lat, lng: last.lng } : { lat: 0, lng: 0 };
         await api.post(`/activities/${this.data.id}/markers`, {
           id: `m_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
           lat: loc.lat,
@@ -201,7 +201,8 @@ Page({
           timestamp: Date.now(),
           type,
           note,
-          photoUrl,
+          photoUrl: urls[0] || '',
+          photos: urls,
         });
       }
 
