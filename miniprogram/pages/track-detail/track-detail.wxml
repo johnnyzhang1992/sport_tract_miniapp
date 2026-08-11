@@ -101,6 +101,7 @@
     activityId="{{id}}"
     activity="{{activity}}"
     mapPoints="{{mapPoints}}"
+    bindposterready="onPosterReady"
   />
 
   <!-- 打点弹窗（编辑/新增） -->

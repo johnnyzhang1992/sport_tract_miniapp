@@ -1,29 +1,32 @@
 /**
  * share-card 分享海报组件（决策 F21/F22）
- * - Canvas 2D 绘制：背景 + 轨迹线（经纬度投影）+ 指标文字 + 小程序码
- * - 保存相册（wx.saveImageToPhotosAlbum，含权限引导）
+ * - 点击「分享海报」→ 生成海报 → 预览弹窗展示 → 用户选择「保存到相册」或「取消」
+ * - 不再点击立即导出
  * props: activityId, activity(指标), mapPoints, miniCodeUrl
- * 方法: generate() —— 拉取小程序码 → 绘制 → 保存
+ * 方法: preview() —— 拉小程序码 → 绘制 → 预览弹窗
  */
 const api = require('../../services/api');
 
 Component({
   properties: {
     activityId: { type: String, value: '' },
-    /** {label, distanceKm, durationText, paceText, calories, startTimeText} */
     activity: { type: Object, value: null },
     mapPoints: { type: Array, value: [] },
-    /** 小程序码 URL（可预先传入，避免重复请求） */
     miniCodeUrl: { type: String, value: '' },
   },
 
+  data: {
+    previewVisible: false,
+    previewPath: '',
+    saving: false,
+  },
+
   methods: {
-    /** 生成并保存海报 */
-    async generate() {
+    /** 生成海报并展示预览弹窗 */
+    async preview() {
       wx.showLoading({ title: '生成海报…' });
       try {
         let codeUrl = this.data.miniCodeUrl;
-        // 没有小程序码则请求（失败不阻塞海报生成）
         if (!codeUrl && this.data.activityId) {
           try {
             const res = await api.post('/share/mini-code', { activityId: this.data.activityId });
@@ -33,9 +36,15 @@ Component({
           }
         }
 
-        await this.drawPoster(codeUrl);
+        const tempPath = await this.drawPoster(codeUrl);
         wx.hideLoading();
-        await this.saveToAlbum();
+        if (tempPath) {
+          this.setData({ previewPath: tempPath, previewVisible: true });
+          // 海报路径交给页面（分享卡片/朋友圈封面用）
+          this.triggerEvent('posterready', { path: tempPath });
+        } else {
+          wx.showToast({ title: '海报生成失败', icon: 'none' });
+        }
       } catch (e) {
         wx.hideLoading();
         wx.showToast({ title: '海报生成失败', icon: 'none' });
@@ -43,6 +52,7 @@ Component({
       }
     },
 
+    /** 绘制海报 → 返回临时文件路径 */
     drawPoster(codeUrl) {
       return new Promise((resolve, reject) => {
         wx.createSelectorQuery()
@@ -55,7 +65,7 @@ Component({
               return;
             }
             const canvas = res[0].node;
-            this._canvasNode = canvas; // Canvas 2D 需节点引用
+            this._canvasNode = canvas;
             const { width, height } = res[0];
             const ctx = canvas.getContext('2d');
             const dpr = (wx.getWindowInfo ? wx.getWindowInfo().pixelRatio : 2) || 2;
@@ -78,19 +88,24 @@ Component({
             ctx.textAlign = 'center';
             ctx.fillText(`${act.label || '运动'} · ${act.distanceKm || '0.00'} 公里`, width / 2, 56);
 
-            // 轨迹线（投影到画布中部的白卡区域）
+            // 轨迹线
             this.drawTrack(ctx, width, height);
-
             // 指标
             this.drawMetrics(ctx, width, height, act);
 
-            // 小程序码（右下角）
+            // 小程序码
+            const finish = () => {
+              // canvas → 临时文件
+              wx.canvasToTempFilePath({
+                canvas: this._canvasNode,
+                success: (r) => resolve(r.tempFilePath),
+                fail: reject,
+              });
+            };
             if (codeUrl) {
-              this.drawCode(ctx, codeUrl, width, height)
-                .then(resolve)
-                .catch(resolve); // 码加载失败不阻塞
+              this.drawCode(ctx, codeUrl, width, height).then(finish).catch(finish);
             } else {
-              resolve();
+              finish();
             }
           });
       });
@@ -111,7 +126,6 @@ Component({
       const spanLat = maxLat - minLat || 0.001;
       const spanLng = maxLng - minLng || 0.001;
 
-      // 白卡
       ctx.fillStyle = 'rgba(255,255,255,0.15)';
       ctx.strokeStyle = 'rgba(255,255,255,0.3)';
       ctx.lineWidth = 1;
@@ -120,7 +134,6 @@ Component({
       ctx.roundRect ? ctx.roundRect(card.x, card.y, card.w, card.h, 16) : ctx.rect(card.x, card.y, card.w, card.h);
       ctx.fill();
 
-      // 轨迹线
       ctx.strokeStyle = '#ffd24d';
       ctx.lineWidth = 4;
       ctx.lineJoin = 'round';
@@ -133,7 +146,6 @@ Component({
       });
       ctx.stroke();
 
-      // 起点终点
       const first = pts[0];
       const last = pts[pts.length - 1];
       const fX = pad / 2 + ((first.lng - minLng) / spanLng) * (width - pad);
@@ -189,27 +201,28 @@ Component({
       });
     },
 
-    /** 保存到相册（含权限引导） */
-    saveToAlbum() {
-      return new Promise((resolve, reject) => {
-        wx.canvasToTempFilePath({
-          canvas: this._canvasNode,
-          success: (res) => {
-            wx.saveImageToPhotosAlbum({
-              filePath: res.tempFilePath,
-              success: () => {
-                wx.showToast({ title: '已保存到相册', icon: 'success' });
-                resolve();
-              },
-              fail: (e) => this.handleAlbumFail(e, resolve, reject),
-            });
-          },
-          fail: reject,
-        });
+    /** 保存到相册（预览弹窗内操作） */
+    save() {
+      if (this.data.saving || !this.data.previewPath) return;
+      this.setData({ saving: true });
+      wx.saveImageToPhotosAlbum({
+        filePath: this.data.previewPath,
+        success: () => {
+          this.setData({ previewVisible: false, saving: false });
+          wx.showToast({ title: '已保存到相册', icon: 'success' });
+        },
+        fail: (e) => {
+          this.setData({ saving: false });
+          this.handleAlbumFail(e);
+        },
       });
     },
 
-    handleAlbumFail(e, resolve, reject) {
+    closePreview() {
+      this.setData({ previewVisible: false });
+    },
+
+    handleAlbumFail(e) {
       if (String(e.errMsg || '').includes('auth deny') || String(e.errMsg || '').includes('authorize')) {
         wx.showModal({
           title: '需要相册权限',
@@ -217,12 +230,10 @@ Component({
           confirmText: '去设置',
           success: (r) => {
             if (r.confirm) wx.openSetting();
-            reject(e);
           },
         });
       } else {
         wx.showToast({ title: '保存失败', icon: 'none' });
-        reject(e);
       }
     },
   },
