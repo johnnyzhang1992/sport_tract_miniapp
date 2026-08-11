@@ -21,7 +21,22 @@ module.exports = {
    *    模拟器/真机预览用电脑局域网 IP（需同一 Wi-Fi）；本机 IP 变化时同步更新
    *  - 生产：必须是 https 备案域名，且需在小程序后台配置 request 合法域名
    */
-  API_BASE_URL: 'http://192.168.31.138:3004',
+  /**
+   * 后端 API 地址（按环境自动切换）
+   * - 开发版（开发者工具/真机调试）：局域网 IP 联调
+   * - 体验版 / 正式版：线上域名
+   * 切换规则见下方 envVersion 判断
+   */
+  API_BASE_URL: (() => {
+    let envVersion = 'develop';
+    try {
+      envVersion = wx.getAccountInfoSync().miniProgram.envVersion;
+    } catch {
+      // 非小程序环境（如 Node 测试）降级为开发版
+    }
+    const isOnline = envVersion === 'release' || envVersion === 'trial';
+    return isOnline ? 'https://api.historybook.cn' : 'http://192.168.31.138:3004';
+  })(),
 
   /**
    * 腾讯位置服务 Key（逆地理编码/地址解析用，敏感配置：
