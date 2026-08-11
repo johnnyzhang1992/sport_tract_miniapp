@@ -159,7 +159,7 @@ Component({
       ctx.lineCap = 'round';
       // 白色底层
       ctx.strokeStyle = 'rgba(255,255,255,0.85)';
-      ctx.lineWidth = 8;
+      ctx.lineWidth = 6;
       ctx.beginPath();
       pts.forEach((p, i) => {
         const x = plotLeft + ((p.lng - minLng) / sLng) * (plotRight - plotLeft);
@@ -170,7 +170,7 @@ Component({
       ctx.stroke();
       // 黄色主体
       ctx.strokeStyle = '#FFE066';
-      ctx.lineWidth = 4;
+      ctx.lineWidth = 3;
       ctx.beginPath();
       pts.forEach((p, i) => {
         const x = plotLeft + ((p.lng - minLng) / sLng) * (plotRight - plotLeft);
@@ -189,10 +189,10 @@ Component({
       const lY = plotBottom - ((last.lat - minLat) / sLat) * (plotBottom - plotTop);
       ctx.fillStyle = '#fff';
       ctx.beginPath();
-      ctx.arc(fX, fY, 7, 0, Math.PI * 2);
+      ctx.arc(fX, fY, 9, 0, Math.PI * 2);
       ctx.fill();
       ctx.beginPath();
-      ctx.arc(lX, lY, 7, 0, Math.PI * 2);
+      ctx.arc(lX, lY, 9, 0, Math.PI * 2);
       ctx.fill();
       // 起/终标签：深蓝底白字（对比强）
       ctx.fillStyle = '#0d2b7a';
