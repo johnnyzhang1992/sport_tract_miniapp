@@ -88,12 +88,12 @@ Component({
             ctx.fillStyle = '#fff';
             ctx.font = 'bold 24px sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText(`${act.label || '运动'} · ${act.distanceKm || '0.00'} 公里`, width / 2, 44);
+            ctx.fillText(`${act.label || '运动'} · ${act.distanceKm || '0.00'} 公里`, width / 2, 42);
 
-            // 轨迹线
+            // 轨迹（大块完整展示）
             this.drawTrack(ctx, width, height);
-            // 指标
-            this.drawMetrics(ctx, width, height, act);
+            // 指标卡片（时长/配速/消耗 独立卡）
+            this.drawStatsCards(ctx, width, height, act);
 
             const finish = () => resolve();
             if (codeUrl) {
@@ -118,66 +118,107 @@ Component({
     drawTrack(ctx, width, height) {
       const pts = this.data.mapPoints || [];
       if (pts.length < 2) return;
-      const pad = 30;
-      const top = 70;
-      const bottom = height - 120;
+      // 轨迹区域：标题下到指标卡上方，尽量占满
+      const pad = 24;
+      const top = 62;
+      const bottom = 232;
       const lats = pts.map((p) => p.lat);
       const lngs = pts.map((p) => p.lng);
-      const minLat = Math.min(...lats);
-      const maxLat = Math.max(...lats);
-      const minLng = Math.min(...lngs);
-      const maxLng = Math.max(...lngs);
-      const spanLat = maxLat - minLat || 0.001;
-      const spanLng = maxLng - minLng || 0.001;
+      let minLat = Math.min(...lats);
+      let maxLat = Math.max(...lats);
+      let minLng = Math.min(...lngs);
+      let maxLng = Math.max(...lngs);
+      // 最小跨度保障：极短轨迹也铺满可视
+      const spanLat = maxLat - minLat;
+      const spanLng = maxLng - minLng;
+      if (spanLat < 0.0005 && spanLng < 0.0005) {
+        const c = 0.0015;
+        minLat -= c; maxLat += c; minLng -= c; maxLng += c;
+      }
+      const sLat = maxLat - minLat || 0.001;
+      const sLng = maxLng - minLng || 0.001;
 
-      ctx.fillStyle = 'rgba(255,255,255,0.15)';
+      // 轨迹卡底
+      ctx.fillStyle = 'rgba(255,255,255,0.16)';
+      ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+      ctx.lineWidth = 1;
       const card = { x: pad / 2, y: top, w: width - pad, h: bottom - top };
       ctx.beginPath();
       ctx.roundRect ? ctx.roundRect(card.x, card.y, card.w, card.h, 16) : ctx.rect(card.x, card.y, card.w, card.h);
       ctx.fill();
 
+      // 轨迹线（完整展示）
       ctx.strokeStyle = '#ffd24d';
-      ctx.lineWidth = 4;
+      ctx.lineWidth = 5;
       ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
       ctx.beginPath();
       pts.forEach((p, i) => {
-        const x = pad / 2 + ((p.lng - minLng) / spanLng) * (width - pad);
-        const y = bottom - ((p.lat - minLat) / spanLat) * (bottom - top);
+        const x = pad / 2 + ((p.lng - minLng) / sLng) * (width - pad);
+        const y = bottom - ((p.lat - minLat) / sLat) * (bottom - top);
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
       });
       ctx.stroke();
 
+      // 起终点圆点 + 标签
       const first = pts[0];
       const last = pts[pts.length - 1];
-      const fX = pad / 2 + ((first.lng - minLng) / spanLng) * (width - pad);
-      const fY = bottom - ((first.lat - minLat) / spanLat) * (bottom - top);
-      const lX = pad / 2 + ((last.lng - minLng) / spanLng) * (width - pad);
-      const lY = bottom - ((last.lat - minLat) / spanLat) * (bottom - top);
+      const fX = pad / 2 + ((first.lng - minLng) / sLng) * (width - pad);
+      const fY = bottom - ((first.lat - minLat) / sLat) * (bottom - top);
+      const lX = pad / 2 + ((last.lng - minLng) / sLng) * (width - pad);
+      const lY = bottom - ((last.lat - minLat) / sLat) * (bottom - top);
       ctx.fillStyle = '#fff';
-      ctx.font = '14px sans-serif';
+      ctx.beginPath();
+      ctx.arc(fX, fY, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(lX, lY, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#1a4fd0';
+      ctx.font = 'bold 14px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('起', fX, fY - 6);
-      ctx.fillText('终', lX, lY - 6);
+      ctx.fillText('起', fX, fY - 10);
+      ctx.fillText('终', lX, lY - 10);
     },
 
-    drawMetrics(ctx, width, height, act) {
-      const y = height - 82;
-      ctx.fillStyle = '#fff';
-      ctx.font = '14px sans-serif';
-      ctx.textAlign = 'center';
-      const items = [
-        `时长 ${act.durationText || '—'}`,
-        `配速 ${act.paceText || '—'}`,
-        `消耗 ${act.calories || 0} kcal`,
+    /** 指标独立卡片：时长 / 配速 / 消耗 */
+    drawStatsCards(ctx, width, height, act) {
+      const cards = [
+        { label: '时长', value: act.durationText || '—' },
+        { label: '配速', value: act.paceText || '—' },
+        { label: '消耗', value: `${act.calories || 0} kcal` },
       ];
-      items.forEach((t, i) => {
-        ctx.fillText(t, (width / items.length) * i + width / items.length / 2, y);
-      });
-      if (act.startTimeText) {
+      const top = 248;
+      const cardH = 66;
+      const gap = 8;
+      const cardW = (width - 24 * 2 - gap * 2) / 3;
+      cards.forEach((c, i) => {
+        const x = 24 + i * (cardW + gap);
+        // 白底圆角卡
+        ctx.fillStyle = 'rgba(255,255,255,0.92)';
+        ctx.beginPath();
+        ctx.roundRect ? ctx.roundRect(x, top, cardW, cardH, 12) : ctx.rect(x, top, cardW, cardH);
+        ctx.fill();
+        // 值
+        ctx.fillStyle = '#1a4fd0';
+        ctx.font = 'bold 16px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(c.value, x + cardW / 2, top + 24);
+        // 标签
+        ctx.fillStyle = '#8a93a6';
         ctx.font = '11px sans-serif';
-        ctx.fillStyle = 'rgba(255,255,255,0.75)';
-        ctx.fillText(act.startTimeText, width / 2, height - 22);
+        ctx.fillText(c.label, x + cardW / 2, top + 48);
+        ctx.textBaseline = 'alphabetic';
+      });
+
+      // 底部时间
+      if (act.startTimeText) {
+        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        ctx.font = '11px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(act.startTimeText, 24, height - 20);
       }
     },
 
@@ -186,9 +227,9 @@ Component({
         wx.getImageInfo({
           src: codeUrl,
           success: (img) => {
-            const size = 90;
+            const size = 84;
             const x = width - size - 20;
-            const y = height - size - 36;
+            const y = height - size - 12; // 右下角（时间在左下，不冲突）
             ctx.fillStyle = '#fff';
             ctx.fillRect(x - 5, y - 5, size + 10, size + 10);
             ctx.drawImage(img.path, x, y, size, size);
