@@ -35,10 +35,11 @@ async function uploadPhoto(tempFilePath) {
     const base = creds.endpoint.replace(/\/$/, '');
     const url = `${base}/${key}`;
 
-    // 3. 签名直传
+    // 3. 签名直传（OSS PostObject：必须 POST 到 bucket 根路径，key 放 formData；
+    //    带对象路径会返回 405 Method Not Allowed）
     const res = await new Promise((resolve, reject) => {
       wx.uploadFile({
-        url: `${base}/${key}`,
+        url: `${base}/`,
         filePath: tempFilePath,
         name: 'file',
         formData: {
