@@ -147,15 +147,22 @@ Component({
       ctx.roundRect ? ctx.roundRect(card.x, card.y, card.w, card.h, 16) : ctx.rect(card.x, card.y, card.w, card.h);
       ctx.fill();
 
-      // 轨迹线（完整展示）
+      // 轨迹投影区：在卡片内部再内缩，保证线/端点/标签不溢出卡片
+      const innerPad = 14;
+      const plotLeft = card.x + innerPad;
+      const plotRight = card.x + card.w - innerPad;
+      const plotTop = card.y + innerPad;
+      const plotBottom = card.y + card.h - innerPad;
+
+      // 轨迹线（完整展示，收在框内）
       ctx.strokeStyle = '#ffd24d';
       ctx.lineWidth = 5;
       ctx.lineJoin = 'round';
       ctx.lineCap = 'round';
       ctx.beginPath();
       pts.forEach((p, i) => {
-        const x = pad / 2 + ((p.lng - minLng) / sLng) * (width - pad);
-        const y = bottom - ((p.lat - minLat) / sLat) * (bottom - top);
+        const x = plotLeft + ((p.lng - minLng) / sLng) * (plotRight - plotLeft);
+        const y = plotBottom - ((p.lat - minLat) / sLat) * (plotBottom - plotTop);
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
       });
@@ -164,10 +171,10 @@ Component({
       // 起终点圆点 + 标签
       const first = pts[0];
       const last = pts[pts.length - 1];
-      const fX = pad / 2 + ((first.lng - minLng) / sLng) * (width - pad);
-      const fY = bottom - ((first.lat - minLat) / sLat) * (bottom - top);
-      const lX = pad / 2 + ((last.lng - minLng) / sLng) * (width - pad);
-      const lY = bottom - ((last.lat - minLat) / sLat) * (bottom - top);
+      const fX = plotLeft + ((first.lng - minLng) / sLng) * (plotRight - plotLeft);
+      const fY = plotBottom - ((first.lat - minLat) / sLat) * (plotBottom - plotTop);
+      const lX = plotLeft + ((last.lng - minLng) / sLng) * (plotRight - plotLeft);
+      const lY = plotBottom - ((last.lat - minLat) / sLat) * (plotBottom - plotTop);
       ctx.fillStyle = '#fff';
       ctx.beginPath();
       ctx.arc(fX, fY, 6, 0, Math.PI * 2);
