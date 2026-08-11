@@ -17,12 +17,12 @@ function formatKm(meters) {
   return (meters / 1000).toFixed(2);
 }
 
-/** 秒/公里 → “5分30秒”（配速，页面单位已标注 /km） */
+/** 秒/公里 → “7'30"/公里” */
 function formatPace(secPerKm) {
   if (!secPerKm || secPerKm <= 0) return '—';
   const m = Math.floor(secPerKm / 60);
   const s = Math.round(secPerKm % 60);
-  return `${m}分${s}秒`;
+  return `${m}'${String(s).padStart(2, '0')}" /公里`;
 }
 
 module.exports = { formatDuration, formatKm, formatPace };
