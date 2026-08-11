@@ -131,4 +131,34 @@ function del(url, data) {
   return request({ url, method: 'DELETE', data });
 }
 
-module.exports = { request, get, post, put, del };
+/**
+ * 图片合规检测（微信 imgSecCheck，服务端调用）
+ * 直传 OSS 前调用：检测通过再上传
+ * @returns {Promise<{risky: boolean, skipped?: boolean, errcode?: number}>}
+ */
+function checkImage(filePath) {
+  return new Promise((resolve, reject) => {
+    const token = storage.getToken();
+    wx.uploadFile({
+      url: config.API_BASE_URL + '/users/check-image',
+      filePath,
+      name: 'file',
+      header: token && token.accessToken ? { Authorization: `Bearer ${token.accessToken}` } : {},
+      success: (res) => {
+        try {
+          const body = JSON.parse(res.data || '{}');
+          if (res.statusCode === 200 && body.success) {
+            resolve(body.data);
+          } else {
+            reject(new Error(body.message || '检测失败'));
+          }
+        } catch {
+          reject(new Error('检测服务响应异常'));
+        }
+      },
+      fail: () => reject(new Error('检测请求失败')),
+    });
+  });
+}
+
+module.exports = { request, get, post, put, del, checkImage };
