@@ -13,6 +13,8 @@ const MIN_INTERVAL_MS = 3000;
 const MAX_SPEED_MPS = 30;
 /** 爬升死区阈值（米，海拔误差范围内不累计） */
 const CLIMB_DEAD_ZONE_M = 2;
+/** 配速最小有效距离（米）：低于此值配速无意义（如刚起步/静止），显示 “—” */
+const MIN_PACE_DISTANCE_M = 200;
 
 /** Haversine 球面距离（米），兼容 {lat,lng} 与 {latitude,longitude} 两种字段 */
 function haversine(a, b) {
@@ -131,9 +133,9 @@ class Tracker {
     return {
       distance: Math.round(this.distance),
       durationSec: Math.round(durationSec),
-      // 配速：秒/公里（游泳/骑行不展示）
+      // 配速：秒/公里（游泳/骑行不展示；距离过短配速无意义）
       pace:
-        this.distance > 0 && !['swimming', 'cycling'].includes(this.type)
+        this.distance >= MIN_PACE_DISTANCE_M && !['swimming', 'cycling'].includes(this.type)
           ? Math.round(durationSec / (this.distance / 1000))
           : null,
       calories: Math.round(met * this.weightKg * (durationSec / 3600)),
