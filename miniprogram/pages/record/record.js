@@ -149,6 +149,10 @@ Page({
   /** 定位回调：喂给 tracker + 更新地图 */
   onLocation(loc) {
     if (this.data.paused) return;
+    if (!this._firstLoc) {
+      this._firstLoc = true;
+      wx.showToast({ title: '已获取定位', icon: 'success' });
+    }
     const point = this.tracker.addPoint(loc);
     if (point) {
       const mapPoints = this.data.mapPoints.concat({ lat: point.lat, lng: point.lng });
