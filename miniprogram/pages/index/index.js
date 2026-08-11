@@ -30,7 +30,17 @@ Page({
       }
       this.setData({ loading: true });
       const overview = await api.get('/stats/overview');
-      this.setData({ overview });
+      // 预处理：WXML 不支持 toFixed 等方法调用
+      this.setData({
+        overview: {
+          today: {
+            count: overview.today.count,
+            distanceKm: (overview.today.distance / 1000).toFixed(2),
+            durationMin: Math.round(overview.today.duration / 60),
+            calories: overview.today.calories,
+          },
+        },
+      });
     } catch (e) {
       console.error('加载概览失败', e);
     } finally {

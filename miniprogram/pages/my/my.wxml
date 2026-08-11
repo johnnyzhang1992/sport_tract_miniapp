@@ -1,7 +1,7 @@
 <view class="container">
   <!-- 用户卡片 -->
   <view class="card user-card" bindtap="goProfile">
-    <view class="avatar">{{user.nickname ? user.nickname[0] : '👤'}}</view>
+    <view class="avatar">{{user.avatarText || '👤'}}</view>
     <view class="user-info">
       <view class="user-name">{{user.nickname || '微信用户'}}</view>
       <view class="text-muted">点击编辑资料</view>

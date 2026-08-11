@@ -31,11 +31,11 @@
         <view class="stat-label">次数</view>
       </view>
       <view class="stat-item">
-        <view class="stat-num">{{(overview.today.distance / 1000).toFixed(2)}}</view>
+        <view class="stat-num">{{overview.today.distanceKm}}</view>
         <view class="stat-label">公里</view>
       </view>
       <view class="stat-item">
-        <view class="stat-num">{{(overview.today.duration / 60).toFixed(0)}}</view>
+        <view class="stat-num">{{overview.today.durationMin}}</view>
         <view class="stat-label">分钟</view>
       </view>
       <view class="stat-item">
