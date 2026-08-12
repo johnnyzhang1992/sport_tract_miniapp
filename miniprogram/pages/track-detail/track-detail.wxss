@@ -165,3 +165,70 @@
   margin: 0 14rpx;
   color: #c2c7d0;
 }
+
+/* 编辑入口 + 备注 */
+.edit-btn {
+  font-size: 24rpx;
+  font-weight: 400;
+  color: #2b6cf6;
+  margin-left: 12rpx;
+  padding: 4rpx 14rpx;
+  background: #e8f0ff;
+  border-radius: 999rpx;
+}
+.note-text {
+  font-size: 26rpx;
+  color: #4e5969;
+  background: #f6f7f9;
+  border-radius: 12rpx;
+  padding: 14rpx 20rpx;
+  margin-top: 14rpx;
+}
+
+/* 编辑面板 */
+.edit-panel {
+  background: #fff;
+  border-radius: 24rpx 24rpx 0 0;
+  padding: 32rpx 32rpx calc(32rpx + env(safe-area-inset-bottom));
+}
+.edit-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #1f2329;
+  text-align: center;
+  margin-bottom: 28rpx;
+}
+.edit-label {
+  font-size: 26rpx;
+  color: #4e5969;
+  margin-bottom: 14rpx;
+}
+.edit-type-grid {
+  display: flex;
+  flex-wrap: wrap;
+  margin-bottom: 24rpx;
+}
+.edit-type-item {
+  width: 33.33%;
+  box-sizing: border-box;
+  padding: 16rpx 0;
+  text-align: center;
+  font-size: 26rpx;
+  color: #1f2329;
+  border-radius: 12rpx;
+}
+.edit-type-active {
+  background: #e8f0ff;
+  color: #2b6cf6;
+  font-weight: 600;
+}
+.edit-note-input {
+  width: 100%;
+  box-sizing: border-box;
+  height: 160rpx;
+  background: #f6f7f9;
+  border-radius: 16rpx;
+  padding: 20rpx;
+  font-size: 26rpx;
+  margin-bottom: 28rpx;
+}
