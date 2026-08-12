@@ -20,7 +20,6 @@ Page({
     mapType: 'standard',
     loading: false,
     fullscreen: false,
-    showPoi: true,
   },
 
   onLoad() {
@@ -110,11 +109,6 @@ Page({
     this.setData({
       mapType: this.data.mapType === 'standard' ? 'satellite' : 'standard',
     });
-  },
-
-  /** POI 标注开关（地铁站/公交站等地标点） */
-  togglePoi() {
-    this.setData({ showPoi: !this.data.showPoi });
   },
 
   /** 全屏展示合集地图 */

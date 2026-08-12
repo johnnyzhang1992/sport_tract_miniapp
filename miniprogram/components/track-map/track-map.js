@@ -21,8 +21,6 @@ Component({
     overviewTracks: { type: Array, value: [] },
     /** 合集模式：热力网格 [{lat, lng, weight(0~1)}] → map circles */
     heat: { type: Array, value: [] },
-    /** POI 标注（地铁站/公交站等地标点，enable-poi） */
-    showPoi: { type: Boolean, value: true },
   },
 
   data: {
