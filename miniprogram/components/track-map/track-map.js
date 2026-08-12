@@ -224,40 +224,54 @@ Component({
       });
     },
 
-    /** 合集模式：多轨迹 polyline（按类型配色）+ 热力 circles */
+    /** 合集模式：多轨迹 polyline（按类型配色 + 高频路线加粗高亮） */
     buildOverview() {
       const tracks = this.data.overviewTracks || [];
-      console.log('[track-map] buildOverview tracks=', tracks.length, 'heat=', (this.data.heat || []).length);
+      const heat = this.data.heat || [];
+      console.log('[track-map] buildOverview tracks=', tracks.length, 'heat=', heat.length);
+      // 热力网格索引（与后端 gridHeat 同算法：150m）
+      const cellLat = 150 / 111320;
+      const heatMap = new Map();
+      heat.forEach((h) => {
+        const cosLat = Math.cos((h.lat * Math.PI) / 180) || 1;
+        const cellLng = cellLat / cosLat;
+        heatMap.set(`${Math.round(h.lat / cellLat)},${Math.round(h.lng / cellLng)}`, h.weight);
+      });
+
       const polylines = [];
       tracks.forEach((t) => {
         const pts = (t.points || [])
           .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng))
           .map((p) => ({ latitude: p.lat, longitude: p.lng }));
         if (pts.length < 2) return;
-        const color = t.color || '#2B6CF6';
-        // 半透明主体线：多条重叠自然加深 → 高频路线视觉强化
-        polylines.push({ points: pts, color, width: 4, arrowLine: false });
+        // 轨迹热度 = 命中热力网格的权重均值（高频路线 → 粗橙线）
+        let sum = 0;
+        let n = 0;
+        (t.points || []).forEach((p) => {
+          const cosLat = Math.cos((p.lat * Math.PI) / 180) || 1;
+          const cellLng = cellLat / cosLat;
+          const w = heatMap.get(`${Math.round(p.lat / cellLat)},${Math.round(p.lng / cellLng)}`);
+          if (w != null) {
+            sum += w;
+            n += 1;
+          }
+        });
+        const trackHeat = n > 0 ? sum / n : 0;
+        const baseColor = t.color || '#2B6CF6';
+        let color = baseColor;
+        let width = 3;
+        if (trackHeat >= 0.5) {
+          color = '#FF9800'; // 高频：橙色粗线（热力强调）
+          width = 8;
+        } else if (trackHeat >= 0.2) {
+          width = 5; // 中频：类型色加粗
+        }
+        polylines.push({ points: pts, color, width, arrowLine: false });
       });
       console.log('[track-map] polylines=', polylines.length);
 
-      // 热力：150m 网格 → 半透明橙色圆（权重越高越浓），≤200 个
-      // map circles 颜色只支持 #RRGGBB / #RRGGBBAA（8 位 hex），rgba() 会崩渲染层
-      const heatCircles = (this.data.heat || []).map((h) => {
-        const alpha = Math.round((0.08 + 0.45 * h.weight) * 255);
-        const hex = (n) => n.toString(16).padStart(2, '0');
-        return {
-          latitude: h.lat,
-          longitude: h.lng,
-          // 半径按权重微调：55m（低频）~ 85m（高频），整体比之前(90m)小
-          radius: 55 + h.weight * 30,
-          color: `#${hex(255)}${hex(152)}${hex(0)}${hex(alpha)}`,
-          fillColor: `#${hex(255)}${hex(152)}${hex(0)}${hex(alpha)}`,
-          strokeWidth: 0,
-        };
-      });
-
-      this.setData({ polyline: polylines, heatCircles });
-      console.log('[track-map] heatCircles=', heatCircles.length);
+      // 热力不再用 circles（map circles 与 polyline 渲染冲突），改由轨迹线粗细/颜色表达
+      this.setData({ polyline: polylines });
     },
 
     /** 合集模式：视野聚焦首条轨迹（避免异地轨迹把视野拉到全国，轨迹缩成不可见） */
