@@ -38,6 +38,11 @@ Page({
     wx.navigateTo({ url: '/pages/overview/overview' });
   },
 
+  /** 数据导入（M7：两步路/Strava 等 GPX/KML/TCX） */
+  goImport() {
+    wx.navigateTo({ url: '/pages/import/import' });
+  },
+
   goStats() {
     wx.navigateTo({ url: '/pages/stats/stats' });
   },

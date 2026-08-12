@@ -166,4 +166,4 @@ function checkImage(filePath) {
   });
 }
 
-module.exports = { request, get, post, put, del, checkImage };
+module.exports = { request, get, post, put, del, checkImage, buildUrl };

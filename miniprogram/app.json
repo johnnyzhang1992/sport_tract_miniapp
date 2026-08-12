@@ -10,7 +10,8 @@
     "pages/profile/profile",
     "pages/settings/settings",
     "pages/privacy/privacy",
-    "pages/overview/overview"
+    "pages/overview/overview",
+    "pages/import/import"
   ],
   "window": {
     "navigationBarBackgroundColor": "#ffffff",

@@ -1,0 +1,61 @@
+<view class="import-page">
+  <!-- 说明 -->
+  <view class="card intro-card">
+    <view class="intro-title">导入运动轨迹</view>
+    <view class="intro-text">支持从以下 App 导出的轨迹文件：</view>
+    <view class="intro-list">
+      <view class="intro-item">• 两步路：KML / GPX</view>
+      <view class="intro-item">• Strava：GPX / TCX</view>
+      <view class="intro-item">• 华为运动健康 / 小米：GPX</view>
+      <view class="intro-item">• 佳明：TCX / GPX</view>
+    </view>
+    <view class="intro-tip">将文件发送到微信「文件传输助手」，然后在此选择</view>
+  </view>
+
+  <!-- 选择文件 -->
+  <t-button theme="primary" size="large" block bind:tap="chooseFile" disabled="{{uploading}}">
+    {{uploading ? '上传解析中…' : '📂 选择轨迹文件'}}
+  </t-button>
+  <view class="text-muted file-name" wx:if="{{fileName}}">已选：{{fileName}}</view>
+
+  <!-- 解析预览 -->
+  <view class="card preview-card" wx:if="{{preview}}">
+    <view class="section-title">确认信息</view>
+    <view class="preview-row">
+      <view class="preview-label">运动类型</view>
+    </view>
+    <view class="type-grid">
+      <view
+        wx:for="{{activityTypes}}"
+        wx:key="type"
+        class="type-item {{preview.type === item.type ? 'type-item-active' : ''}}"
+        data-type="{{item.type}}"
+        bindtap="onTypeChange"
+      >
+        <view class="type-icon">{{item.icon}}</view>
+        <view class="type-label">{{item.label}}</view>
+      </view>
+    </view>
+    <view class="preview-stats">
+      <view class="pstat">
+        <view class="pstat-value">{{preview.distanceKm}}</view>
+        <view class="pstat-label">公里</view>
+      </view>
+      <view class="pstat">
+        <view class="pstat-value">{{preview.durationText}}</view>
+        <view class="pstat-label">时长</view>
+      </view>
+      <view class="pstat">
+        <view class="pstat-value">{{preview.pointCount}}</view>
+        <view class="pstat-label">轨迹点</view>
+      </view>
+    </view>
+    <t-button
+      theme="primary"
+      size="large"
+      block
+      loading="{{saving}}"
+      bind:tap="confirmSave"
+    >保存到我的轨迹</t-button>
+  </view>
+</view>
