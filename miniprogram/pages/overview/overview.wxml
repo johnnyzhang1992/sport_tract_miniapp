@@ -38,12 +38,10 @@
       overviewTracks="{{tracks}}"
       heat="{{heat}}"
       mapType="{{mapType}}"
-      showPoi="{{showPoi}}"
     />
     <view class="layer-btn" bindtap="switchLayer">
       {{mapType === 'standard' ? '🛰️ 卫星' : '🗺️ 标准'}}
     </view>
-    <view class="traffic-btn {{!showPoi ? 'traffic-btn-active' : ''}}" bindtap="togglePoi">🚇 标注</view>
     <view class="fullscreen-btn" bindtap="openFullscreen">⛶ 全屏</view>
     <view class="heat-legend">
       <view class="heat-legend-dot"></view>
@@ -65,8 +63,7 @@
         overviewTracks="{{tracks}}"
         heat="{{heat}}"
         mapType="{{mapType}}"
-        showPoi="{{showPoi}}"
-      />
+        />
     </view>
   </view>
 
