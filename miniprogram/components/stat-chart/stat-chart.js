@@ -151,19 +151,22 @@ Component({
         ctx.globalAlpha = 1;
       });
 
-      // 最大值标注：柱子上方偏移 12px（不重叠柱子、不超出画布顶）
+      // 最大值标注：白底圆角块（与柱子视觉隔离），柱子上方偏移 12px
       const maxV = Math.max(...values);
       const maxIdx = values.indexOf(maxV);
       const barTop = H - axis.padBottom - norm[maxIdx] * axis.chartH;
-      ctx.fillStyle = '#1f2329';
       ctx.font = '10px sans-serif';
       ctx.textAlign = 'center';
-      const maxY = Math.max(axis.padTop + 10, barTop - 12);
-      ctx.fillText(
-        this.formatValue(maxV),
-        axis.padLeft + maxIdx * slotW + slotW / 2,
-        maxY,
-      );
+      const text = this.formatValue(maxV);
+      const tw = ctx.measureText(text).width;
+      const bx = axis.padLeft + maxIdx * slotW + slotW / 2;
+      const by = Math.max(axis.padTop + 10, barTop - 12);
+      ctx.fillStyle = 'rgba(255,255,255,0.95)';
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(bx - tw / 2 - 4, by - 8, tw + 8, 14, 4) : ctx.rect(bx - tw / 2 - 4, by - 8, tw + 8, 14);
+      ctx.fill();
+      ctx.fillStyle = '#1f2329';
+      ctx.fillText(text, bx, by);
     },
 
     /** 折线图（Y 轴基于数据 min~max 范围，曲线占满绘图区） */
@@ -202,11 +205,18 @@ Component({
         // 标注：最大值 + 首尾 + 每 5 个点
         const annotate = i === maxIdx || i === 0 || i === n - 1 || (n > 10 && i % 5 === 0);
         if (annotate) {
+          // 白底圆角块隔离（防与折线/点重叠）
+          const t = this.formatValue(values[i]);
+          const tw2 = ctx.measureText(t).width;
+          const labelY = Math.max(axis.padTop + 10, Y(i) - 5); // 限制在绘图区内
+          ctx.fillStyle = 'rgba(255,255,255,0.92)';
+          ctx.beginPath();
+          ctx.roundRect ? ctx.roundRect(X(i) - tw2 / 2 - 3, labelY - 9, tw2 + 6, 13, 3) : ctx.rect(X(i) - tw2 / 2 - 3, labelY - 9, tw2 + 6, 13);
+          ctx.fill();
           ctx.fillStyle = '#1f2329';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'bottom';
-          const labelY = Math.max(axis.padTop + 10, Y(i) - 5); // 限制在绘图区内
-          ctx.fillText(this.formatValue(values[i]), X(i), labelY);
+          ctx.fillText(t, X(i), labelY);
         }
       });
 
