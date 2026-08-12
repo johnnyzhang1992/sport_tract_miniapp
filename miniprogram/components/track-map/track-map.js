@@ -241,8 +241,8 @@ Component({
               latitude: pts[0].lat,
               longitude: pts[0].lng,
               iconPath: '/assets/icons/marker-start.png',
-              width: 42,
-              height: 42,
+              width: 30,
+              height: 30,
               anchor: { x: 0.5, y: 0.5 },
             },
             {
@@ -250,8 +250,8 @@ Component({
               latitude: pts[pts.length - 1].lat,
               longitude: pts[pts.length - 1].lng,
               iconPath: '/assets/icons/marker-end.png',
-              width: 42,
-              height: 42,
+              width: 30,
+              height: 30,
               anchor: { x: 0.5, y: 0.5 },
             },
           );
