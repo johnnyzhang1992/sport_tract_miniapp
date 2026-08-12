@@ -55,6 +55,11 @@ Page({
         const p = (n) => String(n).padStart(2, '0');
         return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`;
       };
+      // 平均精度（轨迹点 accuracy 均值；旧数据无 accuracy 时跳过）
+      const accs = (activity.trackPoints || [])
+        .map((p) => p.accuracy)
+        .filter((a) => typeof a === 'number' && a > 0);
+      const avgAccuracy = accs.length > 0 ? Math.round(accs.reduce((s, a) => s + a, 0) / accs.length) : null;
       const endTime = activity.endTime || activity.startTime + (activity.duration || 0) * 1000;
       this.setData({
         activity: {
@@ -67,6 +72,7 @@ Page({
           paceUnit: (formatPaceParts(activity.avgPace) || {}).unit || '',
           startTimeText: fmtTime(activity.startTime),
           endTimeText: fmtTime(endTime),
+          avgAccuracy,
         },
         mapPoints: (activity.trackPoints || []).map((p) => ({
           lat: p.lat,

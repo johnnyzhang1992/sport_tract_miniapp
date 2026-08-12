@@ -110,6 +110,7 @@ class Tracker {
       altitude: typeof loc.altitude === 'number' ? Math.round(loc.altitude * 10) / 10 : null,
       speed:
         loc.speed != null && loc.speed >= 0 ? Math.round(loc.speed * 10) / 10 : null,
+      accuracy: typeof loc.accuracy === 'number' ? Math.round(loc.accuracy) : null,
       timestamp: now,
     };
 
