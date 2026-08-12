@@ -19,6 +19,9 @@
     <t-cell title="轨迹合集" arrow bind:click="goOverview">
       <view slot="left-icon" class="cell-icon">🗺️</view>
     </t-cell>
+    <t-cell title="数据导入" arrow bind:click="goImport">
+      <view slot="left-icon" class="cell-icon">📥</view>
+    </t-cell>
     <t-cell title="数据统计" arrow bind:click="goStats">
       <view slot="left-icon" class="cell-icon">📈</view>
     </t-cell>
