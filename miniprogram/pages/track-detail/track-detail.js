@@ -376,10 +376,27 @@ Page({
       success: (res) => {
         wx.hideLoading();
         if (res.statusCode === 200) {
-          wx.showModal({
-            title: 'GPX 导出',
-            content: String(res.data).slice(0, 200),
-            showCancel: false,
+          // 保存为临时文件并分享（文件传输助手），便于导出分析
+          const fs = wx.getFileSystemManager();
+          const path = `${wx.env.USER_DATA_PATH}/activity-${this.data.id}.gpx`;
+          try {
+            fs.writeFileSync(path, String(res.data), 'utf8');
+          } catch (e) {
+            wx.showToast({ title: '写入失败', icon: 'none' });
+            return;
+          }
+          wx.shareFileMessage({
+            filePath: path,
+            fileName: `activity-${this.data.id}.gpx`,
+            success: () => {},
+            fail: () => {
+              // 分享不可用时显示内容前段供排查
+              wx.showModal({
+                title: 'GPX 内容（前 300 字符）',
+                content: String(res.data).slice(0, 300),
+                showCancel: false,
+              });
+            },
           });
         } else {
           wx.showToast({ title: '导出失败', icon: 'none' });
