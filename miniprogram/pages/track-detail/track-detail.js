@@ -376,7 +376,23 @@ Page({
       success: (res) => {
         wx.hideLoading();
         if (res.statusCode === 200) {
-          // 保存为临时文件并分享（文件传输助手），便于导出分析
+          // 电脑端（模拟器）：复制到剪贴板便于分析；手机端：保存文件并分享
+          const isDevtools = (wx.getSystemInfoSync().platform || '').toLowerCase() === 'devtools';
+          if (isDevtools) {
+            wx.setClipboardData({
+              data: String(res.data),
+              success: () => {
+                wx.showModal({
+                  title: 'GPX 已复制',
+                  content: '轨迹数据已复制到剪贴板（电脑端调试用）',
+                  showCancel: false,
+                });
+              },
+              fail: () => wx.showToast({ title: '复制失败', icon: 'none' }),
+            });
+            return;
+          }
+          // 手机端：保存临时文件并分享（文件传输助手）
           const fs = wx.getFileSystemManager();
           const path = `${wx.env.USER_DATA_PATH}/activity-${this.data.id}.gpx`;
           try {
@@ -390,7 +406,6 @@ Page({
             fileName: `activity-${this.data.id}.gpx`,
             success: () => {},
             fail: () => {
-              // 分享不可用：引导用户保存到本地（不展示文件内容）
               wx.showModal({
                 title: '导出失败',
                 content: '无法调起分享，请将文件保存到手机后通过文件传输助手发送',
