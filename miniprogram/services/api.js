@@ -166,4 +166,54 @@ function checkImage(filePath) {
   });
 }
 
-module.exports = { request, get, post, put, del, checkImage, buildUrl };
+/**
+ * 文件上传（multipart，带 401 自动刷新重试）
+ * @param {string} url 相对路径（如 '/activities/import'）
+ * @param {string} filePath 临时文件路径
+ * @param {object} [formData] 额外字段
+ */
+async function uploadFile(url, filePath, formData = {}) {
+  const doUpload = () =>
+    new Promise((resolve, reject) => {
+      wx.uploadFile({
+        url: buildUrl(url),
+        filePath,
+        name: 'file',
+        formData,
+        header: authHeader(),
+        success: (res) => {
+          try {
+            const body = JSON.parse(res.data || '{}');
+            if (res.statusCode >= 200 && res.statusCode < 300 && body.success) {
+              resolve(body.data);
+            } else {
+              const err = new Error(body.message || `上传失败(${res.statusCode})`);
+              err.statusCode = res.statusCode;
+              reject(err);
+            }
+          } catch {
+            reject(new Error('服务响应异常'));
+          }
+        },
+        fail: () => reject(new Error('上传失败，请检查网络')),
+      });
+    });
+  try {
+    return await doUpload();
+  } catch (err) {
+    // 401 → 刷新 token 后重试一次
+    if (err.statusCode === 401) {
+      try {
+        await refreshToken();
+        return await doUpload();
+      } catch (refreshErr) {
+        const app = getApp();
+        if (app && typeof app.logout === 'function') app.logout();
+        throw refreshErr;
+      }
+    }
+    throw err;
+  }
+}
+
+module.exports = { request, get, post, put, del, checkImage, uploadFile, buildUrl };

@@ -1,5 +1,4 @@
 const api = require('../../services/api');
-const { getToken } = require('../../services/storage');
 const config = require('../../config/index');
 const { formatDuration } = require('../../utils/format');
 
@@ -48,27 +47,7 @@ Page({
     this.setData({ uploading: true, fileName: file.name, preview: null, activityId: '' });
     wx.showLoading({ title: '解析中…' });
     try {
-      const res = await new Promise((resolve, reject) => {
-        wx.uploadFile({
-          url: api.buildUrl('/activities/import'),
-          filePath: file.path,
-          name: 'file',
-          header: { Authorization: `Bearer ${getToken()}` },
-          success: (r) => {
-            try {
-              const body = JSON.parse(r.data);
-              if (body.code !== 0 && body.code !== 200) {
-                reject(new Error(body.message || '解析失败'));
-                return;
-              }
-              resolve(body.data);
-            } catch (e) {
-              reject(new Error('解析失败：' + e.message));
-            }
-          },
-          fail: () => reject(new Error('网络错误，请重试')),
-        });
-      });
+      const res = await api.uploadFile('/activities/import', file.path);
       this.setData({
         activityId: res.id,
         preview: {
