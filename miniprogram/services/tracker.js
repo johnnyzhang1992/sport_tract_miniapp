@@ -59,6 +59,7 @@ class Tracker {
 
     this.startTime = now();
     this.paused = false;
+    this._recentSpeeds = []; // 局部速度窗口（尖刺判定用）
     this.pausedAt = 0;
     this.pausedMs = 0;
 
@@ -137,7 +138,61 @@ class Tracker {
     this.points.push(point);
     this.lastPoint = point;
     this.lastSampleTime = now;
+
+    // 尖刺回滚（决策：GPS 短时高速来回跳）——检测上一点是否尖刺，是则剔除并回退距离
+    if (this.points.length >= 3 && this._recentSpeeds.length >= 3) {
+      const a = this.points[this.points.length - 3];
+      const b = this.points[this.points.length - 2];
+      const d1 = haversine(a, b);
+      const d2 = haversine(b, point);
+      const dt1 = (b.timestamp - a.timestamp) / 1000;
+      const dt2 = (point.timestamp - b.timestamp) / 1000;
+      if (dt1 > 0 && dt2 > 0) {
+        const v1 = d1 / dt1;
+        const v2 = d2 / dt2;
+        const med = this._recentSpeeds.slice().sort((x, y) => x - y)[Math.floor(this._recentSpeeds.length / 2)];
+        const spikeV = Math.max(6, med * 4);
+        if (v1 > spikeV && v2 > spikeV && this._turnAngle(a, b, point) > 110) {
+          // 剔除 b：距离重算（去掉 a→b、b→c，改用 a→c）；爬升回退 b 段
+          this.distance = Math.max(0, this.distance - d1 - d2 + haversine(a, point));
+          if (b.altitude != null && a.altitude != null && b.altitude - a.altitude > CLIMB_DEAD_ZONE_M) {
+            this.elevationGain = Math.max(0, this.elevationGain - (b.altitude - a.altitude));
+          }
+          this.points.pop();
+          this.points.pop();
+          this.points.push(point);
+          this.lastPoint = point;
+        }
+      }
+    }
+
+    // 局部速度窗口（最近 6 个瞬时速度，尖刺判定用）
+    if (this.points.length >= 2) {
+      const prev = this.points[this.points.length - 2];
+      const dt = (point.timestamp - prev.timestamp) / 1000;
+      if (dt > 0) {
+        this._recentSpeeds.push(haversine(prev, point) / dt);
+        if (this._recentSpeeds.length > 6) this._recentSpeeds.shift();
+      }
+    }
+
     return point;
+  }
+
+  /** 方向转角（度，0~180） */
+  _turnAngle(a, b, c) {
+    const toRad = (deg) => (deg * Math.PI) / 180;
+    const toDeg = (rad) => (rad * 180) / Math.PI;
+    const br = (p, q) => {
+      const y = Math.sin(toRad(q.lng - p.lng)) * Math.cos(toRad(q.lat));
+      const x =
+        Math.cos(toRad(p.lat)) * Math.sin(toRad(q.lat)) -
+        Math.sin(toRad(p.lat)) * Math.cos(toRad(q.lat)) * Math.cos(toRad(q.lng - p.lng));
+      return Math.atan2(y, x);
+    };
+    let turn = Math.abs(toDeg(br(a, b)) - toDeg(br(b, c))) % 360;
+    if (turn > 180) turn = 360 - turn;
+    return turn;
   }
 
   /** 方位角（度，0=北，顺时针） */

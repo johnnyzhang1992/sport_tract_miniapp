@@ -140,3 +140,24 @@ test('final 包：完整点集 + 地址 + 体重', () => {
   assert.equal(pack.endAddress, '终点');
   assert.ok(pack.endTime > 0);
 });
+
+test('尖刺回滚：短时高速来回跳的点被剔除（距离回退）', () => {
+  let clock = 0;
+  const t = new Tracker('running', 60, () => clock);
+  // 正常步行点：间隔 5s，位移 ~7m（1.4m/s）
+  t.addPoint(P(30, 120)); // t0
+  clock += 5000;
+  t.addPoint(P(30.00006, 120)); // t5
+  clock += 5000;
+  t.addPoint(P(30.00012, 120)); // t10（正常）
+  const before = t.points.length;
+  const distBefore = t.distance;
+  // 尖刺：紧跟 p2（1.3s 后）东跳 21m → 16m/s
+  t.addPoint({ latitude: 30.00012, longitude: 120.00019, timestamp: 11300 });
+  // 回跳（1s 后西回 23m → 23m/s）
+  t.addPoint({ latitude: 30.00013, longitude: 120, timestamp: 12300 });
+  // 尖刺点应被剔除 → 最终点数恢复（3 正常 + 最后回跳点 = 4）
+  assert.ok(t.points.length < before + 2, `尖刺应被剔除, points=${t.points.length}`);
+  // 距离不应虚增（尖刺的 21m + 20m 不应计入）
+  assert.ok(t.distance - distBefore < 15, `距离不应含尖刺虚增, 增量=${(t.distance - distBefore).toFixed(1)}m`);
+});
