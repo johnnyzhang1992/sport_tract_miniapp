@@ -129,14 +129,14 @@ Component({
         // 首尾 label 用边缘对齐防裁剪
         if (i === 0) {
           ctx.textAlign = 'left';
-          ctx.fillText(label, axis.padLeft, H - axis.padBottom + 8);
+          ctx.fillText(label, axis.padLeft, H - axis.padBottom + 16);
           ctx.textAlign = 'center';
         } else if (i === n - 1) {
           ctx.textAlign = 'right';
-          ctx.fillText(label, width - axis.padRight, H - axis.padBottom + 8);
+          ctx.fillText(label, width - axis.padRight, H - axis.padBottom + 16);
           ctx.textAlign = 'center';
         } else {
-          ctx.fillText(label, x, H - axis.padBottom + 8);
+          ctx.fillText(label, x, H - axis.padBottom + 16);
         }
       });
 
@@ -151,14 +151,14 @@ Component({
         ctx.globalAlpha = 1;
       });
 
-      // 最大值标注：显示在柱子内部顶部往下偏移（不贴柱顶/贴画布顶），白字清晰
+      // 最大值标注：柱子上方偏移 12px（不重叠柱子、不超出画布顶）
       const maxV = Math.max(...values);
       const maxIdx = values.indexOf(maxV);
       const barTop = H - axis.padBottom - norm[maxIdx] * axis.chartH;
-      ctx.fillStyle = '#fff';
+      ctx.fillStyle = '#666';
       ctx.font = '10px sans-serif';
       ctx.textAlign = 'center';
-      const maxY = Math.min(H - axis.padBottom - 8, barTop + 12);
+      const maxY = Math.max(axis.padTop + 10, barTop - 12);
       ctx.fillText(
         this.formatValue(maxV),
         axis.padLeft + maxIdx * slotW + slotW / 2,
@@ -220,11 +220,11 @@ Component({
           const label = String(data[i].label);
           if (i === 0) {
             ctx.textAlign = 'left';
-            ctx.fillText(label, axis.padLeft, H - axis.padBottom + 8);
+            ctx.fillText(label, axis.padLeft, H - axis.padBottom + 16);
             ctx.textAlign = 'center';
           } else if (i === n - 1) {
             ctx.textAlign = 'right';
-            ctx.fillText(label, width - axis.padRight, H - axis.padBottom + 8);
+            ctx.fillText(label, width - axis.padRight, H - axis.padBottom + 16);
             ctx.textAlign = 'center';
           } else {
             ctx.fillText(label, X(i), H - axis.padBottom + 8);
