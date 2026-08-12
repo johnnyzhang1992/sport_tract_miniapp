@@ -365,6 +365,31 @@ Page({
 
   noop() {},
 
+  /** 重新纠偏：对轨迹重跑 清洗→纠偏→平滑→重算指标（清理历史脏数据） */
+  async reprocessTrack() {
+    const res = await new Promise((resolve) => {
+      wx.showModal({
+        title: '重新纠偏',
+        content: '将重新清洗轨迹（剔除 GPS 偏移点）并重算距离/配速等指标，是否继续？',
+        confirmText: '纠偏',
+        success: resolve,
+        fail: () => resolve({ confirm: false }),
+      });
+    });
+    if (!res.confirm) return;
+    wx.showLoading({ title: '纠偏中…' });
+    try {
+      const data = await api.post(`/activities/${this.data.id}/reprocess`);
+      this.loadDetail();
+      wx.showToast({ title: '纠偏完成', icon: 'success' });
+    } catch (e) {
+      console.error('纠偏失败', e);
+      wx.showToast({ title: '纠偏失败', icon: 'none' });
+    } finally {
+      wx.hideLoading();
+    }
+  },
+
   /** 导出 GPX */
   exportGpx() {
     const token = storage.getToken();
