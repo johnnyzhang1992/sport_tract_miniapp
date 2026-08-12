@@ -36,6 +36,27 @@
         <view class="type-label">{{item.label}}</view>
       </view>
     </view>
+    <view class="preview-row">
+      <view class="preview-label">数据来源</view>
+    </view>
+    <view class="source-grid">
+      <view
+        wx:for="{{sourceOptions}}"
+        wx:key="value"
+        class="source-item {{preview.source === item.label ? 'source-item-active' : ''}}"
+        data-source="{{item.label}}"
+        bindtap="onSourceChange"
+      >{{item.label}}</view>
+      <view class="source-item {{preview.source === '自定义' ? 'source-item-active' : ''}}" data-source="自定义" bindtap="onSourceChange">自定义…</view>
+    </view>
+    <input
+      wx:if="{{preview.source === '自定义'}}"
+      class="source-custom-input"
+      placeholder="输入来源名称（如：颂拓手表）"
+      maxlength="50"
+      value="{{customSource}}"
+      bindinput="onCustomSourceInput"
+    />
     <view class="preview-stats">
       <view class="pstat">
         <view class="pstat-value">{{preview.distanceKm}}</view>
