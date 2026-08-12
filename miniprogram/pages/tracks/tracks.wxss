@@ -21,3 +21,13 @@
   text-align: center;
   padding: 24rpx 0;
 }
+
+/* 左滑删除按钮 */
+.del-action {
+  background: #e34d59;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26rpx;
+}
