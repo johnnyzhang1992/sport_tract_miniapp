@@ -485,7 +485,9 @@ const ALTITUDE_COLORS = (() => {
     const span = hi[0] - lo[0] || 1;
     const k = (t - lo[0]) / span;
     const rgb = lo[1].map((c, idx) => Math.round(c + (hi[1][idx] - c) * k));
-    colors.push(`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`);
+    // map polyline 颜色只支持 #RRGGBB（hex），rgb() 字符串会导致整条轨迹不渲染
+    const hex = (n) => n.toString(16).padStart(2, '0');
+    colors.push(`#${hex(rgb[0])}${hex(rgb[1])}${hex(rgb[2])}`);
   }
   return colors;
 })();
