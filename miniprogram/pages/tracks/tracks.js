@@ -120,4 +120,31 @@ Page({
       url: `/pages/track-detail/track-detail?id=${id}`,
     });
   },
+
+  /** 左滑删除：二次确认后删除（后端会同步清理关联 OSS 照片） */
+  async onDeleteTap(e) {
+    const id = e.currentTarget.dataset.id;
+    if (!id) return;
+    const item = this.data.items.find((i) => i.id === id);
+    const label = item ? `${item.label} · ${item.startTimeText}` : '该轨迹';
+    const res = await new Promise((resolve) => {
+      wx.showModal({
+        title: '删除轨迹',
+        content: `确定删除「${label}」吗？关联照片会同步删除，且不可恢复`,
+        confirmText: '删除',
+        confirmColor: '#e34d59',
+        success: resolve,
+        fail: () => resolve({ confirm: false }),
+      });
+    });
+    if (!res.confirm) return;
+    try {
+      await api.del(`/activities/${id}`);
+      this.setData({ items: this.data.items.filter((i) => i.id !== id) });
+      wx.showToast({ title: '已删除', icon: 'success' });
+    } catch (err) {
+      console.error('删除轨迹失败', err);
+      wx.showToast({ title: '删除失败，请重试', icon: 'none' });
+    }
+  },
 });
