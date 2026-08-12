@@ -23,6 +23,8 @@ Component({
     heat: { type: Array, value: [] },
     /** 海拔着色（决策 F34：轨迹线按海拔分桶变色，蓝→绿→黄→红） */
     altitudeColor: { type: Boolean, value: false },
+    /** 起点/终点标记（起/终 文字标签） */
+    showStartEnd: { type: Boolean, value: false },
   },
 
   data: {
@@ -226,6 +228,55 @@ Component({
           anchor: { x: 0.5, y: 0.5 },
         };
       });
+
+      // 起点/终点标记（详情页）：轨迹首尾 + "起/终" 文字标签
+      if (this.data.showStartEnd) {
+        const pts = this.data.points.filter(
+          (p) => Number.isFinite(p.lat) && Number.isFinite(p.lng),
+        );
+        if (pts.length >= 2) {
+          base.push(
+            {
+              id: 100002,
+              latitude: pts[0].lat,
+              longitude: pts[0].lng,
+              iconPath: '/assets/icons/marker-dot.png',
+              width: 18,
+              height: 18,
+              anchor: { x: 0.5, y: 0.5 },
+              label: {
+                content: '起',
+                color: '#fff',
+                fontSize: 11,
+                bgColor: '#2b6cf6',
+                borderRadius: 8,
+                padding: 3,
+                anchorX: 0,
+                anchorY: -34,
+              },
+            },
+            {
+              id: 100003,
+              latitude: pts[pts.length - 1].lat,
+              longitude: pts[pts.length - 1].lng,
+              iconPath: '/assets/icons/marker-dot.png',
+              width: 18,
+              height: 18,
+              anchor: { x: 0.5, y: 0.5 },
+              label: {
+                content: '终',
+                color: '#fff',
+                fontSize: 11,
+                bgColor: '#e34d59',
+                borderRadius: 8,
+                padding: 3,
+                anchorX: 0,
+                anchorY: -34,
+              },
+            },
+          );
+        }
+      }
 
       // 当前位置 marker（动态追点）
       if (this.data.currentLocation) {

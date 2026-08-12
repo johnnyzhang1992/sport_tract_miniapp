@@ -8,6 +8,7 @@
       mapType="{{mapType}}"
       mode="view"
       altitudeColor
+      showStartEnd
       bindmarkertap="onMarkerTap"
       bindreplayend="onReplayEnd"
     />
@@ -34,6 +35,7 @@
         mapType="{{mapType}}"
         mode="view"
         altitudeColor
+        showStartEnd
       />
     </view>
   </view>
