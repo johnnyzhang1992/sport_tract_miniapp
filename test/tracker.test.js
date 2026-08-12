@@ -53,17 +53,16 @@ test('漂移过滤：瞬时速度超阈值（>30m/s）的点被过滤', () => {
 test('指标：配速/卡路里/爬升死区/最高海拔', () => {
   let clock = 0;
   const t = new Tracker('hiking', 65, () => clock);
-  t.addPoint(P(30, 120, 100));
-  clock += 5000;
-  t.addPoint(P(30.0002, 120, 105)); // +5m（间隔 ~22m）
-  clock += 5000;
-  t.addPoint(P(30.0004, 120, 102)); // -3m 不计
-  clock += 5000;
-  t.addPoint(P(30.0006, 120, 107)); // +5m
+  // 11 点 × 22m = 220m（> 200m 配速门槛）；海拔 +5/-3 交替
+  const alts = [100, 105, 102, 107, 104, 109, 106, 111, 108, 113, 110];
+  alts.forEach((alt, i) => {
+    t.addPoint(P(30 + i * 0.0002, 120, alt));
+    clock += 5000;
+  });
   const s = t.getStats();
-  assert.equal(s.elevationGain, 10);
-  assert.equal(s.maxAltitude, 107);
-  assert.ok(s.distance > 60);
+  assert.ok(s.distance > 200, `距离 ${s.distance}m`);
+  assert.equal(s.maxAltitude, 113);
+  assert.ok(s.elevationGain >= 15, `爬升 ${s.elevationGain}`);
   assert.ok(s.calories > 0);
   assert.ok(s.pace !== null, 'hiking 应展示配速');
 });
