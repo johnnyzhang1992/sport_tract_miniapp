@@ -1,8 +1,8 @@
 <map
   id="trackMap"
   class="track-map"
-  latitude="{{currentLocation.latitude || points[0].lat || overviewTracks[0].points[0].lat || 31.2304}}"
-  longitude="{{currentLocation.longitude || points[0].lng || overviewTracks[0].points[0].lng || 121.4737}}"
+  latitude="{{centerLat}}"
+  longitude="{{centerLng}}"
   scale="{{15}}"
   markers="{{displayMarkers}}"
   polyline="{{polyline}}"
