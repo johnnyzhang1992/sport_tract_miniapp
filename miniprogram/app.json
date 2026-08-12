@@ -9,7 +9,8 @@
     "pages/stats/stats",
     "pages/profile/profile",
     "pages/settings/settings",
-    "pages/privacy/privacy"
+    "pages/privacy/privacy",
+    "pages/overview/overview"
   ],
   "window": {
     "navigationBarBackgroundColor": "#ffffff",

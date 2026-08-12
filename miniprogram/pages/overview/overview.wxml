@@ -1,0 +1,69 @@
+<view class="overview-page">
+  <!-- 范围切换 -->
+  <view class="range-tabs">
+    <view
+      wx:for="{{ranges}}"
+      wx:key="value"
+      class="range-item {{activeRange === item.value ? 'range-item-active' : ''}}"
+      data-value="{{item.value}}"
+      bindtap="onRangeChange"
+    >{{item.label}}</view>
+  </view>
+
+  <!-- 聚合统计 -->
+  <view class="stats-card">
+    <view class="stat-block">
+      <view class="stat-value">{{data.count}}</view>
+      <view class="stat-label">次数</view>
+    </view>
+    <view class="stat-divider"></view>
+    <view class="stat-block">
+      <view class="stat-value">{{data.totalDistanceKm}}</view>
+      <view class="stat-label">公里</view>
+    </view>
+    <view class="stat-divider"></view>
+    <view class="stat-block">
+      <view class="stat-value">{{data.durationText}}</view>
+      <view class="stat-label">总时长</view>
+    </view>
+  </view>
+
+  <!-- 地图（多轨迹 + 热力） -->
+  <view class="map-wrap">
+    <track-map
+      id="overviewMap"
+      mode="overview"
+      overviewTracks="{{tracks}}"
+      heat="{{heat}}"
+      mapType="{{mapType}}"
+    />
+    <view class="layer-btn" bindtap="switchLayer">
+      {{mapType === 'standard' ? '🛰️ 卫星' : '🗺️ 标准'}}
+    </view>
+    <view class="heat-legend">
+      <view class="heat-legend-dot"></view>
+      <text>高频路线</text>
+    </view>
+  </view>
+
+  <!-- 最近轨迹 -->
+  <view class="recent-title" wx:if="{{recentTracks.length > 0}}">最近轨迹</view>
+  <view
+    wx:for="{{recentTracks}}"
+    wx:key="id"
+    class="recent-item"
+    hover-class="recent-hover"
+    data-id="{{item.id}}"
+    bindtap="onTapTrack"
+  >
+    <view class="recent-icon">{{item.icon}}</view>
+    <view class="recent-info">
+      <view class="recent-name">{{item.label}} · {{item.timeText}}</view>
+      <view class="recent-meta">{{item.distanceKm}} 公里 · {{item.durationText}}</view>
+    </view>
+    <view class="recent-arrow">›</view>
+  </view>
+
+  <view wx:if="{{loading}}" class="loading-tip">加载中…</view>
+  <view wx:if="{{!loading && data.count === 0}}" class="loading-tip">该时间段还没有运动记录</view>
+</view>

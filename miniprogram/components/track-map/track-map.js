@@ -17,11 +17,16 @@ Component({
     mapType: { type: String, value: 'standard' },
     /** 展示模式：record 动态 / view 静态（静态自动 fitView） */
     mode: { type: String, value: 'record' },
+    /** 合集模式（M6）：多轨迹 [{id, type, color, points:[{lat,lng}]}] */
+    overviewTracks: { type: Array, value: [] },
+    /** 合集模式：热力网格 [{lat, lng, weight(0~1)}] → map circles */
+    heat: { type: Array, value: [] },
   },
 
   data: {
     polyline: [],
     displayMarkers: [],
+    heatCircles: [],
   },
 
   observers: {
@@ -37,6 +42,12 @@ Component({
         this.followLocation();
       }
     },
+    'overviewTracks, heat': function () {
+      this.buildOverview();
+      if (this.data.mode === 'overview') {
+        this.fitOverviewView();
+      }
+    },
   },
 
   lifetimes: {
@@ -45,6 +56,10 @@ Component({
       this.buildMarkers();
       if (this.data.mode === 'view') {
         this.fitView();
+      }
+      if (this.data.mode === 'overview') {
+        this.buildOverview();
+        this.fitOverviewView();
       }
     },
   },
@@ -180,6 +195,48 @@ Component({
       this.setData({
         mapType: this.data.mapType === 'standard' ? 'satellite' : 'standard',
       });
+    },
+
+    /** 合集模式：多轨迹 polyline（按类型配色）+ 热力 circles */
+    buildOverview() {
+      const tracks = this.data.overviewTracks || [];
+      const polylines = [];
+      tracks.forEach((t) => {
+        const pts = (t.points || [])
+          .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng))
+          .map((p) => ({ latitude: p.lat, longitude: p.lng }));
+        if (pts.length < 2) return;
+        const color = t.color || '#2B6CF6';
+        // 半透明主体线：多条重叠自然加深 → 高频路线视觉强化
+        polylines.push({ points: pts, color, width: 3, opacity: 0.55, arrowLine: false });
+      });
+
+      // 热力：150m 网格 → 半透明橙色圆（权重越高越浓），≤200 个
+      const heatCircles = (this.data.heat || []).map((h) => ({
+        latitude: h.lat,
+        longitude: h.lng,
+        radius: 90,
+        color: `rgba(255, 152, 0, ${0.08 + 0.45 * h.weight})`,
+        fillColor: `rgba(255, 152, 0, ${0.08 + 0.45 * h.weight})`,
+        strokeWidth: 0,
+      }));
+
+      this.setData({ polyline: polylines, heatCircles });
+    },
+
+    /** 合集模式：视野包含所有轨迹点 */
+    fitOverviewView() {
+      const pts = [];
+      (this.data.overviewTracks || []).forEach((t) => {
+        (t.points || []).forEach((p) => {
+          if (Number.isFinite(p.lat) && Number.isFinite(p.lng)) {
+            pts.push({ latitude: p.lat, longitude: p.lng });
+          }
+        });
+      });
+      if (pts.length === 0) return;
+      const mapCtx = wx.createMapContext('trackMap', this);
+      mapCtx.includePoints({ points: pts, padding: [50, 40, 50, 40] });
     },
 
     /**
