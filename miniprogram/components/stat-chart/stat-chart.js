@@ -188,14 +188,11 @@ Component({
       const maxIdx = values.indexOf(maxV);
       ctx.font = '10px sans-serif';
       values.forEach((_, i) => {
-        // 点
-        ctx.fillStyle = '#fff';
-        ctx.strokeStyle = this.data.color;
-        ctx.lineWidth = 2;
+        // 点：实心小圆（原空心描边圆 3px → 实心 2px）
+        ctx.fillStyle = this.data.color;
         ctx.beginPath();
-        ctx.arc(X(i), Y(i), 3, 0, Math.PI * 2);
+        ctx.arc(X(i), Y(i), 2, 0, Math.PI * 2);
         ctx.fill();
-        ctx.stroke();
         // 标注：最大值 + 首尾 + 每 5 个点
         const annotate = i === maxIdx || i === 0 || i === n - 1 || (n > 10 && i % 5 === 0);
         if (annotate) {
