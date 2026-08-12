@@ -38,6 +38,7 @@ Page({
     this.setData({ loading: true });
     try {
       const res = await api.get(`/overview?range=${this.data.activeRange}`);
+      console.log('[overview] res tracks=', (res.tracks || []).length, 'heat=', (res.heat || []).length);
       this.setData({
         data: {
           count: res.count,
