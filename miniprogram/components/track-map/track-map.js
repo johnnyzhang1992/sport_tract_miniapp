@@ -21,6 +21,8 @@ Component({
     overviewTracks: { type: Array, value: [] },
     /** 合集模式：热力网格 [{lat, lng, weight(0~1)}] → map circles */
     heat: { type: Array, value: [] },
+    /** 海拔着色（决策 F34：轨迹线按海拔分桶变色，蓝→绿→黄→红） */
+    altitudeColor: { type: Boolean, value: false },
   },
 
   data: {
@@ -95,10 +97,16 @@ Component({
       if (this.data.mode === 'overview') return; // 合集模式由 buildOverview 管理轨迹线
       // 过滤非法坐标点（undefined/NaN），空点集时传空数组避免渲染异常
       const pts = this.data.points
-        .map((p) => ({ lat: p.lat, lng: p.lng }))
+        .map((p) => ({ lat: p.lat, lng: p.lng, altitude: p.altitude ?? null }))
         .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng));
       if (pts.length < 2) {
         this.setData({ polyline: [] });
+        return;
+      }
+
+      // 海拔着色：轨迹线按海拔分桶变色（蓝低→红高），打点分段色让位
+      if (this.data.altitudeColor && pts.some((p) => p.altitude != null)) {
+        this.buildAltitudePolyline(pts);
         return;
       }
 
@@ -114,6 +122,47 @@ Component({
         polylines.push({ points: segPts, color: '#D6E4FF', width: 9, arrowLine: false });
         polylines.push({ points: segPts, color, width: 4, arrowLine: false });
       });
+      this.setData({ polyline: polylines });
+    },
+
+    /**
+     * 海拔着色：轨迹线按海拔分桶变色（决策 F34）
+     * 蓝(低) → 绿 → 黄 → 红(高)，相邻同色段合并，控制 polyline 数量
+     */
+    buildAltitudePolyline(pts) {
+      const alts = pts.map((p) => p.altitude).filter((a) => a != null);
+      if (alts.length < 2) {
+        this.setData({ polyline: [] });
+        return;
+      }
+      const min = Math.min(...alts);
+      const max = Math.max(...alts);
+      const span = max - min || 1;
+      const BUCKETS = 12;
+      const bucketIndex = (alt) => Math.min(BUCKETS - 1, Math.max(0, Math.floor(((alt - min) / span) * BUCKETS)));
+
+      const polylines = [];
+      let cur = null; // { color, points }
+      for (let i = 1; i < pts.length; i++) {
+        const a = pts[i - 1];
+        const b = pts[i];
+        if (!Number.isFinite(a.lat) || !Number.isFinite(b.lat)) continue;
+        const avgAlt =
+          a.altitude != null || b.altitude != null
+            ? (a.altitude ?? b.altitude) + ((b.altitude ?? a.altitude) - (a.altitude ?? b.altitude)) / 2
+            : null;
+        const color = avgAlt != null ? ALTITUDE_COLORS[bucketIndex(avgAlt)] : null;
+        const pt = { latitude: b.lat, longitude: b.lng };
+        if (color && cur && cur.color === color) {
+          cur.points.push(pt);
+        } else if (color) {
+          cur = { color, points: [{ latitude: a.lat, longitude: a.lng }, pt] };
+          polylines.push(cur);
+        } else {
+          cur = null;
+        }
+      }
+      // 海拔缺失段（null）用相邻段色补画细线，保证轨迹完整
       this.setData({ polyline: polylines });
     },
 
@@ -411,3 +460,32 @@ function haversineKm(a, b) {
     Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(s));
 }
+
+/** 海拔色带：蓝 → 绿 → 黄 → 红（12 档线性插值） */
+const ALTITUDE_COLORS = (() => {
+  const stops = [
+    [0, [41, 121, 255]], // 蓝（低海拔）
+    [0.35, [0, 199, 83]], // 绿
+    [0.7, [255, 213, 0]], // 黄
+    [1, [244, 67, 54]], // 红（高海拔）
+  ];
+  const N = 12;
+  const colors = [];
+  for (let i = 0; i < N; i++) {
+    const t = i / (N - 1);
+    let lo = stops[0];
+    let hi = stops[stops.length - 1];
+    for (let s = 0; s < stops.length - 1; s++) {
+      if (t >= stops[s][0] && t <= stops[s + 1][0]) {
+        lo = stops[s];
+        hi = stops[s + 1];
+        break;
+      }
+    }
+    const span = hi[0] - lo[0] || 1;
+    const k = (t - lo[0]) / span;
+    const rgb = lo[1].map((c, idx) => Math.round(c + (hi[1][idx] - c) * k));
+    colors.push(`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`);
+  }
+  return colors;
+})();
