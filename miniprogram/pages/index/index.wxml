@@ -47,6 +47,18 @@
     </view>
   </view>
 
+  <!-- 轨迹合集入口 -->
+  <view class="card overview-entry" hover-class="type-item-hover" hover-stay-time="80" bindtap="openOverview">
+    <view class="overview-entry-left">
+      <view class="overview-entry-icon">🗺️</view>
+      <view class="overview-entry-info">
+        <view class="overview-entry-title">轨迹合集</view>
+        <view class="overview-entry-sub text-muted">一周 / 一月 / 一年轨迹一图总览</view>
+      </view>
+    </view>
+    <view class="overview-entry-arrow">›</view>
+  </view>
+
   <!-- 开始按钮 -->
   <t-button
     class="start-btn"

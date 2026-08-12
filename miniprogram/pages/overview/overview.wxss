@@ -1,0 +1,142 @@
+.overview-page {
+  padding: 20rpx 24rpx 60rpx;
+  box-sizing: border-box;
+}
+.range-tabs {
+  display: flex;
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 8rpx;
+  margin-bottom: 20rpx;
+}
+.range-item {
+  flex: 1;
+  text-align: center;
+  padding: 14rpx 0;
+  font-size: 26rpx;
+  color: #4e5969;
+  border-radius: 12rpx;
+}
+.range-item-active {
+  background: #2b6cf6;
+  color: #fff;
+  font-weight: 600;
+}
+
+.stats-card {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 24rpx 0;
+  margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+}
+.stat-block {
+  flex: 1;
+  text-align: center;
+}
+.stat-value {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #1f2329;
+}
+.stat-label {
+  font-size: 22rpx;
+  color: #8a93a6;
+  margin-top: 6rpx;
+}
+.stat-divider {
+  width: 1rpx;
+  height: 56rpx;
+  background: #e5e6eb;
+}
+
+.map-wrap {
+  position: relative;
+  height: 640rpx;
+  border-radius: 16rpx;
+  overflow: hidden;
+  margin-bottom: 24rpx;
+}
+.map-wrap track-map {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.layer-btn {
+  position: absolute;
+  top: 24rpx;
+  right: 24rpx;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 999rpx;
+  padding: 12rpx 24rpx;
+  font-size: 24rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
+  z-index: 2;
+}
+.heat-legend {
+  position: absolute;
+  bottom: 24rpx;
+  left: 24rpx;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 999rpx;
+  padding: 8rpx 20rpx;
+  font-size: 22rpx;
+  color: #4e5969;
+  display: flex;
+  align-items: center;
+  z-index: 2;
+}
+.heat-legend-dot {
+  width: 18rpx;
+  height: 18rpx;
+  border-radius: 50%;
+  background: rgba(255, 152, 0, 0.55);
+  margin-right: 10rpx;
+}
+
+.recent-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1f2329;
+  margin-bottom: 14rpx;
+}
+.recent-item {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 20rpx 24rpx;
+  margin-bottom: 14rpx;
+}
+.recent-hover {
+  opacity: 0.7;
+}
+.recent-icon {
+  font-size: 40rpx;
+  margin-right: 20rpx;
+}
+.recent-info {
+  flex: 1;
+  min-width: 0;
+}
+.recent-name {
+  font-size: 28rpx;
+  color: #1f2329;
+  margin-bottom: 6rpx;
+}
+.recent-meta {
+  font-size: 24rpx;
+  color: #8a93a6;
+}
+.recent-arrow {
+  font-size: 36rpx;
+  color: #c2c7d0;
+}
+.loading-tip {
+  text-align: center;
+  padding: 32rpx 0;
+  color: #8a93a6;
+  font-size: 24rpx;
+}
