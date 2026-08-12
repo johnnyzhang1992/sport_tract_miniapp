@@ -16,8 +16,13 @@ const CLIMB_DEAD_ZONE_M = 2;
 /** 配速最小有效距离（米）：低于此值配速无意义（如刚起步/静止），显示 “—” */
 const MIN_PACE_DISTANCE_M = 200;
 /** 精度过滤阈值（米）：wx.onLocationChange 返回 accuracy（水平精度），超过则丢弃（室内/弱信号）。
- *  30 → 80：室内测试时 accuracy 常 50-100m，太严会全滤掉导致距离恒为 0 */
-const MAX_ACCURACY_M = 80;
+ *  30 → 80：室内测试时 accuracy 常 50-100m，太严会全滤掉导致距离恒为 0。
+ *  80 → 60：配合反转漂移过滤，兼顾室内可测与漂移抑制 */
+const MAX_ACCURACY_M = 60;
+/** 反转漂移过滤：新点相对上一有效点的方向与上一段方向夹角超过该角度（°）且移动缓慢 → 视为 GPS 乱跳丢弃 */
+const REVERSE_TURN_DEG = 120;
+/** 反转漂移过滤：判定为“移动缓慢”的速度上限（m/s） */
+const REVERSE_SLOW_SPEED_MPS = 2;
 
 /** Haversine 球面距离（米），兼容 {lat,lng} 与 {latitude,longitude} 两种字段 */
 function haversine(a, b) {
@@ -83,6 +88,18 @@ class Tracker {
       if (d < MIN_DISTANCE_M && dt < MIN_INTERVAL_MS / 1000) return null;
       // 漂移过滤：瞬时速度超阈值
       if (dt > 0 && d / dt > MAX_SPEED_MPS) return null;
+      // 反转漂移过滤：GPS 乱跳典型特征 = 方向大反转 + 低速（室内漂移来回弹）
+      if (this.prevDirection != null && d >= MIN_DISTANCE_M) {
+        const bearing = this._bearing(this.lastPoint, loc);
+        let turn = Math.abs(bearing - this.prevDirection) % 360;
+        if (turn > 180) turn = 360 - turn;
+        const speed = dt > 0 ? d / dt : 0;
+        if (turn > REVERSE_TURN_DEG && speed < REVERSE_SLOW_SPEED_MPS) {
+          // 丢弃该点，但不更新方向（避免连续误杀后方向丢失）
+          return null;
+        }
+        this.prevDirection = bearing;
+      }
     }
 
     const point = {
@@ -121,6 +138,18 @@ class Tracker {
     this.lastPoint = point;
     this.lastSampleTime = now;
     return point;
+  }
+
+  /** 方位角（度，0=北，顺时针） */
+  _bearing(a, b) {
+    const toRad = (deg) => (deg * Math.PI) / 180;
+    const toDeg = (rad) => (rad * 180) / Math.PI;
+    const lat1 = toRad(a.latitude != null ? a.latitude : a.lat);
+    const lat2 = toRad(b.latitude != null ? b.latitude : b.lat);
+    const dLng = toRad((b.longitude != null ? b.longitude : b.lng) - (a.longitude != null ? a.longitude : a.lng));
+    const y = Math.sin(dLng) * Math.cos(lat2);
+    const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+    return (toDeg(Math.atan2(y, x)) + 360) % 360;
   }
 
   pause() {
