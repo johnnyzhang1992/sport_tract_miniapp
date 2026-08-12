@@ -151,13 +151,14 @@ Component({
         ctx.globalAlpha = 1;
       });
 
-      // 最大值标注（限制在绘图区内，不超出顶部）
+      // 最大值标注：显示在柱子内部顶部往下偏移（不贴柱顶/贴画布顶），白字清晰
       const maxV = Math.max(...values);
       const maxIdx = values.indexOf(maxV);
-      ctx.fillStyle = '#999';
+      const barTop = H - axis.padBottom - norm[maxIdx] * axis.chartH;
+      ctx.fillStyle = '#fff';
       ctx.font = '10px sans-serif';
       ctx.textAlign = 'center';
-      const maxY = Math.max(axis.padTop, H - axis.padBottom - norm[maxIdx] * axis.chartH - 8);
+      const maxY = Math.min(H - axis.padBottom - 8, barTop + 12);
       ctx.fillText(
         this.formatValue(maxV),
         axis.padLeft + maxIdx * slotW + slotW / 2,
