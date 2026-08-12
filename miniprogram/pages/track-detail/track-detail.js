@@ -376,9 +376,12 @@ Page({
       success: (res) => {
         wx.hideLoading();
         if (res.statusCode === 200) {
-          // 电脑端（模拟器）：复制到剪贴板便于分析；手机端：保存文件并分享
-          const isDevtools = (wx.getSystemInfoSync().platform || '').toLowerCase() === 'devtools';
-          if (isDevtools) {
+          // 电脑端（微信 PC / 开发者工具）：复制到剪贴板便于分析；手机端：保存文件并分享
+          // wx.getDeviceInfo().platform: ios/android/windows/mac/devtools
+          const plat =
+            (wx.getDeviceInfo ? wx.getDeviceInfo().platform : wx.getSystemInfoSync().platform || '').toLowerCase();
+          const isDesktop = ['windows', 'mac', 'devtools'].includes(plat);
+          if (isDesktop) {
             wx.setClipboardData({
               data: String(res.data),
               success: () => {
