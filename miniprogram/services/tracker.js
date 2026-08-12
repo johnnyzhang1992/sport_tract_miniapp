@@ -9,16 +9,20 @@ const EARTH_RADIUS_M = 6371000;
 const MIN_DISTANCE_M = 3;
 /** 节流：最小采点间隔（毫秒） */
 const MIN_INTERVAL_MS = 3000;
-/** 漂移过滤：最大瞬时速度（m/s，≈108km/h，超限视为漂移点） */
-const MAX_SPEED_MPS = 30;
 /** 爬升死区阈值（米，海拔误差范围内不累计） */
 const CLIMB_DEAD_ZONE_M = 2;
 /** 配速最小有效距离（米）：低于此值配速无意义（如刚起步/静止），显示 “—” */
 const MIN_PACE_DISTANCE_M = 200;
-/** 精度过滤阈值（米）：wx.onLocationChange 返回 accuracy（水平精度），超过则丢弃（室内/弱信号）。
- *  30 → 80：室内测试时 accuracy 常 50-100m，太严会全滤掉导致距离恒为 0。
- *  80 → 60：配合反转漂移过滤，兼顾室内可测与漂移抑制 */
-const MAX_ACCURACY_M = 60;
+/** 按运动类型的实时过滤配置（决策：与后端 cleanTrajectory 类型配置一致，防骑行起步误杀等） */
+const TYPE_TRACKER_CONFIG = {
+  walking: { maxAccuracyM: 60, minSpikeSpeed: 5, maxAbsSpeed: 12, minHighSpeed: 7 },
+  hiking: { maxAccuracyM: 60, minSpikeSpeed: 5, maxAbsSpeed: 12, minHighSpeed: 7 },
+  running: { maxAccuracyM: 50, minSpikeSpeed: 8, maxAbsSpeed: 18, minHighSpeed: 10 },
+  cycling: { maxAccuracyM: 40, minSpikeSpeed: 12, maxAbsSpeed: 30, minHighSpeed: 14 },
+  mountaineering: { maxAccuracyM: 80, minSpikeSpeed: 5, maxAbsSpeed: 12, minHighSpeed: 7 },
+  swimming: { maxAccuracyM: 60, minSpikeSpeed: 3, maxAbsSpeed: 8, minHighSpeed: 5 },
+};
+const DEFAULT_TRACKER_CONFIG = TYPE_TRACKER_CONFIG.running;
 /** 反转漂移过滤：新点相对上一有效点的方向与上一段方向夹角超过该角度（°）且移动缓慢 → 视为 GPS 乱跳丢弃 */
 const REVERSE_TURN_DEG = 120;
 /** 反转漂移过滤：判定为“移动缓慢”的速度上限（m/s） */
@@ -60,6 +64,8 @@ class Tracker {
     this.startTime = now();
     this.paused = false;
     this._recentSpeeds = []; // 局部速度窗口（尖刺判定用）
+    // 按运动类型阈值（防骑行起步/跑步冲刺被误杀）
+    this._typeCfg = TYPE_TRACKER_CONFIG[type] || DEFAULT_TRACKER_CONFIG;
     this.pausedAt = 0;
     this.pausedMs = 0;
 
@@ -76,8 +82,8 @@ class Tracker {
   addPoint(loc) {
     if (this.paused || !loc) return null;
 
-    // 精度过滤：accuracy 超阈值（室内/弱信号）直接丢弃，避免轨迹乱跳
-    if (typeof loc.accuracy === 'number' && loc.accuracy > MAX_ACCURACY_M) return null;
+    // 精度过滤：accuracy 超阈值（按类型，室内/弱信号）直接丢弃，避免轨迹乱跳
+    if (typeof loc.accuracy === 'number' && loc.accuracy > this._typeCfg.maxAccuracyM) return null;
 
     // 防御：模拟器/部分机型 timestamp 可能是字符串，统一转数字
     const now = Number(loc.timestamp) || this.now();
@@ -88,7 +94,7 @@ class Tracker {
       // 时间/距离双阈值节流（F9：位置未变不重复采点）
       if (d < MIN_DISTANCE_M && dt < MIN_INTERVAL_MS / 1000) return null;
       // 漂移过滤：瞬时速度超阈值
-      if (dt > 0 && d / dt > MAX_SPEED_MPS) return null;
+      if (dt > 0 && d / dt > this._typeCfg.maxAbsSpeed) return null;
       // 反转漂移过滤：GPS 乱跳典型特征 = 方向大反转 + 低速（室内漂移来回弹）
       if (this.prevDirection != null && d >= MIN_DISTANCE_M) {
         const bearing = this._bearing(this.lastPoint, loc);
@@ -152,7 +158,7 @@ class Tracker {
         const v1 = d1 / dt1;
         const v2 = d2 / dt2;
         const med = this._recentSpeeds.slice().sort((x, y) => x - y)[Math.floor(this._recentSpeeds.length / 2)];
-        const spikeV = Math.max(6, med * 4);
+        const spikeV = Math.max(this._typeCfg.minSpikeSpeed, med * 4);
         if (v1 > spikeV && v2 > spikeV && this._turnAngle(a, b, point) > 110) {
           // 剔除 b：距离重算（去掉 a→b、b→c，改用 a→c）；爬升回退 b 段
           this.distance = Math.max(0, this.distance - d1 - d2 + haversine(a, point));
