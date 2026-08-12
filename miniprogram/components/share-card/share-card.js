@@ -5,6 +5,12 @@
  * props: activityId, activity(指标), mapPoints, miniCodeUrl
  * 方法: preview()；事件: posterready({ path }) 海报临时路径
  */
+/** 海拔色带（与 track-map 一致）：蓝 → 绿 → 黄 → 红 12 档 */
+const ALTITUDE_COLORS = [
+  '#2979ff', '#1e8dd2', '#14a2a6', '#09b679', '#0ac850', '#4ccb3a',
+  '#8ecf25', '#d1d20f', '#fec805', '#fb9b15', '#f76f26', '#f44336',
+];
+
 Component({
   properties: {
     activityId: { type: String, value: '' },
@@ -137,31 +143,44 @@ Component({
       const plotTop = card.y + innerPad;
       const plotBottom = card.y + card.h - innerPad;
 
-      // 轨迹线：双层描边（白色底层 + 黄色主体），与蓝色背景对比强烈
+      // 轨迹线：白色底层 + 海拔彩色主体（决策：海报与详情页一致，按海拔变色）
+      const px = (p) => plotLeft + ((p.lng - minLng) / sLng) * (plotRight - plotLeft);
+      const py = (p) => plotBottom - ((p.lat - minLat) / sLat) * (plotBottom - plotTop);
       ctx.lineJoin = 'round';
       ctx.lineCap = 'round';
-      // 白色底层
+      // 白色底层（保证与蓝背景对比）
       ctx.strokeStyle = 'rgba(255,255,255,0.85)';
       ctx.lineWidth = 6;
       ctx.beginPath();
       pts.forEach((p, i) => {
-        const x = plotLeft + ((p.lng - minLng) / sLng) * (plotRight - plotLeft);
-        const y = plotBottom - ((p.lat - minLat) / sLat) * (plotBottom - plotTop);
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
+        if (i === 0) ctx.moveTo(px(p), py(p));
+        else ctx.lineTo(px(p), py(p));
       });
       ctx.stroke();
-      // 黄色主体
-      ctx.strokeStyle = '#FFE066';
+      // 海拔彩色主体：逐段绘制（相邻点平均海拔 → 色带）
+      const alts = pts.map((p) => p.altitude).filter((a) => a != null);
+      const minAlt = alts.length >= 2 ? Math.min(...alts) : null;
+      const maxAlt = alts.length >= 2 ? Math.max(...alts) : null;
+      const spanAlt = maxAlt != null && maxAlt > minAlt ? maxAlt - minAlt : 1;
       ctx.lineWidth = 3;
-      ctx.beginPath();
-      pts.forEach((p, i) => {
-        const x = plotLeft + ((p.lng - minLng) / sLng) * (plotRight - plotLeft);
-        const y = plotBottom - ((p.lat - minLat) / sLat) * (plotBottom - plotTop);
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      });
-      ctx.stroke();
+      for (let i = 1; i < pts.length; i++) {
+        const a = pts[i - 1];
+        const b = pts[i];
+        const avgAlt =
+          a.altitude != null || b.altitude != null
+            ? ((a.altitude ?? b.altitude) + (b.altitude ?? a.altitude)) / 2
+            : null;
+        let color = '#FFFFFF';
+        if (avgAlt != null && minAlt != null) {
+          const ratio = Math.max(0, Math.min(0.999, (avgAlt - minAlt) / spanAlt));
+          color = ALTITUDE_COLORS[Math.floor(ratio * ALTITUDE_COLORS.length)];
+        }
+        ctx.strokeStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(px(a), py(a));
+        ctx.lineTo(px(b), py(b));
+        ctx.stroke();
+      }
 
       // 起终点圆点 + 标签
       const first = pts[0];
