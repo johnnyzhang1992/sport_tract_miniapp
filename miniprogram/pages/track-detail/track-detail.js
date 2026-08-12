@@ -68,7 +68,11 @@ Page({
           startTimeText: fmtTime(activity.startTime),
           endTimeText: fmtTime(endTime),
         },
-        mapPoints: (activity.trackPoints || []).map((p) => ({ lat: p.lat, lng: p.lng })),
+        mapPoints: (activity.trackPoints || []).map((p) => ({
+          lat: p.lat,
+          lng: p.lng,
+          altitude: p.altitude != null ? p.altitude : null,
+        })),
         markers: (activity.markers || []).map((m) => ({ id: m.id, lat: m.lat, lng: m.lng })),
         markerList: (activity.markers || []).map((m) => ({
           ...m,
