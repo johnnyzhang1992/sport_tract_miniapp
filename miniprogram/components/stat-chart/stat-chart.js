@@ -151,7 +151,7 @@ Component({
         ctx.globalAlpha = 1;
       });
 
-      // 最大值标注：白底圆角块（与柱子视觉隔离），柱子上方偏移 12px
+      // 最大值标注：柱上方白底块（不遮柱子）；柱子满高无上方空间时用柱内白字（不切割）
       const maxV = Math.max(...values);
       const maxIdx = values.indexOf(maxV);
       const barTop = H - axis.padBottom - norm[maxIdx] * axis.chartH;
@@ -160,13 +160,21 @@ Component({
       const text = this.formatValue(maxV);
       const tw = ctx.measureText(text).width;
       const bx = axis.padLeft + maxIdx * slotW + slotW / 2;
-      const by = Math.max(axis.padTop + 10, barTop - 12);
-      ctx.fillStyle = 'rgba(255,255,255,0.95)';
-      ctx.beginPath();
-      ctx.roundRect ? ctx.roundRect(bx - tw / 2 - 4, by - 8, tw + 8, 14, 4) : ctx.rect(bx - tw / 2 - 4, by - 8, tw + 8, 14);
-      ctx.fill();
-      ctx.fillStyle = '#1f2329';
-      ctx.fillText(text, bx, by);
+      const blockH = 14;
+      if (barTop - axis.padTop >= blockH + 10) {
+        // 柱上方：白块下缘 = barTop - 4（完全在柱子上方，不遮柱）
+        const by = barTop - 10;
+        ctx.fillStyle = 'rgba(255,255,255,0.95)';
+        ctx.beginPath();
+        ctx.roundRect ? ctx.roundRect(bx - tw / 2 - 4, by - 8, tw + 8, blockH, 4) : ctx.rect(bx - tw / 2 - 4, by - 8, tw + 8, blockH);
+        ctx.fill();
+        ctx.fillStyle = '#1f2329';
+        ctx.fillText(text, bx, by);
+      } else {
+        // 满高柱：柱内顶部白字（无白块，不产生切割感）
+        ctx.fillStyle = '#fff';
+        ctx.fillText(text, bx, barTop + 12);
+      }
     },
 
     /** 折线图（Y 轴基于数据 min~max 范围，曲线占满绘图区） */
