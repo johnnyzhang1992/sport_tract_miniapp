@@ -18,6 +18,18 @@
   font-size: 24rpx;
   box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
 }
+.weak-tip {
+  position: absolute;
+  top: 100rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 152, 0, 0.92);
+  color: #fff;
+  border-radius: 999rpx;
+  padding: 8rpx 24rpx;
+  font-size: 22rpx;
+  z-index: 5;
+}
 .stats-wrap {
   position: absolute;
   left: 24rpx;

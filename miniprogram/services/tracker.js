@@ -6,7 +6,7 @@ const config = require('../config/index');
 
 const EARTH_RADIUS_M = 6371000;
 /** 节流：最小采点距离（米） */
-const MIN_DISTANCE_M = 5;
+const MIN_DISTANCE_M = 3;
 /** 节流：最小采点间隔（毫秒） */
 const MIN_INTERVAL_MS = 3000;
 /** 漂移过滤：最大瞬时速度（m/s，≈108km/h，超限视为漂移点） */
@@ -15,8 +15,9 @@ const MAX_SPEED_MPS = 30;
 const CLIMB_DEAD_ZONE_M = 2;
 /** 配速最小有效距离（米）：低于此值配速无意义（如刚起步/静止），显示 “—” */
 const MIN_PACE_DISTANCE_M = 200;
-/** 精度过滤阈值（米）：wx.onLocationChange 返回 accuracy（水平精度），超过则丢弃（室内/弱信号） */
-const MAX_ACCURACY_M = 30;
+/** 精度过滤阈值（米）：wx.onLocationChange 返回 accuracy（水平精度），超过则丢弃（室内/弱信号）。
+ *  30 → 80：室内测试时 accuracy 常 50-100m，太严会全滤掉导致距离恒为 0 */
+const MAX_ACCURACY_M = 80;
 
 /** Haversine 球面距离（米），兼容 {lat,lng} 与 {latitude,longitude} 两种字段 */
 function haversine(a, b) {

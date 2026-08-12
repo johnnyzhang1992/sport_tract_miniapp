@@ -25,6 +25,7 @@ Page({
     currentLocation: null,
     followMode: true,
     mapType: 'standard',
+    weakSignal: false,
 
     // 实时数据
     stats: {
@@ -152,6 +153,11 @@ Page({
     if (!this._firstLoc) {
       this._firstLoc = true;
       wx.showToast({ title: '已获取定位', icon: 'success' });
+    }
+    // GPS 信号弱提示（室内/高楼遮挡）：accuracy 大时提醒距离可能不准
+    const weak = typeof loc.accuracy === 'number' && loc.accuracy > 50;
+    if (weak !== this.data.weakSignal) {
+      this.setData({ weakSignal: weak });
     }
     const point = this.tracker.addPoint(loc);
     if (point) {
