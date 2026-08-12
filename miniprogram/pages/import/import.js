@@ -5,6 +5,15 @@ const { formatDuration } = require('../../utils/format');
 Page({
   data: {
     activityTypes: config.ACTIVITY_TYPES,
+    sourceOptions: [
+      { value: '两步路', label: '两步路' },
+      { value: 'Strava', label: 'Strava' },
+      { value: '佳明', label: '佳明' },
+      { value: '华为运动健康', label: '华为运动健康' },
+      { value: '小米运动', label: '小米运动' },
+      { value: 'Keep', label: 'Keep' },
+    ],
+    customSource: '',
     fileName: '',
     uploading: false,
     saving: false,
@@ -50,8 +59,10 @@ Page({
       const res = await api.uploadFile('/activities/import', file.path);
       this.setData({
         activityId: res.id,
+        customSource: res.source || '',
         preview: {
           type: res.type,
+          source: res.source || '其他',
           distanceKm: (res.distance / 1000).toFixed(2),
           durationText: formatDuration(res.duration),
           pointCount: res.pointCount,
@@ -63,6 +74,25 @@ Page({
       wx.hideLoading();
       this.setData({ uploading: false });
     }
+  },
+
+  /** 切换数据来源（预设或自定义） */
+  onSourceChange(e) {
+    const source = e.currentTarget.dataset.source;
+    if (!this.data.preview || source === this.data.preview.source) return;
+    this.setData({ 'preview.source': source });
+  },
+
+  onCustomSourceInput(e) {
+    this.setData({ customSource: e.detail.value });
+  },
+
+  /** 当前选择的来源（自定义时用输入值） */
+  currentSource() {
+    const { preview, customSource } = this.data;
+    if (!preview) return '';
+    if (preview.source === '自定义') return (customSource || '').trim() || '其他';
+    return preview.source;
   },
 
   /** 切换运动类型 */
@@ -78,9 +108,10 @@ Page({
     const { preview, activityId } = this.data;
     this.setData({ saving: true });
     try {
-      if (preview.type) {
-        await api.put(`/activities/${activityId}/type`, { type: preview.type });
-      }
+      const body = {};
+      if (preview.type) body.type = preview.type;
+      body.source = this.currentSource();
+      await api.put(`/activities/${activityId}/meta`, body);
       wx.showToast({ title: '导入成功', icon: 'success' });
       setTimeout(() => {
         wx.redirectTo({ url: `/pages/track-detail/track-detail?id=${activityId}` });
