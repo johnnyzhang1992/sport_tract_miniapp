@@ -26,6 +26,7 @@ Page({
     followMode: true,
     mapType: 'standard',
     weakSignal: false,
+    weakAccuracy: null,
 
     // 实时数据
     stats: {
@@ -155,10 +156,11 @@ Page({
       this._firstLoc = true;
       wx.showToast({ title: '已获取定位', icon: 'success' });
     }
-    // GPS 信号弱提示（室内/高楼遮挡）：accuracy 大时提醒距离可能不准
-    const weak = typeof loc.accuracy === 'number' && loc.accuracy > 50;
+    // GPS 信号弱提示（室内/高楼遮挡）：accuracy 大时提醒距离可能不准（阈值 45m，比过滤阈值 60m 更敏感）
+    const weakAcc = typeof loc.accuracy === 'number' ? loc.accuracy : null;
+    const weak = weakAcc != null && weakAcc > 45;
     if (weak !== this.data.weakSignal) {
-      this.setData({ weakSignal: weak });
+      this.setData({ weakSignal: weak, weakAccuracy: weakAcc != null ? Math.round(weakAcc) : null });
     }
     const point = this.tracker.addPoint(loc);
     if (point) {
