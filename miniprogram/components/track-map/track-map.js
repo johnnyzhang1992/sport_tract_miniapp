@@ -255,7 +255,7 @@ Component({
         };
       });
 
-      this.setData({ polyline: polylines }); // 不更新 heatCircles：circles 属性与 polyline 渲染冲突
+      this.setData({ polyline: polylines, heatCircles });
       console.log('[track-map] heatCircles=', heatCircles.length);
     },
 
