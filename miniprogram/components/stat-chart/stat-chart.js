@@ -112,27 +112,28 @@ Component({
       const barW = Math.min(16, slotW * 0.55);
       const norm = this.normalize(values);
 
-      // X 标签（左右留白，首尾不裁剪）
+      // X 标签：上限 7 个均匀抽稀（避免挤在一起），首尾始终保留
+      const maxLabels = 7;
+      const labelEvery = Math.max(1, Math.ceil(n / maxLabels));
       ctx.font = '10px sans-serif';
       ctx.fillStyle = '#999';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
       values.forEach((_, i) => {
-        if (n <= 15 || i % 2 === 0) {
-          const x = axis.padLeft + i * slotW + slotW / 2;
-          const label = String(data[i].label);
-          // 首尾 label 用边缘对齐防裁剪
-          if (i === 0) {
-            ctx.textAlign = 'left';
-            ctx.fillText(label, axis.padLeft, H - axis.padBottom + 8);
-            ctx.textAlign = 'center';
-          } else if (i === n - 1) {
-            ctx.textAlign = 'right';
-            ctx.fillText(label, width - axis.padRight, H - axis.padBottom + 8);
-            ctx.textAlign = 'center';
-          } else {
-            ctx.fillText(label, x, H - axis.padBottom + 8);
-          }
+        if (i !== 0 && i !== n - 1 && i % labelEvery !== 0) return;
+        const x = axis.padLeft + i * slotW + slotW / 2;
+        const label = String(data[i].label);
+        // 首尾 label 用边缘对齐防裁剪
+        if (i === 0) {
+          ctx.textAlign = 'left';
+          ctx.fillText(label, axis.padLeft, H - axis.padBottom + 8);
+          ctx.textAlign = 'center';
+        } else if (i === n - 1) {
+          ctx.textAlign = 'right';
+          ctx.fillText(label, width - axis.padRight, H - axis.padBottom + 8);
+          ctx.textAlign = 'center';
+        } else {
+          ctx.fillText(label, x, H - axis.padBottom + 8);
         }
       });
 
@@ -147,16 +148,17 @@ Component({
         ctx.globalAlpha = 1;
       });
 
-      // 最大值标注
+      // 最大值标注（限制在绘图区内，不超出顶部）
       const maxV = Math.max(...values);
       const maxIdx = values.indexOf(maxV);
       ctx.fillStyle = '#999';
       ctx.font = '10px sans-serif';
       ctx.textAlign = 'center';
+      const maxY = Math.max(axis.padTop, H - axis.padBottom - norm[maxIdx] * axis.chartH - 8);
       ctx.fillText(
         this.formatValue(maxV),
         axis.padLeft + maxIdx * slotW + slotW / 2,
-        H - axis.padBottom - norm[maxIdx] * axis.chartH - 8,
+        maxY,
       );
     },
 
@@ -199,7 +201,8 @@ Component({
           ctx.fillStyle = '#666';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'bottom';
-          ctx.fillText(this.formatValue(values[i]), X(i), Y(i) - 5);
+          const labelY = Math.max(axis.padTop + 10, Y(i) - 5); // 限制在绘图区内
+          ctx.fillText(this.formatValue(values[i]), X(i), labelY);
         }
       });
 
