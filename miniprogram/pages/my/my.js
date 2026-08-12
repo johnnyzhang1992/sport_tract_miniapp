@@ -33,6 +33,11 @@ Page({
     }
   },
 
+  /** 轨迹合集（M6：一周/一月/一年一图总览） */
+  goOverview() {
+    wx.navigateTo({ url: '/pages/overview/overview' });
+  },
+
   goStats() {
     wx.navigateTo({ url: '/pages/stats/stats' });
   },

@@ -63,31 +63,3 @@
   margin-top: 16rpx;
 }
 
-/* 轨迹合集入口 */
-.overview-entry {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 20rpx;
-}
-.overview-entry-left {
-  display: flex;
-  align-items: center;
-}
-.overview-entry-icon {
-  font-size: 44rpx;
-  margin-right: 20rpx;
-}
-.overview-entry-title {
-  font-size: 30rpx;
-  font-weight: 600;
-  color: #1f2329;
-}
-.overview-entry-sub {
-  font-size: 22rpx;
-  margin-top: 4rpx;
-}
-.overview-entry-arrow {
-  font-size: 40rpx;
-  color: #c2c7d0;
-}

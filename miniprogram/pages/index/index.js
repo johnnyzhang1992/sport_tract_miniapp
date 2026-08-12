@@ -54,9 +54,4 @@ Page({
       url: `/pages/record/record?type=${this.data.selectedType}`,
     });
   },
-
-  /** 轨迹合集（M6）：一周/一月/一年一图总览 */
-  openOverview() {
-    wx.navigateTo({ url: '/pages/overview/overview' });
-  },
 });
