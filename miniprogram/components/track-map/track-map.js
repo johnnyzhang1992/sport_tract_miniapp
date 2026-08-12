@@ -27,10 +27,13 @@ Component({
     polyline: [],
     displayMarkers: [],
     heatCircles: [],
+    centerLat: 31.2304,
+    centerLng: 121.4737,
   },
 
   observers: {
     'points, markers, currentLocation': function (points, markers, currentLocation) {
+      this.updateCenter();
       this.buildPolyline();
       this.buildMarkers();
       if (this.data.mode === 'view') {
@@ -43,6 +46,7 @@ Component({
       }
     },
     'overviewTracks, heat': function () {
+      this.updateCenter();
       this.buildOverview();
       if (this.data.mode === 'overview') {
         this.fitOverviewView();
@@ -52,6 +56,7 @@ Component({
 
   lifetimes: {
     ready() {
+      this.updateCenter();
       this.buildPolyline();
       this.buildMarkers();
       if (this.data.mode === 'view') {
@@ -65,6 +70,24 @@ Component({
   },
 
   methods: {
+    /** 统一计算地图中心（WXML 不支持多级表达式，如 overviewTracks[0].points[0].lat） */
+    updateCenter() {
+      const loc = this.data.currentLocation;
+      if (loc && Number.isFinite(loc.latitude) && Number.isFinite(loc.longitude)) {
+        this.setData({ centerLat: loc.latitude, centerLng: loc.longitude });
+        return;
+      }
+      const pts = this.data.points || [];
+      if (pts.length && Number.isFinite(pts[0].lat) && Number.isFinite(pts[0].lng)) {
+        this.setData({ centerLat: pts[0].lat, centerLng: pts[0].lng });
+        return;
+      }
+      const ot = this.data.overviewTracks || [];
+      const p0 = ot[0] && ot[0].points && ot[0].points[0];
+      if (p0 && Number.isFinite(p0.lat) && Number.isFinite(p0.lng)) {
+        this.setData({ centerLat: p0.lat, centerLng: p0.lng });
+      }
+    },
     buildPolyline() {
       // 过滤非法坐标点（undefined/NaN），空点集时传空数组避免渲染异常
       const pts = this.data.points
