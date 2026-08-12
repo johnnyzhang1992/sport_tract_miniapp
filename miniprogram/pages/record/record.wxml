@@ -14,8 +14,10 @@
     <view class="layer-btn" bindtap="switchLayer">
       {{mapType === 'standard' ? '🛰️ 卫星' : '🗺️ 标准'}}
     </view>
-    <!-- GPS 信号弱提示（室内/遮挡） -->
-    <view class="weak-tip" wx:if="{{weakSignal}}">📡 GPS 信号弱（精度 {{weakAccuracy}}m），距离可能不准</view>
+    <!-- 实时精度徽章（常驻；弱信号时橙色） -->
+    <view class="acc-badge {{weakSignal ? 'acc-badge-weak' : ''}}" wx:if="{{currentAccuracy != null}}">
+      <text class="acc-dot"></text> 精度 {{currentAccuracy}}m
+    </view>
   </view>
 
   <!-- 实时数据面板 -->
