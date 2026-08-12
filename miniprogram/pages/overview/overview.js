@@ -19,6 +19,7 @@ Page({
     recentTracks: [],
     mapType: 'standard',
     loading: false,
+    fullscreen: false,
   },
 
   onLoad() {
@@ -101,6 +102,20 @@ Page({
     this.setData({
       mapType: this.data.mapType === 'standard' ? 'satellite' : 'standard',
     });
+  },
+
+  /** 全屏展示合集地图 */
+  openFullscreen() {
+    this.setData({ fullscreen: true });
+  },
+
+  closeFullscreen() {
+    this.setData({ fullscreen: false });
+  },
+
+  /** 全屏内图层切换 */
+  fsSwitchLayer() {
+    this.switchLayer();
   },
 
   onTapTrack(e) {

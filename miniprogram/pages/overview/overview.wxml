@@ -40,9 +40,27 @@
     <view class="layer-btn" bindtap="switchLayer">
       {{mapType === 'standard' ? '🛰️ 卫星' : '🗺️ 标准'}}
     </view>
+    <view class="fullscreen-btn" bindtap="openFullscreen">⛶ 全屏</view>
     <view class="heat-legend">
       <view class="heat-legend-dot"></view>
       <text>高频路线</text>
+    </view>
+  </view>
+
+  <!-- 全屏地图弹窗（不拦截 touch：map 手势需要 touchmove） -->
+  <view class="fullscreen-mask" wx:if="{{fullscreen}}">
+    <view class="fullscreen-close" bindtap="closeFullscreen">✕</view>
+    <view class="fullscreen-layer" bindtap="fsSwitchLayer">
+      {{mapType === 'standard' ? '🛰️ 卫星' : '🗺️ 标准'}}
+    </view>
+    <view class="fullscreen-map-wrap">
+      <track-map
+        id="fsOverviewMap"
+        mode="overview"
+        overviewTracks="{{tracks}}"
+        heat="{{heat}}"
+        mapType="{{mapType}}"
+      />
     </view>
   </view>
 
