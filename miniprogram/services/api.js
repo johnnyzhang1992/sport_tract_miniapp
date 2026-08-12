@@ -15,9 +15,12 @@ let refreshWaiters = [];
 
 /** 原生请求（不含鉴权逻辑） */
 function rawRequest({ url, method = 'GET', data, header = {} }) {
-  // 无 body 的请求（GET/DELETE 无数据）不设 JSON Content-Type，
-  // 否则后端 Fastify 解析空 body 报 400（Body cannot be empty）
+  // 无 body 的请求（GET/DELETE 无数据）：显式覆盖 Content-Type，
+  // 避免微信默认 application/json + 空 body → 后端 Fastify 报 400（Body cannot be empty）
   const hasBody = data != null && !['GET', 'DELETE'].includes(method);
+  const jsonHeader = hasBody
+    ? { 'Content-Type': 'application/json' }
+    : { 'Content-Type': 'text/plain' };
   return new Promise((resolve, reject) => {
     wx.request({
       url: buildUrl(url),
@@ -25,7 +28,7 @@ function rawRequest({ url, method = 'GET', data, header = {} }) {
       data,
       header: Object.assign(
         {},
-        hasBody ? { 'Content-Type': 'application/json' } : {},
+        jsonHeader,
         header,
       ),
       timeout: 15000,
