@@ -407,26 +407,7 @@ Page({
       success: (res) => {
         wx.hideLoading();
         if (res.statusCode === 200) {
-          // 电脑端（微信 PC / 开发者工具）：复制到剪贴板便于分析；手机端：保存文件并分享
-          // wx.getDeviceInfo().platform: ios/android/windows/mac/devtools
-          const plat =
-            (wx.getDeviceInfo ? wx.getDeviceInfo().platform : wx.getSystemInfoSync().platform || '').toLowerCase();
-          const isDesktop = ['windows', 'mac', 'devtools'].includes(plat);
-          if (isDesktop) {
-            wx.setClipboardData({
-              data: String(res.data),
-              success: () => {
-                wx.showModal({
-                  title: 'GPX 已复制',
-                  content: '轨迹数据已复制到剪贴板（电脑端调试用）',
-                  showCancel: false,
-                });
-              },
-              fail: () => wx.showToast({ title: '复制失败', icon: 'none' }),
-            });
-            return;
-          }
-          // 手机端：保存临时文件并分享（文件传输助手）
+          // 所有端统一：保存为 .gpx 文件并分享（微信 PC/手机均支持 shareFileMessage）
           const fs = wx.getFileSystemManager();
           const path = `${wx.env.USER_DATA_PATH}/activity-${this.data.id}.gpx`;
           try {
@@ -440,11 +421,29 @@ Page({
             fileName: `activity-${this.data.id}.gpx`,
             success: () => {},
             fail: () => {
-              wx.showModal({
-                title: '导出失败',
-                content: '无法调起分享，请将文件保存到手机后通过文件传输助手发送',
-                showCancel: false,
-              });
+              // 分享不可用（如部分 devtools）：PC 端复制到剪贴板兜底
+              const plat =
+                (wx.getDeviceInfo ? wx.getDeviceInfo().platform : wx.getSystemInfoSync().platform || '').toLowerCase();
+              const isDesktop = ['windows', 'mac', 'devtools'].includes(plat);
+              if (isDesktop) {
+                wx.setClipboardData({
+                  data: String(res.data),
+                  success: () => {
+                    wx.showModal({
+                      title: '已复制到剪贴板',
+                      content: '分享不可用，GPX 内容已复制（调试用）',
+                      showCancel: false,
+                    });
+                  },
+                  fail: () => wx.showToast({ title: '复制失败', icon: 'none' }),
+                });
+              } else {
+                wx.showModal({
+                  title: '导出失败',
+                  content: '无法调起分享，请将文件保存到手机后通过文件传输助手发送',
+                  showCancel: false,
+                });
+              }
             },
           });
         } else {
