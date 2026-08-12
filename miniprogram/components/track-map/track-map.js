@@ -21,6 +21,8 @@ Component({
     overviewTracks: { type: Array, value: [] },
     /** 合集模式：热力网格 [{lat, lng, weight(0~1)}] → map circles */
     heat: { type: Array, value: [] },
+    /** 交通路况图层（enable-traffic） */
+    showTraffic: { type: Boolean, value: false },
   },
 
   data: {
@@ -47,8 +49,9 @@ Component({
     },
     'overviewTracks, heat': function () {
       this.updateCenter();
-      this.buildOverview();
+      // 仅合集模式处理多轨迹；view/record 模式不受 overviewTracks 影响（避免覆盖竞态）
       if (this.data.mode === 'overview') {
+        this.buildOverview();
         this.fitOverviewView();
       }
     },
@@ -236,10 +239,23 @@ Component({
       });
       console.log('[track-map] polylines=', polylines.length);
 
-      // ⚠️ 二分排查：circles 疑似导致渲染层崩溃（maxSimplifyZoom），暂时禁用热力圈
-      const heatCircles = [];
+      // 热力：150m 网格 → 半透明橙色圆（权重越高越浓），≤200 个
+      // map circles 颜色只支持 #RRGGBB / #RRGGBBAA（8 位 hex），rgba() 会崩渲染层
+      const heatCircles = (this.data.heat || []).map((h) => {
+        const alpha = Math.round((0.08 + 0.45 * h.weight) * 255);
+        const hex = (n) => n.toString(16).padStart(2, '0');
+        return {
+          latitude: h.lat,
+          longitude: h.lng,
+          radius: 90,
+          color: `#${hex(255)}${hex(152)}${hex(0)}${hex(alpha)}`,
+          fillColor: `#${hex(255)}${hex(152)}${hex(0)}${hex(alpha)}`,
+          strokeWidth: 0,
+        };
+      });
 
       this.setData({ polyline: polylines, heatCircles });
+      console.log('[track-map] heatCircles=', heatCircles.length);
     },
 
     /** 合集模式：视野包含所有轨迹点 */

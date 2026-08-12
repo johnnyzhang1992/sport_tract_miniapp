@@ -33,14 +33,17 @@
     <track-map
       id="overviewMap"
       class="overview-map"
+      style="width: 100%; height: 600rpx;"
       mode="overview"
       overviewTracks="{{tracks}}"
       heat="{{heat}}"
       mapType="{{mapType}}"
+      showTraffic="{{showTraffic}}"
     />
     <view class="layer-btn" bindtap="switchLayer">
       {{mapType === 'standard' ? '🛰️ 卫星' : '🗺️ 标准'}}
     </view>
+    <view class="traffic-btn {{showTraffic ? 'traffic-btn-active' : ''}}" bindtap="toggleTraffic">🚦 路况</view>
     <view class="fullscreen-btn" bindtap="openFullscreen">⛶ 全屏</view>
     <view class="heat-legend">
       <view class="heat-legend-dot"></view>
@@ -62,6 +65,7 @@
         overviewTracks="{{tracks}}"
         heat="{{heat}}"
         mapType="{{mapType}}"
+        showTraffic="{{showTraffic}}"
       />
     </view>
   </view>

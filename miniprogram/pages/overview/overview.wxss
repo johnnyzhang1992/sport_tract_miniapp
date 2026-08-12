@@ -193,3 +193,19 @@
   padding: 12rpx 24rpx;
   font-size: 24rpx;
 }
+.traffic-btn {
+  position: absolute;
+  top: 96rpx;
+  right: 24rpx;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 999rpx;
+  padding: 12rpx 24rpx;
+  font-size: 24rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
+  z-index: 2;
+  color: #4e5969;
+}
+.traffic-btn-active {
+  background: #2b6cf6;
+  color: #fff;
+}

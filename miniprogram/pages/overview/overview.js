@@ -20,6 +20,7 @@ Page({
     mapType: 'standard',
     loading: false,
     fullscreen: false,
+    showTraffic: false,
   },
 
   onLoad() {
@@ -55,11 +56,10 @@ Page({
       wx.showToast({ title: '加载失败', icon: 'none' });
     } finally {
       this.setData({ loading: false });
-      // 双保险：等渲染完成后强制组件重绘 + 视野定位（不依赖 observers 时序）
+      // 只兜底视野定位（不重复 buildOverview，避免覆盖竞态）
       setTimeout(() => {
         const map = this.selectComponent('#overviewMap');
-        if (map && typeof map.buildOverview === 'function') {
-          map.buildOverview();
+        if (map && typeof map.fitOverviewView === 'function') {
           map.fitOverviewView();
         }
       }, 300);
@@ -112,14 +112,18 @@ Page({
     });
   },
 
+  /** 交通路况开关 */
+  toggleTraffic() {
+    this.setData({ showTraffic: !this.data.showTraffic });
+  },
+
   /** 全屏展示合集地图 */
   openFullscreen() {
     this.setData({ fullscreen: true });
-    // 全屏组件刚创建（wx:if），等待渲染后强制重绘
+    // 全屏组件刚创建（wx:if），ready 已画线；这里只兜底视野
     setTimeout(() => {
       const map = this.selectComponent('#fsOverviewMap');
-      if (map && typeof map.buildOverview === 'function') {
-        map.buildOverview();
+      if (map && typeof map.fitOverviewView === 'function') {
         map.fitOverviewView();
       }
     }, 300);
