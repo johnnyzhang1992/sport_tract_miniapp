@@ -200,6 +200,7 @@ Component({
     /** 合集模式：多轨迹 polyline（按类型配色）+ 热力 circles */
     buildOverview() {
       const tracks = this.data.overviewTracks || [];
+      console.log('[track-map] buildOverview tracks=', tracks.length, 'heat=', (this.data.heat || []).length);
       const polylines = [];
       tracks.forEach((t) => {
         const pts = (t.points || [])
@@ -208,8 +209,9 @@ Component({
         if (pts.length < 2) return;
         const color = t.color || '#2B6CF6';
         // 半透明主体线：多条重叠自然加深 → 高频路线视觉强化
-        polylines.push({ points: pts, color, width: 3, opacity: 0.55, arrowLine: false });
+        polylines.push({ points: pts, color, width: 4, arrowLine: false });
       });
+      console.log('[track-map] polylines=', polylines.length);
 
       // 热力：150m 网格 → 半透明橙色圆（权重越高越浓），≤200 个
       const heatCircles = (this.data.heat || []).map((h) => ({
