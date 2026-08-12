@@ -26,6 +26,7 @@
 .del-action {
   background: #e34d59;
   color: #fff;
+  height: 100%; /* 撑满滑动容器高度，与左侧卡片同高 */
   display: flex;
   align-items: center;
   justify-content: center;
