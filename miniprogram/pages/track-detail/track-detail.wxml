@@ -60,6 +60,11 @@
     <view class="text-muted detail-sub" wx:if="{{activity.elevationGain}}">
       累计爬升 {{activity.elevationGain}}m · 最高海拔 {{activity.maxAltitude || '—'}}m · 打点 {{markerList.length}} 个
     </view>
+    <view class="detail-time">
+      <text>开始 {{activity.startTimeText}}</text>
+      <text class="time-sep">·</text>
+      <text>结束 {{activity.endTimeText}}</text>
+    </view>
   </view>
 
   <!-- 海拔曲线（决策 F31：仅供参考） -->

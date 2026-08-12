@@ -50,6 +50,12 @@ Page({
         .map((p, i) => ({ label: String(i), value: p.altitude }));
 
 
+      const fmtTime = (ts) => {
+        const d = new Date(ts);
+        const p = (n) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+      };
+      const endTime = activity.endTime || activity.startTime + (activity.duration || 0) * 1000;
       this.setData({
         activity: {
           ...activity,
@@ -59,12 +65,8 @@ Page({
           durationText: formatDuration(activity.duration),
           paceValue: (formatPaceParts(activity.avgPace) || {}).value || '—',
           paceUnit: (formatPaceParts(activity.avgPace) || {}).unit || '',
-          startTimeText: new Date(activity.startTime).toLocaleString('zh-CN', {
-            month: 'numeric',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-          }),
+          startTimeText: fmtTime(activity.startTime),
+          endTimeText: fmtTime(endTime),
         },
         mapPoints: (activity.trackPoints || []).map((p) => ({ lat: p.lat, lng: p.lng })),
         markers: (activity.markers || []).map((m) => ({ id: m.id, lat: m.lat, lng: m.lng })),
