@@ -34,8 +34,11 @@ Component({
   observers: {
     'points, markers, currentLocation': function (points, markers, currentLocation) {
       this.updateCenter();
-      this.buildPolyline();
-      this.buildMarkers();
+      // overview 模式轨迹线由 buildOverview 管理，buildPolyline 会清空（points 为空）
+      if (this.data.mode !== 'overview') {
+        this.buildPolyline();
+        this.buildMarkers();
+      }
       if (this.data.mode === 'view') {
         this.fitView();
       }
@@ -58,12 +61,11 @@ Component({
   lifetimes: {
     ready() {
       this.updateCenter();
-      this.buildPolyline();
-      this.buildMarkers();
-      if (this.data.mode === 'view') {
-        this.fitView();
-      }
-      if (this.data.mode === 'overview') {
+      if (this.data.mode !== 'overview') {
+        this.buildPolyline();
+        this.buildMarkers();
+        if (this.data.mode === 'view') this.fitView();
+      } else {
         this.buildOverview();
         this.fitOverviewView();
       }
@@ -90,6 +92,7 @@ Component({
       }
     },
     buildPolyline() {
+      if (this.data.mode === 'overview') return; // 合集模式由 buildOverview 管理轨迹线
       // 过滤非法坐标点（undefined/NaN），空点集时传空数组避免渲染异常
       const pts = this.data.points
         .map((p) => ({ lat: p.lat, lng: p.lng }))
@@ -252,23 +255,19 @@ Component({
         };
       });
 
-      this.setData({ polyline: polylines, heatCircles });
+      this.setData({ polyline: polylines }); // 不更新 heatCircles：circles 属性与 polyline 渲染冲突
       console.log('[track-map] heatCircles=', heatCircles.length);
     },
 
-    /** 合集模式：视野包含所有轨迹点 */
+    /** 合集模式：视野聚焦首条轨迹（避免异地轨迹把视野拉到全国，轨迹缩成不可见） */
     fitOverviewView() {
-      const pts = [];
-      (this.data.overviewTracks || []).forEach((t) => {
-        (t.points || []).forEach((p) => {
-          if (Number.isFinite(p.lat) && Number.isFinite(p.lng)) {
-            pts.push({ latitude: p.lat, longitude: p.lng });
-          }
-        });
-      });
+      const t0 = (this.data.overviewTracks || [])[0];
+      const pts = ((t0 && t0.points) || [])
+        .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng))
+        .map((p) => ({ latitude: p.lat, longitude: p.lng }));
       if (pts.length === 0) return;
       const mapCtx = wx.createMapContext('trackMap', this);
-      mapCtx.includePoints({ points: pts, padding: [50, 40, 50, 40] });
+      mapCtx.includePoints({ points: pts, padding: [60, 40, 60, 40] });
     },
 
     /**
