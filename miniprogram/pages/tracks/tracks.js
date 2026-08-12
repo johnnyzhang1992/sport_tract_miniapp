@@ -100,7 +100,7 @@ Page({
     const diffDays = Math.floor((Date.now() - start.getTime()) / 86400000);
     const timeText =
       diffDays < 7
-        ? ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][start.getDay()]
+        ? ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'][start.getDay()]
         : `${start.getFullYear()}/${start.getMonth() + 1}/${start.getDate()}`;
     return {
       ...item,
