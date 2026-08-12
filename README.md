@@ -1,107 +1,106 @@
 # sport_track_miniapp — 运动轨迹记录小程序（前端）
 
-> 版本：v0.1（M1 骨架：tabBar 三页 + 静默登录 + 轨迹列表已联通后端）
-> 文档：`docs/`（需求说明书 / 竞品分析 / 前端页面架构 / 后端架构）
+> 版本：v1.0（M1-M8 全功能：记录 / 地图 / 打点 / 统计 / 海报 / 合集 / 导入 / 纠偏）
+> 文档：`docs/`（01 需求 / 02 竞品 / 03 前端架构 / 04 后端架构 / 05 上线准备 / 06 导入调研 / 07 纠偏调研 / 08 纠偏实现）
+
+## 功能总览
+
+| 模块 | 说明 |
+|---|---|
+| **运动记录** | 实时轨迹（GPS 采点/节流/漂移过滤/尖刺回滚）、实时数据面板（距离/时长/配速/海拔）、实时精度徽章、图层切换、暂停/继续/结束 |
+| **打点** | 中途打卡（类型/备注/照片 ≤3 张）、打点序号图标（①②③）、照片增删、OSS 私有直传 |
+| **轨迹详情** | 地图（分段轨迹、海拔着色、起点终点标记）、回放、海拔曲线、照片、轨迹信息编辑（类型/备注）、重新纠偏、GPX 导出（devtools 复制 / PC+真机文件） |
+| **分享海报** | 先预览再保存/分享（Canvas 绘制：轨迹海拔着色 + 指标卡 + 品牌），朋友圈/朋友卡片封面 |
+| **统计** | 距离趋势/时长/次数图表、数据统计页 |
+| **轨迹合集** | 一周/一月/一年/全部一图总览（多轨迹 + 高频路线热力 + 全屏）、DP 抽稀 |
+| **数据导入** | 两步路/Strava/佳明等 GPX/KML/TCX 导入，WGS-84→GCJ-02 坐标转换、类型/来源确认 |
+| **轨迹列表** | 左滑删除（二次确认）、类型筛选、卡片展示 |
+| **个人中心** | 资料编辑、数据导入入口、轨迹合集入口、设置、隐私政策 |
 
 ## 技术栈
 
-- 微信小程序**原生**开发（决策：不引入 Taro/uni-app）
-- UI：**tdesign-miniprogram**（npm 依赖已声明，页面骨架暂用原生组件，后续按需引入）
-- 地图：微信 `map` 组件 + 腾讯位置服务 QQMapWX（逆地理编码）
-- 后端：`../sport_track_api/`（Fastify，端口 3004）
+- 微信小程序**原生**开发（不引入 Taro/uni-app）
+- UI：**tdesign-miniprogram**（`miniprogram_npm` 构建产物，clone 后需重建）
+- 地图：微信 `map` 组件（GCJ-02）
+- 后端：`../sport_track_api/`（Fastify 5 + MongoDB，端口 3004，线上 api.historybook.cn）
 
----
+## 关键设计
 
-## 🔧 待配置清单（请逐项准备）
-
-> 所有**代码内配置**集中在 `miniprogram/config/index.js`，填好后即可联调。
-
-### 1️⃣ 微信小程序 AppID（✅ 已填：wx68ebe78cca4dc17c）
-- 填入：`project.config.json` 的 `appid` 字段（已配置）
-- ⚠️ 配套：后端 `.env.local` 需填 `WX_APPID` + `WX_SECRET`（secret 在公众平台获取）才能走真实微信登录；未填前保持 `WX_MOCK_LOGIN=true`
-
-### 2️⃣ 后端 API 地址（必填）
-- 填入：`miniprogram/config/index.js` → `API_BASE_URL`
-- 开发联调：
-  - 微信开发者工具 → 右上角「详情」→「本地设置」→ 勾选 **「不校验合法域名、web-view…」**
-  - 模拟器：`http://localhost:3004`（默认已填）
-  - **真机预览**：改为电脑局域网 IP（如 `http://192.168.1.5:3004`，需同一 Wi-Fi）
-- 生产：必须是 **https 备案域名**，并在小程序后台配置 request 合法域名
-
-### 3️⃣ 腾讯位置服务 Key（逆地理编码/打点地址用）
-- 申请：https://lbs.qq.com → 控制台 → 创建应用 → 选「微信小程序」类型并绑定 AppID
-- 填入：`miniprogram/config/index.js` → `TENCENT_MAP_KEY`
-- 配套依赖 `qqmap-wx-jssdk`（npm），后续 `services/geo.js` 实现时引入
-
-### 4️⃣ 后端环境变量（sport_track_api/.env.local）
-| 变量 | 说明 |
-|---|---|
-| `WX_MOCK_LOGIN` | 开发期无真实 AppID 时设 `true`（任意 code 换测试 openid） |
-| `WX_APPID` / `WX_SECRET` | 拿到正式 AppID 后填入，关闭 mock |
-| `MONGODB_URI` | 本地 MongoDB 连接串（已配好） |
-
-### 5️⃣ 精确地理位置接口权限（运动记录功能依赖）
-- 微信公众平台 → 开发管理 → 接口设置 → 申请 **「wx.getLocation / 精确地理位置」** 类接口权限
-- ⚠️ 审核不过的降级方案：海拔/爬升隐藏（见需求文档 D16）
-
-### 6️⃣ 阿里云 OSS（打点照片/头像直传，M2/M3 用）
-- 后端 `.env.local`：`OSS_REGION/BUCKET/ENDPOINT/AK_ID/AK_SECRET/ROLE_ARN`
-- 前端：`miniprogram/config/index.js` → `OSS.ENDPOINT` 与后端 `OSS_ENDPOINT` 一致
-- 生产：小程序后台配置 **uploadFile 合法域名**
-
-### 7️⃣ tdesign-miniprogram npm 构建（✅ 已本地构建，clone 后需重建）
-- **本地已构建**：`miniprogram/miniprogram_npm/` 已由 `cp -r node_modules/tdesign-miniprogram/miniprogram_dist miniprogram/miniprogram_npm/tdesign-miniprogram` 生成（该目录被 gitignore，clone 后需重建）
-- 或在开发者工具 → 工具 → **「构建 npm」**（标准方式，效果相同）
-- 已接入组件：t-button / t-cell / t-cell-group / t-tabs / t-tab-panel / t-dialog / t-avatar / t-tag（页面 json 的 usingComponents 声明）
-- 组件 API 以官方文档为准（开发时通过 TDesign MCP server 获取：`npx tdesign-mcp-server`）
-
----
+- **API 环境切换**：`config/index.js` 按 `wx.getAccountInfoSync().envVersion` 自动切（开发=本地 IP / 体验正式=线上域名），可 FORCE_ONLINE 强制
+- **网络层**：JWT 注入 + 401 静默刷新重试 + uploadFile 同机制（DELETE 空 body 显式 text/plain 防后端 400）
+- **轨迹纠偏**：前端实时（精度过滤/节流/速度/反转/尖刺回滚 + 距离回退）+ 后端 finish（海拔清洗→轨迹纠偏→平滑→重算），**按运动类型微调阈值**（详见 docs/08）
+- **隐私合规**：定位权限 desc + requiredPrivateInfos、隐私政策页、启动隐私引导（getPrivacySetting）、内容安全检测
+- **坐标系**：第三方导入 WGS-84 → GCJ-02 自动转换（与 eviltransform 标准一致）
 
 ## 快速开始
 
 ```bash
-# 1. 安装依赖（npm 构建产物由微信开发者工具生成）
+# 1. 安装依赖
 npm install
 
-# 2. 微信开发者工具 → 导入项目 → 选择本目录
-#    （project.config.json 已配置 miniprogramRoot=miniprogram/）
+# 2. 微信开发者工具 → 导入项目 → 本目录（project.config.json 已配置）
 
 # 3. 本地设置勾选"不校验合法域名"
 
 # 4. 启动后端（见 ../sport_track_api/README.md）
-cd ../sport_track_api && pnpm dev   # http://localhost:3004
+cd ../sport_track_api && pnpm dev
 
-# 5. 工具 → 构建 npm（如需 tdesign 组件）
+# 5. 工具 → 构建 npm（tdesign 组件）
+#    clone 后重建：cp -r node_modules/tdesign-miniprogram/miniprogram_dist miniprogram/miniprogram_npm/tdesign-miniprogram
 ```
-
-**验证**：打开小程序 → 首页应显示今日概览（0）；「轨迹」tab 应显示空态；登录自动完成（后端日志可见新用户）。
 
 ## 目录结构
 
 ```
 sport_track_miniapp/
-├── project.config.json        # ★AppID 占位
-├── package.json               # tdesign-miniprogram 依赖
+├── project.config.json        # AppID wx68ebe78cca4dc17c + packOptions.ignore
+├── docs/                      # 需求/架构/上线/导入/纠偏 文档
 ├── miniprogram/
-│   ├── app.js / app.json      # 全局：静默登录 + tabBar 三页
-│   ├── config/index.js        # ★配置中心（API 地址/地图 Key/运动类型）
+│   ├── app.js                 # 静默登录 + 隐私引导 + 未保存运动恢复
+│   ├── app.json               # 页面/tabBar/权限声明/requiredPrivateInfos
+│   ├── config/index.js        # 配置中心（API/运动类型/颜色）
 │   ├── services/
-│   │   ├── api.js             # 网络层：JWT 注入 + 401 静默刷新重试
-│   │   └── storage.js         # 本地缓存（token/用户）
-│   ├── utils/format.js        # 时长/公里/配速格式化
-│   ├── pages/
-│   │   ├── index/             # 首页：类型选择 + 今日概览 + 开始入口
-│   │   ├── tracks/            # 轨迹列表（分页 + 类型筛选，已联后端）
-│   │   ├── my/                # 我的：用户卡片 + 菜单
-│   │   ├── track-detail/      # 轨迹详情（指标 + 打点时间线，地图待 track-map）
-│   │   └── record/summary/stats/profile/settings   # 占位页
-│   └── components/            # track-map/live-stats/marker-form/...（待实现）
+│   │   ├── api.js             # 网络层（401 刷新/uploadFile/buildUrl）
+│   │   ├── tracker.js         # 运动记录器（采点/过滤/尖刺回滚/指标/seq）
+│   │   ├── sync.js            # 增量上传协议
+│   │   ├── oss-upload.js      # OSS 签名直传（私有 bucket）
+│   │   ├── geo.js             # 逆地理编码（后端代理）
+│   │   └── storage.js         # token/用户/设置缓存
+│   ├── utils/format.js        # 时长/公里/配速（7'30"/公里）
+│   ├── components/
+│   │   ├── track-map/         # 地图组件（record/view/overview 三模式 + 海拔着色 + 起终点 + 回放）
+│   │   ├── live-stats/        # 实时数据面板
+│   │   ├── marker-form/       # 打点表单
+│   │   ├── stat-chart/        # 统计图表（柱/折线 + 标注隔离）
+│   │   └── share-card/        # 分享海报（预览/保存/分享）
+│   └── pages/
+│       ├── index/             # 首页（类型选择 + 今日概览 + 开始）
+│       ├── record/            # 运动记录（实时地图 + 精度徽章 + 打点）
+│       ├── summary/           # 运动摘要（保存）
+│       ├── tracks/            # 轨迹列表（左滑删除 + 卡片）
+│       ├── track-detail/      # 详情（地图/回放/海拔/编辑/纠偏/导出）
+│       ├── stats/             # 数据统计
+│       ├── overview/          # 轨迹合集（多轨迹 + 热力 + 全屏）
+│       ├── import/            # 数据导入（GPX/KML/TCX + 来源/类型确认）
+│       ├── profile/settings/privacy
+│       └── my/                # 我的（资料/合集/导入/统计/设置入口）
 ```
 
-## 里程碑进度
+## 里程碑
 
-- [x] 骨架：tabBar 三页、静默登录（wx.login → JWT）、网络层（401 刷新）、轨迹列表联调
-- [x] M2 前端：record 实时记录（定位采集/节流/漂移过滤/指标计算/增量上传/打点/暂停结束）→ 摘要页（保存 finish 对账）
-- [ ] M3 前端：track-map 完善、轨迹详情地图、回放、打点编辑交互
-- [x] M4：统计图表（stat-chart）、资料编辑（头像/昵称合规）、设置页、分享海报（Canvas + 小程序码）、海拔曲线
-- [ ] M5：真机验证（后台定位/耗电/海拔）、权限引导、提审发布
+- [x] M1 骨架：tabBar、静默登录、网络层、轨迹列表
+- [x] M2 记录：实时采点/过滤/指标/增量上传/打点/摘要保存
+- [x] M3 详情：地图（分段/回放/图层/全屏/海拔曲线/照片）
+- [x] M4 分享海报（预览/保存/分享/海拔着色）、统计图表、资料/设置
+- [x] M5 隐私合规、上线准备（docs/05）
+- [x] M6 轨迹合集（一周/一月/一年 + 热力 + 抽稀）
+- [x] M7 数据导入（GPX/KML/TCX + 坐标转换 + 来源记录）、轨迹信息编辑、删除
+- [x] M8 轨迹纠偏（四类剔除 + 首尾跳 + 类型化阈值 + 实时尖刺回滚 + reprocess）
+- [ ] 体验版/正式版发布（合法域名 + 提审）
+
+## 上线待办（详见 docs/05）
+
+1. 微信后台：服务器域名（request `api.historybook.cn`；uploadFile/downloadFile OSS；downloadFile tdesign.gtimg.com）
+2. 用户隐私保护指引（位置/相册/昵称头像）
+3. 服务类目「运动健身」；上传体验版 → 真机回归 → 提审
+4. 证书续期：historybook.cn / myhistorybook.cn（2026-09 到期）
