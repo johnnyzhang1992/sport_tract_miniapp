@@ -55,15 +55,15 @@ test('指标：配速/卡路里/爬升死区/最高海拔', () => {
   const t = new Tracker('hiking', 65, () => clock);
   t.addPoint(P(30, 120, 100));
   clock += 5000;
-  t.addPoint(P(30.001, 120, 105)); // +5m（间隔 ~111m，> 200m 配速有效）
+  t.addPoint(P(30.0002, 120, 105)); // +5m（间隔 ~22m）
   clock += 5000;
-  t.addPoint(P(30.002, 120, 102)); // -3m 不计
+  t.addPoint(P(30.0004, 120, 102)); // -3m 不计
   clock += 5000;
-  t.addPoint(P(30.003, 120, 107)); // +5m
+  t.addPoint(P(30.0006, 120, 107)); // +5m
   const s = t.getStats();
   assert.equal(s.elevationGain, 10);
   assert.equal(s.maxAltitude, 107);
-  assert.ok(s.distance > 300);
+  assert.ok(s.distance > 60);
   assert.ok(s.calories > 0);
   assert.ok(s.pace !== null, 'hiking 应展示配速');
 });
@@ -119,10 +119,10 @@ test('精度过滤：accuracy 超阈值（室内/弱信号）的点被丢弃', (
   t.addPoint({ latitude: 30, longitude: 120, accuracy: 10, timestamp: 1000 });
   clock += 5000;
   const before = t.points.length;
-  t.addPoint({ latitude: 30.001, longitude: 120, accuracy: 150, timestamp: 6000 }); // 150m 精度，丢弃
+  t.addPoint({ latitude: 30.0002, longitude: 120, accuracy: 150, timestamp: 6000 }); // 150m 精度，丢弃
   assert.equal(t.points.length, before);
   clock += 5000;
-  t.addPoint({ latitude: 30.002, longitude: 120, accuracy: 15, timestamp: 11000 }); // 15m 精度，接受
+  t.addPoint({ latitude: 30.0004, longitude: 120, accuracy: 15, timestamp: 11000 }); // 15m 精度，接受
   assert.equal(t.points.length, 2);
 });
 
@@ -152,9 +152,9 @@ test('尖刺回滚：短时高速来回跳的点被剔除（距离回退）', ()
   t.addPoint(P(30.00012, 120)); // t10（正常）
   const before = t.points.length;
   const distBefore = t.distance;
-  // 尖刺：紧跟 p2（1.3s 后）东跳 21m → 16m/s
-  t.addPoint({ latitude: 30.00012, longitude: 120.00019, timestamp: 11300 });
-  // 回跳（1s 后西回 23m → 23m/s）
+  // 尖刺：紧跟 p2（1.3s 后）东跳 15m → 11.5m/s
+  t.addPoint({ latitude: 30.00012, longitude: 120.00014, timestamp: 11300 });
+  // 回跳（1s 后西回 16m → 16m/s）
   t.addPoint({ latitude: 30.00013, longitude: 120, timestamp: 12300 });
   // 尖刺点应被剔除 → 最终点数恢复（3 正常 + 最后回跳点 = 4）
   assert.ok(t.points.length < before + 2, `尖刺应被剔除, points=${t.points.length}`);
