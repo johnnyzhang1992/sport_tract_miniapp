@@ -156,7 +156,12 @@ Component({
         if (color && cur && cur.color === color) {
           cur.points.push(pt);
         } else if (color) {
-          cur = { color, points: [{ latitude: a.lat, longitude: a.lng }, pt] };
+          cur = {
+            color,
+            points: [{ latitude: a.lat, longitude: a.lng }, pt],
+            width: 4,
+            arrowLine: false,
+          };
           polylines.push(cur);
         } else {
           cur = null;
