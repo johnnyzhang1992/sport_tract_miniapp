@@ -32,6 +32,7 @@
   <view class="map-wrap">
     <track-map
       id="overviewMap"
+      class="overview-map"
       mode="overview"
       overviewTracks="{{tracks}}"
       heat="{{heat}}"
@@ -56,6 +57,7 @@
     <view class="fullscreen-map-wrap">
       <track-map
         id="fsOverviewMap"
+        class="overview-map"
         mode="overview"
         overviewTracks="{{tracks}}"
         heat="{{heat}}"

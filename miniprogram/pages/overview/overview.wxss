@@ -59,7 +59,7 @@
   overflow: hidden;
   margin-bottom: 24rpx;
 }
-.map-wrap track-map {
+.overview-map {
   width: 100%;
   height: 100%;
   display: block;
@@ -163,7 +163,7 @@
   position: absolute;
   inset: 0;
 }
-.fullscreen-map-wrap track-map {
+.fullscreen-map-wrap .overview-map {
   width: 100%;
   height: 100%;
   display: block;
