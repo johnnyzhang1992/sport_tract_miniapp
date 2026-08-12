@@ -11,7 +11,7 @@
   show-location="{{false}}"
   enable-3D="{{false}}"
   enable-satellite="{{mapType === 'satellite'}}"
-  enable-traffic="{{showTraffic}}"
+  enable-poi="{{showPoi}}"
   bindtap="onMapTap"
   bindmarkertap="onMarkerTap"
   bindcallouttap="onMapCalloutTap"

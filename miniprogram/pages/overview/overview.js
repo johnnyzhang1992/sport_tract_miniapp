@@ -20,7 +20,7 @@ Page({
     mapType: 'standard',
     loading: false,
     fullscreen: false,
-    showTraffic: false,
+    showPoi: true,
   },
 
   onLoad() {
@@ -112,9 +112,9 @@ Page({
     });
   },
 
-  /** 交通路况开关 */
-  toggleTraffic() {
-    this.setData({ showTraffic: !this.data.showTraffic });
+  /** POI 标注开关（地铁站/公交站等地标点） */
+  togglePoi() {
+    this.setData({ showPoi: !this.data.showPoi });
   },
 
   /** 全屏展示合集地图 */
