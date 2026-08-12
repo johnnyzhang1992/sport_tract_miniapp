@@ -155,7 +155,7 @@ Component({
       const maxV = Math.max(...values);
       const maxIdx = values.indexOf(maxV);
       const barTop = H - axis.padBottom - norm[maxIdx] * axis.chartH;
-      ctx.fillStyle = '#666';
+      ctx.fillStyle = '#1f2329';
       ctx.font = '10px sans-serif';
       ctx.textAlign = 'center';
       const maxY = Math.max(axis.padTop + 10, barTop - 12);
@@ -202,7 +202,7 @@ Component({
         // 标注：最大值 + 首尾 + 每 5 个点
         const annotate = i === maxIdx || i === 0 || i === n - 1 || (n > 10 && i % 5 === 0);
         if (annotate) {
-          ctx.fillStyle = '#666';
+          ctx.fillStyle = '#1f2329';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'bottom';
           const labelY = Math.max(axis.padTop + 10, Y(i) - 5); // 限制在绘图区内
