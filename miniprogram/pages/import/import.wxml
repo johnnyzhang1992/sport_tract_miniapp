@@ -71,12 +71,12 @@
         <view class="pstat-label">轨迹点</view>
       </view>
     </view>
-    <t-button
-      theme="primary"
-      size="large"
-      block
-      loading="{{saving}}"
-      bind:tap="confirmSave"
-    >保存到我的轨迹</t-button>
+  </view>
+
+  <!-- 底部固定保存按钮 -->
+  <view class="bottom-bar" wx:if="{{preview}}">
+    <button class="save-btn" loading="{{saving}}" bindtap="confirmSave" disabled="{{saving}}">
+      保存到我的足迹
+    </button>
   </view>
 </view>

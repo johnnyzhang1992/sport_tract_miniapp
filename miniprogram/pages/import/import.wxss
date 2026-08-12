@@ -120,3 +120,32 @@
   font-size: 26rpx;
   margin-bottom: 24rpx;
 }
+
+/* 底部固定保存按钮 */
+.bottom-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 16rpx 24rpx calc(16rpx + env(safe-area-inset-bottom));
+  background: #fff;
+  box-shadow: 0 -4rpx 20rpx rgba(0, 0, 0, 0.06);
+  z-index: 100;
+}
+.save-btn {
+  background: #2b6cf6;
+  color: #fff;
+  font-size: 30rpx;
+  font-weight: 600;
+  height: 88rpx;
+  line-height: 88rpx;
+  border-radius: 999rpx;
+  padding: 0;
+}
+.save-btn[disabled] {
+  background: #9db9f5;
+  color: #fff;
+}
+.import-page {
+  padding-bottom: 140rpx; /* 给固定按钮让位 */
+}
