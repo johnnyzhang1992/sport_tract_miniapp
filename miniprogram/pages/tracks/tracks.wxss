@@ -5,17 +5,46 @@
   font-size: 40rpx;
   margin-right: 12rpx;
 }
-.track-cell-wrap {
+.track-card {
+  display: flex;
+  align-items: center; /* 图标垂直居中 */
+  background: #fff;
   margin-bottom: 16rpx;
   border-radius: 16rpx;
-  overflow: hidden;
+  padding: 24rpx 28rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
 }
-.track-cell-hover {
+.track-card-hover {
   opacity: 0.7;
 }
-.track-cell {
-  border-radius: 16rpx;
-  overflow: hidden;
+.cell-icon {
+  font-size: 44rpx;
+  margin-right: 24rpx;
+  flex-shrink: 0;
+}
+.track-info {
+  flex: 1;
+  min-width: 0;
+}
+.track-type {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1f2329;
+  margin-bottom: 10rpx;
+}
+.track-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.track-dist {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #2b6cf6;
+}
+.track-time {
+  font-size: 24rpx;
+  color: #8a93a6;
 }
 .loading-tip {
   text-align: center;

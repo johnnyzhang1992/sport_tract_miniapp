@@ -95,6 +95,13 @@ Page({
   /** 列表项装饰：原始聚合数据 → 展示字段（后端返回 _id，补 id 映射） */
   decorate(item) {
     const meta = config.ACTIVITY_TYPES.find((t) => t.type === item.type) || {};
+    const start = new Date(item.startTime);
+    // 时间展示：一周内显示星期几，超过一周显示年月日
+    const diffDays = Math.floor((Date.now() - start.getTime()) / 86400000);
+    const timeText =
+      diffDays < 7
+        ? ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][start.getDay()]
+        : `${start.getFullYear()}/${start.getMonth() + 1}/${start.getDate()}`;
     return {
       ...item,
       id: String(item._id || item.id || ''),
@@ -109,6 +116,7 @@ Page({
         minute: '2-digit',
       }),
       paceText: item.avgPace ? formatPace(item.avgPace) : '—',
+      timeText,
     };
   },
 

@@ -27,21 +27,20 @@
     bind:click="onDeleteTap"
   >
     <view
-      class="track-cell-wrap"
-      hover-class="track-cell-hover"
+      class="track-card"
+      hover-class="track-card-hover"
       hover-stay-time="80"
       data-id="{{item.id}}"
       bindtap="onTapItem"
     >
-      <t-cell
-        class="track-cell"
-        hover
-        title="{{item.label}} · {{item.startTimeText}}"
-        description="{{item.distanceKm}}km · {{item.durationText}} · 配速 {{item.paceText}} · {{item.calories}}kcal{{item.markerCount > 0 ? ' · 📍' + item.markerCount : ''}}"
-        arrow
-      >
-        <view slot="left-icon" class="cell-icon">{{item.icon}}</view>
-      </t-cell>
+      <view class="cell-icon">{{item.icon}}</view>
+      <view class="track-info">
+        <view class="track-type">{{item.label}}</view>
+        <view class="track-meta">
+          <text class="track-dist">{{item.distanceKm}} 公里</text>
+          <text class="track-time">{{item.timeText}}</text>
+        </view>
+      </view>
     </view>
   </t-swipe-cell>
 
