@@ -152,3 +152,16 @@
 .fixed-actions .act-btn + .act-btn {
   margin-left: 16rpx;
 }
+
+/* 开始/结束时间 */
+.detail-time {
+  display: flex;
+  align-items: center;
+  font-size: 24rpx;
+  color: #8a93a6;
+  margin-top: 10rpx;
+}
+.time-sep {
+  margin: 0 14rpx;
+  color: #c2c7d0;
+}
