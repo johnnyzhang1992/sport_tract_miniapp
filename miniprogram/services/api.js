@@ -15,12 +15,19 @@ let refreshWaiters = [];
 
 /** 原生请求（不含鉴权逻辑） */
 function rawRequest({ url, method = 'GET', data, header = {} }) {
+  // 无 body 的请求（GET/DELETE 无数据）不设 JSON Content-Type，
+  // 否则后端 Fastify 解析空 body 报 400（Body cannot be empty）
+  const hasBody = data != null && !['GET', 'DELETE'].includes(method);
   return new Promise((resolve, reject) => {
     wx.request({
       url: buildUrl(url),
       method,
       data,
-      header: Object.assign({ 'Content-Type': 'application/json' }, header),
+      header: Object.assign(
+        {},
+        hasBody ? { 'Content-Type': 'application/json' } : {},
+        header,
+      ),
       timeout: 15000,
       success: (res) => {
         const body = res.data || {};
