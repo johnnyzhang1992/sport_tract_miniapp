@@ -43,6 +43,11 @@ Page({
     this.setData({ 'settings.highAccuracy': e.detail.value });
   },
 
+  /** 打开隐私政策 */
+  openPrivacy() {
+    wx.navigateTo({ url: '/pages/privacy/privacy' });
+  },
+
   async save() {
     if (this.data.saving) return;
     this.setData({ saving: true });

@@ -34,6 +34,15 @@
     <t-switch value="{{settings.highAccuracy}}" bind:change="onHighAccuracyChange" />
   </view>
 
+  <!-- 隐私政策 -->
+  <view class="card link-row" bindtap="openPrivacy">
+    <view class="switch-info">
+      <view class="switch-title">隐私政策</view>
+      <view class="text-muted">查看我们如何收集与使用您的信息</view>
+    </view>
+    <view class="link-arrow">›</view>
+  </view>
+
   <t-button
     theme="primary"
     size="large"
