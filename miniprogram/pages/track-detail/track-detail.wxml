@@ -42,7 +42,8 @@
 
   <!-- 指标 -->
   <view class="card">
-    <view class="detail-title">{{activity.icon}} {{activity.label}}</view>
+    <view class="detail-title">{{activity.icon}} {{activity.label}} <text class="edit-btn" bindtap="openEdit">✏️ 编辑</text></view>
+    <view class="note-text" wx:if="{{activity.note}}">📝 {{activity.note}}</view>
     <view class="track-metrics">
       <view class="metric">
         <view class="metric-num">{{activity.distanceKm}}</view>
@@ -122,4 +123,30 @@
     binddelete="onMarkerDelete"
     bindcancel="onMarkerCancel"
   />
+
+  <!-- 编辑轨迹信息（类型/备注） -->
+  <t-popup visible="{{editVisible}}" placement="bottom" bind:visible-change="onEditVisibleChange">
+    <view class="edit-panel">
+      <view class="edit-title">编辑轨迹信息</view>
+      <view class="edit-label">运动类型</view>
+      <view class="edit-type-grid">
+        <view
+          wx:for="{{activityTypes}}"
+          wx:key="type"
+          class="edit-type-item {{editType === item.type ? 'edit-type-active' : ''}}"
+          data-type="{{item.type}}"
+          bindtap="onEditTypeChange"
+        >{{item.icon}} {{item.label}}</view>
+      </view>
+      <view class="edit-label">备注</view>
+      <textarea
+        class="edit-note-input"
+        value="{{editNote}}"
+        placeholder="添加备注（如：跟朋友一起的晨跑）"
+        maxlength="500"
+        bindinput="onEditNoteInput"
+      ></textarea>
+      <t-button theme="primary" size="large" block loading="{{editSaving}}" bind:tap="saveEdit">保存</t-button>
+    </view>
+  </t-popup>
 </view>

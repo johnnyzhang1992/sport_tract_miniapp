@@ -264,6 +264,64 @@ Page({
     }
   },
 
+  /** 打开编辑面板 */
+  openEdit() {
+    const act = this.data.activity || {};
+    this.setData({
+      editVisible: true,
+      editType: act.type || '',
+      editNote: act.note || '',
+    });
+  },
+
+  onEditVisibleChange(e) {
+    if (!e.detail.visible) {
+      this.setData({ editVisible: false });
+    }
+  },
+
+  onEditTypeChange(e) {
+    this.setData({ editType: e.currentTarget.dataset.type });
+  },
+
+  onEditNoteInput(e) {
+    this.setData({ editNote: e.detail.value });
+  },
+
+  /** 保存编辑（改类型重算配速/卡路里；备注 ≤500） */
+  async saveEdit() {
+    if (this.data.editSaving) return;
+    const { editType, editNote } = this.data;
+    const body = {};
+    if (editType && editType !== (this.data.activity || {}).type) body.type = editType;
+    if (editNote !== ((this.data.activity || {}).note || '')) body.note = editNote;
+    if (Object.keys(body).length === 0) {
+      this.setData({ editVisible: false });
+      return;
+    }
+    this.setData({ editSaving: true });
+    try {
+      const res = await api.put(`/activities/${this.data.id}/meta`, body);
+      // 刷新类型/备注（指标不变，仅更新展示字段）
+      const act = this.data.activity || {};
+      const meta = config.ACTIVITY_TYPES.find((t) => t.type === res.type) || {};
+      this.setData({
+        'activity.type': res.type,
+        'activity.label': meta.label || res.type,
+        'activity.icon': meta.icon || '🏃',
+        'activity.note': res.note,
+        editVisible: false,
+      });
+      wx.showToast({ title: '已保存', icon: 'success' });
+    } catch (e) {
+      console.error('保存编辑失败', e);
+      wx.showToast({ title: '保存失败', icon: 'none' });
+    } finally {
+      this.setData({ editSaving: false });
+    }
+  },
+
+
   /** 海报生成完成：记录路径（分享卡片/朋友圈封面） */
   onPosterReady(e) {
     this.shareImagePath = e.detail.path;
