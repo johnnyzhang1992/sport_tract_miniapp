@@ -390,10 +390,10 @@ Page({
             fileName: `activity-${this.data.id}.gpx`,
             success: () => {},
             fail: () => {
-              // 分享不可用时显示内容前段供排查
+              // 分享不可用：引导用户保存到本地（不展示文件内容）
               wx.showModal({
-                title: 'GPX 内容（前 300 字符）',
-                content: String(res.data).slice(0, 300),
+                title: '导出失败',
+                content: '无法调起分享，请将文件保存到手机后通过文件传输助手发送',
                 showCancel: false,
               });
             },
