@@ -11,6 +11,38 @@ App({
   onLaunch() {
     // 静默登录（决策 D2：微信一键登录无感）
     this.login();
+    // 隐私合规（决策 M5）：检查隐私协议状态，未同意时引导（微信后台已配置《用户隐私保护指引》）
+    this.checkPrivacy();
+  },
+
+  /** 隐私合规：needAuthorization 时引导用户同意/查看协议 */
+  checkPrivacy() {
+    if (!wx.getPrivacySetting) return; // 基础库过低，跳过
+    wx.getPrivacySetting({
+      success: (res) => {
+        // privacyContractName 有值时微信会自动弹协议；这里处理用户明确拒绝后的引导
+        if (!res.needAuthorization) return;
+        if (this._privacyPrompted) return;
+        this._privacyPrompted = true;
+        wx.showModal({
+          title: '隐私保护提示',
+          content: `为提供运动轨迹记录服务，我们需要使用您的位置信息（记录轨迹）、相册（上传打点照片）等。请阅读并同意《${res.privacyContractName || '用户隐私保护指引'}》。`,
+          confirmText: '同意并继续',
+          cancelText: '查看详情',
+          success: (r) => {
+            if (r.confirm) {
+              // 同意：授权隐私接口（微信会自动弹正式协议，此处静默通过）
+              if (wx.requirePrivacyAuthorize) {
+                wx.requirePrivacyAuthorize({ fail: () => {} });
+              }
+            } else {
+              // 拒绝/查看详情 → 跳转隐私政策页
+              wx.navigateTo({ url: '/pages/privacy/privacy' });
+            }
+          },
+        });
+      },
+    });
   },
 
   onShow() {

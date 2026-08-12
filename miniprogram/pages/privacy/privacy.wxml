@@ -1,0 +1,32 @@
+<view class="privacy-page">
+  <view class="privacy-title">小迹一下 · 用户隐私保护政策</view>
+  <view class="privacy-updated">更新日期：2026-08-12 · 生效日期：2026-08-12</view>
+
+  <view class="privacy-section">
+    <view class="privacy-h">一、我们收集的信息</view>
+    <view class="privacy-p">1. <text class="strong">位置信息</text>：用于记录运动轨迹、打卡点定位、逆地理编码展示地址。仅在你主动开始记录运动时获取，可随时在系统设置中关闭。</view>
+    <view class="privacy-p">2. <text class="strong">相册与照片</text>：用于打点上传照片、设置头像。仅在您主动选择时读取。</view>
+    <view class="privacy-p">3. <text class="strong">微信昵称与头像</text>：用于展示个人资料。</view>
+    <view class="privacy-p">4. <text class="strong">运动数据</text>：轨迹点、距离、时长、配速、消耗、海拔等，用于生成运动记录与统计图表。</view>
+  </view>
+
+  <view class="privacy-section">
+    <view class="privacy-h">二、信息的使用</view>
+    <view class="privacy-p">运动数据仅用于向您展示记录与统计；照片存储于阿里云 OSS（私有 Bucket，仅您本人可访问）；位置信息仅用于轨迹绘制与地址展示，不用于其他用途。</view>
+  </view>
+
+  <view class="privacy-section">
+    <view class="privacy-h">三、信息的存储与安全</view>
+    <view class="privacy-p">数据存储于阿里云服务器（杭州区域），采用访问鉴权与签名 URL 方式保护您的照片隐私。我们不会向任何第三方出售您的个人信息。</view>
+  </view>
+
+  <view class="privacy-section">
+    <view class="privacy-h">四、您的权利</view>
+    <view class="privacy-p">您可以随时在「设置」中关闭定位权限，或在轨迹列表中删除某条记录（关联照片一并删除）。删除后数据不可恢复。</view>
+  </view>
+
+  <view class="privacy-section">
+    <view class="privacy-h">五、联系我们</view>
+    <view class="privacy-p">如对本政策有任何疑问，可通过小程序「我的-意见反馈」联系我们。</view>
+  </view>
+</view>

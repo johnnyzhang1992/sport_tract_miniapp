@@ -56,3 +56,13 @@
 .switch-title {
   font-size: 30rpx;
 }
+.link-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+.link-arrow {
+  font-size: 40rpx;
+  color: #c2c7d0;
+}

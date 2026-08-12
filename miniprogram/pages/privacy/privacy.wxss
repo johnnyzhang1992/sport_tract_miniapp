@@ -1,0 +1,36 @@
+.privacy-page {
+  padding: 40rpx 32rpx 60rpx;
+  background: #fff;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+.privacy-title {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #1f2329;
+  margin-bottom: 12rpx;
+}
+.privacy-updated {
+  font-size: 22rpx;
+  color: #8a93a6;
+  margin-bottom: 40rpx;
+}
+.privacy-section {
+  margin-bottom: 36rpx;
+}
+.privacy-h {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1f2329;
+  margin-bottom: 14rpx;
+}
+.privacy-p {
+  font-size: 26rpx;
+  line-height: 1.7;
+  color: #4e5969;
+  margin-bottom: 12rpx;
+}
+.strong {
+  font-weight: 600;
+  color: #1f2329;
+}
