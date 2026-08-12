@@ -7,7 +7,6 @@
   scale="{{15}}"
   markers="{{displayMarkers}}"
   polyline="{{polyline}}"
-  circles="{{heatCircles}}"
   show-location="{{false}}"
   enable-3D="{{false}}"
   enable-satellite="{{mapType === 'satellite'}}"
