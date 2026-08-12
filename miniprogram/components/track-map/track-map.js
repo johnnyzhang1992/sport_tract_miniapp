@@ -248,7 +248,8 @@ Component({
         return {
           latitude: h.lat,
           longitude: h.lng,
-          radius: 90,
+          // 半径按权重微调：55m（低频）~ 85m（高频），整体比之前(90m)小
+          radius: 55 + h.weight * 30,
           color: `#${hex(255)}${hex(152)}${hex(0)}${hex(alpha)}`,
           fillColor: `#${hex(255)}${hex(152)}${hex(0)}${hex(alpha)}`,
           strokeWidth: 0,
