@@ -15,7 +15,7 @@
       {{mapType === 'standard' ? '🛰️ 卫星' : '🗺️ 标准'}}
     </view>
     <!-- GPS 信号弱提示（室内/遮挡） -->
-    <view class="weak-tip" wx:if="{{weakSignal}}">📡 GPS 信号弱，距离可能不准</view>
+    <view class="weak-tip" wx:if="{{weakSignal}}">📡 GPS 信号弱（精度 {{weakAccuracy}}m），距离可能不准</view>
   </view>
 
   <!-- 实时数据面板 -->
