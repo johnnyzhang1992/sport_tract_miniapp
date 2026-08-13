@@ -13,6 +13,10 @@ const MIN_INTERVAL_MS = 3000;
 const CLIMB_DEAD_ZONE_M = 2;
 /** 配速最小有效距离（米）：低于此值配速无意义（如刚起步/静止），显示 “—” */
 const MIN_PACE_DISTANCE_M = 200;
+/** 后台恢复预热：切后台超过该时长（毫秒）才启用；回前台 GPS 冷启动，前几秒定位漂移大 */
+const BACKGROUND_GAP_MS = 30000;
+/** 预热窗口（毫秒）：回前台后丢弃该窗口内的点，等 GPS 重新收敛 */
+const RESUME_WARMUP_MS = 5000;
 /** 按运动类型的实时过滤配置（决策：与后端 cleanTrajectory 类型配置一致，防骑行起步误杀等） */
 const TYPE_TRACKER_CONFIG = {
   walking: { maxAccuracyM: 60, minSpikeSpeed: 5, maxAbsSpeed: 12, minHighSpeed: 7 },
@@ -72,6 +76,10 @@ class Tracker {
     this.distance = 0; // 米
     this.elevationGain = 0;
     this.maxAltitude = null;
+
+    // 前后台切换：切后台时间戳 + 回前台预热窗口（冷启动漂移过滤）
+    this._backgroundAt = 0;
+    this._resumeWarmupUntil = 0;
   }
 
   /**
@@ -87,6 +95,9 @@ class Tracker {
 
     // 防御：模拟器/部分机型 timestamp 可能是字符串，统一转数字
     const now = Number(loc.timestamp) || this.now();
+
+    // 后台恢复预热：回前台后短时间内 GPS 冷启动漂移大，丢弃窗口内的点（等重新收敛）
+    if (this._resumeWarmupUntil && this.now() < this._resumeWarmupUntil) return null;
 
     if (this.lastPoint) {
       const d = haversine(this.lastPoint, loc);
@@ -212,6 +223,57 @@ class Tracker {
     const y = Math.sin(dLng) * Math.cos(lat2);
     const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
     return (toDeg(Math.atan2(y, x)) + 360) % 360;
+  }
+
+  /**
+   * 恢复现场（退出页面后重新进入）：从后端已上传的点重建状态
+   * @param {Array} points 后端 trackPoints [{seq,lat,lng,altitude,speed,accuracy,timestamp}]
+   */
+  restoreFromPoints(points, markers, startTime, pausedMs) {
+    this.points = (points || []).map((p) => ({ ...p }));
+    this.markers = markers || [];
+    this.seq = this.points.length ? this.points.reduce((m, p) => Math.max(m, p.seq || 0), 0) : 0;
+    this.startTime = startTime || this.startTime;
+    this.pausedMs = pausedMs || 0;
+    // 指标从点重算（比信任旧值更准）
+    this.distance = 0;
+    this.elevationGain = 0;
+    this.maxAltitude = null;
+    for (let i = 0; i < this.points.length; i++) {
+      const p = this.points[i];
+      if (p.altitude != null) {
+        this.maxAltitude = this.maxAltitude == null ? p.altitude : Math.max(this.maxAltitude, p.altitude);
+      }
+      if (i > 0) {
+        const prev = this.points[i - 1];
+        this.distance += haversine(prev, p);
+        if (p.altitude != null && prev.altitude != null && p.altitude - prev.altitude > CLIMB_DEAD_ZONE_M) {
+          this.elevationGain += p.altitude - prev.altitude;
+        }
+      }
+    }
+    this.lastPoint = this.points.length ? this.points[this.points.length - 1] : null;
+    this.lastSampleTime = this.lastPoint ? this.lastPoint.timestamp : 0;
+    this.paused = false;
+    this.pausedAt = 0;
+  }
+
+  /** 切后台标记（页面 onHide 调用） */
+  markBackground() {
+    this._backgroundAt = this.now();
+  }
+
+  /** 回前台（页面 onShow 调用）：后台较久且后台期间无采点（前台定位被暂停、GPS 冷启动）才预热 */
+  onForeground() {
+    const bgAt = this._backgroundAt;
+    this._backgroundAt = 0;
+    if (!bgAt) return;
+    const bgMs = this.now() - bgAt;
+    // 后台期间仍持续采点（后台定位可用）→ GPS 未冷启动，无需预热
+    const hadPointsInBackground = this.lastSampleTime > bgAt;
+    if (!hadPointsInBackground && bgMs > BACKGROUND_GAP_MS) {
+      this._resumeWarmupUntil = this.now() + RESUME_WARMUP_MS;
+    }
   }
 
   pause() {

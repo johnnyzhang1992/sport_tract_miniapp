@@ -11,7 +11,8 @@
         data-type="{{item.type}}"
         bindtap="selectType"
       >
-        {{item.icon}} {{item.label}}
+        <image class="type-icon" src="{{item.iconImg}}" mode="aspectFit" />
+        <text>{{item.label}}</text>
       </view>
     </view>
 
@@ -32,7 +33,7 @@
       <view class="photo-grid">
         <view wx:for="{{existingPhotos}}" wx:key="*this" class="photo-item">
           <image class="photo-img" src="{{item}}" mode="aspectFill" />
-          <view class="photo-remove" data-idx="{{index}}" bindtap="removeExistingPhoto">✕</view>
+          <view class="photo-remove" data-idx="{{index}}" bindtap="removeExistingPhoto"><image src="/assets/icons/lucide-x-white.png" mode="aspectFit" /></view>
         </view>
       </view>
     </view>
@@ -43,7 +44,7 @@
       <view class="photo-grid">
         <view wx:for="{{photos}}" wx:key="*this" class="photo-item">
           <image class="photo-img" src="{{item}}" mode="aspectFill" />
-          <view class="photo-remove" data-idx="{{index}}" bindtap="removePhoto">✕</view>
+          <view class="photo-remove" data-idx="{{index}}" bindtap="removePhoto"><image src="/assets/icons/lucide-x-white.png" mode="aspectFit" /></view>
         </view>
       </view>
     </view>
@@ -54,7 +55,7 @@
       wx:if="{{existingPhotos.length + photos.length < maxPhotos}}"
       bindtap="choosePhoto"
     >
-      📷 拍照 / 相册（{{existingPhotos.length + photos.length}}/{{maxPhotos}}）
+      拍照 / 相册（{{existingPhotos.length + photos.length}}/{{maxPhotos}}）
     </view>
 
     <view class="actions">

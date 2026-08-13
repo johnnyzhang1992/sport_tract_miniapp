@@ -23,12 +23,30 @@ Page({
     selectedType: 'running',
     overview: null,
     overviewLabel: '今日概览',
+    totalOverview: null, // 累计数据：轨迹数/总公里/点亮省份/城市
     loading: false,
+    ongoingActivity: null, // 进行中（已暂停）运动入口
   },
 
   onShow() {
     this.applyDefaultType();
     this.loadOverview();
+    this.checkOngoing();
+  },
+
+  /** 检查是否有“退出页面暂停”的运动，首页显示继续入口 */
+  checkOngoing() {
+    const ongoing = wx.getStorageSync('ongoingActivity');
+    this.setData({ ongoingActivity: ongoing || null });
+  },
+
+  /** 点击“继续运动”入口 → 回记录页（让用户选择继续/重新开始） */
+  goOngoing() {
+    const o = this.data.ongoingActivity;
+    if (!o || !o.activityId) return;
+    wx.navigateTo({
+      url: `/pages/record/record?resume=1&activityId=${o.activityId}&type=${o.type || 'running'}`,
+    });
   },
 
   /** 应用设置的默认运动类型（设置页保存到后端用户 settings） */
@@ -66,7 +84,10 @@ Page({
       if (!app.globalData.loggedIn) {
         await app.login();
       }
-      const overview = await api.get('/stats/overview');
+      const [overview, footprint] = await Promise.all([
+        api.get('/stats/overview'),
+        api.get('/stats/footprint').catch(() => null),
+      ]);
       // 兜底优先级：今日 → 本周 → 当月 → 今年 → 今日（都无数据）
       const order = [
         { key: 'today', label: '今日' },
@@ -78,10 +99,17 @@ Page({
         order.find((o) => (overview[o.key] || {}).count > 0) ||
         { key: 'today', label: '今日' };
       const s = overview[sec.key] || { count: 0, distance: 0, duration: 0, calories: 0 };
+      const total = overview.total || { count: 0, distance: 0 };
       // 预处理：WXML 不支持 toFixed 等方法调用；公里/千卡 K·W 缩写、时长分钟→小时→天
       const dur = formatDuration(s.duration || 0);
       this.setData({
         overviewLabel: sec.label + '概览',
+        totalOverview: {
+          trackCount: total.count || 0,
+          totalKm: compact((total.distance || 0) / 1000),
+          provinceCount: footprint ? footprint.provinceCount : 0,
+          cityCount: footprint ? footprint.cityCount : 0,
+        },
         overview: {
           today: {
             count: s.count,

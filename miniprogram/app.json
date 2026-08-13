@@ -66,5 +66,8 @@
         "pages/footprint/footprint"
       ]
     }
+  ],
+  "requiredBackgroundModes": [
+    "location"
   ]
 }

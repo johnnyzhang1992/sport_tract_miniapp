@@ -44,8 +44,10 @@
   border-bottom: none;
 }
 .marker-icon {
-  font-size: 36rpx;
+  width: 40rpx;
+  height: 40rpx;
   margin-right: 16rpx;
+  flex-shrink: 0;
 }
 .marker-note {
   font-size: 28rpx;

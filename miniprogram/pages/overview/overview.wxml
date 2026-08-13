@@ -40,9 +40,10 @@
       mapType="{{mapType}}"
     />
     <view class="layer-btn" bindtap="switchLayer">
-      {{mapType === 'standard' ? '🛰️ 卫星' : '🗺️ 标准'}}
+      <image class="btn-icon" src="{{mapType === 'standard' ? '/assets/icons/lucide-satellite.png' : '/assets/icons/lucide-map.png'}}" mode="aspectFit" />
+      <text>{{mapType === 'standard' ? '卫星' : '标准'}}</text>
     </view>
-    <view class="fullscreen-btn" bindtap="openFullscreen">⛶ 全屏</view>
+    <view class="fullscreen-btn" bindtap="openFullscreen"><image class="btn-icon" src="/assets/icons/lucide-maximize.png" mode="aspectFit" /><text>全屏</text></view>
     <view class="heat-legend">
       <view class="heat-legend-dot"></view>
       <text>高频路线</text>
@@ -51,9 +52,10 @@
 
   <!-- 全屏地图弹窗（不拦截 touch：map 手势需要 touchmove） -->
   <view class="fullscreen-mask" wx:if="{{fullscreen}}">
-    <view class="fullscreen-close" bindtap="closeFullscreen">✕</view>
+    <view class="fullscreen-close" bindtap="closeFullscreen"><image class="close-icon" src="/assets/icons/lucide-x.png" mode="aspectFit" /></view>
     <view class="fullscreen-layer" bindtap="fsSwitchLayer">
-      {{mapType === 'standard' ? '🛰️ 卫星' : '🗺️ 标准'}}
+      <image class="btn-icon" src="{{mapType === 'standard' ? '/assets/icons/lucide-satellite.png' : '/assets/icons/lucide-map.png'}}" mode="aspectFit" />
+      <text>{{mapType === 'standard' ? '卫星' : '标准'}}</text>
     </view>
     <view class="fullscreen-map-wrap">
       <track-map

@@ -15,12 +15,12 @@
   <!-- 真实中国地图（echarts） -->
   <view class="card map-card">
     <ec-canvas id="footprintMap" canvas-id="footprintMap" ec="{{ ec }}"></ec-canvas>
-    <view class="fullscreen-btn" bindtap="openFullscreen">⛶ 全屏</view>
+    <view class="fullscreen-btn" bindtap="openFullscreen"><image class="btn-icon" src="/assets/icons/lucide-maximize.png" mode="aspectFit" /><text>全屏</text></view>
   </view>
 
   <!-- 全屏地图弹窗 -->
   <view class="fullscreen-mask" wx:if="{{fullscreen}}">
-    <view class="fullscreen-close" bindtap="closeFullscreen">✕</view>
+    <view class="fullscreen-close" bindtap="closeFullscreen"><image class="close-icon" src="/assets/icons/lucide-x.png" mode="aspectFit" /></view>
     <ec-canvas id="fsMap" canvas-id="fsMap" ec="{{ fsEc }}"></ec-canvas>
   </view>
 
@@ -38,5 +38,5 @@
   </view>
 
   <view wx:if="{{loading}}" class="loading-tip">统计中…</view>
-  <view wx:if="{{!loading && provinceCount === 0}}" class="loading-tip">还没有点亮的城市，去记录一次运动吧 🏃</view>
+  <view wx:if="{{!loading && provinceCount === 0}}" class="loading-tip">还没有点亮的城市，去记录一次运动吧</view>
 </view>

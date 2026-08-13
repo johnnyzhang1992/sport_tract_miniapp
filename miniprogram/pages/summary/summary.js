@@ -84,6 +84,7 @@ Page({
       wx.hideLoading();
       wx.removeStorageSync('pending_summary');
       wx.removeStorageSync('pending_sync_activity');
+      wx.removeStorageSync('ongoingActivity');
       wx.showToast({ title: '已保存', icon: 'success' });
       setTimeout(() => wx.switchTab({ url: '/pages/tracks/tracks' }), 600);
     } catch (e) {
@@ -114,6 +115,7 @@ Page({
         }
         wx.removeStorageSync('pending_summary');
         wx.removeStorageSync('pending_sync_activity');
+        wx.removeStorageSync('ongoingActivity');
         wx.switchTab({ url: '/pages/index/index' });
       },
     });

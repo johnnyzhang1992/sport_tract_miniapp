@@ -4,7 +4,7 @@
     <view class="preview-box">
       <view class="preview-head">
         <view class="preview-title">分享海报</view>
-        <view class="preview-close" bindtap="closePreview">✕</view>
+        <view class="preview-close" bindtap="closePreview"><image src="/assets/icons/lucide-x.png" mode="aspectFit" /></view>
       </view>
       <canvas
         type="2d"

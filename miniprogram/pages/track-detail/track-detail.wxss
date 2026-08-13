@@ -15,6 +15,8 @@
   padding: 10rpx 22rpx;
   font-size: 24rpx;
   box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
+  display: flex;
+  align-items: center;
 }
 .layer-btn {
   right: 24rpx;
@@ -26,6 +28,16 @@
   background: #2b6cf6;
   color: #fff;
 }
+.btn-icon {
+  width: 28rpx;
+  height: 28rpx;
+  margin-right: 8rpx;
+  flex-shrink: 0;
+}
+.close-icon {
+  width: 36rpx;
+  height: 36rpx;
+}
 .fullscreen-btn {
   position: absolute;
   right: 24rpx;
@@ -35,6 +47,8 @@
   padding: 10rpx 22rpx;
   font-size: 24rpx;
   box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
+  display: flex;
+  align-items: center;
 }
 /* 全屏地图弹窗 */
 .fullscreen-mask {
@@ -73,6 +87,8 @@
   padding: 12rpx 26rpx;
   font-size: 26rpx;
   box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
 }
 .detail-title {
   font-size: 32rpx;
@@ -122,8 +138,10 @@
   opacity: 0.7;
 }
 .marker-icon {
-  font-size: 40rpx;
+  width: 44rpx;
+  height: 44rpx;
   margin-right: 20rpx;
+  flex-shrink: 0;
 }
 .marker-body {
   flex: 1;

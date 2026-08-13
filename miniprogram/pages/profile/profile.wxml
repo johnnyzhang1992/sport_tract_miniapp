@@ -3,7 +3,7 @@
   <view class="card avatar-card">
     <view class="avatar-wrap" bindtap="chooseAvatar" hover-class="avatar-hover">
       <image wx:if="{{avatarTemp || avatarUrl}}" class="avatar-img" src="{{avatarTemp || avatarUrl}}" mode="aspectFill" />
-      <view wx:else class="avatar-placeholder">👤</view>
+      <image wx:else class="avatar-placeholder" src="/assets/icons/lucide-user.png" mode="aspectFit" />
       <view class="avatar-edit">更换头像</view>
     </view>
   </view>

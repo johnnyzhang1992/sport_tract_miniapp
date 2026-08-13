@@ -13,19 +13,22 @@
       bindreplayend="onReplayEnd"
     />
     <view class="layer-btn" bindtap="switchLayer">
-      {{mapType === 'standard' ? '🛰️ 卫星' : '🗺️ 标准'}}
+      <image class="btn-icon" src="{{mapType === 'standard' ? '/assets/icons/lucide-satellite.png' : '/assets/icons/lucide-map.png'}}" mode="aspectFit" />
+      <text>{{mapType === 'standard' ? '卫星' : '标准'}}</text>
     </view>
     <view class="replay-btn {{replaying ? 'replay-btn-active' : ''}}" bindtap="startReplay">
-      {{replaying ? '⏹ 停止' : '▶️ 回放'}}
+      <image class="btn-icon" src="{{replaying ? '/assets/icons/lucide-stop-white.png' : '/assets/icons/lucide-play.png'}}" mode="aspectFit" />
+      <text>{{replaying ? '停止' : '回放'}}</text>
     </view>
-    <view class="fullscreen-btn" bindtap="openFullscreen">⛶ 全屏</view>
+    <view class="fullscreen-btn" bindtap="openFullscreen"><image class="btn-icon" src="/assets/icons/lucide-maximize.png" mode="aspectFit" /><text>全屏</text></view>
   </view>
 
   <!-- 全屏地图弹窗（不拦截 touch：map 手势需要 touchmove 做缩放/拖动） -->
   <view class="fullscreen-mask" wx:if="{{fullscreen}}">
-    <view class="fullscreen-close" bindtap="closeFullscreen">✕</view>
+    <view class="fullscreen-close" bindtap="closeFullscreen"><image class="close-icon" src="/assets/icons/lucide-x.png" mode="aspectFit" /></view>
     <view class="fullscreen-layer" bindtap="fsSwitchLayer">
-      {{mapType === 'standard' ? '🛰️ 卫星' : '🗺️ 标准'}}
+      <image class="btn-icon" src="{{mapType === 'standard' ? '/assets/icons/lucide-satellite.png' : '/assets/icons/lucide-map.png'}}" mode="aspectFit" />
+      <text>{{mapType === 'standard' ? '卫星' : '标准'}}</text>
     </view>
     <view class="fullscreen-map-wrap">
       <track-map
@@ -43,7 +46,7 @@
   <!-- 指标 -->
   <view class="card">
     <view class="detail-title"><image class="title-icon" src="{{activity.iconImg}}" mode="aspectFit"></image> {{activity.label}} <text class="edit-btn" bindtap="openEdit">✏️ 编辑</text></view>
-    <view class="note-text" wx:if="{{activity.note}}">📝 {{activity.note}}</view>
+    <view class="note-text" wx:if="{{activity.note}}">{{activity.note}}</view>
     <view class="track-metrics">
       <view class="metric">
         <view class="metric-num">{{activity.distanceKm}}</view>
@@ -128,7 +131,7 @@
       bindtap="onTapMarkerItem"
       hover-class="marker-hover"
     >
-      <view class="marker-icon">{{item.typeMeta.icon || '📍'}}</view>
+      <image class="marker-icon" src="{{item.typeMeta.iconImg || '/assets/icons/lucide-pin.png'}}" mode="aspectFit" />
       <view class="marker-body">
         <view class="marker-note">{{item.note || item.typeMeta.label || '打点'}}</view>
         <view class="text-muted">{{item.timeText}}{{item.address ? ' · ' + item.address : ''}}</view>

@@ -24,11 +24,19 @@
   flex-wrap: wrap;
 }
 .type-pill {
-  padding: 14rpx 28rpx;
+  padding: 12rpx 28rpx;
   border-radius: 999rpx;
   background: #f2f3f5;
   margin: 0 16rpx 16rpx 0;
   font-size: 26rpx;
+  display: flex;
+  align-items: center;
+}
+.type-icon {
+  width: 30rpx;
+  height: 30rpx;
+  margin-right: 8rpx;
+  flex-shrink: 0;
 }
 .type-pill-active {
   background: #eef4ff;
@@ -77,13 +85,11 @@
   top: -12rpx;
   right: -12rpx;
   background: rgba(0, 0, 0, 0.6);
-  color: #fff;
   width: 40rpx;
   height: 40rpx;
   border-radius: 50%;
-  text-align: center;
-  line-height: 40rpx;
-  font-size: 22rpx;
+  padding: 10rpx;
+  box-sizing: border-box;
 }
 .photo-add {
   padding: 24rpx;

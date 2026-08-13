@@ -34,7 +34,7 @@
   <view class="card" wx:if="{{markers.length > 0}}">
     <view class="summary-title">打点 ({{markers.length}})</view>
     <view wx:for="{{markers}}" wx:key="id" class="marker-item">
-      <view class="marker-icon">{{item.typeMeta.icon || '📍'}}</view>
+      <image class="marker-icon" src="{{item.typeMeta.iconImg || '/assets/icons/lucide-pin.png'}}" mode="aspectFit" />
       <view class="marker-body">
         <view class="marker-note">{{item.note || item.typeMeta.label || '打点'}}</view>
         <view class="text-muted">{{item.timeText}}</view>

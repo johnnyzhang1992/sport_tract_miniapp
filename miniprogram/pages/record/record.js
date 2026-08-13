@@ -5,6 +5,7 @@
  * 结束不直接 finish：跳摘要页，用户确认"保存"才提交 final 包（文档 3.3）
  */
 const config = require('../../config/index');
+const api = require('../../services/api');
 const { Tracker } = require('../../services/tracker');
 const { SyncService } = require('../../services/sync');
 const { reverseGeocode } = require('../../services/geo');
@@ -51,6 +52,12 @@ Page({
   },
 
   onLoad(options) {
+    // 恢复模式：从首页“运动已暂停”入口进入，让用户选择继续 or 重新开始
+    if (options.resume && options.activityId) {
+      this.resumeEntry(options.activityId, options.type || 'running');
+      return;
+    }
+
     const type = options.type || 'running';
     const meta = config.ACTIVITY_TYPES.find((t) => t.type === type) || {};
     this.setData({ type, typeLabel: meta.label || type, typeIcon: meta.icon || '🏃', typeIconImg: meta.iconImg || '' });
@@ -129,14 +136,19 @@ Page({
   },
 
   startLocation() {
-    wx.startLocationUpdate({
-      type: 'gcj02',
-      isHighAccuracy: true,
-      fail: (e) => {
-        console.warn('[record] startLocationUpdate 失败（降级无海拔）', e);
-        wx.startLocationUpdate({ type: 'gcj02' });
-      },
-    });
+    const highOpts = { type: 'gcj02', isHighAccuracy: true };
+    // 优先后台定位（运动切后台继续记录）；未开通后台定位权限/用户拒绝时降级前台定位
+    if (wx.startLocationUpdateBackground) {
+      wx.startLocationUpdateBackground({
+        ...highOpts,
+        fail: (e) => {
+          console.warn('[record] startLocationUpdateBackground 不可用，降级前台定位', e);
+          this.startForegroundLocation(highOpts);
+        },
+      });
+    } else {
+      this.startForegroundLocation(highOpts);
+    }
 
     if (!locationListenerOn) {
       locationListenerOn = true;
@@ -147,6 +159,17 @@ Page({
         }
       });
     }
+  },
+
+  /** 前台定位（降级路径：后台定位不可用时） */
+  startForegroundLocation(highOpts) {
+    wx.startLocationUpdate({
+      ...highOpts,
+      fail: (e) => {
+        console.warn('[record] startLocationUpdate 失败（降级无海拔）', e);
+        wx.startLocationUpdate({ type: 'gcj02' });
+      },
+    });
   },
 
   /** 定位回调：喂给 tracker + 更新地图 */
@@ -305,6 +328,7 @@ Page({
 
   /** 结束：停止采集，生成 final 包暂存，跳摘要页 */
   async confirmEnd() {
+    this._ending = true; // 标记正常结束（onUnload 不再存“进行中”）
     this.setData({ endConfirmVisible: false, starting: true });
 
     // 停止定位与调度
@@ -354,18 +378,30 @@ Page({
       confirmColor: '#ff4d4f',
       success: async (res) => {
         if (res.confirm) {
+          this._canceled = true; // 标记已放弃（onUnload 不再存“进行中”）
           wx.stopLocationUpdate();
           this.sync.stop();
           if (this.statsTimer) {
             clearInterval(this.statsTimer);
             this.statsTimer = null;
           }
-          // 通知后端取消活动（失败静默）
+          // 通知后端取消活动（失败静默）+ 清除“进行中”标记
           this.sync.cancel().catch(() => {});
+          wx.removeStorageSync('ongoingActivity');
           wx.switchTab({ url: '/pages/index/index' });
         }
       },
     });
+  },
+
+  onHide() {
+    // 切后台：标记时间（回前台时判断是否需要 GPS 预热，避免冷启动定位漂移）
+    if (this.tracker) this.tracker.markBackground();
+  },
+
+  onShow() {
+    // 回前台：后台较久则开启预热窗口（丢弃回前台后几秒内的漂移点）
+    if (this.tracker) this.tracker.onForeground();
   },
 
   onUnload() {
@@ -376,5 +412,95 @@ Page({
       this.statsTimer = null;
     }
     wx.setKeepScreenOn({ keepScreenOn: false });
+
+    // 运动进行中退出（非结束跳摘要、非放弃）：自动暂停并保留现场，首页可“继续”
+    if (!this._ending && !this._canceled && this.tracker && this.sync && this.sync.activityId) {
+      if (!this.tracker.paused) {
+        this.tracker.pause();
+      }
+      wx.setStorageSync('ongoingActivity', {
+        activityId: this.sync.activityId,
+        type: this.data.type,
+        startTime: this.tracker.startTime,
+        pausedAt: this.tracker.pausedAt || Date.now(),
+        pausedMs: this.tracker.pausedMs,
+      });
+    }
+  },
+
+  /** 首页“运动已暂停”入口：弹窗选择继续 or 重新开始 */
+  async resumeEntry(activityId, type) {
+    const res = await new Promise((resolve) => {
+      wx.showModal({
+        title: '继续上次运动？',
+        content: '检测到有一条未结束的运动记录',
+        confirmText: '继续',
+        cancelText: '重新开始',
+        success: resolve,
+        fail: () => resolve({ confirm: false }),
+      });
+    });
+    if (res.confirm) {
+      await this.resume(activityId, type);
+    } else {
+      // 重新开始：取消旧活动，清现场，走正常新建流程
+      const s = new SyncService();
+      s.activityId = activityId;
+      s.cancel().catch(() => {});
+      wx.removeStorageSync('ongoingActivity');
+      const meta = config.ACTIVITY_TYPES.find((t) => t.type === type) || {};
+      this.setData({ type, typeLabel: meta.label || type, typeIcon: meta.icon || '🏃', typeIconImg: meta.iconImg || '' });
+      this.tracker = new Tracker(type, 60);
+      this.sync = new SyncService();
+      this.init();
+    }
+  },
+
+  /** 继续上次运动：从后端拉点重建 tracker，保持暂停态，等用户点“继续” */
+  async resume(activityId, type) {
+    const meta = config.ACTIVITY_TYPES.find((t) => t.type === type) || {};
+    this.setData({ type, typeLabel: meta.label || type, typeIcon: meta.icon || '🏃', typeIconImg: meta.iconImg || '' });
+    try {
+      wx.showLoading({ title: '恢复中…' });
+      const activity = await api.get(`/activities/${activityId}`);
+      if (!activity || activity.status !== 'in_progress') {
+        wx.hideLoading();
+        wx.removeStorageSync('ongoingActivity');
+        wx.showToast({ title: '该运动已结束', icon: 'none' });
+        return;
+      }
+      this.tracker = new Tracker(type, 60);
+      this.tracker.restoreFromPoints(activity.trackPoints, activity.markers, activity.startTime, activity.pausedMs);
+      // 退出时已暂停：退出→现在的时长也算暂停（补进 pausedMs），恢复后保持暂停
+      const ongoing = wx.getStorageSync('ongoingActivity');
+      if (ongoing && ongoing.pausedAt) {
+        this.tracker.pausedMs += Math.max(0, Date.now() - ongoing.pausedAt);
+      }
+      this.tracker.paused = true;
+      this.tracker.pausedAt = Date.now();
+
+      this.sync = new SyncService();
+      this.sync.activityId = activityId;
+      this.sync.lastUploadedSeq = this.tracker.seq; // 已上传到后端的点
+
+      this.setData({
+        starting: false,
+        paused: true,
+        currentAccuracy: null,
+        mapPoints: activity.trackPoints.map((p) => ({ lat: p.lat, lng: p.lng })),
+        mapMarkers: (activity.markers || []).map((m) => ({ id: m.id, lat: m.lat, lng: m.lng })),
+      });
+
+      this.startLocation();
+      wx.setKeepScreenOn({ keepScreenOn: true });
+      this.sync.start(this.tracker);
+      this.updateStats();
+      this.statsTimer = setInterval(() => this.updateStats(), 1000);
+      wx.hideLoading();
+    } catch (e) {
+      wx.hideLoading();
+      console.error('[record] 恢复运动失败', e);
+      wx.showToast({ title: '恢复失败，请重试', icon: 'none' });
+    }
   },
 });

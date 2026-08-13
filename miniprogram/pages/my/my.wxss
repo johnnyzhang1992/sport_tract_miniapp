@@ -18,8 +18,10 @@
   padding: 8rpx 12rpx;
 }
 .cell-icon {
-  font-size: 34rpx;
+  width: 40rpx;
+  height: 40rpx;
   margin-right: 8rpx;
+  flex-shrink: 0;
 }
 .version-tip {
   text-align: center;
@@ -33,7 +35,8 @@
   margin-bottom: 16rpx;
 }
 .entry-icon {
-  font-size: 52rpx;
+  width: 56rpx;
+  height: 56rpx;
   margin-right: 24rpx;
   flex-shrink: 0;
 }
