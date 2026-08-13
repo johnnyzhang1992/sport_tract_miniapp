@@ -39,6 +39,7 @@
             <view class="track-head">
               <image class="cell-icon" src="{{item.iconImg}}" mode="aspectFit"></image>
               <text class="track-type">{{item.label}}</text>
+              <text class="track-duration">{{item.durationText}}</text>
             </view>
             <view class="track-foot">
               <text class="track-dist">{{item.distanceKm}}公里</text>

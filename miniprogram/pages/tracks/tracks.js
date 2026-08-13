@@ -1,5 +1,5 @@
 const api = require('../../services/api');
-const { formatDuration, formatPace } = require('../../utils/format');
+const { formatDuration, formatPace, formatDurationStat } = require('../../utils/format');
 const config = require('../../config/index');
 
 const PAGE_SIZE = 20;
@@ -111,7 +111,7 @@ Page({
       color: meta.color || '#2B6CF6',
       previewPoints: item.previewPoints || [],
       distanceKm: (item.distance / 1000).toFixed(2).replace(/\.?0+$/, ''),
-      durationText: formatDuration(item.duration),
+      durationText: (() => { const d = formatDurationStat(item.duration); return `${d.num}${d.unit}`; })(),
       startTimeText: new Date(item.startTime).toLocaleString('zh-CN', {
         month: 'numeric',
         day: 'numeric',
