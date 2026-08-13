@@ -11,7 +11,7 @@
   background: #fff;
   margin-bottom: 16rpx;
   border-radius: 16rpx;
-  padding: 24rpx 28rpx;
+  padding: 36rpx 28rpx; /* 高度更高 */
   box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
 }
 .track-card-hover {
@@ -27,9 +27,9 @@
   min-width: 0;
 }
 .track-type {
-  font-size: 26rpx;
+  font-size: 22rpx; /* 类型字号缩小 */
   color: #1f2329;
-  margin-bottom: 10rpx;
+  margin-bottom: 12rpx;
 }
 .track-meta {
   display: flex;
@@ -37,7 +37,7 @@
   align-items: center;
 }
 .track-dist {
-  font-size: 34rpx;
+  font-size: 30rpx; /* 距离字号缩小 */
   font-weight: 600;
   color: #2b6cf6;
 }
