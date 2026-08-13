@@ -18,7 +18,7 @@ module.exports = {
       // 非小程序环境（如 Node 测试）降级为开发版
     }
     // ⚠️ 联调开关：强制走线上域名（体验版调试期保持 true；上线前评估是否保留）
-    const FORCE_ONLINE = true;
+    const FORCE_ONLINE = false;
     const isOnline = FORCE_ONLINE || envVersion === 'release' || envVersion === 'trial';
     return isOnline ? 'https://api.historybook.cn' : 'http://192.168.31.138:3004';
   })(),
