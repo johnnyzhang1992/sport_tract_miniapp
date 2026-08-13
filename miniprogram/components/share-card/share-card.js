@@ -91,7 +91,7 @@ Component({
             // 标题
             const act = this.data.activity || {};
             ctx.fillStyle = '#fff';
-            ctx.font = 'bold 24px sans-serif';
+            ctx.font = 'bold 20px sans-serif';
             ctx.textAlign = 'center';
             ctx.fillText(`${act.label || '运动'} · ${act.distanceKm || '0.00'} 公里`, width / 2, 42);
 
