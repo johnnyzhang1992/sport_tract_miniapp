@@ -6,6 +6,7 @@
     "t-tabs": "tdesign-miniprogram/tabs/tabs",
     "t-tab-panel": "tdesign-miniprogram/tab-panel/tab-panel",
     "t-cell": "tdesign-miniprogram/cell/cell",
-    "t-swipe-cell": "tdesign-miniprogram/swipe-cell/swipe-cell"
+    "t-swipe-cell": "tdesign-miniprogram/swipe-cell/swipe-cell",
+    "track-thumb": "/components/track-thumb/track-thumb"
   }
 }

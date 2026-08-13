@@ -42,6 +42,7 @@
           <text class="track-time">{{item.timeText}}</text>
         </view>
       </view>
+      <track-thumb class="track-thumb" points="{{item.previewPoints}}" color="{{item.color}}" />
     </view>
   </t-swipe-cell>
 
