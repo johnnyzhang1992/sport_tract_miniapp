@@ -1,3 +1,19 @@
+/** 数字缩写：≥10000 → 1.22W，≥1000 → 1.22K，否则去尾零保留2位 */
+function compact(v) {
+  if (v >= 10000) return (v / 10000).toFixed(2).replace(/\.?0+$/, '') + 'W';
+  if (v >= 1000) return (v / 1000).toFixed(2).replace(/\.?0+$/, '') + 'K';
+  return String(Math.round(v * 100) / 100);
+}
+
+/** 时长格式化：≤999分钟→分钟；≤999小时→小时；否则→天 */
+function formatDuration(seconds) {
+  const min = seconds / 60;
+  if (min <= 999) return { num: String(Math.round(min)), unit: '分钟' };
+  const h = min / 60;
+  if (h <= 999) return { num: String(Math.round(h * 10) / 10), unit: '小时' };
+  return { num: String(Math.round((h / 24) * 10) / 10), unit: '天' };
+}
+
 const config = require('../../config/index');
 const api = require('../../services/api');
 
@@ -62,15 +78,19 @@ Page({
         order.find((o) => (overview[o.key] || {}).count > 0) ||
         { key: 'today', label: '今日' };
       const s = overview[sec.key] || { count: 0, distance: 0, duration: 0, calories: 0 };
-      // 预处理：WXML 不支持 toFixed 等方法调用
+      // 预处理：WXML 不支持 toFixed 等方法调用；公里/千卡 K·W 缩写、时长分钟→小时→天
+      const dur = formatDuration(s.duration || 0);
       this.setData({
         overviewLabel: sec.label + '概览',
         overview: {
           today: {
             count: s.count,
-            distanceKm: (s.distance / 1000).toFixed(2),
-            durationMin: Math.round(s.duration / 60),
-            calories: s.calories,
+            distanceNum: compact((s.distance || 0) / 1000),
+            distanceUnit: '公里',
+            durationNum: dur.num,
+            durationUnit: dur.unit,
+            calorieNum: compact(s.calories || 0),
+            calorieUnit: '千卡',
           },
         },
       });
