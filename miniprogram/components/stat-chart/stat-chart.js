@@ -207,10 +207,14 @@ Component({
         // 标注：最大值 + 首尾 + 每 5 个点
         const annotate = i === maxIdx || i === 0 || i === n - 1 || (n > 10 && i % 5 === 0);
         if (annotate) {
-          // 白底圆角块隔离（防与折线/点重叠）
+          // 白底圆角块 + 与曲线错开：默认点上方；若相邻点显著更高（曲线经过上方）→ 移下方
           const t = this.formatValue(values[i]);
           const tw2 = ctx.measureText(t).width;
-          const labelY = Math.max(axis.padTop + 10, Y(i) - 5); // 限制在绘图区内
+          const neighborHigh =
+            (i > 0 && Y(i - 1) < Y(i) - 20) || (i < n - 1 && Y(i + 1) < Y(i) - 20);
+          const labelY = neighborHigh
+            ? Math.min(H - axis.padBottom - 6, Y(i) + 14)
+            : Math.max(axis.padTop + 10, Y(i) - 9);
           ctx.fillStyle = 'rgba(255,255,255,0.92)';
           ctx.beginPath();
           ctx.roundRect ? ctx.roundRect(X(i) - tw2 / 2 - 3, labelY - 9, tw2 + 6, 13, 3) : ctx.rect(X(i) - tw2 / 2 - 3, labelY - 9, tw2 + 6, 13);
