@@ -1,52 +1,72 @@
 .filter-tabs {
   margin-bottom: 8rpx;
 }
-.track-card {
+
+/* 2 列网格 */
+.track-grid {
   display: flex;
-  align-items: center; /* 图标垂直居中 */
-  background: #fff;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+.grid-item {
+  width: calc(50% - 8rpx);
   margin-bottom: 16rpx;
+}
+
+/* 卡片（缩略图在上，信息在下） */
+.track-card {
+  background: #fff;
   border-radius: 16rpx;
-  padding: 20rpx 28rpx; /* 更紧凑 */
-  height: 120rpx; /* 固定高度 */
-  box-sizing: border-box;
+  overflow: hidden;
   box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
 }
 .track-card-hover {
   opacity: 0.7;
 }
-.track-info {
-  flex: 1;
-  min-width: 0;
-}
+
+/* 轨迹缩略图 */
 .track-thumb {
-  width: 132rpx;
-  height: 96rpx;
-  flex-shrink: 0;
-  margin-left: 16rpx;
-  border-radius: 12rpx;
-  overflow: hidden;
+  width: 100%;
+  height: 156rpx;
+  display: block;
   background: #f6f8fb;
 }
-.track-type {
-  font-size: 22rpx; /* 类型字号缩小 */
-  color: #1f2329;
+
+/* 卡片信息区 */
+.track-body {
+  padding: 16rpx 20rpx 20rpx;
+}
+.track-head {
+  display: flex;
+  align-items: center;
   margin-bottom: 12rpx;
 }
-.track-meta {
+.cell-icon {
+  width: 30rpx;
+  height: 30rpx;
+  margin-right: 10rpx;
+  flex-shrink: 0;
+}
+.track-type {
+  font-size: 24rpx;
+  font-weight: 500;
+  color: #1f2329;
+}
+.track-foot {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: baseline;
 }
 .track-dist {
-  font-size: 30rpx; /* 距离字号缩小 */
+  font-size: 28rpx;
   font-weight: 600;
   color: #2b6cf6;
 }
 .track-time {
-  font-size: 24rpx;
+  font-size: 22rpx;
   color: #8a93a6;
 }
+
 .loading-tip {
   text-align: center;
   padding: 24rpx 0;
@@ -56,16 +76,9 @@
 .del-action {
   background: #e34d59;
   color: #fff;
-  height: 100%; /* 撑满滑动容器高度，与左侧卡片同高 */
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 26rpx;
-}
-
-.cell-icon {
-  width: 44rpx;
-  height: 44rpx;
-  margin-right: 20rpx;
-  flex-shrink: 0;
 }
