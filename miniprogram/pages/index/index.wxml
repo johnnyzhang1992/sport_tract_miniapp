@@ -1,7 +1,7 @@
 <view class="container">
   <!-- 欢迎语 -->
   <view class="welcome">
-    <view class="welcome-title">开始一次运动</view>
+    <view class="welcome-title">记录每一次运动</view>
     <view class="welcome-sub text-muted">选择类型，记录你的轨迹与风景</view>
   </view>
 
@@ -18,7 +18,7 @@
         data-type="{{item.type}}"
         bindtap="selectType"
       >
-        <view class="type-icon">{{item.icon}}</view>
+        <image class="type-icon" src="{{item.iconImg}}" mode="aspectFit"></image>
         <view class="type-label">{{item.label}}</view>
       </view>
     </view>
@@ -26,7 +26,7 @@
 
   <!-- 今日概览 -->
   <view class="card" wx:if="{{overview}}">
-    <view class="section-title">今日概览</view>
+    <view class="section-title">{{overviewLabel}}</view>
     <view class="stats-row">
       <view class="stat-item">
         <view class="stat-num">{{overview.today.count}}</view>
@@ -53,6 +53,7 @@
     theme="primary"
     size="large"
     block
+    shape="round"
     bind:tap="startRecord"
   >开始运动</t-button>
 </view>

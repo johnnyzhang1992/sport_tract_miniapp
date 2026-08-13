@@ -28,12 +28,14 @@ module.exports = {
    * 前端 icon/文案从这里读，新增类型只需扩展
    */
   ACTIVITY_TYPES: [
-    { type: 'hiking', label: '徒步', icon: '🏔️', met: 4.3, color: '#FF9800' },
-    { type: 'walking', label: '散步', icon: '🚶', met: 3.5, color: '#FF6B6B' },
-    { type: 'running', label: '跑步', icon: '🏃', met: 9.8, color: '#2B6CF6' },
-    { type: 'cycling', label: '骑行', icon: '🚴', met: 7.5, color: '#07C160' },
-    { type: 'mountaineering', label: '登山', icon: '⛰️', met: 8.0, color: '#8B5CF6' },
-    { type: 'swimming', label: '游泳', icon: '🏊', met: 8.0, color: '#00B8D9' },
+    { type: 'walking', label: '散步', icon: '🚶', iconImg: '/assets/icons/activity-walking.png', met: 3.5, color: '#FF6B6B' },
+    { type: 'running', label: '跑步', icon: '🏃', iconImg: '/assets/icons/activity-running.png', met: 9.8, color: '#2B6CF6' },
+    { type: 'hiking', label: '徒步', icon: '🏔️', iconImg: '/assets/icons/activity-hiking.png', met: 4.3, color: '#FF9800' },
+    { type: 'mountaineering', label: '爬山', icon: '⛰️', iconImg: '/assets/icons/activity-mountaineering.png', met: 8.0, color: '#8B5CF6' },
+    { type: 'cycling', label: '骑行', icon: '🚴', iconImg: '/assets/icons/activity-cycling.png', met: 7.5, color: '#07C160' },
+    { type: 'skiing', label: '滑雪', icon: '🎿', iconImg: '/assets/icons/activity-skiing.png', met: 6.0, color: '#29B6F6' },
+    { type: 'rowing', label: '划船', icon: '🚣', iconImg: '/assets/icons/activity-rowing.png', met: 7.0, color: '#26A69A' },
+    { type: 'swimming', label: '游泳', icon: '🏊', iconImg: '/assets/icons/activity-swimming.png', met: 8.0, color: '#00B8D9' },
   ],
 
   /** 打点类型（决策 F10：可扩展） */
