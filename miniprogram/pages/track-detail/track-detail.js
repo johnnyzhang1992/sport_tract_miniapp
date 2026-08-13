@@ -8,7 +8,7 @@ const api = require('../../services/api');
 const config = require('../../config/index');
 const storage = require('../../services/storage');
 const { uploadPhoto } = require('../../services/oss-upload');
-const { formatDuration, formatPaceParts } = require('../../utils/format');
+const { formatDuration, formatPace } = require('../../utils/format');
 
 Page({
   data: {
@@ -27,6 +27,11 @@ Page({
     editMarker: null,
     markerBusy: false,
     fullscreen: false,
+
+    // 单段明细（每公里）
+    kmSegs: [],
+    displaySegs: [], // 默认前 10 段
+    segsVisible: false,
   },
 
   onLoad(options) {
@@ -92,6 +97,9 @@ Page({
         })),
         altitudeChart,
       });
+      // 单段明细（每公里分段；默认展示前 10）
+      const segs = this.computeKmSegments(activity.trackPoints || []);
+      this.setData({ kmSegs: segs, displaySegs: segs.slice(0, 10) });
     } catch (e) {
       wx.showToast({ title: '加载详情失败', icon: 'none' });
       console.error(e);
@@ -268,6 +276,63 @@ Page({
     } else {
       wx.showToast({ title: '组件未就绪', icon: 'none' });
     }
+  },
+
+  /** 单段明细：按每公里切分段（序号/时间/配速），最后不足 1km 记为余段 */
+  computeKmSegments(points) {
+    if (!points || points.length < 2) return [];
+    const toRad = (d) => (d * Math.PI) / 180;
+    const distM = (a, b) => {
+      const R = 6371000;
+      const dLat = toRad(b.lat - a.lat);
+      const dLng = toRad(b.lng - a.lng);
+      const s =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+      return 2 * R * Math.asin(Math.sqrt(s));
+    };
+    const segs = [];
+    let cur = { startTs: points[0].timestamp, acc: 0 };
+    for (let i = 1; i < points.length; i++) {
+      const d = distM(points[i - 1], points[i]);
+      cur.acc += d;
+      if (cur.acc >= 1000) {
+        const durationSec = Math.max(1, Math.round((points[i].timestamp - cur.startTs) / 1000));
+        const distKm = cur.acc / 1000;
+        segs.push({
+          idx: segs.length + 1,
+          distKm,
+          durationSec,
+          durationText: formatDuration(durationSec),
+          paceText: formatPace(durationSec / distKm),
+        });
+        cur = { startTs: points[i].timestamp, acc: 0 };
+      }
+    }
+    // 最后不足 1km 的余段（位移 >20m 才展示）
+    if (cur.acc > 20 && points.length >= 2) {
+      const last = points[points.length - 1];
+      const durationSec = Math.max(1, Math.round((last.timestamp - cur.startTs) / 1000));
+      const distKm = cur.acc / 1000;
+      segs.push({
+        idx: segs.length + 1,
+        distKm,
+        durationSec,
+        durationText: formatDuration(durationSec),
+        paceText: formatPace(durationSec / distKm),
+        partial: true, // 余段（不足 1km）
+      });
+    }
+    return segs;
+  },
+
+  /** 查看全部单段（弹窗） */
+  openAllSegs() {
+    this.setData({ segsVisible: true });
+  },
+
+  onSegsVisibleChange(e) {
+    if (!e.detail.visible) this.setData({ segsVisible: false });
   },
 
   /** 打开编辑面板 */
