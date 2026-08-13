@@ -1,6 +1,6 @@
 const api = require('../../services/api');
 const config = require('../../config/index');
-const { formatDuration } = require('../../utils/format');
+const { formatDuration, compact, formatDurationStat } = require('../../utils/format');
 
 const RANGES = [
   { value: 'week', label: '一周' },
@@ -13,7 +13,7 @@ Page({
   data: {
     ranges: RANGES,
     activeRange: 'week',
-    data: { count: 0, totalDistanceKm: 0, durationText: '—' },
+    data: { count: 0, totalDistanceKm: 0, durationNum: '—', durationUnit: '分钟' },
     tracks: [],
     heat: [],
     recentTracks: [],
@@ -40,11 +40,13 @@ Page({
     try {
       const res = await api.get(`/overview?range=${this.data.activeRange}`);
       console.log('[overview] res tracks=', (res.tracks || []).length, 'heat=', (res.heat || []).length);
+      const dur = formatDurationStat(res.totalDurationSec);
       this.setData({
         data: {
           count: res.count,
-          totalDistanceKm: res.totalDistanceKm.toFixed(1),
-          durationText: formatDuration(res.totalDurationSec),
+          totalDistanceKm: compact(res.totalDistanceKm),
+          durationNum: dur.num,
+          durationUnit: dur.unit,
         },
         tracks: this.decorateTracks(res.tracks),
         heat: res.heat || [],

@@ -23,8 +23,8 @@
     </view>
     <view class="stat-divider"></view>
     <view class="stat-block">
-      <view class="stat-value">{{data.durationText}}</view>
-      <view class="stat-label">总时长</view>
+      <view class="stat-value">{{data.durationNum}}</view>
+      <view class="stat-label">{{data.durationUnit}}</view>
     </view>
   </view>
 
