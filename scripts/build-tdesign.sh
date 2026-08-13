@@ -1,6 +1,6 @@
 #!/bin/bash
 # 按需重建 tdesign miniprogram_npm（clone 后 / 依赖更新后运行一次）
-# 只保留用到的组件 + common + 被引用的 npm 依赖（tslib 等），避免全量 5MB 打包
+# 只保留用到的组件 + common/mixins 公共目录 + 被引用的 npm 依赖（tslib 等），避免全量 5MB 打包
 set -e
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -14,13 +14,15 @@ fi
 
 # 用到的组件（含间接依赖：badge/image/loading/overlay/sticky）
 COMPONENTS="avatar badge button cell cell-group dialog icon image loading overlay popup sticky swipe-cell switch tab-panel tabs tag"
-# tdesign 内部 npm 依赖（组件 require 'tslib' 等，需提升到 miniprogram_npm 根）
+# 公共目录：所有组件 js 里 `from "../xxx"` 引用的共享代码（common=公共工具，mixins=混入）
+SHARED="common mixins"
+# tdesign 内部 npm 依赖（组件 import 'tslib' 等，需提升到 miniprogram_npm 根）
 DEPS="tslib dayjs tinycolor2 marked"
 
 rm -rf "$DST"
 mkdir -p "$DST/tdesign-miniprogram"
 
-for c in $COMPONENTS common; do
+for c in $COMPONENTS $SHARED; do
   if [ -d "$SRC/$c" ]; then
     cp -r "$SRC/$c" "$DST/tdesign-miniprogram/$c"
   fi
