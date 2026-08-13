@@ -148,9 +148,11 @@
 }
 .fixed-actions .act-btn {
   flex: 1;
+  font-size: 22rpx; /* 小屏 4 按钮放不下，缩小字号 */
+  padding: 0 8rpx;
 }
 .fixed-actions .act-btn + .act-btn {
-  margin-left: 16rpx;
+  margin-left: 10rpx;
 }
 
 /* 开始/结束时间 */
