@@ -8,7 +8,7 @@ const api = require('../../services/api');
 const config = require('../../config/index');
 const storage = require('../../services/storage');
 const { uploadPhoto } = require('../../services/oss-upload');
-const { formatDuration, formatPace } = require('../../utils/format');
+const { formatDuration, formatPace, formatPaceParts } = require('../../utils/format');
 
 Page({
   data: {
