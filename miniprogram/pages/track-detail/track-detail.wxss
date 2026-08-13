@@ -286,11 +286,15 @@
   color: #4e5969;
   margin-top: 4rpx;
 }
-.more-btn {
-  text-align: center;
+.seg-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8rpx;
+}
+.seg-more {
   color: #2b6cf6;
-  font-size: 26rpx;
-  padding: 20rpx 0 4rpx;
+  font-size: 24rpx;
 }
 
 /* 全部单段弹窗 */
