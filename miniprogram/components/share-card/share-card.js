@@ -5,6 +5,17 @@
  * props: activityId, activity(指标), mapPoints, miniCodeUrl
  * 方法: preview()；事件: posterready({ path }) 海报临时路径
  */
+/** 圆角矩形路径（arcTo 手写，真机基础库无 ctx.roundRect 时兜底为直角） */
+function roundRectPath(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
 /** 海拔色带（与 track-map 一致）：蓝 → 绿 → 黄 → 红 12 档 */
 const ALTITUDE_COLORS = [
   '#2979ff', '#1e8dd2', '#14a2a6', '#09b679', '#0ac850', '#4ccb3a',
@@ -133,7 +144,7 @@ Component({
       ctx.lineWidth = 1;
       const card = { x: pad / 2, y: top, w: width - pad, h: bottom - top };
       ctx.beginPath();
-      ctx.roundRect ? ctx.roundRect(card.x, card.y, card.w, card.h, 16) : ctx.rect(card.x, card.y, card.w, card.h);
+      roundRectPath(ctx, card.x, card.y, card.w, card.h, 16);
       ctx.fill();
 
       // 轨迹投影区：在卡片内部再内缩，保证线/端点/标签不溢出卡片
@@ -224,7 +235,7 @@ Component({
         // 白底圆角卡
         ctx.fillStyle = 'rgba(255,255,255,0.92)';
         ctx.beginPath();
-        ctx.roundRect ? ctx.roundRect(x, top, cardW, cardH, 12) : ctx.rect(x, top, cardW, cardH);
+        roundRectPath(ctx, x, top, cardW, cardH, 12);
         ctx.fill();
 
         // 配速：数值大字 + /公里 单位小字（水平整体居中）
