@@ -302,7 +302,10 @@
   background: #fff;
   border-radius: 24rpx 24rpx 0 0;
   padding: 28rpx 28rpx 0; /* 安全区移到滚动列表内 */
-  max-height: 75vh;
+  height: 75vh; /* 弹窗撑高，列表占满标题以下 */
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
 }
 .segs-title {
   font-size: 30rpx;
@@ -312,7 +315,8 @@
   padding-bottom: 20rpx;
 }
 .segs-scroll {
-  height: 55vh; /* 固定高度，scroll-view 滚动可靠，不产生底部空白 */
+  flex: 1; /* 占满标题下所有区域 */
+  min-height: 0;
   padding-bottom: calc(28rpx + env(safe-area-inset-bottom)); /* 安全区在列表内：最后一项可滚到 home 条上方 */
   box-sizing: border-box;
 }
