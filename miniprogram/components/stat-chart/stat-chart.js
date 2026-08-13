@@ -76,7 +76,7 @@ Component({
       const maxV = Math.max(...values);
       const minV = Math.min(...values);
       const span = maxV - minV || 1;
-      ctx.font = '10px sans-serif';
+      ctx.font = '9px sans-serif';
       const labels = [maxV, minV + span / 2, minV];
       // Y 轴刻度区宽度按最大刻度文字动态计算（防 devtools/长数值溢出画面左缘）
       const labelTexts = labels.map((v) => this.formatValue(v));
@@ -194,36 +194,12 @@ Component({
       });
       ctx.stroke();
 
-      // 数据点圆点 + 关键点数值标注
-      const maxV = Math.max(...values);
-      const maxIdx = values.indexOf(maxV);
-      ctx.font = '10px sans-serif';
+      // 数据点圆点（决策：取消数值标注，避免与曲线重叠；海拔数值看 Y 轴刻度）
       values.forEach((_, i) => {
-        // 点：实心小圆（原空心描边圆 3px → 实心 2px）
         ctx.fillStyle = this.data.color;
         ctx.beginPath();
         ctx.arc(X(i), Y(i), 2, 0, Math.PI * 2);
         ctx.fill();
-        // 标注：最大值 + 首尾 + 每 5 个点
-        const annotate = i === maxIdx || i === 0 || i === n - 1 || (n > 10 && i % 5 === 0);
-        if (annotate) {
-          // 白底圆角块 + 与曲线错开：默认点上方；若相邻点显著更高（曲线经过上方）→ 移下方
-          const t = this.formatValue(values[i]);
-          const tw2 = ctx.measureText(t).width;
-          const neighborHigh =
-            (i > 0 && Y(i - 1) < Y(i) - 20) || (i < n - 1 && Y(i + 1) < Y(i) - 20);
-          const labelY = neighborHigh
-            ? Math.min(H - axis.padBottom - 6, Y(i) + 14)
-            : Math.max(axis.padTop + 10, Y(i) - 9);
-          ctx.fillStyle = 'rgba(255,255,255,0.92)';
-          ctx.beginPath();
-          ctx.roundRect ? ctx.roundRect(X(i) - tw2 / 2 - 3, labelY - 9, tw2 + 6, 13, 3) : ctx.rect(X(i) - tw2 / 2 - 3, labelY - 9, tw2 + 6, 13);
-          ctx.fill();
-          ctx.fillStyle = '#1f2329';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'bottom';
-          ctx.fillText(t, X(i), labelY);
-        }
       });
 
       // X 标签（左右留白）
