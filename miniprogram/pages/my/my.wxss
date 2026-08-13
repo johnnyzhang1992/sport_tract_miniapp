@@ -25,3 +25,34 @@
   text-align: center;
   padding: 40rpx 0;
 }
+
+/* 概况入口卡片 */
+.overview-entry {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16rpx;
+}
+.entry-icon {
+  font-size: 52rpx;
+  margin-right: 24rpx;
+  flex-shrink: 0;
+}
+.entry-info {
+  flex: 1;
+  min-width: 0;
+}
+.entry-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+.entry-sub {
+  font-size: 26rpx; /* 数据文案加大 */
+  margin-top: 6rpx;
+  color: #2b6cf6; /* 更亮（数据醒目） */
+  font-weight: 500;
+}
+.entry-arrow {
+  font-size: 40rpx;
+  color: #c2c7d0;
+}

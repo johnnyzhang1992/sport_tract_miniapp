@@ -97,6 +97,7 @@ Page({
       return {
         id: t.id,
         icon: meta.icon || '🏃',
+        iconImg: meta.iconImg || '',
         label: meta.label || t.type,
         timeText,
         distanceKm: (t.distance / 1000).toFixed(2),

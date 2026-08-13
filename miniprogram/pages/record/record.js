@@ -18,6 +18,7 @@ Page({
     type: 'running',
     typeLabel: '跑步',
     typeIcon: '🏃',
+    typeIconImg: '',
 
     // 地图
     mapPoints: [], // [{lat, lng}]
@@ -52,7 +53,7 @@ Page({
   onLoad(options) {
     const type = options.type || 'running';
     const meta = config.ACTIVITY_TYPES.find((t) => t.type === type) || {};
-    this.setData({ type, typeLabel: meta.label || type, typeIcon: meta.icon || '🏃' });
+    this.setData({ type, typeLabel: meta.label || type, typeIcon: meta.icon || '🏃', typeIconImg: meta.iconImg || '' });
 
     this.tracker = new Tracker(type, 60);
     this.sync = new SyncService();
@@ -330,6 +331,7 @@ Page({
         type: this.data.type,
         typeLabel: this.data.typeLabel,
         typeIcon: this.data.typeIcon,
+        typeIconImg: this.data.typeIconImg,
       });
       // 暂存 sync 实例（摘要页"保存"时提交 finish）
       wx.setStorageSync('pending_sync_activity', this.sync.activityId);

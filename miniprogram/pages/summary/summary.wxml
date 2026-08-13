@@ -6,7 +6,7 @@
 
   <!-- 指标 -->
   <view class="card">
-    <view class="summary-title">{{typeIcon}} {{typeLabel}} 完成</view>
+    <view class="summary-title"><image class="title-icon" src="{{typeIconImg}}" mode="aspectFit"></image> {{typeLabel}} 完成</view>
     <view class="metrics-grid">
       <view class="metric">
         <view class="metric-num">{{stats.distanceKm}}</view>

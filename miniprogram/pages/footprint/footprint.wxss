@@ -1,0 +1,159 @@
+.footprint-page {
+  padding: 24rpx;
+}
+.stats-card {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 32rpx 0;
+  margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+}
+.stat-block {
+  flex: 1;
+  text-align: center;
+}
+.stat-value {
+  font-size: 48rpx;
+  font-weight: 700;
+  color: #2b6cf6;
+}
+.stat-label {
+  font-size: 24rpx;
+  color: #8a93a6;
+  margin-top: 6rpx;
+}
+.stat-divider {
+  width: 1rpx;
+  height: 60rpx;
+  background: #e5e6eb;
+}
+.card {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 20rpx;
+}
+.section-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1f2329;
+  margin-bottom: 20rpx;
+}
+.prov-grid {
+  display: flex;
+  flex-wrap: wrap;
+}
+.prov-cell {
+  width: 16.66%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16rpx 0;
+  border-radius: 12rpx;
+  color: #c2c7d0;
+}
+.prov-lit {
+  background: #e8f0ff;
+  color: #2b6cf6;
+}
+.prov-name {
+  font-size: 22rpx;
+}
+.prov-count {
+  font-size: 18rpx;
+  margin-top: 4rpx;
+  color: #2b6cf6;
+}
+.city-row {
+  display: flex;
+  align-items: center;
+  padding: 18rpx 0;
+  border-bottom: 1rpx solid #f2f3f5;
+}
+.city-row:last-child {
+  border-bottom: none;
+}
+.city-dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  background: #2b6cf6;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+}
+.city-info {
+  flex: 1;
+  min-width: 0;
+}
+.city-name {
+  font-size: 28rpx;
+  color: #1f2329;
+}
+.city-prov {
+  font-size: 22rpx;
+  color: #8a93a6;
+  margin-top: 2rpx;
+}
+.city-count {
+  font-size: 24rpx;
+  color: #2b6cf6;
+}
+.loading-tip {
+  text-align: center;
+  color: #8a93a6;
+  font-size: 24rpx;
+  padding: 40rpx 0;
+}
+
+/* echarts 地图容器高度 */
+ec-canvas {
+  width: 100%;
+  height: 780rpx;
+  display: block;
+  background: #f4f6fa; /* 浅背景色 */
+}
+
+/* 全屏地图 */
+.map-card {
+  position: relative;
+}
+.fullscreen-btn {
+  position: absolute;
+  bottom: 48rpx; /* 右下角，离地图内容远一点 */
+  right: 48rpx;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 999rpx;
+  padding: 10rpx 22rpx;
+  font-size: 24rpx;
+  color: #4e5969;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.1);
+}
+.fullscreen-mask {
+  position: fixed;
+  inset: 0;
+  background: #fff;
+  z-index: 10000;
+}
+.fullscreen-mask ec-canvas {
+  width: 100%;
+  height: 100vh;
+  display: block;
+}
+.fullscreen-close {
+  position: absolute;
+  top: calc(24rpx + env(safe-area-inset-top));
+  left: 24rpx;
+  z-index: 10001;
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  color: #1f2329;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32rpx;
+}

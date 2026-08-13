@@ -1,0 +1,42 @@
+<view class="footprint-page">
+  <!-- 统计卡 -->
+  <view class="stats-card">
+    <view class="stat-block">
+      <view class="stat-value">{{provinceCount}}</view>
+      <view class="stat-label">点亮省份</view>
+    </view>
+    <view class="stat-divider"></view>
+    <view class="stat-block">
+      <view class="stat-value">{{cityCount}}</view>
+      <view class="stat-label">点亮城市</view>
+    </view>
+  </view>
+
+  <!-- 真实中国地图（echarts） -->
+  <view class="card map-card">
+    <ec-canvas id="footprintMap" canvas-id="footprintMap" ec="{{ ec }}"></ec-canvas>
+    <view class="fullscreen-btn" bindtap="openFullscreen">⛶ 全屏</view>
+  </view>
+
+  <!-- 全屏地图弹窗 -->
+  <view class="fullscreen-mask" wx:if="{{fullscreen}}">
+    <view class="fullscreen-close" bindtap="closeFullscreen">✕</view>
+    <ec-canvas id="fsMap" canvas-id="fsMap" ec="{{ fsEc }}"></ec-canvas>
+  </view>
+
+  <!-- 点亮城市列表 -->
+  <view class="card" wx:if="{{cities.length > 0}}">
+    <view class="section-title">点亮城市（{{cities.length}}）</view>
+    <view wx:for="{{cities}}" wx:key="name" class="city-row">
+      <view class="city-dot"></view>
+      <view class="city-info">
+        <view class="city-name">{{item.name}}</view>
+        <view class="city-prov">{{item.province}}</view>
+      </view>
+      <view class="city-count">{{item.count}} 次</view>
+    </view>
+  </view>
+
+  <view wx:if="{{loading}}" class="loading-tip">统计中…</view>
+  <view wx:if="{{!loading && provinceCount === 0}}" class="loading-tip">还没有点亮的城市，去记录一次运动吧 🏃</view>
+</view>
