@@ -108,7 +108,7 @@ Page({
       icon: meta.icon || '🏃',
       iconImg: meta.iconImg || '',
       label: meta.label || item.type,
-      color: meta.color || '#2B6CF6',
+      color: '#1f2329', // 轨迹颜色统一黑色
       previewPoints: item.previewPoints || [],
       distanceKm: (item.distance / 1000).toFixed(2).replace(/\.?0+$/, ''),
       durationText: (() => { const d = formatDurationStat(item.duration); return `${d.num}${d.unit}`; })(),
