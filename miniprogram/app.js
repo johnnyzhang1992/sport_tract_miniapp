@@ -1,4 +1,5 @@
-const { request } = require('./services/api');
+const api = require('./services/api');
+const { request } = api;
 const { getToken, setToken, clearToken } = require('./services/storage');
 
 App({
@@ -6,6 +7,7 @@ App({
     userInfo: null,
     loggedIn: false,
     loginPromise: null,
+    api, // 网络层挂全局（分包页面无法 require 主包 JS，经 getApp() 访问）
   },
 
   onLaunch() {
