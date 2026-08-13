@@ -8,6 +8,12 @@
   position: absolute;
   inset: 0;
 }
+.btn-icon {
+  width: 28rpx;
+  height: 28rpx;
+  margin-right: 8rpx;
+  flex-shrink: 0;
+}
 .layer-btn {
   position: absolute;
   top: 24rpx;
@@ -17,12 +23,13 @@
   padding: 12rpx 24rpx;
   font-size: 24rpx;
   box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
+  display: flex;
+  align-items: center;
 }
 .acc-badge {
   position: absolute;
-  top: 100rpx;
-  left: 50%;
-  transform: translateX(-50%);
+  top: 24rpx;
+  left: 24rpx; /* 左上角，与右上角图层按钮对称 */
   background: rgba(44, 187, 110, 0.92);
   color: #fff;
   border-radius: 999rpx;
@@ -66,21 +73,16 @@
   align-items: center;
 }
 .action-icon {
-  font-size: 44rpx;
   width: 96rpx;
   height: 96rpx;
+  padding: 26rpx;
+  box-sizing: border-box;
   background: #fff;
   border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.12);
 }
 .action-icon.big {
-  font-size: 52rpx;
-}
-.action-icon.danger {
-  color: #ff4d4f;
+  padding: 22rpx;
 }
 .action-label {
   font-size: 22rpx;

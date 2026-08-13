@@ -40,10 +40,10 @@ module.exports = {
 
   /** 打点类型（决策 F10：可扩展） */
   MARKER_TYPES: [
-    { type: 'checkpoint', label: '打卡点', icon: '📍' },
-    { type: 'rest', label: '休息点', icon: '🛋️' },
-    { type: 'photo', label: '拍照点', icon: '📷' },
-    { type: 'note', label: '备注', icon: '📝' },
+    { type: 'checkpoint', label: '打卡点', icon: '📍', iconImg: '/assets/icons/lucide-pin.png' },
+    { type: 'rest', label: '休息点', icon: '🛋️', iconImg: '/assets/icons/lucide-coffee.png' },
+    { type: 'photo', label: '拍照点', icon: '📷', iconImg: '/assets/icons/lucide-camera.png' },
+    { type: 'note', label: '备注', icon: '📝', iconImg: '/assets/icons/lucide-note.png' },
   ],
 
   /** 同步协议参数（与后端一致） */

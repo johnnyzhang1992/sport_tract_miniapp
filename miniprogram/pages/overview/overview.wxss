@@ -64,6 +64,16 @@
   height: 100%;
   display: block;
 }
+.btn-icon {
+  width: 28rpx;
+  height: 28rpx;
+  margin-right: 8rpx;
+  flex-shrink: 0;
+}
+.close-icon {
+  width: 36rpx;
+  height: 36rpx;
+}
 .layer-btn {
   position: absolute;
   top: 24rpx;
@@ -74,6 +84,8 @@
   font-size: 24rpx;
   box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
   z-index: 2;
+  display: flex;
+  align-items: center;
 }
 .heat-legend {
   position: absolute;
@@ -152,6 +164,8 @@
   font-size: 24rpx;
   box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
   z-index: 2;
+  display: flex;
+  align-items: center;
 }
 .fullscreen-mask {
   position: fixed;
@@ -192,6 +206,8 @@
   border-radius: 999rpx;
   padding: 12rpx 24rpx;
   font-size: 24rpx;
+  display: flex;
+  align-items: center;
 }
 .traffic-btn {
   position: absolute;

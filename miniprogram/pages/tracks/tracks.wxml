@@ -16,7 +16,7 @@
 
   <!-- 轨迹列表 -->
   <view wx:if="{{items.length === 0 && !loading}}">
-    <view class="empty" wx:if="{{initialized}}">还没有运动记录，去开始第一次吧 🏃</view>
+    <view class="empty" wx:if="{{initialized}}">还没有运动记录，去开始第一次吧</view>
     <view class="empty" wx:else>加载中…</view>
   </view>
 

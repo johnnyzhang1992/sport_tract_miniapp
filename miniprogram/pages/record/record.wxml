@@ -12,7 +12,8 @@
     />
     <!-- 图层切换 -->
     <view class="layer-btn" bindtap="switchLayer">
-      {{mapType === 'standard' ? '🛰️ 卫星' : '🗺️ 标准'}}
+      <image class="btn-icon" src="{{mapType === 'standard' ? '/assets/icons/lucide-satellite.png' : '/assets/icons/lucide-map.png'}}" mode="aspectFit" />
+      <text>{{mapType === 'standard' ? '卫星' : '标准'}}</text>
     </view>
     <!-- 实时精度徽章（常驻；弱信号时橙色） -->
     <view class="acc-badge {{weakSignal ? 'acc-badge-weak' : ''}}" wx:if="{{currentAccuracy != null}}">
@@ -36,15 +37,15 @@
   <!-- 底部操作栏 -->
   <view class="action-bar">
     <view class="action-item" bindtap="openMarkerForm">
-      <view class="action-icon">📍</view>
+      <image class="action-icon" src="/assets/icons/lucide-pin.png" mode="aspectFit" />
       <view class="action-label">打点</view>
     </view>
     <view class="action-item" bindtap="togglePause">
-      <view class="action-icon big">{{paused ? '▶️' : '⏸️'}}</view>
+      <image class="action-icon big" src="{{paused ? '/assets/icons/lucide-play.png' : '/assets/icons/lucide-pause.png'}}" mode="aspectFit" />
       <view class="action-label">{{paused ? '继续' : '暂停'}}</view>
     </view>
     <view class="action-item" bindtap="openEndConfirm">
-      <view class="action-icon big danger">⏹️</view>
+      <image class="action-icon big danger" src="/assets/icons/lucide-stop-red.png" mode="aspectFit" />
       <view class="action-label">结束</view>
     </view>
   </view>

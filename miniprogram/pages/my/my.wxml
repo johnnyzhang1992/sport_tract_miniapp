@@ -3,10 +3,10 @@
   <view class="card user-card hover-card" hover-class="card-hover" hover-stay-time="100" bindtap="goProfile">
     <t-avatar
       class="user-avatar"
-      image="{{user.avatarUrl || ''}}"
+      image="{{user.avatarUrl || '/assets/icons/lucide-user.png'}}"
       size="96rpx"
     >
-      {{user.avatarText || '👤'}}
+      {{user.avatarText}}
     </t-avatar>
     <view class="user-info">
       <view class="user-name">{{user.nickname || '微信用户'}}</view>
@@ -16,7 +16,7 @@
 
   <!-- 轨迹合集 / 点亮地图 概况卡片 -->
   <view class="card overview-entry" hover-class="card-hover" hover-stay-time="100" bindtap="goOverview">
-    <view class="entry-icon">🧭</view>
+    <image class="entry-icon" src="/assets/icons/lucide-compass.png" mode="aspectFit" />
     <view class="entry-info">
       <view class="entry-title">轨迹合集</view>
       <view class="entry-sub text-muted">{{overview.totalCount}} 条轨迹 · {{overview.totalKm}} 公里</view>
@@ -25,7 +25,7 @@
   </view>
 
   <view class="card overview-entry" hover-class="card-hover" hover-stay-time="100" bindtap="goFootprint">
-    <view class="entry-icon">🌍</view>
+    <image class="entry-icon" src="/assets/icons/lucide-globe.png" mode="aspectFit" />
     <view class="entry-info">
       <view class="entry-title">点亮地图</view>
       <view class="entry-sub text-muted">点亮 {{footprint.provinceCount}} 省 · {{footprint.cityCount}} 城</view>
@@ -36,13 +36,13 @@
   <!-- 菜单 -->
   <t-cell-group class="card menu-card">
     <t-cell title="数据导入" arrow bind:click="goImport">
-      <view slot="left-icon" class="cell-icon">📥</view>
+      <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-download.png" mode="aspectFit" />
     </t-cell>
     <t-cell title="数据统计" arrow bind:click="goStats">
-      <view slot="left-icon" class="cell-icon">📈</view>
+      <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-chart.png" mode="aspectFit" />
     </t-cell>
     <t-cell title="设置" arrow bind:click="goSettings">
-      <view slot="left-icon" class="cell-icon">⚙️</view>
+      <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-settings.png" mode="aspectFit" />
     </t-cell>
   </t-cell-group>
 

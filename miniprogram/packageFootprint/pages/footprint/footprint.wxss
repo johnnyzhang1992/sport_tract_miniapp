@@ -130,6 +130,18 @@ ec-canvas {
   font-size: 24rpx;
   color: #4e5969;
   box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+}
+.btn-icon {
+  width: 28rpx;
+  height: 28rpx;
+  margin-right: 8rpx;
+  flex-shrink: 0;
+}
+.close-icon {
+  width: 36rpx;
+  height: 36rpx;
 }
 .fullscreen-mask {
   position: fixed;
@@ -151,9 +163,6 @@ ec-canvas {
   height: 64rpx;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.92);
-  color: #1f2329;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 32rpx;
+  padding: 14rpx;
+  box-sizing: border-box;
 }

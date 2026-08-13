@@ -25,5 +25,5 @@
       <view class="stat-unit">千卡</view>
     </view>
   </view>
-  <view class="pause-tip" wx:if="{{paused}}">⏸ 已暂停</view>
+  <view class="pause-tip" wx:if="{{paused}}"><image class="pause-icon" src="/assets/icons/lucide-pause.png" mode="aspectFit" />已暂停</view>
 </view>

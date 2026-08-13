@@ -1,4 +1,14 @@
 <view class="container">
+  <!-- 进行中（已暂停）运动入口 -->
+  <view wx:if="{{ongoingActivity}}" class="ongoing-bar" hover-class="ongoing-bar-hover" hover-stay-time="80" bindtap="goOngoing">
+    <image class="ongoing-icon" src="/assets/icons/lucide-pause-white.png" mode="aspectFit" />
+    <view class="ongoing-info">
+      <view class="ongoing-title">运动已暂停</view>
+      <view class="ongoing-sub text-muted">点击继续上次的运动记录</view>
+    </view>
+    <view class="ongoing-arrow">›</view>
+  </view>
+
   <!-- 欢迎语 -->
   <view class="welcome">
     <view class="welcome-title">记录每一次运动</view>
@@ -20,6 +30,29 @@
       >
         <image class="type-icon" src="{{item.iconImg}}" mode="aspectFit"></image>
         <view class="type-label">{{item.label}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 累计数据概览 -->
+  <view class="card" wx:if="{{totalOverview}}">
+    <view class="section-title">累计数据</view>
+    <view class="stats-row">
+      <view class="stat-item">
+        <view class="stat-num">{{totalOverview.trackCount}}</view>
+        <view class="stat-label">轨迹</view>
+      </view>
+      <view class="stat-item">
+        <view class="stat-num">{{totalOverview.totalKm}}</view>
+        <view class="stat-label">公里</view>
+      </view>
+      <view class="stat-item">
+        <view class="stat-num">{{totalOverview.provinceCount}}</view>
+        <view class="stat-label">点亮省份</view>
+      </view>
+      <view class="stat-item">
+        <view class="stat-num">{{totalOverview.cityCount}}</view>
+        <view class="stat-label">点亮城市</view>
       </view>
     </view>
   </view>
