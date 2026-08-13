@@ -225,8 +225,8 @@ Component({
         { label: '配速', value: paceText },
         { label: '消耗/千卡', value: `${act.calories || 0}` },
       ];
-      const top = 248;
-      const cardH = 92; // 加高：充分利用与底部时间行之间的空间
+      const top = 250;
+      const cardH = 72; // 适中高度（不过高）
       const gap = 10;
       const cardW = (width - 24 * 2 - gap * 2) / 3;
       cards.forEach((c, i) => {
@@ -242,7 +242,7 @@ Component({
         if (match) {
           const num = match[1];
           const unit = match[2];
-          ctx.font = 'bold 20px sans-serif';
+          ctx.font = 'bold 18px sans-serif';
           const numW = ctx.measureText(num).width;
           ctx.font = '12px sans-serif';
           const unitW = ctx.measureText(unit).width;
@@ -250,24 +250,24 @@ Component({
           ctx.fillStyle = '#1a4fd0';
           ctx.textAlign = 'left';
           ctx.textBaseline = 'middle';
-          ctx.font = 'bold 20px sans-serif';
-          ctx.fillText(num, startX, top + 34);
+          ctx.font = 'bold 18px sans-serif';
+          ctx.fillText(num, startX, top + 30);
           ctx.font = '12px sans-serif';
-          ctx.fillText(unit, startX + numW, top + 34);
+          ctx.fillText(unit, startX + numW, top + 30);
           ctx.textAlign = 'center';
         } else {
           // 值
           ctx.fillStyle = '#1a4fd0';
-          ctx.font = 'bold 20px sans-serif';
+          ctx.font = 'bold 18px sans-serif';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillText(c.value, x + cardW / 2, top + 34);
+          ctx.fillText(c.value, x + cardW / 2, top + 30);
         }
         // 标签
         ctx.fillStyle = '#8a93a6';
         ctx.font = '12px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(c.label, x + cardW / 2, top + 64);
+        ctx.fillText(c.label, x + cardW / 2, top + 54);
         ctx.textBaseline = 'alphabetic';
       });
 
