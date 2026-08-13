@@ -72,7 +72,7 @@
   <view class="init-mask" wx:if="{{starting || error}}">
     <view class="init-box">
       <view wx:if="{{error}}">{{error}}</view>
-      <view wx:else>{{typeIcon}} {{typeLabel}} · 定位中…</view>
+      <view wx:else><image class="title-icon" src="{{typeIconImg}}" mode="aspectFit"></image> {{typeLabel}} · 定位中…</view>
     </view>
   </view>
 </view>

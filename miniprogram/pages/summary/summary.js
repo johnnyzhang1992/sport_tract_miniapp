@@ -12,6 +12,7 @@ Page({
   data: {
     typeLabel: '',
     typeIcon: '🏃',
+    typeIconImg: '',
     stats: null,
     mapPoints: [],
     markers: [],
@@ -27,7 +28,7 @@ Page({
       return;
     }
 
-    const { finalPack, stats, typeLabel, typeIcon } = pending;
+    const { finalPack, stats, typeLabel, typeIcon, typeIconImg } = pending;
     const meta = config.MARKER_TYPES;
 
     this.finalPack = finalPack;
@@ -37,6 +38,7 @@ Page({
     this.setData({
       typeLabel,
       typeIcon,
+      typeIconImg,
       stats: {
         distanceKm: (stats.distance / 1000).toFixed(2),
         durationText: formatDuration(stats.durationSec),

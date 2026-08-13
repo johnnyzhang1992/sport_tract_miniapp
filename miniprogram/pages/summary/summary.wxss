@@ -57,3 +57,10 @@
 .btn-discard {
   margin-right: 20rpx;
 }
+
+.title-icon {
+  width: 44rpx;
+  height: 44rpx;
+  margin-right: 8rpx;
+  vertical-align: middle;
+}

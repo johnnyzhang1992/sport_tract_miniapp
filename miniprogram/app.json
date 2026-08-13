@@ -11,7 +11,8 @@
     "pages/settings/settings",
     "pages/privacy/privacy",
     "pages/overview/overview",
-    "pages/import/import"
+    "pages/import/import",
+    "pages/footprint/footprint"
   ],
   "window": {
     "navigationBarBackgroundColor": "#ffffff",

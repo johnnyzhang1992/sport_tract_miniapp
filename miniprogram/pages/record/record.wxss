@@ -100,3 +100,10 @@
   font-size: 32rpx;
   color: #666;
 }
+
+.title-icon {
+  width: 40rpx;
+  height: 40rpx;
+  margin-right: 8rpx;
+  vertical-align: middle;
+}

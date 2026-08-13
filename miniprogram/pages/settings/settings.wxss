@@ -66,3 +66,9 @@
   font-size: 40rpx;
   color: #c2c7d0;
 }
+
+.type-icon {
+  width: 48rpx;
+  height: 48rpx;
+  margin-right: 10rpx;
+}

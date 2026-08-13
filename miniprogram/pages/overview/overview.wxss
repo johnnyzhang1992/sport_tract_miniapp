@@ -209,3 +209,9 @@
   background: #2b6cf6;
   color: #fff;
 }
+
+.recent-icon {
+  width: 44rpx;
+  height: 44rpx;
+  margin-right: 20rpx;
+}

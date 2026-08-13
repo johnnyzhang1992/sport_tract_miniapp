@@ -149,3 +149,9 @@
 .import-page {
   padding-bottom: 140rpx; /* 给固定按钮让位 */
 }
+
+.type-icon {
+  width: 44rpx;
+  height: 44rpx;
+  margin: 0 10rpx;
+}

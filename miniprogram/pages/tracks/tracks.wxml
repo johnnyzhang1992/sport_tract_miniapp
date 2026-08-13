@@ -2,6 +2,7 @@
   <!-- 类型筛选（t-tabs） -->
   <t-tabs
     class="filter-tabs"
+    sticky
     value="{{activeFilter}}"
     bind:change="onTabChange"
   >
@@ -33,7 +34,7 @@
       data-id="{{item.id}}"
       bindtap="onTapItem"
     >
-      <view class="cell-icon">{{item.icon}}</view>
+      <image class="cell-icon" src="{{item.iconImg}}" mode="aspectFit"></image>
       <view class="track-info">
         <view class="track-type">{{item.label}}</view>
         <view class="track-meta">

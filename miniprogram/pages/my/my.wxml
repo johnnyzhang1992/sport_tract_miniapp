@@ -14,11 +14,27 @@
     </view>
   </view>
 
+  <!-- 轨迹合集 / 点亮地图 概况卡片 -->
+  <view class="card overview-entry" hover-class="card-hover" hover-stay-time="100" bindtap="goOverview">
+    <view class="entry-icon">🧭</view>
+    <view class="entry-info">
+      <view class="entry-title">轨迹合集</view>
+      <view class="entry-sub text-muted">{{overview.totalCount}} 条轨迹 · {{overview.totalKm}} 公里</view>
+    </view>
+    <view class="entry-arrow">›</view>
+  </view>
+
+  <view class="card overview-entry" hover-class="card-hover" hover-stay-time="100" bindtap="goFootprint">
+    <view class="entry-icon">🌍</view>
+    <view class="entry-info">
+      <view class="entry-title">点亮地图</view>
+      <view class="entry-sub text-muted">点亮 {{footprint.provinceCount}} 省 · {{footprint.cityCount}} 城</view>
+    </view>
+    <view class="entry-arrow">›</view>
+  </view>
+
   <!-- 菜单 -->
   <t-cell-group class="card menu-card">
-    <t-cell title="轨迹合集" arrow bind:click="goOverview">
-      <view slot="left-icon" class="cell-icon">🗺️</view>
-    </t-cell>
     <t-cell title="数据导入" arrow bind:click="goImport">
       <view slot="left-icon" class="cell-icon">📥</view>
     </t-cell>

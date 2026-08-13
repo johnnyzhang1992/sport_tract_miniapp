@@ -106,6 +106,7 @@ Page({
       ...item,
       id: String(item._id || item.id || ''),
       icon: meta.icon || '🏃',
+      iconImg: meta.iconImg || '',
       label: meta.label || item.type,
       distanceKm: (item.distance / 1000).toFixed(2),
       durationText: formatDuration(item.duration),

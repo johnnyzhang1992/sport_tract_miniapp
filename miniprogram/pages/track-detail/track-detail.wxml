@@ -42,7 +42,7 @@
 
   <!-- 指标 -->
   <view class="card">
-    <view class="detail-title">{{activity.icon}} {{activity.label}} <text class="edit-btn" bindtap="openEdit">✏️ 编辑</text></view>
+    <view class="detail-title"><image class="title-icon" src="{{activity.iconImg}}" mode="aspectFit"></image> {{activity.label}} <text class="edit-btn" bindtap="openEdit">✏️ 编辑</text></view>
     <view class="note-text" wx:if="{{activity.note}}">📝 {{activity.note}}</view>
     <view class="track-metrics">
       <view class="metric">
@@ -176,7 +176,7 @@
           class="edit-type-item {{editType === item.type ? 'edit-type-active' : ''}}"
           data-type="{{item.type}}"
           bindtap="onEditTypeChange"
-        >{{item.icon}} {{item.label}}</view>
+        ><image class="type-icon" src="{{item.iconImg}}" mode="aspectFit"></image> {{item.label}}</view>
       </view>
       <view class="edit-label">备注</view>
       <textarea

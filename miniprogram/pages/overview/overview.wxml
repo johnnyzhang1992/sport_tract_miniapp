@@ -77,7 +77,7 @@
     data-id="{{item.id}}"
     bindtap="onTapTrack"
   >
-    <view class="recent-icon">{{item.icon}}</view>
+    <image class="recent-icon" src="{{item.iconImg}}" mode="aspectFit"></image>
     <view class="recent-info">
       <view class="recent-name">{{item.label}} · {{item.timeText}}</view>
       <view class="recent-meta">{{item.distanceKm}} 公里 · {{item.durationText}}</view>

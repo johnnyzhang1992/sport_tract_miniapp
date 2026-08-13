@@ -11,7 +11,9 @@
   background: #fff;
   margin-bottom: 16rpx;
   border-radius: 16rpx;
-  padding: 46rpx 28rpx; /* 高度再加高 */
+  padding: 20rpx 28rpx; /* 更紧凑 */
+  height: 120rpx; /* 固定高度 */
+  box-sizing: border-box;
   box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
 }
 .track-card-hover {
@@ -59,4 +61,11 @@
   align-items: center;
   justify-content: center;
   font-size: 26rpx;
+}
+
+.cell-icon {
+  width: 44rpx;
+  height: 44rpx;
+  margin-right: 24rpx;
+  flex-shrink: 0;
 }

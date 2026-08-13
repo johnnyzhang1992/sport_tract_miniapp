@@ -32,7 +32,7 @@
         data-type="{{item.type}}"
         bindtap="onTypeChange"
       >
-        <view class="type-icon">{{item.icon}}</view>
+        <image class="type-icon" src="{{item.iconImg}}" mode="aspectFit"></image>
         <view class="type-label">{{item.label}}</view>
       </view>
     </view>

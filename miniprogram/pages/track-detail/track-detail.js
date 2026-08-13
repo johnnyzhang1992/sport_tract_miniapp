@@ -70,6 +70,7 @@ Page({
         activity: {
           ...activity,
           icon: meta.icon || '🏃',
+          iconImg: meta.iconImg || '',
           label: meta.label || activity.type,
           distanceKm: (activity.distance / 1000).toFixed(2),
           durationText: formatDuration(activity.duration),
@@ -380,6 +381,7 @@ Page({
         'activity.type': res.type,
         'activity.label': meta.label || res.type,
         'activity.icon': meta.icon || '🏃',
+        'activity.iconImg': meta.iconImg || '',
         'activity.note': res.note,
         editVisible: false,
       });
