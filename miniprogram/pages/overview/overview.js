@@ -81,7 +81,7 @@ Page({
       return {
         id: t.id,
         type: t.type,
-        color: meta.color || '#2B6CF6',
+        color: '#1f2329', // 轨迹颜色统一黑色
         points: t.points || [],
       };
     });
