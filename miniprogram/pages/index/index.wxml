@@ -33,16 +33,16 @@
         <view class="stat-label">次数</view>
       </view>
       <view class="stat-item">
-        <view class="stat-num">{{overview.today.distanceKm}}</view>
-        <view class="stat-label">公里</view>
+        <view class="stat-num">{{overview.today.distanceNum}}</view>
+        <view class="stat-label">{{overview.today.distanceUnit}}</view>
       </view>
       <view class="stat-item">
-        <view class="stat-num">{{overview.today.durationMin}}</view>
-        <view class="stat-label">分钟</view>
+        <view class="stat-num">{{overview.today.durationNum}}</view>
+        <view class="stat-label">{{overview.today.durationUnit}}</view>
       </view>
       <view class="stat-item">
-        <view class="stat-num">{{overview.today.calories}}</view>
-        <view class="stat-label">千卡</view>
+        <view class="stat-num">{{overview.today.calorieNum}}</view>
+        <view class="stat-label">{{overview.today.calorieUnit}}</view>
       </view>
     </view>
   </view>
