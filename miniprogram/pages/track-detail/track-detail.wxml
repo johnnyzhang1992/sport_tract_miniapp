@@ -74,7 +74,10 @@
 
   <!-- 单段明细（每公里） -->
   <view class="card" wx:if="{{displaySegs.length > 0}}">
-    <view class="detail-title">单段明细 <text class="text-muted" style="font-size:22rpx">（每公里）</text></view>
+    <view class="seg-head">
+      <view class="detail-title">单段明细 <text class="text-muted" style="font-size:22rpx">（每公里）</text></view>
+      <view class="seg-more" wx:if="{{kmSegs.length > 5}}" bindtap="openAllSegs">查看全部 ›</view>
+    </view>
     <view wx:for="{{displaySegs}}" wx:key="idx" class="seg-row">
       <view class="seg-idx {{item.partial ? 'seg-idx-partial' : ''}}">{{item.partial ? '余' : item.idx}}</view>
       <view class="seg-info">
@@ -85,7 +88,6 @@
         <view class="seg-pace">配速 {{item.paceText}}</view>
       </view>
     </view>
-    <view class="more-btn" wx:if="{{kmSegs.length > 5}}" bindtap="openAllSegs">查看全部 {{kmSegs.length}} 段 ›</view>
   </view>
 
   <!-- 单段全部弹窗 -->
