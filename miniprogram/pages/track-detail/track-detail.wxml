@@ -78,6 +78,41 @@
     <stat-chart data="{{altitudeChart}}" type="line" unit="m" height="{{150}}" empty-text="暂无海拔数据" />
   </view>
 
+  <!-- 单段明细（每公里） -->
+  <view class="card" wx:if="{{displaySegs.length > 0}}">
+    <view class="detail-title">单段明细 <text class="text-muted" style="font-size:22rpx">（每公里）</text></view>
+    <view wx:for="{{displaySegs}}" wx:key="idx" class="seg-row">
+      <view class="seg-idx {{item.partial ? 'seg-idx-partial' : ''}}">{{item.partial ? '余' : item.idx}}</view>
+      <view class="seg-info">
+        <view class="seg-meta">
+          <text class="seg-time">{{item.durationText}}</text>
+          <text class="seg-dist">{{item.distKm.toFixed(2)}} 公里{{item.partial ? '（不足 1km）' : ''}}</text>
+        </view>
+        <view class="seg-pace">配速 {{item.paceText}}</view>
+      </view>
+    </view>
+    <view class="more-btn" wx:if="{{kmSegs.length > 10}}" bindtap="openAllSegs">查看全部 {{kmSegs.length}} 段 ›</view>
+  </view>
+
+  <!-- 单段全部弹窗 -->
+  <t-popup visible="{{segsVisible}}" placement="bottom" bind:visible-change="onSegsVisibleChange">
+    <view class="segs-panel">
+      <view class="segs-title">单段明细（{{kmSegs.length}} 段）</view>
+      <scroll-view scroll-y class="segs-scroll">
+        <view wx:for="{{kmSegs}}" wx:key="idx" class="seg-row">
+          <view class="seg-idx {{item.partial ? 'seg-idx-partial' : ''}}">{{item.partial ? '余' : item.idx}}</view>
+          <view class="seg-info">
+            <view class="seg-meta">
+              <text class="seg-time">{{item.durationText}}</text>
+              <text class="seg-dist">{{item.distKm.toFixed(2)}} 公里{{item.partial ? '（不足 1km）' : ''}}</text>
+            </view>
+            <view class="seg-pace">配速 {{item.paceText}}</view>
+          </view>
+        </view>
+      </scroll-view>
+    </view>
+  </t-popup>
+
   <!-- 打点时间线（点击可编辑） -->
   <view class="card" wx:if="{{markerList.length > 0}}">
     <view class="detail-title">打点 ({{markerList.length}})</view>

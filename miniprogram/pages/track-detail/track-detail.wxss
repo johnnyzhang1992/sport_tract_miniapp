@@ -232,3 +232,81 @@
   font-size: 26rpx;
   margin-bottom: 28rpx;
 }
+
+/* 单段明细 */
+.seg-row {
+  display: flex;
+  align-items: center;
+  padding: 18rpx 0;
+  border-bottom: 1rpx solid #f2f3f5;
+}
+.seg-row:last-child {
+  border-bottom: none;
+}
+.seg-idx {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 50%;
+  background: #e8f0ff;
+  color: #2b6cf6;
+  font-size: 26rpx;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 20rpx;
+  flex-shrink: 0;
+}
+.seg-idx-partial {
+  background: #fff3e0;
+  color: #ff9800;
+}
+.seg-info {
+  flex: 1;
+  min-width: 0;
+}
+.seg-meta {
+  display: flex;
+  align-items: baseline;
+}
+.seg-time {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1f2329;
+  margin-right: 16rpx;
+}
+.seg-dist {
+  font-size: 22rpx;
+  color: #8a93a6;
+}
+.seg-pace {
+  font-size: 24rpx;
+  color: #4e5969;
+  margin-top: 4rpx;
+}
+.more-btn {
+  text-align: center;
+  color: #2b6cf6;
+  font-size: 26rpx;
+  padding: 20rpx 0 4rpx;
+}
+
+/* 全部单段弹窗 */
+.segs-panel {
+  background: #fff;
+  border-radius: 24rpx 24rpx 0 0;
+  padding: 28rpx 28rpx calc(28rpx + env(safe-area-inset-bottom));
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+}
+.segs-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1f2329;
+  text-align: center;
+  padding-bottom: 20rpx;
+}
+.segs-scroll {
+  max-height: 56vh;
+}
