@@ -77,7 +77,13 @@ Component({
       const minV = Math.min(...values);
       const span = maxV - minV || 1;
       ctx.font = '9px sans-serif';
-      const labels = [maxV, minV + span / 2, minV];
+      const labels = [
+        maxV,
+        minV + span * 0.75,
+        minV + span / 2,
+        minV + span * 0.25,
+        minV,
+      ];
       // Y 轴刻度区宽度按最大刻度文字动态计算（防 devtools/长数值溢出画面左缘）
       const labelTexts = labels.map((v) => this.formatValue(v));
       const maxLabelW = Math.max(...labelTexts.map((t) => ctx.measureText(t).width));
@@ -85,11 +91,11 @@ Component({
       const chartW = width - padLeft - padRight;
       const chartH = height - padTop - padBottom;
 
-      // 3 条水平网格 + Y 轴刻度（max / mid / min）
+      // 5 条水平网格 + Y 轴刻度（四等分：max / 3/4 / mid / 1/4 / min）
       ctx.textAlign = 'right';
       ctx.textBaseline = 'middle';
       labels.forEach((v, i) => {
-        const y = padTop + (chartH * i) / 2;
+        const y = padTop + (chartH * i) / 4;
         // 网格线
         ctx.strokeStyle = i === 0 ? '#e8e8e8' : '#f2f2f2';
         ctx.lineWidth = 1;
