@@ -301,7 +301,7 @@
 .segs-panel {
   background: #fff;
   border-radius: 24rpx 24rpx 0 0;
-  padding: 28rpx 28rpx calc(28rpx + env(safe-area-inset-bottom));
+  padding: 28rpx 28rpx 0; /* 安全区移到滚动列表内 */
   max-height: 75vh;
 }
 .segs-title {
@@ -313,4 +313,6 @@
 }
 .segs-scroll {
   height: 55vh; /* 固定高度，scroll-view 滚动可靠，不产生底部空白 */
+  padding-bottom: calc(28rpx + env(safe-area-inset-bottom)); /* 安全区在列表内：最后一项可滚到 home 条上方 */
+  box-sizing: border-box;
 }
