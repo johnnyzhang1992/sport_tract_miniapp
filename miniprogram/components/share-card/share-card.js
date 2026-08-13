@@ -217,14 +217,13 @@ Component({
 
     /** 指标独立卡片：时长 / 配速 / 消耗 */
     drawStatsCards(ctx, width, height, act) {
-      // 配速兼容：详情页 activity 是 paceValue+paceUnit 拆分字段，或 summary 的 paceText
-      const paceText =
-        act.paceText ||
-        (act.paceValue ? `${act.paceValue}${act.paceUnit || ''}` : '—');
+      // 配速：去掉 /公里 单位（只显示数值，如 5'30"）；消耗单位移到 label
+      const paceFull = act.paceText || (act.paceValue ? `${act.paceValue}${act.paceUnit || ''}` : '—');
+      const paceText = String(paceFull).replace(/\s*\/公里.*$/, '');
       const cards = [
         { label: '时长', value: act.durationText || '—' },
         { label: '配速', value: paceText },
-        { label: '消耗', value: `${act.calories || 0} 千卡` },
+        { label: '消耗/千卡', value: `${act.calories || 0}` },
       ];
       const top = 248;
       const cardH = 66;
