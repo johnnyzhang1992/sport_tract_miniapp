@@ -298,9 +298,7 @@
   background: #fff;
   border-radius: 24rpx 24rpx 0 0;
   padding: 28rpx 28rpx calc(28rpx + env(safe-area-inset-bottom));
-  max-height: 70vh;
-  display: flex;
-  flex-direction: column;
+  max-height: 75vh;
 }
 .segs-title {
   font-size: 30rpx;
@@ -310,5 +308,5 @@
   padding-bottom: 20rpx;
 }
 .segs-scroll {
-  max-height: 56vh;
+  height: 55vh; /* 固定高度，scroll-view 滚动可靠，不产生底部空白 */
 }
