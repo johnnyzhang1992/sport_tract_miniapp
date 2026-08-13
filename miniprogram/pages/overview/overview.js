@@ -81,7 +81,7 @@ Page({
       return {
         id: t.id,
         type: t.type,
-        color: '#1f2329', // 轨迹颜色统一黑色
+        color: '#4e5969', // 轨迹颜色统一深灰（黑色偏淡）
         points: t.points || [],
       };
     });
