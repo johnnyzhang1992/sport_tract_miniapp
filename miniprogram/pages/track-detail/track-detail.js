@@ -99,7 +99,7 @@ Page({
       });
       // 单段明细（每公里分段；默认展示前 10）
       const segs = this.computeKmSegments(activity.trackPoints || []);
-      this.setData({ kmSegs: segs, displaySegs: segs.slice(0, 10) });
+      this.setData({ kmSegs: segs, displaySegs: segs.slice(0, 5) });
     } catch (e) {
       wx.showToast({ title: '加载详情失败', icon: 'none' });
       console.error(e);
