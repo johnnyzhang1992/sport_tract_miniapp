@@ -1,4 +1,3 @@
-const api = require('../../services/api');
 const echarts = require('../../components/ec-canvas/echarts');
 
 
@@ -106,14 +105,14 @@ Page({
       // 省界地图数据（放后端，按需拉取）
       if (!this._chinaMap) {
         try {
-          const map = await api.get('/geo/china-map');
+          const map = await getApp().globalData.api.get('/geo/china-map');
           this._chinaMap = map;
           echarts.registerMap('china', map);
         } catch (e) {
           console.error('加载地图数据失败', e);
         }
       }
-      const res = await api.get('/stats/footprint');
+      const res = await getApp().globalData.api.get('/stats/footprint');
       this.setData({
         provinceCount: res.provinceCount,
         cityCount: res.cityCount,
