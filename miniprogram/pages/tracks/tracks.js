@@ -108,6 +108,8 @@ Page({
       icon: meta.icon || '🏃',
       iconImg: meta.iconImg || '',
       label: meta.label || item.type,
+      color: meta.color || '#2B6CF6',
+      previewPoints: item.previewPoints || [],
       distanceKm: (item.distance / 1000).toFixed(2),
       durationText: formatDuration(item.duration),
       startTimeText: new Date(item.startTime).toLocaleString('zh-CN', {
