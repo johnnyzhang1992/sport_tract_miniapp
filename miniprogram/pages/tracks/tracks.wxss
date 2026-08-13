@@ -51,6 +51,12 @@
   font-size: 24rpx;
   font-weight: 500;
   color: #1f2329;
+  margin-right: auto; /* 把时长推到行右侧 */
+}
+.track-duration {
+  font-size: 22rpx;
+  color: #8a93a6;
+  flex-shrink: 0;
 }
 .track-foot {
   display: flex;
