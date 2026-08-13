@@ -11,7 +11,7 @@
   background: #fff;
   margin-bottom: 16rpx;
   border-radius: 16rpx;
-  padding: 36rpx 28rpx; /* 高度更高 */
+  padding: 46rpx 28rpx; /* 高度再加高 */
   box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
 }
 .track-card-hover {
