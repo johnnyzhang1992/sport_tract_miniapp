@@ -95,14 +95,16 @@
     <view class="segs-panel">
       <view class="segs-title">单段明细（{{kmSegs.length}} 段）</view>
       <scroll-view scroll-y class="segs-scroll">
-        <view wx:for="{{kmSegs}}" wx:key="idx" class="seg-row">
-          <view class="seg-idx {{item.partial ? 'seg-idx-partial' : ''}}">{{item.partial ? '余' : item.idx}}</view>
-          <view class="seg-info">
-            <view class="seg-meta">
-              <text class="seg-time">{{item.durationText}}</text>
-              <text class="seg-dist">{{item.distKm.toFixed(2)}} 公里{{item.partial ? '（不足 1km）' : ''}}</text>
+        <view class="segs-list">
+          <view wx:for="{{kmSegs}}" wx:key="idx" class="seg-row">
+            <view class="seg-idx {{item.partial ? 'seg-idx-partial' : ''}}">{{item.partial ? '余' : item.idx}}</view>
+            <view class="seg-info">
+              <view class="seg-meta">
+                <text class="seg-time">{{item.durationText}}</text>
+                <text class="seg-dist">{{item.distKm.toFixed(2)}} 公里{{item.partial ? '（不足 1km）' : ''}}</text>
+              </view>
+              <view class="seg-pace">配速 {{item.paceText}}</view>
             </view>
-            <view class="seg-pace">配速 {{item.paceText}}</view>
           </view>
         </view>
       </scroll-view>
