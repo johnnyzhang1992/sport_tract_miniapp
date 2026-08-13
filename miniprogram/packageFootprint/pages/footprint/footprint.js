@@ -1,6 +1,6 @@
 const api = require('../../services/api');
 const echarts = require('../../components/ec-canvas/echarts');
-const provincesMap = require('./provinces-map.js');
+
 
 /** 地图配置：点亮省高亮（visualMap 按 value 深浅），未点亮灰 */
 function getMapOption(data) {
@@ -62,8 +62,10 @@ Page({
       comp.init((canvas, width, height, dpr) => {
         const chart = echarts.init(canvas, null, { width, height, devicePixelRatio: dpr });
         canvas.setChart(chart);
-        echarts.registerMap('china', provincesMap);
-        chart.setOption(getMapOption(this._mapData || []));
+        if (this._chinaMap) {
+          echarts.registerMap('china', this._chinaMap);
+          chart.setOption(getMapOption(this._mapData || []));
+        }
         this.fsChart = chart;
       });
     }
@@ -80,8 +82,10 @@ Page({
       comp.init((canvas, width, height, dpr) => {
         const chart = echarts.init(canvas, null, { width, height, devicePixelRatio: dpr });
         canvas.setChart(chart);
-        echarts.registerMap('china', provincesMap);
-        chart.setOption(getMapOption(this._mapData || []));
+        if (this._chinaMap) {
+          echarts.registerMap('china', this._chinaMap);
+          chart.setOption(getMapOption(this._mapData || []));
+        }
         this.chart = chart;
       });
     }
@@ -99,6 +103,16 @@ Page({
     }
     this.setData({ loading: true });
     try {
+      // 省界地图数据（放后端，按需拉取）
+      if (!this._chinaMap) {
+        try {
+          const map = await api.get('/geo/china-map');
+          this._chinaMap = map;
+          echarts.registerMap('china', map);
+        } catch (e) {
+          console.error('加载地图数据失败', e);
+        }
+      }
       const res = await api.get('/stats/footprint');
       this.setData({
         provinceCount: res.provinceCount,

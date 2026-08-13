@@ -63,7 +63,7 @@ Page({
 
   /** 点亮地图（足迹省份/城市统计） */
   goFootprint() {
-    wx.navigateTo({ url: '/pages/footprint/footprint' });
+    wx.navigateTo({ url: '/packageFootprint/pages/footprint/footprint' });
   },
 
   goStats() {
