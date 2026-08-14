@@ -81,19 +81,16 @@ Component({
             ctx.scale(dpr, dpr);
             ctx.clearRect(0, 0, width, height);
 
-            // 背景
-            const bg = ctx.createLinearGradient(0, 0, 0, height);
-            bg.addColorStop(0, '#2b6cf6');
-            bg.addColorStop(1, '#1a4fd0');
-            ctx.fillStyle = bg;
+            // 背景（浅色：白底黑字）
+            ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, width, height);
 
-            // 标题
+            // 标题（距顶部与底部时间距底一致，去加粗）
             const act = this.data.activity || {};
-            ctx.fillStyle = '#fff';
-            ctx.font = 'bold 20px sans-serif';
+            ctx.fillStyle = 'rgba(31,35,41,0.7)';
+            ctx.font = '13px sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText(`${act.label || '运动'} · ${act.distanceKm || '0.00'} 公里`, width / 2, 42);
+            ctx.fillText(`${act.label || '运动'} · ${act.distanceKm || '0.00'} 公里`, width / 2, 20);
 
             // 轨迹（大块完整展示）
             this.drawTrack(ctx, width, height);
@@ -118,10 +115,10 @@ Component({
     drawTrack(ctx, width, height) {
       const pts = this.data.mapPoints || [];
       if (pts.length < 2) return;
-      // 轨迹区域：标题下到指标卡上方，尽量占满
+      // 轨迹区域：标题下到指标卡上方，尽量占满（高度调高）
       const pad = 24;
       const top = 62;
-      const bottom = 232;
+      const bottom = 240;
       const lats = pts.map((p) => p.lat);
       const lngs = pts.map((p) => p.lng);
       let minLat = Math.min(...lats);
@@ -138,81 +135,26 @@ Component({
       const sLat = maxLat - minLat || 0.001;
       const sLng = maxLng - minLng || 0.001;
 
-      // 轨迹卡底
-      ctx.fillStyle = 'rgba(255,255,255,0.16)';
-      ctx.strokeStyle = 'rgba(255,255,255,0.25)';
-      ctx.lineWidth = 1;
-      const card = { x: pad / 2, y: top, w: width - pad, h: bottom - top };
-      ctx.beginPath();
-      roundRectPath(ctx, card.x, card.y, card.w, card.h, 16);
-      ctx.fill();
+      // 轨迹区域（白底无卡底背景，直接画轨迹线）
+      const innerPad = 20;
+      const plotLeft = pad / 2 + innerPad;
+      const plotRight = width - pad / 2 - innerPad;
+      const plotTop = top + innerPad;
+      const plotBottom = bottom - innerPad;
 
-      // 轨迹投影区：在卡片内部再内缩，保证线/端点/标签不溢出卡片
-      const innerPad = 14;
-      const plotLeft = card.x + innerPad;
-      const plotRight = card.x + card.w - innerPad;
-      const plotTop = card.y + innerPad;
-      const plotBottom = card.y + card.h - innerPad;
-
-      // 轨迹线：白色底层 + 海拔彩色主体（决策：海报与详情页一致，按海拔变色）
+      // 轨迹线：单色实线（与轨迹卡片缩略图一致：#808080 中灰），无起终点、无海拔着色
       const px = (p) => plotLeft + ((p.lng - minLng) / sLng) * (plotRight - plotLeft);
       const py = (p) => plotBottom - ((p.lat - minLat) / sLat) * (plotBottom - plotTop);
       ctx.lineJoin = 'round';
       ctx.lineCap = 'round';
-      // 白色底层（保证与蓝背景对比）
-      ctx.strokeStyle = 'rgba(255,255,255,0.85)';
-      ctx.lineWidth = 6;
+      ctx.strokeStyle = '#808080';
+      ctx.lineWidth = 1.5;
       ctx.beginPath();
       pts.forEach((p, i) => {
         if (i === 0) ctx.moveTo(px(p), py(p));
         else ctx.lineTo(px(p), py(p));
       });
       ctx.stroke();
-      // 海拔彩色主体：逐段绘制（相邻点平均海拔 → 色带）
-      const alts = pts.map((p) => p.altitude).filter((a) => a != null);
-      const minAlt = alts.length >= 2 ? Math.min(...alts) : null;
-      const maxAlt = alts.length >= 2 ? Math.max(...alts) : null;
-      const spanAlt = maxAlt != null && maxAlt > minAlt ? maxAlt - minAlt : 1;
-      ctx.lineWidth = 3;
-      for (let i = 1; i < pts.length; i++) {
-        const a = pts[i - 1];
-        const b = pts[i];
-        const avgAlt =
-          a.altitude != null || b.altitude != null
-            ? ((a.altitude ?? b.altitude) + (b.altitude ?? a.altitude)) / 2
-            : null;
-        let color = '#FFFFFF';
-        if (avgAlt != null && minAlt != null) {
-          const ratio = Math.max(0, Math.min(0.999, (avgAlt - minAlt) / spanAlt));
-          color = ALTITUDE_COLORS[Math.floor(ratio * ALTITUDE_COLORS.length)];
-        }
-        ctx.strokeStyle = color;
-        ctx.beginPath();
-        ctx.moveTo(px(a), py(a));
-        ctx.lineTo(px(b), py(b));
-        ctx.stroke();
-      }
-
-      // 起终点圆点 + 标签
-      const first = pts[0];
-      const last = pts[pts.length - 1];
-      const fX = plotLeft + ((first.lng - minLng) / sLng) * (plotRight - plotLeft);
-      const fY = plotBottom - ((first.lat - minLat) / sLat) * (plotBottom - plotTop);
-      const lX = plotLeft + ((last.lng - minLng) / sLng) * (plotRight - plotLeft);
-      const lY = plotBottom - ((last.lat - minLat) / sLat) * (plotBottom - plotTop);
-      ctx.fillStyle = '#fff';
-      ctx.beginPath();
-      ctx.arc(fX, fY, 9, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(lX, lY, 9, 0, Math.PI * 2);
-      ctx.fill();
-      // 起/终标签：深蓝底白字（对比强）
-      ctx.fillStyle = '#0d2b7a';
-      ctx.font = 'bold 12px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('起', fX, fY + 4);
-      ctx.fillText('终', lX, lY + 4);
     },
 
     /** 指标独立卡片：时长 / 配速 / 消耗 */
@@ -225,62 +167,58 @@ Component({
         { label: '配速', value: paceText },
         { label: '消耗/千卡', value: `${act.calories || 0}` },
       ];
-      const top = 250;
-      const cardH = 72; // 适中高度（不过高）
+      const top = 304; // 再往下移
+      const cardH = 56; // 内边距减小
       const gap = 10;
       const cardW = (width - 24 * 2 - gap * 2) / 3;
       cards.forEach((c, i) => {
         const x = 24 + i * (cardW + gap);
-        // 白底圆角卡
-        ctx.fillStyle = 'rgba(255,255,255,0.92)';
-        ctx.beginPath();
-        roundRectPath(ctx, x, top, cardW, cardH, 12);
-        ctx.fill();
+        // 去掉卡片背景色（透明，直接用海报背景）
 
         // 配速：数值大字 + /公里 单位小字（水平整体居中）
         const match = c.label === '配速' ? /^(.*?)(\/.*)$/.exec(String(c.value)) : null;
         if (match) {
           const num = match[1];
           const unit = match[2];
-          ctx.font = 'bold 18px sans-serif';
+          ctx.font = 'bold 15px sans-serif';
           const numW = ctx.measureText(num).width;
-          ctx.font = '12px sans-serif';
+          ctx.font = '11px sans-serif';
           const unitW = ctx.measureText(unit).width;
           const startX = x + cardW / 2 - (numW + unitW) / 2;
-          ctx.fillStyle = '#1a4fd0';
+          ctx.fillStyle = 'rgba(31,35,41,0.7)';
           ctx.textAlign = 'left';
           ctx.textBaseline = 'middle';
-          ctx.font = 'bold 18px sans-serif';
-          ctx.fillText(num, startX, top + 30);
-          ctx.font = '12px sans-serif';
-          ctx.fillText(unit, startX + numW, top + 30);
+          ctx.font = '15px sans-serif';
+          ctx.fillText(num, startX, top + 22);
+          ctx.font = '11px sans-serif';
+          ctx.fillText(unit, startX + numW, top + 22);
           ctx.textAlign = 'center';
         } else {
           // 值
-          ctx.fillStyle = '#1a4fd0';
-          ctx.font = 'bold 18px sans-serif';
+          ctx.fillStyle = 'rgba(31,35,41,0.7)';
+          ctx.font = '15px sans-serif';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillText(c.value, x + cardW / 2, top + 30);
+          ctx.fillText(c.value, x + cardW / 2, top + 22);
         }
-        // 标签
-        ctx.fillStyle = '#8a93a6';
-        ctx.font = '12px sans-serif';
+        // 标签（颜色与数值/底部一致）
+        ctx.fillStyle = 'rgba(31,35,41,0.7)';
+        ctx.font = '11px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(c.label, x + cardW / 2, top + 54);
+        ctx.fillText(c.label, x + cardW / 2, top + 40);
         ctx.textBaseline = 'alphabetic';
       });
 
       // 品牌行（底部）：左时间 + 右 @小迹一下（水平居右）
       const brandY = height - 20;
       if (act.startTimeText) {
-        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        ctx.fillStyle = 'rgba(31,35,41,0.7)';
         ctx.font = '11px sans-serif';
         ctx.textAlign = 'left';
         ctx.fillText(act.startTimeText, 24, brandY);
       }
-      ctx.fillStyle = 'rgba(255,255,255,0.85)';
-      ctx.font = '13px sans-serif';
+      ctx.fillStyle = 'rgba(31,35,41,0.7)'; // 与左侧日期一致
+      ctx.font = '11px sans-serif'; // 与左侧日期一致
       ctx.textAlign = 'right';
       ctx.fillText('@小迹一下', width - 14, brandY);
     },

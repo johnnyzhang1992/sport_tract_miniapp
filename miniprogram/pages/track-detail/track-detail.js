@@ -14,6 +14,7 @@ Page({
   data: {
     id: '',
     activity: null,
+    activityTypes: config.ACTIVITY_TYPES, // 编辑弹窗运动类型选项
     mapPoints: [],
     markers: [], // 打点 markers（地图）
     markerList: [], // 打点时间线（带展示字段）
