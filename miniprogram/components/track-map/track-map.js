@@ -25,6 +25,10 @@ Component({
     altitudeColor: { type: Boolean, value: false },
     /** 起点/终点标记（起/终 文字标签） */
     showStartEnd: { type: Boolean, value: false },
+    /** 显示高频路线图例（overview 合集模式） */
+    showHeatLegend: { type: Boolean, value: false },
+    /** POI 按钮放右上角（图层按钮左侧）——全屏地图用 */
+    poiTopRight: { type: Boolean, value: false },
   },
 
   data: {
@@ -33,6 +37,7 @@ Component({
     heatCircles: [],
     centerLat: 31.2304,
     centerLng: 121.4737,
+    enablePoi: true, // 是否展示 POI 标注（地名/道路名）
   },
 
   observers: {
@@ -307,6 +312,11 @@ Component({
       this.setData({
         mapType: this.data.mapType === 'standard' ? 'satellite' : 'standard',
       });
+    },
+
+    /** 切换 POI 标注显示 */
+    togglePoi() {
+      this.setData({ enablePoi: !this.data.enablePoi });
     },
 
     /** 合集模式：多轨迹 polyline（按类型配色 + 高频路线加粗高亮） */

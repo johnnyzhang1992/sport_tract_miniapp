@@ -87,26 +87,6 @@
   display: flex;
   align-items: center;
 }
-.heat-legend {
-  position: absolute;
-  bottom: 24rpx;
-  left: 24rpx;
-  background: rgba(255, 255, 255, 0.92);
-  border-radius: 999rpx;
-  padding: 8rpx 20rpx;
-  font-size: 22rpx;
-  color: #4e5969;
-  display: flex;
-  align-items: center;
-  z-index: 2;
-}
-.heat-legend-dot {
-  width: 18rpx;
-  height: 18rpx;
-  border-radius: 50%;
-  background: rgba(255, 152, 0, 0.55);
-  margin-right: 10rpx;
-}
 
 .recent-title {
   font-size: 28rpx;

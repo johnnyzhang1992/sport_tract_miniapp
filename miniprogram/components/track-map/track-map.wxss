@@ -1,4 +1,72 @@
+.map-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
 .track-map {
   width: 100%;
   height: 100%;
+}
+/* POI 切换按钮（默认：右下角，全屏按钮左边） */
+.poi-btn {
+  position: absolute;
+  bottom: 24rpx;
+  right: 180rpx; /* 全屏按钮（right 24）左边，适中间距 */
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 999rpx;
+  padding: 10rpx 22rpx;
+  font-size: 24rpx;
+  color: #4e5969;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
+}
+/* record 模式：右上角（图层按钮下方），避开底部操作栏 */
+.poi-btn-top {
+  bottom: auto;
+  right: 24rpx;
+  top: 90rpx;
+}
+/* overview 模式：右下角贴右缘（无全屏按钮让位） */
+.poi-btn-overview {
+  right: 24rpx;
+}
+/* 全屏地图：右上角，图层按钮（right 24，宽约 140）左侧，留足间距 */
+.poi-btn-top-right {
+  bottom: auto;
+  top: 24rpx;
+  right: 185rpx;
+}
+.poi-btn-active {
+  background: #2b6cf6;
+  color: #fff;
+}
+.poi-icon {
+  width: 26rpx;
+  height: 26rpx;
+  margin-right: 6rpx;
+}
+
+/* 高频路线图例（与 POI 同一容器：底部对齐，POI 左边） */
+.heat-legend {
+  position: absolute;
+  bottom: 24rpx;
+  right: 170rpx; /* 标注按钮（right 24，含图标宽约 130）左边，适中间距 */
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 999rpx;
+  padding: 10rpx 22rpx;
+  font-size: 24rpx; /* 与 POI 按钮字号一致 */
+  color: #4e5969;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
+}
+.heat-legend-dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  background: #ff9800;
+  margin-right: 10rpx;
 }
