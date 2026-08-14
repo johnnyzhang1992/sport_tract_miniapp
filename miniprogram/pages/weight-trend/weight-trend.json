@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "体重趋势",
+  "usingComponents": {
+    "stat-chart": "/components/stat-chart/stat-chart"
+  }
+}

@@ -18,8 +18,8 @@
   padding: 8rpx 12rpx;
 }
 .cell-icon {
-  width: 40rpx;
-  height: 40rpx;
+  width: 38rpx;
+  height: 38rpx;
   margin-right: 8rpx;
   flex-shrink: 0;
 }
@@ -35,8 +35,8 @@
   margin-bottom: 16rpx;
 }
 .entry-icon {
-  width: 56rpx;
-  height: 56rpx;
+  width: 50rpx;
+  height: 50rpx;
   margin-right: 24rpx;
   flex-shrink: 0;
 }
@@ -46,7 +46,6 @@
 }
 .entry-title {
   font-size: 30rpx;
-  font-weight: 600;
   color: #1f2329;
 }
 .entry-sub {
@@ -58,4 +57,18 @@
 .entry-arrow {
   font-size: 40rpx;
   color: #c2c7d0;
+}
+
+/* 身高体重展示 */
+.body-data {
+  margin-top: 10rpx;
+  display: flex;
+  gap: 20rpx;
+}
+.body-item {
+  font-size: 22rpx;
+  color: #8a93a6;
+  background: #f2f3f5;
+  border-radius: 999rpx;
+  padding: 4rpx 16rpx;
 }

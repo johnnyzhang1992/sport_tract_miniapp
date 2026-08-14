@@ -145,10 +145,11 @@ Component({
       const query = wx.createSelectorQuery().in(this)
       query
         .select('.ec-canvas')
-        .fields({ node: true, size: true })
+        .fields({ node: true, size: true, rect: true })
         .exec(res => {
           const canvasNode = res[0].node
           this.canvasNode = canvasNode
+          this._rect = res[0].rect || null // 缓存 canvas 位置（触摸坐标兜底）
 
           const canvasDpr = wx.getSystemInfoSync().pixelRatio
           const canvasWidth = res[0].width
@@ -213,9 +214,24 @@ Component({
       }
     },
 
+    _fixTouch(touch) {
+      // 兜底：部分环境（开发者工具模拟/个别机型）touch.x/y 缺失，用 clientX/clientY - canvas 位置换算
+      let x = touch && touch.x;
+      let y = touch && touch.y;
+      const r = this._rect;
+      if ((x == null || isNaN(x)) && touch && touch.clientX != null && r) {
+        x = touch.clientX - r.left;
+      }
+      if ((y == null || isNaN(y)) && touch && touch.clientY != null && r) {
+        y = touch.clientY - r.top;
+      }
+      return { x: x || 0, y: y || 0 };
+    },
+
     touchStart(e) {
       if (this.chart && e.touches.length > 0) {
-        var touch = e.touches[0];
+        this._lastTouchMoveTs = 0; // 手势开始重置节流，立即响应
+        var touch = this._fixTouch(e.touches[0]);
         var handler = this.chart.getZr().handler;
         handler.dispatch('mousedown', {
           zrX: touch.x,
@@ -237,7 +253,11 @@ Component({
 
     touchMove(e) {
       if (this.chart && e.touches.length > 0) {
-        var touch = e.touches[0];
+        // 节流：限制处理频率（40ms ≈ 25fps），降低拖拽/缩放灵敏度，避免频繁重绘
+        const now = Date.now();
+        if (this._lastTouchMoveTs && now - this._lastTouchMoveTs < 40) return;
+        this._lastTouchMoveTs = now;
+        var touch = this._fixTouch(e.touches[0]);
         var handler = this.chart.getZr().handler;
         handler.dispatch('mousemove', {
           zrX: touch.x,
@@ -252,7 +272,7 @@ Component({
 
     touchEnd(e) {
       if (this.chart) {
-        const touch = e.changedTouches ? e.changedTouches[0] : {};
+        const touch = this._fixTouch(e.changedTouches ? e.changedTouches[0] : {});
         var handler = this.chart.getZr().handler;
         handler.dispatch('mouseup', {
           zrX: touch.x,
@@ -279,6 +299,14 @@ function wrapTouch(event) {
     const touch = event.touches[i];
     touch.offsetX = touch.x;
     touch.offsetY = touch.y;
+  }
+  // 微信小程序事件对象没有 preventDefault / stopPropagation，zrender 手势处理会调用，
+  // 补空实现避免 TypeError
+  if (typeof event.preventDefault !== 'function') {
+    event.preventDefault = () => {};
+  }
+  if (typeof event.stopPropagation !== 'function') {
+    event.stopPropagation = () => {};
   }
   return event;
 }

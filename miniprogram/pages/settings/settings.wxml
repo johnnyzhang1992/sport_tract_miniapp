@@ -34,6 +34,15 @@
     <t-switch value="{{settings.highAccuracy}}" bind:change="onHighAccuracyChange" />
   </view>
 
+  <!-- 展示身高体重 -->
+  <view class="card switch-row">
+    <view class="switch-info">
+      <view class="switch-title">展示身高体重</view>
+      <view class="text-muted">在个人中心展示您的身高与体重</view>
+    </view>
+    <t-switch value="{{settings.showBodyData}}" bind:change="onShowBodyDataChange" />
+  </view>
+
   <!-- 隐私政策 -->
   <view class="card link-row" bindtap="openPrivacy">
     <view class="switch-info">

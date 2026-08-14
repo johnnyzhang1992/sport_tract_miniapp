@@ -109,3 +109,18 @@
   margin-right: 8rpx;
   vertical-align: middle;
 }
+
+/* 权限错误：重新授权按钮 */
+.auth-btn {
+  margin-top: 24rpx;
+  background: #2b6cf6;
+  color: #fff;
+  border-radius: 999rpx;
+  font-size: 28rpx;
+  padding: 12rpx 48rpx;
+  line-height: 1.6;
+  border: none;
+}
+.auth-btn::after {
+  border: none;
+}

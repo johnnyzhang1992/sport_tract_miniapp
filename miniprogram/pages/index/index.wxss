@@ -1,5 +1,10 @@
 .welcome {
-  padding: 20rpx 8rpx 32rpx;
+  padding: 20rpx 8rpx 24rpx;
+}
+/* 首页卡片紧凑化（覆盖全局 .card） */
+.card {
+  padding: 18rpx 20rpx;
+  margin-bottom: 14rpx;
 }
 .welcome-title {
   font-size: 44rpx;
@@ -9,19 +14,19 @@
   margin-top: 8rpx;
 }
 .section-title {
-  font-size: 30rpx;
+  font-size: 26rpx;
   font-weight: 600;
-  margin-bottom: 20rpx;
+  margin-bottom: 12rpx;
 }
 .type-grid {
   display: flex;
   flex-wrap: wrap;
-  row-gap: 24rpx; /* 上下行间距 */
+  row-gap: 8rpx; /* 上下行间距更小 */
 }
 .type-item {
   width: 25%; /* 每行 4 个 */
   box-sizing: border-box;
-  padding: 12rpx 0; /* 更紧凑 */
+  padding: 6rpx 0; /* 按钮更紧凑 */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -37,12 +42,12 @@
   border-color: #2b6cf6;
 }
 .type-icon {
-  width: 52rpx;
-  height: 52rpx;
+  width: 44rpx;
+  height: 44rpx;
 }
 .type-label {
-  margin-top: 4rpx;
-  font-size: 22rpx; /* 文字缩小 */
+  margin-top: 2rpx;
+  font-size: 20rpx; /* 文字更小 */
 }
 .stats-row {
   display: flex;
@@ -52,14 +57,14 @@
   text-align: center;
 }
 .stat-num {
-  font-size: 36rpx;
+  font-size: 30rpx;
   font-weight: 600;
   color: #2b6cf6;
 }
 .stat-label {
-  font-size: 24rpx;
+  font-size: 20rpx;
   color: #999;
-  margin-top: 4rpx;
+  margin-top: 2rpx;
 }
 .start-btn {
   margin-top: 48rpx; /* 与上方间距加大 */

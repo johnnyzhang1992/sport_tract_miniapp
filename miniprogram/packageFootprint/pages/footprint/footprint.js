@@ -53,25 +53,55 @@ Page({
     this.fetch();
   },
 
+  /** 缩放：+ 放大 / - 缩小（通过 mousewheel 事件驱动 echarts roam） */
+  zoomIn() {
+    this.zoomMap(10);
+  },
+
+  zoomOut() {
+    this.zoomMap(-10);
+  },
+
+  zoomMap(delta) {
+    const chart = this.data.fullscreen ? this.fsChart : this.chart;
+    if (!chart || typeof chart.getZr !== 'function') return;
+    const zr = chart.getZr();
+    if (!zr || !zr.handler || typeof zr.handler.dispatch !== 'function') return;
+    const w = chart.getWidth() || 300;
+    const h = chart.getHeight() || 300;
+    zr.handler.dispatch('mousewheel', {
+      zrX: w / 2,
+      zrY: h / 2,
+      wheelDelta: delta,
+      preventDefault: () => {},
+      stopImmediatePropagation: () => {},
+      stopPropagation: () => {},
+    });
+  },
+
   /** 全屏展示地图 */
   openFullscreen() {
-    this.setData({ fullscreen: true });
-    const comp = this.selectComponent('#fsMap');
-    if (comp && comp.init && !this.fsChart) {
-      comp.init((canvas, width, height, dpr) => {
-        const chart = echarts.init(canvas, null, { width, height, devicePixelRatio: dpr });
-        canvas.setChart(chart);
-        if (this._chinaMap) {
-          echarts.registerMap('china', this._chinaMap);
-          chart.setOption(getMapOption(this._mapData || []));
-        }
-        this.fsChart = chart;
-      });
-    }
+    this.setData({ fullscreen: true }, () => {
+      // setData 是异步的：回调时遮罩+fsMap 组件已渲染完成，此时才能取到组件并初始化
+      const comp = this.selectComponent('#fsMap');
+      if (comp && comp.init) {
+        comp.init((canvas, width, height, dpr) => {
+          const chart = echarts.init(canvas, null, { width, height, devicePixelRatio: dpr });
+          canvas.setChart(chart);
+          if (this._chinaMap) {
+            echarts.registerMap('china', this._chinaMap);
+            chart.setOption(getMapOption(this._mapData || []));
+          }
+          this.fsChart = chart;
+          return chart; // ec-canvas 内部 this.chart = callback(...)，必须返回 chart 才能转发触摸事件
+        });
+      }
+    });
   },
 
   closeFullscreen() {
     this.setData({ fullscreen: false });
+    this.fsChart = null; // 组件（wx:if）销毁重建，下次打开需重新初始化
   },
 
   onReady() {
@@ -86,6 +116,7 @@ Page({
           chart.setOption(getMapOption(this._mapData || []));
         }
         this.chart = chart;
+        return chart; // ec-canvas 内部 this.chart = callback(...)，必须返回 chart 才能转发触摸事件
       });
     }
   },

@@ -32,6 +32,24 @@
     </view>
   </view>
 
+  <!-- 身体数据（卡路里/运动数据计算用） -->
+  <view class="card">
+    <view class="field-label">身高（cm）</view>
+    <input class="field-input" type="number" value="{{heightCm}}" bindinput="onHeightInput" placeholder="请输入身高" />
+    <view class="field-label">体重（kg）</view>
+    <input class="field-input" type="number" value="{{weightKg}}" bindinput="onWeightInput" placeholder="请输入体重" />
+    <view class="text-muted body-tip">身高体重用于更准确地估算运动卡路里消耗</view>
+  </view>
+
+  <!-- 体重趋势入口 -->
+  <view class="card link-card" bindtap="goWeightTrend" hover-class="card-hover">
+    <view class="switch-info">
+      <view class="switch-title">体重趋势</view>
+      <view class="text-muted">查看体重变化记录（天/周/月/年）</view>
+    </view>
+    <view class="link-arrow">›</view>
+  </view>
+
   <t-button
     theme="primary"
     size="large"

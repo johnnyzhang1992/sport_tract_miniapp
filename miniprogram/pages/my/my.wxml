@@ -11,6 +11,10 @@
     <view class="user-info">
       <view class="user-name">{{user.nickname || '微信用户'}}</view>
       <view class="text-muted">点击编辑资料</view>
+      <view class="body-data" wx:if="{{showBodyData}}">
+        <text class="body-item" wx:if="{{user.heightCm}}">身高 {{user.heightCm}}cm</text>
+        <text class="body-item" wx:if="{{user.weightKg}}">体重 {{user.weightKg}}kg</text>
+      </view>
     </view>
   </view>
 
@@ -35,16 +39,16 @@
 
   <!-- 菜单 -->
   <t-cell-group class="card menu-card">
-    <t-cell title="数据导入" arrow bind:click="goImport">
-      <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-download.png" mode="aspectFit" />
-    </t-cell>
     <t-cell title="数据统计" arrow bind:click="goStats">
       <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-chart.png" mode="aspectFit" />
+    </t-cell>
+    <t-cell title="数据导入" arrow bind:click="goImport">
+      <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-download.png" mode="aspectFit" />
     </t-cell>
     <t-cell title="设置" arrow bind:click="goSettings">
       <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-settings.png" mode="aspectFit" />
     </t-cell>
   </t-cell-group>
 
-  <view class="text-muted version-tip">运动轨迹 v0.1 · 骨架版</view>
+  <view class="text-muted version-tip">小迹一下 v1.0 @小小梦工场</view>
 </view>

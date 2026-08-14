@@ -14,7 +14,8 @@
 
   <!-- 选择文件 -->
   <t-button theme="primary" size="large" block bind:tap="chooseFile" disabled="{{uploading}}">
-    {{uploading ? '上传解析中…' : '📂 选择轨迹文件'}}
+    <image class="choose-icon" src="/assets/icons/lucide-folder-white.png" mode="aspectFit" />
+    {{uploading ? '上传解析中…' : '选择轨迹文件'}}
   </t-button>
   <view class="text-muted file-name" wx:if="{{fileName}}">已选：{{fileName}}</view>
 
