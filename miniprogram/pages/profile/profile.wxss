@@ -68,3 +68,31 @@
   color: #2b6cf6;
   border: 2rpx solid #2b6cf6;
 }
+
+/* 身体数据提示 */
+.body-tip {
+  margin-top: 12rpx;
+  font-size: 22rpx;
+}
+
+/* 体重趋势入口卡片 */
+.link-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+.switch-info {
+  flex: 1;
+}
+.switch-title {
+  font-size: 28rpx;
+  color: #1f2329;
+}
+.link-arrow {
+  font-size: 40rpx;
+  color: #c2c7d0;
+}
+.card-hover {
+  opacity: 0.8;
+}

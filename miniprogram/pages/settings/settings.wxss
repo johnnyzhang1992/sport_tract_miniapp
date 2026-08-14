@@ -28,9 +28,9 @@
   flex-wrap: wrap;
 }
 .type-item {
-  width: 33.33%;
+  width: 25%; /* 一行 4 个（紧凑版） */
   box-sizing: border-box;
-  padding: 16rpx 0;
+  padding: 8rpx 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -42,11 +42,12 @@
   border-color: #2b6cf6;
 }
 .type-icon {
-  font-size: 44rpx;
+  width: 44rpx;
+  height: 44rpx;
 }
 .type-label {
-  font-size: 24rpx;
-  margin-top: 6rpx;
+  font-size: 20rpx;
+  margin-top: 4rpx;
 }
 .switch-row {
   display: flex;

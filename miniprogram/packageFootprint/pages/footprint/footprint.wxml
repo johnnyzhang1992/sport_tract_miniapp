@@ -15,6 +15,10 @@
   <!-- 真实中国地图（echarts） -->
   <view class="card map-card">
     <ec-canvas id="footprintMap" canvas-id="footprintMap" ec="{{ ec }}"></ec-canvas>
+    <view class="zoom-controls">
+      <view class="zoom-btn" bindtap="zoomIn">+</view>
+      <view class="zoom-btn" bindtap="zoomOut">−</view>
+    </view>
     <view class="fullscreen-btn" bindtap="openFullscreen"><image class="btn-icon" src="/assets/icons/lucide-maximize.png" mode="aspectFit" /><text>全屏</text></view>
   </view>
 
@@ -22,6 +26,10 @@
   <view class="fullscreen-mask" wx:if="{{fullscreen}}">
     <view class="fullscreen-close" bindtap="closeFullscreen"><image class="close-icon" src="/assets/icons/lucide-x.png" mode="aspectFit" /></view>
     <ec-canvas id="fsMap" canvas-id="fsMap" ec="{{ fsEc }}"></ec-canvas>
+    <view class="zoom-controls fs-zoom">
+      <view class="zoom-btn" bindtap="zoomIn">+</view>
+      <view class="zoom-btn" bindtap="zoomOut">−</view>
+    </view>
   </view>
 
   <!-- 点亮城市列表 -->

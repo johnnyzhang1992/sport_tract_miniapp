@@ -1,4 +1,6 @@
 {
   "navigationBarTitleText": "数据导入",
-  "usingComponents": {}
+  "usingComponents": {
+    "t-button": "tdesign-miniprogram/button/button"
+  }
 }

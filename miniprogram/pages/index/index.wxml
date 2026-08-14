@@ -15,25 +15,6 @@
     <view class="welcome-sub text-muted">选择类型，记录你的轨迹与风景</view>
   </view>
 
-  <!-- 运动类型选择 -->
-  <view class="card">
-    <view class="section-title">运动类型</view>
-    <view class="type-grid">
-      <view
-        wx:for="{{activityTypes}}"
-        wx:key="type"
-        class="type-item {{selectedType === item.type ? 'type-item-active' : ''}}"
-        hover-class="type-item-hover"
-        hover-stay-time="80"
-        data-type="{{item.type}}"
-        bindtap="selectType"
-      >
-        <image class="type-icon" src="{{item.iconImg}}" mode="aspectFit"></image>
-        <view class="type-label">{{item.label}}</view>
-      </view>
-    </view>
-  </view>
-
   <!-- 累计数据概览 -->
   <view class="card" wx:if="{{totalOverview}}">
     <view class="section-title">累计数据</view>
@@ -76,6 +57,25 @@
       <view class="stat-item">
         <view class="stat-num">{{overview.today.calorieNum}}</view>
         <view class="stat-label">{{overview.today.calorieUnit}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 运动类型选择 -->
+  <view class="card">
+    <view class="section-title">运动类型</view>
+    <view class="type-grid">
+      <view
+        wx:for="{{activityTypes}}"
+        wx:key="type"
+        class="type-item {{selectedType === item.type ? 'type-item-active' : ''}}"
+        hover-class="type-item-hover"
+        hover-stay-time="80"
+        data-type="{{item.type}}"
+        bindtap="selectType"
+      >
+        <image class="type-icon" src="{{item.iconImg}}" mode="aspectFit"></image>
+        <view class="type-label">{{item.label}}</view>
       </view>
     </view>
   </view>

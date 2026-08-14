@@ -155,3 +155,12 @@
   height: 44rpx;
   margin: 0 10rpx;
 }
+
+/* 选择文件按钮内图标 */
+.choose-icon {
+  width: 34rpx;
+  height: 34rpx;
+  margin-right: 10rpx;
+  display: inline-block;
+  vertical-align: middle;
+}

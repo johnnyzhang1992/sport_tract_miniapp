@@ -72,7 +72,10 @@
   <!-- 初始化/错误状态 -->
   <view class="init-mask" wx:if="{{starting || error}}">
     <view class="init-box">
-      <view wx:if="{{error}}">{{error}}</view>
+      <block wx:if="{{error}}">
+        <view>{{error}}</view>
+        <button class="auth-btn" bindtap="retryAuth">重新授权</button>
+      </block>
       <view wx:else><image class="title-icon" src="{{typeIconImg}}" mode="aspectFit"></image> {{typeLabel}} · 定位中…</view>
     </view>
   </view>

@@ -166,3 +166,37 @@ ec-canvas {
   padding: 14rpx;
   box-sizing: border-box;
 }
+
+/* 缩放按钮（+/-） */
+.zoom-controls {
+  position: absolute;
+  right: 24rpx;
+  bottom: 120rpx; /* 全屏按钮上方 */
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
+  border-radius: 12rpx;
+  overflow: hidden;
+}
+.zoom-btn {
+  width: 64rpx;
+  height: 64rpx;
+  background: rgba(255, 255, 255, 0.94);
+  color: #1f2329;
+  font-size: 40rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.zoom-btn:first-child {
+  border-bottom: 1rpx solid #eef0f3;
+}
+.zoom-btn-active {
+  opacity: 0.7;
+}
+/* 全屏内缩放按钮（右下角） */
+.fs-zoom {
+  bottom: 48rpx;
+  right: 48rpx;
+}

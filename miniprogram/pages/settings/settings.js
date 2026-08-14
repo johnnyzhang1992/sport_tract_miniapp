@@ -11,6 +11,7 @@ Page({
       unit: 'metric',
       defaultType: 'walking',
       highAccuracy: true,
+      showBodyData: true,
     },
     activityTypes: config.ACTIVITY_TYPES,
     saving: false,
@@ -24,7 +25,10 @@ Page({
     try {
       const user = await api.get('/users/me');
       this.setData({
-        settings: Object.assign({ unit: 'metric', defaultType: 'walking', highAccuracy: true }, user.settings),
+        settings: Object.assign(
+          { unit: 'metric', defaultType: 'walking', highAccuracy: true, showBodyData: true },
+          user.settings,
+        ),
       });
     } catch (e) {
       console.error('加载设置失败', e);
@@ -43,6 +47,10 @@ Page({
     this.setData({ 'settings.highAccuracy': e.detail.value });
   },
 
+  onShowBodyDataChange(e) {
+    this.setData({ 'settings.showBodyData': e.detail.value });
+  },
+
   /** 打开隐私政策 */
   openPrivacy() {
     wx.navigateTo({ url: '/pages/privacy/privacy' });
@@ -52,8 +60,13 @@ Page({
     if (this.data.saving) return;
     this.setData({ saving: true });
     try {
-      await api.put('/users/me', { settings: this.data.settings });
+      const saved = await api.put('/users/me', { settings: this.data.settings });
       wx.showToast({ title: '已保存', icon: 'success' });
+      // 同步全局（my 页身高体重展示开关即时生效）
+      const app = getApp();
+      if (app.globalData.userInfo) {
+        app.globalData.userInfo.settings = saved.settings || this.data.settings;
+      }
       setTimeout(() => wx.navigateBack(), 600);
     } catch (e) {
       wx.showToast({ title: '保存失败', icon: 'none' });

@@ -13,6 +13,8 @@ Page({
     avatarUrl: '', // 当前头像 URL
     nickname: '',
     gender: 0, // 0 未知 1 男 2 女
+    weightKg: 60,
+    heightCm: 170,
     saving: false,
   },
 
@@ -28,6 +30,8 @@ Page({
         avatarUrl: user.avatarUrl || '',
         nickname: user.nickname || '',
         gender: user.gender || 0,
+        weightKg: user.weightKg || 60,
+        heightCm: user.heightCm || 170,
       });
     } catch (e) {
       wx.showToast({ title: '加载失败', icon: 'none' });
@@ -55,8 +59,33 @@ Page({
     this.setData({ nickname: e.detail.value });
   },
 
+  /** 体重趋势入口 */
+  goWeightTrend() {
+    wx.navigateTo({ url: '/pages/weight-trend/weight-trend' });
+  },
+
   onGenderTap(e) {
     this.setData({ gender: Number(e.currentTarget.dataset.gender) });
+  },
+
+  onHeightInput(e) {
+    this.setData({ heightCm: e.detail.value });
+  },
+
+  onWeightInput(e) {
+    this.setData({ weightKg: e.detail.value });
+  },
+
+  /** 本地文件 md5（判断选的头像是否和上次上传的一样，避免重复上传浪费 CDN） */
+  getFileMd5(filePath) {
+    return new Promise((resolve) => {
+      wx.getFileInfo({
+        filePath,
+        digestAlgorithm: 'md5',
+        success: (res) => resolve(res.digest || ''),
+        fail: () => resolve(''),
+      });
+    });
   },
 
   /** 保存：头像先合规检测 + 上传 OSS，再更新资料（昵称后端会再做合规检测） */
@@ -71,27 +100,49 @@ Page({
     wx.showLoading({ title: '保存中…' });
 
     try {
-      const body = { nickname, gender: this.data.gender };
+      const weight = Number(this.data.weightKg);
+      const height = Number(this.data.heightCm);
+      const body = {
+        nickname,
+        gender: this.data.gender,
+        weightKg: weight >= 20 && weight <= 300 ? weight : undefined,
+        heightCm: height >= 50 && height <= 250 ? height : undefined,
+      };
 
-      // 头像：有新选择才上传（uploadPhoto 内含微信合规检测，违规返回 blocked）
+      // 头像：有新选择才处理（uploadPhoto 内含微信合规检测，违规返回 blocked）
       if (this.data.avatarTemp) {
-        const up = await uploadPhoto(this.data.avatarTemp, {
-          dir: 'avatar',
-          prefix: 'avatar_',
-        });
-        if (up && up.blocked) {
-          wx.hideLoading();
-          wx.showToast({ title: '头像包含不当内容', icon: 'none' });
-          return;
+        // 判断头像是否变化：本地文件 md5 与上次上传一致且 URL 未变 → 复用旧头像，不重复上传
+        const md5 = await this.getFileMd5(this.data.avatarTemp);
+        const last = wx.getStorageSync('avatar_upload') || {};
+        const unchanged = md5 && last.md5 === md5 && last.url === this.data.avatarUrl;
+        if (!unchanged) {
+          const up = await uploadPhoto(this.data.avatarTemp, {
+            dir: 'avatar',
+            prefix: 'avatar_',
+          });
+          if (up && up.blocked) {
+            wx.hideLoading();
+            wx.showToast({ title: '头像包含不当内容', icon: 'none' });
+            return;
+          }
+          if (up && up.url) {
+            body.avatarUrl = up.url;
+            wx.setStorageSync('avatar_upload', { md5, url: up.url });
+          }
         }
-        if (up && up.url) {
-          body.avatarUrl = up.url;
-        }
+        // unchanged：头像没变，不更新 avatarUrl（保持当前，避免重复上传）
       }
 
-      await api.put('/users/me', body);
+      const saved = await api.put('/users/me', body);
       wx.hideLoading();
       wx.showToast({ title: '已保存', icon: 'success' });
+      // 同步全局用户信息（体重/身高供运动卡路里计算使用）
+      const app = getApp();
+      if (app.globalData.userInfo) {
+        app.globalData.userInfo.weightKg = saved.weightKg ?? (Number(this.data.weightKg) || 60);
+        app.globalData.userInfo.heightCm = saved.heightCm ?? (Number(this.data.heightCm) || 170);
+        app.globalData.userInfo.nickname = saved.nickname || this.data.nickname;
+      }
       setTimeout(() => wx.navigateBack(), 600);
     } catch (e) {
       wx.hideLoading();

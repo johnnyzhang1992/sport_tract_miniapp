@@ -11,7 +11,8 @@
     "pages/settings/settings",
     "pages/privacy/privacy",
     "pages/overview/overview",
-    "pages/import/import"
+    "pages/import/import",
+    "pages/weight-trend/weight-trend"
   ],
   "window": {
     "navigationBarBackgroundColor": "#ffffff",
@@ -47,7 +48,7 @@
   },
   "permission": {
     "scope.userLocation": {
-      "desc": "用于记录您的运动轨迹与打点位置"
+      "desc": "用于记录您的运动轨迹并统计运动距离、配速等数据"
     }
   },
   "requiredPrivateInfos": [

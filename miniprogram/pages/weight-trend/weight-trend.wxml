@@ -1,0 +1,34 @@
+<view class="container">
+  <!-- 最新体重统计卡 -->
+  <view class="card stat-card">
+    <view class="stat-block">
+      <view class="stat-value">{{latestWeight != null ? latestWeight : '—'}}</view>
+      <view class="stat-label">最新体重 kg</view>
+    </view>
+    <view class="stat-block">
+      <view class="stat-value">{{chartData.length}}</view>
+      <view class="stat-label">记录次数</view>
+    </view>
+  </view>
+
+  <!-- 维度切换 -->
+  <view class="card">
+    <view class="range-row">
+      <view
+        wx:for="{{ranges}}"
+        wx:key="value"
+        class="range-btn {{activeRange === item.value ? 'range-btn-active' : ''}}"
+        data-value="{{item.value}}"
+        bindtap="onRangeChange"
+      >{{item.label}}</view>
+    </view>
+  </view>
+
+  <!-- 体重趋势折线图 -->
+  <view class="card">
+    <view class="section-title">体重趋势（kg）</view>
+    <stat-chart data="{{chartData}}" type="line" unit="kg" color="#2b6cf6" height="280" empty-text="该时段暂无体重记录" />
+  </view>
+
+  <view wx:if="{{loading}}" class="text-muted loading-tip">加载中…</view>
+</view>

@@ -7,6 +7,7 @@
 const config = require('../../config/index');
 const api = require('../../services/api');
 const { Tracker } = require('../../services/tracker');
+const { ensureLocationAuth } = require('../../services/location-auth');
 const { SyncService } = require('../../services/sync');
 const { reverseGeocode } = require('../../services/geo');
 const { uploadPhoto } = require('../../services/oss-upload');
@@ -62,17 +63,30 @@ Page({
     const meta = config.ACTIVITY_TYPES.find((t) => t.type === type) || {};
     this.setData({ type, typeLabel: meta.label || type, typeIcon: meta.icon || '🏃', typeIconImg: meta.iconImg || '' });
 
-    this.tracker = new Tracker(type, 60);
+    this.tracker = new Tracker(type, this.getWeightKg());
     this.sync = new SyncService();
 
     this.init();
   },
 
+  /** 用户体重（卡路里计算用；未设置默认 60kg） */
+  getWeightKg() {
+    try {
+      const app = getApp();
+      const u = app.globalData.userInfo;
+      if (u && u.weightKg && u.weightKg >= 20 && u.weightKg <= 300) return u.weightKg;
+    } catch (e) { /* ignore */ }
+    return 60;
+  },
+
   async init() {
     try {
-      // 1. 位置权限检查
-      const authed = await this.ensureLocationAuth();
-      if (!authed) return;
+      // 1. 位置权限检查（无权限无法记录轨迹，引导后仍未授权则显示错误 + 重新授权按钮）
+      const authed = await ensureLocationAuth();
+      if (!authed) {
+        this.setData({ starting: false, error: '未获得位置权限，无法记录运动轨迹' });
+        return;
+      }
 
       // 2. 创建进行中活动（后端）
       await this.sync.createActivity(this.data.type, Date.now());
@@ -95,58 +109,47 @@ Page({
     }
   },
 
-  /** 位置权限：拒绝时引导打开设置 */
-  ensureLocationAuth() {
-    return new Promise((resolve) => {
-      wx.getSetting({
-        success: (res) => {
-          const granted = res.authSetting['scope.userLocation'];
-          if (granted === undefined) {
-            // 首次：直接发起授权
-            wx.authorize({
-              scope: 'scope.userLocation',
-              success: () => resolve(true),
-              fail: () => this.showAuthGuide(() => resolve(false)),
-            });
-          } else if (granted) {
-            resolve(true);
-          } else {
-            this.showAuthGuide(() => resolve(false));
-          }
-        },
-        fail: () => resolve(false),
-      });
-    });
-  },
-
-  showAuthGuide(cb) {
-    wx.showModal({
-      title: '需要位置权限',
-      content: '运动轨迹记录需要获取您的位置信息，请在设置中开启',
-      confirmText: '去设置',
-      success: (res) => {
-        if (res.confirm) {
-          wx.openSetting({ complete: cb });
-        } else {
-          cb();
-        }
-      },
-      fail: cb,
-    });
+  /** 错误状态下的重新授权：授权成功后重新初始化 */
+  async retryAuth() {
+    const authed = await ensureLocationAuth();
+    if (authed) {
+      this.setData({ error: '' });
+      this.init();
+    }
   },
 
   startLocation() {
     const highOpts = { type: 'gcj02', isHighAccuracy: true };
-    // 优先后台定位（运动切后台继续记录）；未开通后台定位权限/用户拒绝时降级前台定位
+    // 优先后台定位（运动切后台继续记录）；后台不可用时弹窗让用户选择（去开启 / 仅前台）
     if (wx.startLocationUpdateBackground) {
       wx.startLocationUpdateBackground({
         ...highOpts,
+        success: () => {
+          this._hasBackgroundAuth = true; // 后台定位可用：切后台持续记录
+        },
         fail: (e) => {
-          console.warn('[record] startLocationUpdateBackground 不可用，降级前台定位', e);
+          console.warn('[record] startLocationUpdateBackground 不可用', e);
+          this._hasBackgroundAuth = false; // 无后台权限：切后台将暂停运动
           this.startForegroundLocation(highOpts);
+          // 弹窗让用户选择是否开启后台定位（仅首次弹，避免每次打断）
+          if (!this._bgAuthPrompted) {
+            this._bgAuthPrompted = true;
+            wx.showModal({
+              title: '后台定位未开启',
+              content: '未开启后台定位，切后台时将暂停记录轨迹。是否去开启？',
+              confirmText: '去开启',
+              cancelText: '仅前台',
+              success: (res) => {
+                if (res.confirm) {
+                  wx.openSetting({});
+                }
+              },
+            });
+          }
         },
       });
     } else {
+      this._hasBackgroundAuth = false;
       this.startForegroundLocation(highOpts);
     }
 
@@ -395,13 +398,27 @@ Page({
   },
 
   onHide() {
+    if (!this.tracker) return;
     // 切后台：标记时间（回前台时判断是否需要 GPS 预热，避免冷启动定位漂移）
-    if (this.tracker) this.tracker.markBackground();
+    this.tracker.markBackground();
+    // 无后台定位权限：切后台自动暂停（后台无法采点，暂停避免轨迹缺失/跳变）
+    if (!this._hasBackgroundAuth && !this.data.paused) {
+      this.tracker.pause();
+      this._bgPaused = true;
+      this.setData({ paused: true });
+      this.updateStats();
+    }
   },
 
   onShow() {
+    if (!this.tracker) return;
     // 回前台：后台较久则开启预热窗口（丢弃回前台后几秒内的漂移点）
-    if (this.tracker) this.tracker.onForeground();
+    this.tracker.onForeground();
+    // 因无后台权限被自动暂停：保持暂停，提示用户点击「继续」再次开始记录
+    if (this._bgPaused) {
+      this._bgPaused = false;
+      wx.showToast({ title: '后台已暂停运动，点击继续', icon: 'none' });
+    }
   },
 
   onUnload() {
@@ -450,7 +467,7 @@ Page({
       wx.removeStorageSync('ongoingActivity');
       const meta = config.ACTIVITY_TYPES.find((t) => t.type === type) || {};
       this.setData({ type, typeLabel: meta.label || type, typeIcon: meta.icon || '🏃', typeIconImg: meta.iconImg || '' });
-      this.tracker = new Tracker(type, 60);
+      this.tracker = new Tracker(type, this.getWeightKg());
       this.sync = new SyncService();
       this.init();
     }
@@ -469,7 +486,7 @@ Page({
         wx.showToast({ title: '该运动已结束', icon: 'none' });
         return;
       }
-      this.tracker = new Tracker(type, 60);
+      this.tracker = new Tracker(type, this.getWeightKg());
       this.tracker.restoreFromPoints(activity.trackPoints, activity.markers, activity.startTime, activity.pausedMs);
       // 退出时已暂停：退出→现在的时长也算暂停（补进 pausedMs），恢复后保持暂停
       const ongoing = wx.getStorageSync('ongoingActivity');

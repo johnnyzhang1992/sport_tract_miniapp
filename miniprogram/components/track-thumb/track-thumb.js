@@ -49,7 +49,7 @@ Component({
           }
           const spanLat = maxLat - minLat || 1e-9;
           const spanLng = maxLng - minLng || 1e-9;
-          const pad = 3;
+          const pad = 10; // 内边距：轨迹线离容器边缘留白
           const x = (lng) => pad + ((lng - minLng) / spanLng) * (width - pad * 2);
           const y = (lat) => height - pad - ((lat - minLat) / spanLat) * (height - pad * 2);
 

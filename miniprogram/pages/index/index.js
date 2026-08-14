@@ -130,8 +130,11 @@ Page({
     }
   },
 
-  /** 开始运动 → 记录页（M2 里程碑：实时地图+数据面板） */
-  startRecord() {
+  /** 开始运动 → 记录页（预检定位权限：无权限无法记录轨迹，先引导授权） */
+  async startRecord() {
+    const { ensureLocationAuth } = require('../../services/location-auth');
+    const authed = await ensureLocationAuth();
+    if (!authed) return; // 用户取消/未开启：留在首页
     wx.navigateTo({
       url: `/pages/record/record?type=${this.data.selectedType}`,
     });
