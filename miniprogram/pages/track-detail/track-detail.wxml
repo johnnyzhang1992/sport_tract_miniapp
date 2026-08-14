@@ -39,6 +39,7 @@
         mode="view"
         altitudeColor
         showStartEnd
+        poi-top-right
       />
     </view>
   </view>
