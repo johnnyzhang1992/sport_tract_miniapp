@@ -64,10 +64,11 @@ Component({
           if (!width) return;
 
           const gap = 1;
-          // 格子宽浮点：cols*(cell+gap) = width，右侧不留白
-          const cell = Math.max(3, width / cols - gap);
+          const leftPad = 14; // 左侧星期标签区
+          // 格子宽浮点：leftPad + cols*(cell+gap) = width，右侧占满
+          const cell = Math.max(3, (width - leftPad) / cols - gap);
           const cellW = cell;
-          const labelH = 10; // 顶部月份标签
+          const labelH = 16; // 顶部月份标签（留足空间，防截取）
           // 星期标签（一/三/五）在左侧，底部无标签区 → H 只含顶部标签 + 7 行格子
           const H = labelH + 7 * (cell + gap);
 
@@ -96,7 +97,7 @@ Component({
 
           // 格子（行 0=周日 ... 6=周六）
           for (let w = 0; w < cols; w++) {
-            const x = w * (cell + gap);
+            const x = leftPad + w * (cell + gap);
             for (let r = 0; r < 7; r++) {
               const d = new Date(start);
               d.setDate(start.getDate() + w * 7 + r);
@@ -119,18 +120,22 @@ Component({
             const mDate = new Date(Math.floor(ym / 12), ym % 12, 1, 0, 0, 0, 0);
             if (mDate.getTime() < start.getTime() || mDate.getTime() > today.getTime()) continue;
             const col = Math.floor((mDate.getTime() - start.getTime()) / (7 * 86400000));
-            const x = col * (cell + gap);
+            const x = leftPad + col * (cell + gap);
             ctx.fillText(`${ym % 12 + 1}月`, x, labelH - 5);
           }
 
-          // 底部星期标签：周一/周三/周五（行 1/3/5）
+          // 左侧星期标签：按空间（格子大小）决定展示数量
           ctx.fillStyle = '#bbb';
           ctx.font = '8px sans-serif';
-          ['', '一', '', '三', '', '五', ''].forEach((t, r) => {
+          ctx.textAlign = 'right';
+          const weekLabels =
+            cell >= 11
+              ? ['日', '一', '二', '三', '四', '五', '六'] // 空间足：全部
+              : ['日', '', '', '三', '', '', '六']; // 首/中/末三行（周日/周三/周六）
+          weekLabels.forEach((t, r) => {
             if (!t) return;
             const y = labelH + r * (cell + gap) + cell / 2;
-            ctx.textAlign = 'right';
-            ctx.fillText(t, 0, y + 3);
+            ctx.fillText(t, leftPad - 4, y + 3);
           });
         });
     },

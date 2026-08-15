@@ -1,5 +1,5 @@
 .welcome {
-  padding: 20rpx 8rpx 24rpx;
+  padding: 0 8rpx 20rpx; /* 顶部内间距移除（页面已有内边距） */
 }
 /* 首页卡片紧凑化（覆盖全局 .card） */
 .card {
@@ -7,7 +7,7 @@
   margin-bottom: 14rpx;
 }
 .welcome-title {
-  font-size: 44rpx;
+  font-size: 38rpx;
   font-weight: 600;
 }
 .welcome-sub {
@@ -124,6 +124,7 @@
 .heat-legend-text {
   font-size: 20rpx;
   color: #8a93a6;
+  margin-right: 10rpx; /* 与色块间距 */
 }
 .heat-legend-colors {
   display: flex;
