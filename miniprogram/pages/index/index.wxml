@@ -15,6 +15,21 @@
     <view class="welcome-sub text-muted">选择类型，记录你的轨迹与风景</view>
   </view>
 
+  <!-- 运动日历热力图（GitHub 风格，近 365 天） -->
+  <view class="card heat-card" wx:if="{{heatData.length > 0}}">
+    <view class="section-title">运动日历</view>
+    <calendar-heat data="{{heatData}}" />
+    <view class="heat-legend-row">
+      <text class="heat-legend-text">颜色越深，当天运动越多</text>
+      <view class="heat-legend-colors">
+        <view class="hl-cell" style="background:#ebedf0"></view>
+        <view class="hl-cell" style="background:#c6dbff"></view>
+        <view class="hl-cell" style="background:#7ea8ff"></view>
+        <view class="hl-cell" style="background:#2b6cf6"></view>
+      </view>
+    </view>
+  </view>
+
   <!-- 累计数据概览 -->
   <view class="card" wx:if="{{totalOverview}}">
     <view class="section-title">累计数据</view>

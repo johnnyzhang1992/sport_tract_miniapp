@@ -1,0 +1,4 @@
+.heat-canvas {
+  width: 100%;
+  display: block;
+}
