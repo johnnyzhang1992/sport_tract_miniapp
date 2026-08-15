@@ -12,7 +12,8 @@
     "pages/privacy/privacy",
     "pages/overview/overview",
     "pages/import/import",
-    "pages/weight-trend/weight-trend"
+    "pages/weight-trend/weight-trend",
+    "pages/report/report"
   ],
   "window": {
     "navigationBarBackgroundColor": "#ffffff",

@@ -40,6 +40,42 @@
     </view>
   </view>
 
+  <!-- 个人最佳纪录 -->
+  <view class="card" wx:if="{{best}}">
+    <view class="section-title">个人最佳</view>
+    <view class="best-grid">
+      <view class="best-item">
+        <view class="best-value">{{best.maxDistance.value}}</view>
+        <view class="best-label">最远距离 km</view>
+        <view class="best-date" wx:if="{{best.maxDistance.date}}">{{best.maxDistance.date}}</view>
+      </view>
+      <view class="best-item">
+        <view class="best-value">{{best.minPace.value}}</view>
+        <view class="best-label">最快配速</view>
+        <view class="best-date" wx:if="{{best.minPace.date}}">{{best.minPace.date}}</view>
+      </view>
+      <view class="best-item">
+        <view class="best-value">{{best.maxDuration.value}}</view>
+        <view class="best-label">最长时长</view>
+        <view class="best-date" wx:if="{{best.maxDuration.date}}">{{best.maxDuration.date}}</view>
+      </view>
+      <view class="best-item">
+        <view class="best-value">{{best.maxElevation.value}}</view>
+        <view class="best-label">最大爬升</view>
+        <view class="best-date" wx:if="{{best.maxElevation.date}}">{{best.maxElevation.date}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 运动报告入口（独立报告页） -->
+  <view class="card link-row" bindtap="goReport" hover-class="report-hover">
+    <view class="switch-info">
+      <view class="switch-title">运动报告</view>
+      <view class="text-muted">周/月/年运动汇总 · 个人最佳 · 轨迹记录</view>
+    </view>
+    <view class="link-arrow">›</view>
+  </view>
+
   <!-- 趋势柱状图 -->
   <view class="card">
     <view class="chart-head">

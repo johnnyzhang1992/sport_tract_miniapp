@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "运动报告",
+  "usingComponents": {
+    "track-thumb": "/components/track-thumb/track-thumb"
+  }
+}

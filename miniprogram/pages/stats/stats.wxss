@@ -62,3 +62,72 @@
   font-weight: 600;
   box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
 }
+
+/* 个人最佳 */
+.best-grid {
+  display: flex;
+  flex-wrap: wrap;
+}
+.best-item {
+  width: 50%;
+  box-sizing: border-box;
+  padding: 16rpx 8rpx;
+  text-align: center;
+}
+.best-value {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #2b6cf6;
+}
+.best-label {
+  font-size: 22rpx;
+  color: #999;
+  margin-top: 4rpx;
+}
+.best-date {
+  font-size: 18rpx;
+  color: #bbb;
+  margin-top: 2rpx;
+}
+
+/* 运动报告 */
+.report-row {
+  display: flex;
+  margin-top: 8rpx;
+}
+.report-item {
+  flex: 1;
+  text-align: center;
+}
+.report-num {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+.report-label {
+  font-size: 22rpx;
+  color: #999;
+  margin-top: 4rpx;
+}
+
+/* 运动报告入口 */
+.link-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+.switch-info {
+  flex: 1;
+}
+.switch-title {
+  font-size: 28rpx;
+  color: #1f2329;
+}
+.link-arrow {
+  font-size: 40rpx;
+  color: #c2c7d0;
+}
+.report-hover {
+  opacity: 0.8;
+}
