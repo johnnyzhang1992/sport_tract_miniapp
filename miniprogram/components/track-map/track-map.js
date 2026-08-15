@@ -37,7 +37,7 @@ Component({
     heatCircles: [],
     centerLat: 31.2304,
     centerLng: 121.4737,
-    enablePoi: true, // 是否展示 POI 标注（地名/道路名）
+    enablePoi: false, // 是否展示 POI 标注（地名/道路名）——默认关闭
   },
 
   observers: {

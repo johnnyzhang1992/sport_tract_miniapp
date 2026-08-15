@@ -67,24 +67,56 @@
     </view>
   </view>
 
-  <!-- 最近轨迹 -->
-  <view class="recent-title" wx:if="{{recentTracks.length > 0}}">最近轨迹</view>
-  <view
-    wx:for="{{recentTracks}}"
-    wx:key="id"
-    class="recent-item"
-    hover-class="recent-hover"
-    data-id="{{item.id}}"
-    bindtap="onTapTrack"
-  >
-    <image class="recent-icon" src="{{item.iconImg}}" mode="aspectFit"></image>
-    <view class="recent-info">
-      <view class="recent-name">{{item.label}} · {{item.timeText}}</view>
-      <view class="recent-meta">{{item.distanceKm}} 公里 · {{item.durationText}}</view>
+  <!-- 最近轨迹（轨迹卡片样式，参照我的轨迹列表） -->
+  <view class="recent-head" wx:if="{{recentTracks.length > 0}}">
+    <view class="recent-title">最近轨迹</view>
+    <view class="share-btn" bindtap="openShare">
+      <image class="share-btn-icon" src="/assets/icons/lucide-share.png" mode="aspectFit" />
+      <text>分享</text>
     </view>
-    <view class="recent-arrow">›</view>
+  </view>
+  <view class="recent-grid">
+    <view
+      wx:for="{{visibleRecent}}"
+      wx:key="id"
+      class="recent-card"
+      hover-class="recent-hover"
+      data-id="{{item.id}}"
+      bindtap="onTapTrack"
+    >
+      <track-thumb class="recent-thumb" points="{{item.previewPoints}}" color="{{item.color}}" />
+      <view class="recent-body">
+        <view class="recent-head-row">
+          <image class="recent-icon" src="{{item.iconImg}}" mode="aspectFit"></image>
+          <text class="recent-type">{{item.label}}</text>
+          <text class="recent-duration">{{item.durationText}}</text>
+        </view>
+        <view class="recent-foot-row">
+          <text class="recent-dist">{{item.distanceKm}}公里</text>
+          <text class="recent-time">{{item.timeText}}</text>
+        </view>
+      </view>
+    </view>
   </view>
 
+  <view wx:if="{{!loading && visibleRecent.length < recentTracks.length}}" class="loading-tip">上拉加载更多</view>
   <view wx:if="{{loading}}" class="loading-tip">加载中…</view>
   <view wx:if="{{!loading && data.count === 0}}" class="loading-tip">该时间段还没有运动记录</view>
+
+  <!-- 分享弹窗 -->
+  <view class="share-mask" wx:if="{{shareVisible}}" catchtouchmove="noop">
+    <view class="share-box">
+      <view class="share-head">
+        <text class="share-title">{{shareTitle}}</text>
+        <view class="share-close" bindtap="closeShare"><image class="close-icon" src="/assets/icons/lucide-x.png" mode="aspectFit" /></view>
+      </view>
+      <scroll-view scroll-y class="share-scroll" enhanced show-scrollbar="{{false}}">
+        <canvas type="2d" id="sharePoster" class="share-canvas" style="width: 300px; height: {{shareCanvasH}}px;"></canvas>
+      </scroll-view>
+      <view class="share-foot">
+        <view class="share-toggle" bindtap="toggleShareTime">{{shareShowTime ? '隐藏时间' : '显示时间'}}</view>
+        <button class="share-save" bindtap="saveShare">保存图片</button>
+      </view>
+    </view>
+  </view>
 </view>

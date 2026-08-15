@@ -3,6 +3,7 @@
   "usingComponents": {
     "track-map": "../../components/track-map/track-map",
     "t-tabs": "tdesign-miniprogram/tabs/tabs",
-    "t-tab-panel": "tdesign-miniprogram/tab-panel/tab-panel"
+    "t-tab-panel": "tdesign-miniprogram/tab-panel/tab-panel",
+    "track-thumb": "/components/track-thumb/track-thumb"
   }
 }

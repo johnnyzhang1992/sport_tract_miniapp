@@ -53,30 +53,22 @@ Page({
     this.fetch();
   },
 
-  /** 缩放：+ 放大 / - 缩小（通过 mousewheel 事件驱动 echarts roam） */
+  /** 缩放：+ 放大 / - 缩小（setOption 更新 map zoom，方向可靠） */
   zoomIn() {
-    this.zoomMap(10);
+    this.zoomMap(1.3);
   },
 
   zoomOut() {
-    this.zoomMap(-10);
+    this.zoomMap(1 / 1.3);
   },
 
-  zoomMap(delta) {
+  zoomMap(factor) {
     const chart = this.data.fullscreen ? this.fsChart : this.chart;
-    if (!chart || typeof chart.getZr !== 'function') return;
-    const zr = chart.getZr();
-    if (!zr || !zr.handler || typeof zr.handler.dispatch !== 'function') return;
-    const w = chart.getWidth() || 300;
-    const h = chart.getHeight() || 300;
-    zr.handler.dispatch('mousewheel', {
-      zrX: w / 2,
-      zrY: h / 2,
-      wheelDelta: delta,
-      preventDefault: () => {},
-      stopImmediatePropagation: () => {},
-      stopPropagation: () => {},
-    });
+    if (!chart || typeof chart.setOption !== 'function') return;
+    const opt = chart.getOption();
+    const cur = (opt.series && opt.series[0] && opt.series[0].zoom) || 1;
+    const next = Math.max(0.5, Math.min(8, cur * factor));
+    chart.setOption({ series: [{ zoom: next }] });
   },
 
   /** 全屏展示地图 */
