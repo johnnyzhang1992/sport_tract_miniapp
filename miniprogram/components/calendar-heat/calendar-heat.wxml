@@ -1,0 +1,1 @@
+<canvas type="2d" id="heatCanvas" class="heat-canvas" style="width: 100%; height: {{canvasH}}px;"></canvas>

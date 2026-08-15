@@ -84,9 +84,10 @@ Page({
       if (!app.globalData.loggedIn) {
         await app.login();
       }
-      const [overview, footprint] = await Promise.all([
+      const [overview, footprint, heat] = await Promise.all([
         api.get('/stats/overview'),
         api.get('/stats/footprint').catch(() => null),
+        api.get('/stats/trend?days=365').catch(() => null),
       ]);
       // 兜底优先级：今日 → 本周 → 当月 → 今年 → 今日（都无数据）
       const order = [
@@ -100,6 +101,8 @@ Page({
         { key: 'today', label: '今日' };
       const s = overview[sec.key] || { count: 0, distance: 0, duration: 0, calories: 0 };
       const total = overview.total || { count: 0, distance: 0 };
+      // 日历热力图数据（近 365 天按天距离）
+      const heatData = heat && heat.data ? heat.data : [];
       // 预处理：WXML 不支持 toFixed 等方法调用；公里/千卡 K·W 缩写、时长分钟→小时→天
       const dur = formatDuration(s.duration || 0);
       this.setData({
@@ -121,6 +124,7 @@ Page({
             calorieUnit: '千卡',
           },
         },
+        heatData,
       });
     } catch (e) {
       console.error('加载概览失败', e); // 保留旧数据（不置空，避免切换 tab 后空白）

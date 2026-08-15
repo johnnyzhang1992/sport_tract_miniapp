@@ -108,3 +108,30 @@
   font-size: 40rpx;
   color: rgba(255, 255, 255, 0.9);
 }
+
+/* 运动日历卡片：底部内边距 */
+.heat-card {
+  padding-bottom: 16rpx;
+}
+
+/* 运动日历图例说明 */
+.heat-legend-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end; /* 文案+色块整体靠右 */
+  margin-top: 12rpx;
+}
+.heat-legend-text {
+  font-size: 20rpx;
+  color: #8a93a6;
+}
+.heat-legend-colors {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+}
+.hl-cell {
+  width: 18rpx;
+  height: 18rpx;
+  border-radius: 4rpx;
+}
