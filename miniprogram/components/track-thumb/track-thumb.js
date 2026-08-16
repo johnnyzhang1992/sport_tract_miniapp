@@ -50,8 +50,20 @@ Component({
           const spanLat = maxLat - minLat || 1e-9;
           const spanLng = maxLng - minLng || 1e-9;
           const pad = 10; // 内边距：轨迹线离容器边缘留白
-          const x = (lng) => pad + ((lng - minLng) / spanLng) * (width - pad * 2);
-          const y = (lat) => height - pad - ((lat - minLat) / spanLat) * (height - pad * 2);
+
+          // 等比例缩放（与真实地图一致）：纬度 1°≈111km，经度 1°≈111×cos(纬度)km
+          // 各轴独立归一化会把轨迹拉伸变形，这里用同一 scale 保持形状
+          const midLat = (minLat + maxLat) / 2;
+          const kmPerDegLng = 111 * Math.cos((midLat * Math.PI) / 180);
+          const lngKm = spanLng * kmPerDegLng;
+          const latKm = spanLat * 111;
+          const scale = Math.min((width - pad * 2) / lngKm, (height - pad * 2) / latKm); // px/km
+          const drawW = lngKm * scale;
+          const drawH = latKm * scale;
+          const offsetX = (width - drawW) / 2; // 水平居中
+          const offsetY = (height - drawH) / 2; // 垂直居中
+          const x = (lng) => offsetX + (lng - minLng) * kmPerDegLng * scale;
+          const y = (lat) => height - offsetY - (lat - minLat) * 111 * scale;
 
           ctx.strokeStyle = this.data.color;
           ctx.lineWidth = 1.5;
