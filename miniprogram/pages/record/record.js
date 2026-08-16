@@ -210,7 +210,7 @@ Page({
       stats: {
         distanceKm: snap.distanceKm,
         durationText: snap.durationText,
-        paceText: snap.pace ? formatPace(snap.pace) : '—',
+        paceText: snap.pace ? formatPace(snap.pace).replace(/\s*\/公里.*$/, '') : '—', // 去单位（底部文案已有 /km）
         altitude: this.data.stats.altitude,
         climb: snap.elevationGain,
         calories: snap.calories,

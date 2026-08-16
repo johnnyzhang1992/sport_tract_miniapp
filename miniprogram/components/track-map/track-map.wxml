@@ -19,6 +19,15 @@
     bindmarkertap="onMarkerTap"
     bindcallouttap="onMapCalloutTap"
   ></map>
+  <!-- 全屏关闭按钮（组件内，左上角） -->
+  <view class="map-fullscreen-close" wx:if="{{showFullscreenClose}}" bindtap="closeFullscreen">
+    <image class="map-fullscreen-close-icon" src="/assets/icons/lucide-x.png" mode="aspectFit" />
+  </view>
+  <!-- 全屏按钮（与标注同容器，右下角最右） -->
+  <view class="map-fullscreen-btn" wx:if="{{showFullscreen}}" bindtap="openFullscreen">
+    <image class="map-fullscreen-icon" src="/assets/icons/lucide-maximize.png" mode="aspectFit" />
+    <text>全屏</text>
+  </view>
   <!-- POI 标注切换按钮（record 模式在右上角避开底部操作栏；其他模式放右下角全屏按钮左边） -->
   <view class="poi-btn {{mode === 'record' ? 'poi-btn-top' : ''}} {{mode === 'overview' ? 'poi-btn-overview' : ''}} {{poiTopRight ? 'poi-btn-top-right' : ''}} {{poiBottomRight ? 'poi-btn-bottom-right' : ''}} {{enablePoi ? 'poi-btn-active' : ''}}" bindtap="togglePoi">
     <image class="poi-icon" src="{{enablePoi ? '/assets/icons/lucide-pin-white.png' : '/assets/icons/lucide-pin.png'}}" mode="aspectFit" />

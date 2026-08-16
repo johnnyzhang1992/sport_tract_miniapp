@@ -76,8 +76,8 @@
 }
 .layer-btn {
   position: absolute;
-  top: 24rpx;
-  left: 175rpx; /* 左上角：全屏按钮（left 24）右侧适中间距 */
+  top: 16rpx;
+  right: 24rpx; /* 右上角（真机指南针在左侧） */
   background: rgba(255, 255, 255, 0.92);
   border-radius: 999rpx;
   padding: 12rpx 24rpx;
@@ -186,8 +186,8 @@
 /* 全屏地图弹窗 */
 .fullscreen-btn {
   position: absolute;
-  top: 24rpx;
-  left: 24rpx;
+  bottom: 16rpx;
+  right: 24rpx; /* 右下角最右 */
   background: rgba(255, 255, 255, 0.92);
   border-radius: 999rpx;
   padding: 12rpx 24rpx;
@@ -214,7 +214,7 @@
 }
 .fullscreen-close {
   position: absolute;
-  top: calc(24rpx + env(safe-area-inset-top));
+  top: calc(16rpx + env(safe-area-inset-top));
   left: 24rpx;
   z-index: 1001;
   width: 64rpx;
@@ -229,8 +229,8 @@
 }
 .fullscreen-layer {
   position: absolute;
-  top: calc(24rpx + env(safe-area-inset-top));
-  left: 100rpx; /* 左侧：贴关闭按钮（left 24 宽 64） */
+  top: calc(16rpx + env(safe-area-inset-top));
+  right: 24rpx; /* 右上角（真机指南针在左侧） */
   z-index: 1001;
   background: rgba(255, 255, 255, 0.92);
   border-radius: 999rpx;

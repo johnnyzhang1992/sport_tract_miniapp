@@ -16,11 +16,11 @@
 }
 .layer-btn {
   position: absolute;
-  top: 24rpx;
-  left: 205rpx; /* 左上角，精度徽章（left 24）右侧留间距 */
+  top: 16rpx;
+  right: 24rpx; /* 右上角（真机指南针在左侧） */
   background: rgba(255, 255, 255, 0.9);
   border-radius: 999rpx;
-  padding: 12rpx 24rpx;
+  padding: 10rpx 22rpx; /* 与精度/标注按钮统一高度 */
   font-size: 24rpx;
   box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
   display: flex;
@@ -28,12 +28,12 @@
 }
 .acc-badge {
   position: absolute;
-  top: 24rpx;
-  left: 24rpx; /* 左上角，与右上角图层按钮对称 */
+  top: 16rpx;
+  right: 310rpx; /* 右上角一行：精度（最左）|标注|卫星 */
   background: rgba(44, 187, 110, 0.92);
   color: #fff;
   border-radius: 999rpx;
-  padding: 8rpx 22rpx;
+  padding: 10rpx 22rpx; /* 与卫星/标注按钮统一高度 */
   font-size: 22rpx;
   z-index: 5;
   display: flex;

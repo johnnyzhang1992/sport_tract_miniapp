@@ -25,7 +25,6 @@
 
   <!-- 全屏地图弹窗（不拦截 touch：map 手势需要 touchmove 做缩放/拖动） -->
   <view class="fullscreen-mask" wx:if="{{fullscreen}}">
-    <view class="fullscreen-close" bindtap="closeFullscreen"><image class="close-icon" src="/assets/icons/lucide-x.png" mode="aspectFit" /></view>
     <view class="fullscreen-layer" bindtap="fsSwitchLayer">
       <image class="btn-icon" src="{{mapType === 'standard' ? '/assets/icons/lucide-satellite.png' : '/assets/icons/lucide-map.png'}}" mode="aspectFit" />
       <text>{{mapType === 'standard' ? '卫星' : '标准'}}</text>
@@ -40,6 +39,8 @@
         altitudeColor
         showStartEnd
         poi-top-right
+        show-fullscreen-close
+        bind:close-fullscreen="closeFullscreen"
       />
     </view>
   </view>

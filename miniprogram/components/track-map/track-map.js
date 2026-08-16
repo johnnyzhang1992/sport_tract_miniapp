@@ -31,6 +31,10 @@ Component({
     poiTopRight: { type: Boolean, value: false },
     /** POI 按钮右下角贴右（无全屏按钮的页面，如 summary） */
     poiBottomRight: { type: Boolean, value: false },
+    /** 显示全屏按钮（组件内，与标注同容器统一样式） */
+    showFullscreen: { type: Boolean, value: false },
+    /** 全屏地图显示关闭按钮（组件内统一） */
+    showFullscreenClose: { type: Boolean, value: false },
   },
 
   data: {
@@ -365,6 +369,16 @@ Component({
       this.setData({
         mapType: this.data.mapType === 'standard' ? 'satellite' : 'standard',
       });
+    },
+
+    /** 全屏（触发页面方法） */
+    openFullscreen() {
+      this.triggerEvent('fullscreen');
+    },
+
+    /** 关闭全屏（触发页面方法） */
+    closeFullscreen() {
+      this.triggerEvent('close-fullscreen');
     },
 
     /** 切换 POI 标注显示 */
