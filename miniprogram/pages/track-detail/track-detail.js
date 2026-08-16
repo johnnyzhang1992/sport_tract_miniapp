@@ -86,7 +86,7 @@ Page({
           lng: p.lng,
           altitude: p.altitude != null ? p.altitude : null,
         })),
-        markers: (activity.markers || []).map((m) => ({ id: m.id, lat: m.lat, lng: m.lng })),
+        markers: (activity.markers || []).map((m) => ({ id: m.id, lat: m.lat, lng: m.lng, type: m.type })),
         markerList: (activity.markers || []).map((m) => ({
           ...m,
           typeMeta: config.MARKER_TYPES.find((t) => t.type === m.type) || {},
@@ -156,8 +156,9 @@ Page({
 
   onMarkerTap(e) {
     const markerId = e.detail; // track-map 返回数字 id，需映射回打点
-    // 用坐标匹配（track-map 数字 id 与打点顺序一致）
-    const idx = (typeof markerId === 'number' ? markerId - 1 : -1);
+    // 序号圈 id=idx+1；类型图标 id=30000+idx+1（统一映射回打点下标）
+    const num = typeof markerId === 'number' ? (markerId >= 30000 ? markerId - 30000 : markerId) : -1;
+    const idx = num - 1;
     const list = this.data.markerList;
     if (idx >= 0 && idx < list.length) {
       this.openEditMarker(list[idx]);
@@ -177,13 +178,9 @@ Page({
     });
   },
 
-  /** 新增打点（补打） */
+  /** 新增打点（补打）——已结束的轨迹不允许新增，拦截并提示 */
   addMarker() {
-    this.setData({
-      markerFormVisible: true,
-      editMode: false,
-      editMarker: null,
-    });
+    wx.showToast({ title: '已完成的轨迹不能再补打点', icon: 'none' });
   },
 
   async onMarkerConfirm(e) {

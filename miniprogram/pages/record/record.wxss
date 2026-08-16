@@ -17,7 +17,7 @@
 .layer-btn {
   position: absolute;
   top: 24rpx;
-  right: 24rpx;
+  left: 205rpx; /* 左上角，精度徽章（left 24）右侧留间距 */
   background: rgba(255, 255, 255, 0.9);
   border-radius: 999rpx;
   padding: 12rpx 24rpx;
@@ -52,9 +52,39 @@
 .stats-wrap {
   position: absolute;
   left: 24rpx;
-  right: 24rpx;
   top: 100rpx;
+  width: 430rpx; /* 缩小宽度：右侧留白，不盖住右上角指南针 */
   z-index: 10;
+}
+/* 贴左收齐态：窄条只显示距离+时长 */
+.stats-collapsed {
+  width: 260rpx;
+}
+.stats-collapsed-bar {
+  display: flex;
+  align-items: baseline;
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 999rpx;
+  padding: 14rpx 24rpx;
+  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.08);
+}
+.scb-dist {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #2b6cf6;
+  font-variant-numeric: tabular-nums;
+}
+.scb-unit {
+  font-size: 20rpx;
+  color: #999;
+  margin-left: 6rpx;
+  margin-right: 16rpx;
+}
+.scb-dur {
+  font-size: 26rpx;
+  color: #1f2329;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 .action-bar {
   position: absolute;
@@ -62,7 +92,7 @@
   right: 0;
   bottom: 0;
   padding: 24rpx 0 calc(24rpx + env(safe-area-inset-bottom));
-  background: linear-gradient(transparent, rgba(255, 255, 255, 0.95) 30%);
+  background: linear-gradient(transparent, rgba(255, 255, 255, 0.8) 30%);
   display: flex;
   justify-content: space-around;
   z-index: 10;

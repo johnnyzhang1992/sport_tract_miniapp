@@ -77,7 +77,7 @@
 .layer-btn {
   position: absolute;
   top: 24rpx;
-  right: 24rpx;
+  left: 175rpx; /* 左上角：全屏按钮（left 24）右侧适中间距 */
   background: rgba(255, 255, 255, 0.92);
   border-radius: 999rpx;
   padding: 12rpx 24rpx;
@@ -230,7 +230,7 @@
 .fullscreen-layer {
   position: absolute;
   top: calc(24rpx + env(safe-area-inset-top));
-  right: 24rpx;
+  left: 100rpx; /* 左侧：贴关闭按钮（left 24 宽 64） */
   z-index: 1001;
   background: rgba(255, 255, 255, 0.92);
   border-radius: 999rpx;

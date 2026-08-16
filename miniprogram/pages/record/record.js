@@ -41,6 +41,8 @@ Page({
       calories: 0,
     },
     paused: false,
+    statsCollapsed: false, // 数据面板是否贴左收齐
+    _collapsed: false,
 
     // 打点弹窗
     markerFormVisible: false,
@@ -276,6 +278,7 @@ Page({
         id: marker.id,
         lat: marker.lat,
         lng: marker.lng,
+        type: marker.type, // 打点类型（地图图标区分）
       });
       this.setData({ mapMarkers });
 
@@ -313,6 +316,11 @@ Page({
 
   cancelEnd() {
     this.setData({ endConfirmVisible: false });
+  },
+
+  /** 数据面板：点击贴左收齐 / 展开 */
+  toggleStats() {
+    this.setData({ statsCollapsed: !this.data.statsCollapsed });
   },
 
   togglePause() {

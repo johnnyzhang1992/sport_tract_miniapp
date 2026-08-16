@@ -8,7 +8,13 @@ const { formatDuration } = require('../../utils/format');
 Page({
   data: {
     overview: null,
-    days: 7,
+    trendType: 'week', // 距离趋势维度 week/month/week6/year
+    trendTypes: [
+      { value: 'week', label: '周' },
+      { value: 'month', label: '月' },
+      { value: 'week6', label: '6个月' },
+      { value: 'year', label: '年' },
+    ],
     chartData: [], // 柱状图数据 [{label, value}]
     chartUnit: 'km',
     loading: true,
@@ -37,13 +43,13 @@ Page({
       this.setData({ loading: true });
       const [overview, trend, best] = await Promise.all([
         api.get('/stats/overview'),
-        api.get(`/stats/trend?days=${this.data.days}`),
+        api.get(`/stats/trend?type=${this.data.trendType}`),
         api.get('/stats/best').catch(() => null),
       ]);
       this.setData({
         overview: this.decorateOverview(overview),
         chartData: trend.data.map((d) => ({
-          label: d.date.slice(5), // MM-DD
+          label: this.trendLabel(d.date),
           value: Math.round((d.distance / 1000) * 100) / 100, // 公里
         })),
         best: this.decorateBest(best),
@@ -96,10 +102,23 @@ Page({
     };
   },
 
-  onDaysChange(e) {
-    const days = Number(e.currentTarget.dataset.days);
-    if (days === this.data.days) return;
-    this.setData({ days });
+  /** 趋势维度切换 */
+  onTrendTypeChange(e) {
+    const value = e.currentTarget.dataset.value;
+    if (value === this.data.trendType) return;
+    this.setData({ trendType: value });
     this.loadAll();
+  },
+
+  /** 趋势标签：周/月 → MM-DD；6个月 → 周号；年 → M月 */
+  trendLabel(date) {
+    if (this.data.trendType === 'year') {
+      return `${Number(date.slice(5, 7))}月`;
+    }
+    if (this.data.trendType === 'week6') {
+      const m = date.match(/-W(\d+)/);
+      return m ? `W${m[1]}` : date.slice(5);
+    }
+    return date.slice(5); // MM-DD
   },
 });

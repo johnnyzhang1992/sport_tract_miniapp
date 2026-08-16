@@ -9,6 +9,8 @@
     markers="{{displayMarkers}}"
     polyline="{{polyline}}"
     show-location="{{false}}"
+    show-scale="{{true}}"
+    show-compass="{{true}}"
     enable-3D="{{false}}"
     enable-satellite="{{mapType === 'satellite'}}"
     enable-rotate="{{true}}"
@@ -18,7 +20,7 @@
     bindcallouttap="onMapCalloutTap"
   ></map>
   <!-- POI 标注切换按钮（record 模式在右上角避开底部操作栏；其他模式放右下角全屏按钮左边） -->
-  <view class="poi-btn {{mode === 'record' ? 'poi-btn-top' : ''}} {{mode === 'overview' ? 'poi-btn-overview' : ''}} {{poiTopRight ? 'poi-btn-top-right' : ''}} {{enablePoi ? 'poi-btn-active' : ''}}" bindtap="togglePoi">
+  <view class="poi-btn {{mode === 'record' ? 'poi-btn-top' : ''}} {{mode === 'overview' ? 'poi-btn-overview' : ''}} {{poiTopRight ? 'poi-btn-top-right' : ''}} {{poiBottomRight ? 'poi-btn-bottom-right' : ''}} {{enablePoi ? 'poi-btn-active' : ''}}" bindtap="togglePoi">
     <image class="poi-icon" src="{{enablePoi ? '/assets/icons/lucide-pin-white.png' : '/assets/icons/lucide-pin.png'}}" mode="aspectFit" />
     <text>标注</text>
   </view>

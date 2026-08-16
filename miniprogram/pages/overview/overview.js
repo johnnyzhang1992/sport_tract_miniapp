@@ -3,9 +3,9 @@ const config = require('../../config/index');
 const { formatDuration, compact, formatDurationStat } = require('../../utils/format');
 
 const RANGES = [
-  { value: 'week', label: '一周' },
-  { value: 'month', label: '一月' },
-  { value: 'year', label: '一年' },
+  { value: 'week', label: '本周' },
+  { value: 'month', label: '本月' },
+  { value: 'year', label: '本年' },
   { value: 'all', label: '全部' },
 ];
 
@@ -149,7 +149,7 @@ Page({
       wx.showToast({ title: '该时间段暂无轨迹', icon: 'none' });
       return;
     }
-    const rangeLabel = { week: '一周', month: '本月', year: '当前', all: '全部' }[this.data.activeRange] || '当前';
+    const rangeLabel = { week: '本周', month: '本月', year: '本年', all: '全部' }[this.data.activeRange] || '当前';
     const showCount = Math.min(tracks.length, MAX_SHARE_TRACKS);
     this.setData({ shareTitle: `我的${rangeLabel}轨迹 · ${showCount} 条${tracks.length > MAX_SHARE_TRACKS ? '（部分）' : ''}` });
     const shareTracks = tracks.map((t) => {
@@ -257,7 +257,7 @@ Page({
         ctx.fillRect(0, 0, width, H);
 
         // 标题：我的{范围}轨迹分享 · N 条
-        const rangeLabel = { week: '一周', month: '本月', year: '当前', all: '全部' }[this.data.activeRange] || '当前';
+        const rangeLabel = { week: '本周', month: '本月', year: '本年', all: '全部' }[this.data.activeRange] || '当前';
         ctx.fillStyle = '#1f2329';
         ctx.font = 'bold 15px sans-serif';
         ctx.textAlign = 'center';
