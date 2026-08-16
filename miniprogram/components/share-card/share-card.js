@@ -143,8 +143,18 @@ Component({
       const plotBottom = bottom - innerPad;
 
       // 轨迹线：单色实线（与轨迹卡片缩略图一致：#808080 中灰），无起终点、无海拔着色
-      const px = (p) => plotLeft + ((p.lng - minLng) / sLng) * (plotRight - plotLeft);
-      const py = (p) => plotBottom - ((p.lat - minLat) / sLat) * (plotBottom - plotTop);
+      // 等比例缩放（与真实地图一致）：纬度 1°≈111km，经度 1°≈111×cos(纬度)km，避免各轴独立拉伸变形
+      const midLat2 = (minLat + maxLat) / 2;
+      const kmPerDegLng2 = 111 * Math.cos((midLat2 * Math.PI) / 180);
+      const lngKm2 = sLng * kmPerDegLng2;
+      const latKm2 = sLat * 111;
+      const plotW = plotRight - plotLeft;
+      const plotH = plotBottom - plotTop;
+      const scale2 = Math.min(plotW / lngKm2, plotH / latKm2);
+      const offX = plotLeft + (plotW - lngKm2 * scale2) / 2; // 水平居中
+      const offY = plotBottom - (plotH - latKm2 * scale2) / 2; // 垂直居中（y 轴翻转）
+      const px = (p) => offX + (p.lng - minLng) * kmPerDegLng2 * scale2;
+      const py = (p) => offY - (p.lat - minLat) * 111 * scale2;
       ctx.lineJoin = 'round';
       ctx.lineCap = 'round';
       ctx.strokeStyle = '#808080';
