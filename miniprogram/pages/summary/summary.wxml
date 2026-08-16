@@ -1,7 +1,7 @@
 <view class="container" wx:if="{{stats}}">
   <!-- 轨迹图（静态模式自动 fitView） -->
   <view class="map-card">
-    <track-map points="{{mapPoints}}" markers="{{markers}}" mode="view" />
+    <track-map points="{{mapPoints}}" markers="{{markers}}" mode="view" poi-bottom-right />
   </view>
 
   <!-- 指标 -->

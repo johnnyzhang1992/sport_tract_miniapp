@@ -19,7 +19,7 @@
   align-items: center;
 }
 .layer-btn {
-  right: 24rpx;
+  left: 185rpx; /* 左上角，回放按钮（left 24）右侧留间距 */
 }
 .replay-btn {
   left: 24rpx;
@@ -80,7 +80,7 @@
 .fullscreen-layer {
   position: absolute;
   top: calc(24rpx + env(safe-area-inset-top));
-  right: 24rpx;
+  left: 100rpx; /* 左侧：贴关闭按钮（left 24 宽 64） */
   z-index: 1001;
   background: rgba(255, 255, 255, 0.92);
   border-radius: 999rpx;

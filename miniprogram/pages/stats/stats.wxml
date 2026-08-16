@@ -81,8 +81,13 @@
     <view class="chart-head">
       <view class="section-title">距离趋势（公里）</view>
       <view class="days-toggle">
-        <view class="day-btn {{days === 7 ? 'day-btn-active' : ''}}" data-days="7" bindtap="onDaysChange">7天</view>
-        <view class="day-btn {{days === 30 ? 'day-btn-active' : ''}}" data-days="30" bindtap="onDaysChange">30天</view>
+        <view
+          wx:for="{{trendTypes}}"
+          wx:key="value"
+          class="day-btn {{trendType === item.value ? 'day-btn-active' : ''}}"
+          data-value="{{item.value}}"
+          bindtap="onTrendTypeChange"
+        >{{item.label}}</view>
       </view>
     </view>
     <stat-chart data="{{chartData}}" type="bar" unit="km" height="{{230}}" empty-text="暂无运动数据" />

@@ -46,12 +46,16 @@
 }
 .days-toggle {
   display: flex;
+  flex: 1; /* 占满剩余宽度，4 个按钮均分不挤 */
+  margin-left: 16rpx;
   background: #f2f3f5;
   border-radius: 999rpx;
   padding: 4rpx;
 }
 .day-btn {
-  padding: 8rpx 28rpx;
+  flex: 1; /* 4 个按钮均分 */
+  text-align: center;
+  padding: 8rpx 0;
   border-radius: 999rpx;
   font-size: 24rpx;
   color: #666;

@@ -21,9 +21,15 @@
     </view>
   </view>
 
-  <!-- 实时数据面板 -->
-  <view class="stats-wrap">
+  <!-- 实时数据面板（点击贴左收齐/展开） -->
+  <view class="stats-wrap {{statsCollapsed ? 'stats-collapsed' : ''}}" bindtap="toggleStats">
+    <view class="stats-collapsed-bar" wx:if="{{statsCollapsed}}">
+      <text class="scb-dist">{{stats.distanceKm}}</text>
+      <text class="scb-unit">公里</text>
+      <text class="scb-dur">{{stats.durationText}}</text>
+    </view>
     <live-stats
+      wx:else
       distanceKm="{{stats.distanceKm}}"
       durationText="{{stats.durationText}}"
       paceText="{{stats.paceText}}"

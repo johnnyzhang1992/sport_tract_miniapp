@@ -25,8 +25,13 @@
 /* record 模式：右上角（图层按钮下方），避开底部操作栏 */
 .poi-btn-top {
   bottom: auto;
+  top: 24rpx;
+  left: 345rpx; /* 左上角：卫星按钮右侧 */
+  right: auto !important; /* 强制清除默认 right，避免双定位拉伸宽度 */
+}
+/* 右下角贴右（无全屏按钮的页面，如 summary） */
+.poi-btn-bottom-right {
   right: 24rpx;
-  top: 90rpx;
 }
 /* overview 模式：右下角贴右缘（无全屏按钮让位） */
 .poi-btn-overview {
@@ -35,8 +40,10 @@
 /* 全屏地图：右上角，图层按钮（right 24，宽约 140）左侧，留足间距 */
 .poi-btn-top-right {
   bottom: auto;
-  top: 24rpx;
-  right: 185rpx;
+  top: calc(24rpx + env(safe-area-inset-top));
+  left: 252rpx; /* 左侧：卫星按钮（left 100）右侧贴紧 */
+  right: auto !important; /* 强制清除 .poi-btn 默认 right：flex+left/right 双定位会把宽度拉伸成整行 */
+  width: fit-content; /* 宽度跟随内容 */
 }
 .poi-btn-active {
   background: #2b6cf6;
@@ -70,3 +77,4 @@
   background: #ff9800;
   margin-right: 10rpx;
 }
+

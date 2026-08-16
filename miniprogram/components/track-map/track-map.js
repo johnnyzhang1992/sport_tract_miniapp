@@ -29,6 +29,8 @@ Component({
     showHeatLegend: { type: Boolean, value: false },
     /** POI 按钮放右上角（图层按钮左侧）——全屏地图用 */
     poiTopRight: { type: Boolean, value: false },
+    /** POI 按钮右下角贴右（无全屏按钮的页面，如 summary） */
+    poiBottomRight: { type: Boolean, value: false },
   },
 
   data: {
@@ -218,21 +220,71 @@ Component({
 
     buildMarkers() {
       // 微信 map 组件：marker id 必须是 number（字符串会报渲染层错误）
-      // 打点图标：按打卡顺序用带数字的圆圈（marker-1.png ~ marker-20.png）
-      // anchor 用中心 {0.5, 0.5}：默认底部锚点会让图标悬在坐标点上方（打点不贴轨迹线）
-      const base = this.data.markers.map((m, idx) => {
-        const num = idx + 1;
-        return {
-          id: num,
-          latitude: m.lat,
-          longitude: m.lng,
-          iconPath:
-            num <= 20 ? `/assets/icons/marker-${num}.png` : defaultMarkerIcon(),
-          width: m.width || 24,
-          height: m.height || 24,
-          anchor: { x: 0.5, y: 0.5 },
-        };
-      });
+      // 打点图标：类型图标作为圆形底图（去背景色）+ 序号叠加居中（离屏 canvas 合成）
+      const TYPE_ICONS = {
+        checkpoint: '/assets/icons/lucide-pin.png',
+        rest: '/assets/icons/lucide-coffee.png',
+        photo: '/assets/icons/lucide-camera.png',
+        note: '/assets/icons/lucide-note.png',
+      };
+      const MARKER_ICON_CACHE = (this._markerIconCache = this._markerIconCache || {});
+      const build = async (type, num) => {
+        // 图标不依赖序号，缓存键只用类型（加 v2 版本避免旧带数字图残留）
+        const key = `v2-${type || 'checkpoint'}`;
+        if (MARKER_ICON_CACHE[key]) return MARKER_ICON_CACHE[key];
+        try {
+          const canvas = wx.createOffscreenCanvas({ type: '2d', width: 48, height: 48 });
+          const ctx = canvas.getContext('2d');
+          // 白底圆 + 边框（图标有底有边，更清晰）
+          ctx.beginPath();
+          ctx.arc(24, 24, 23, 0, Math.PI * 2);
+          ctx.fillStyle = '#ffffff';
+          ctx.fill();
+          ctx.strokeStyle = '#c8d0dc';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+          // 图标内缩居中（36×36，留边距不铺满）
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(24, 24, 19, 0, Math.PI * 2);
+          ctx.clip();
+          const icon = TYPE_ICONS[type] || TYPE_ICONS.checkpoint;
+          const img = canvas.createImage();
+          img.src = icon;
+          await new Promise((res, rej) => {
+            img.onload = res;
+            img.onerror = rej;
+          });
+          ctx.drawImage(img, 9, 9, 30, 30);
+          ctx.restore();
+          const path = await new Promise((res) => {
+            wx.canvasToTempFilePath({
+              canvas,
+              success: (r) => res(r.tempFilePath),
+              fail: () => res(''),
+            });
+          });
+          if (path) MARKER_ICON_CACHE[key] = path;
+          return path;
+        } catch (e) {
+          return '';
+        }
+      };
+      Promise.all(
+        this.data.markers.map((m, idx) => build(m.type, idx + 1)),
+      ).then((icons) => {
+        const base = this.data.markers.map((m, idx) => {
+          const num = idx + 1;
+          return {
+            id: num,
+            latitude: m.lat,
+            longitude: m.lng,
+            iconPath: icons[idx] || defaultMarkerIcon(),
+            width: 20,
+            height: 20,
+            anchor: { x: 0.5, y: 0.5 },
+          };
+        });
 
       // 起点/终点标记（详情页）：轨迹首尾 + "起/终" 文字标签
       if (this.data.showStartEnd) {
@@ -246,8 +298,8 @@ Component({
               latitude: pts[0].lat,
               longitude: pts[0].lng,
               iconPath: '/assets/icons/marker-start.png',
-              width: 26,
-              height: 26,
+              width: 20,
+              height: 20,
               anchor: { x: 0.5, y: 0.5 },
             },
             {
@@ -255,8 +307,8 @@ Component({
               latitude: pts[pts.length - 1].lat,
               longitude: pts[pts.length - 1].lng,
               iconPath: '/assets/icons/marker-end.png',
-              width: 26,
-              height: 26,
+              width: 20,
+              height: 20,
               anchor: { x: 0.5, y: 0.5 },
             },
           );
@@ -276,6 +328,7 @@ Component({
         });
       }
       this.setData({ displayMarkers: base });
+      });
     },
 
     /** 动态追点：视野跟随当前位置（节流） */
@@ -318,6 +371,8 @@ Component({
     togglePoi() {
       this.setData({ enablePoi: !this.data.enablePoi });
     },
+
+
 
     /** 合集模式：多轨迹 polyline（按类型配色 + 高频路线加粗高亮） */
     buildOverview() {
