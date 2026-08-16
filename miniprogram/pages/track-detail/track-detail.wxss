@@ -9,7 +9,7 @@
 .layer-btn,
 .replay-btn {
   position: absolute;
-  top: 24rpx;
+  top: 16rpx;
   background: rgba(255, 255, 255, 0.92);
   border-radius: 999rpx;
   padding: 10rpx 22rpx;
@@ -19,10 +19,10 @@
   align-items: center;
 }
 .layer-btn {
-  left: 185rpx; /* 左上角，回放按钮（left 24）右侧留间距 */
+  right: 24rpx; /* 右上角（真机指南针在左侧） */
 }
 .replay-btn {
-  left: 24rpx;
+  left: 80rpx; /* 往右移约一半宽度，避开真机左侧指南针 */
 }
 .replay-btn-active {
   background: #2b6cf6;
@@ -41,7 +41,7 @@
 .fullscreen-btn {
   position: absolute;
   right: 24rpx;
-  bottom: 24rpx;
+  bottom: 16rpx;
   background: rgba(255, 255, 255, 0.92);
   border-radius: 999rpx;
   padding: 10rpx 22rpx;
@@ -63,7 +63,7 @@
 }
 .fullscreen-close {
   position: absolute;
-  top: calc(24rpx + env(safe-area-inset-top));
+  top: calc(16rpx + env(safe-area-inset-top));
   left: 24rpx;
   z-index: 1001;
   width: 64rpx;
@@ -79,8 +79,8 @@
 }
 .fullscreen-layer {
   position: absolute;
-  top: calc(24rpx + env(safe-area-inset-top));
-  left: 100rpx; /* 左侧：贴关闭按钮（left 24 宽 64） */
+  top: calc(16rpx + env(safe-area-inset-top));
+  right: 24rpx; /* 右上角（真机指南针在左侧） */
   z-index: 1001;
   background: rgba(255, 255, 255, 0.92);
   border-radius: 999rpx;
