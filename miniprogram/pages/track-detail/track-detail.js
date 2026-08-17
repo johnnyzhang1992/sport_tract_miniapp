@@ -101,6 +101,12 @@ Page({
       });
       // 单段明细（每公里分段；默认展示前 10）
       const segs = this.computeKmSegments(activity.trackPoints || []);
+      const full = segs.filter((s) => !s.partial);
+      if (full.length) {
+        // 标记该轨迹最快配速段（完整段中配速最小）
+        const fastest = full.reduce((a, b) => (b.durationSec / b.distKm < a.durationSec / a.distKm ? b : a), full[0]);
+        fastest.fastest = true;
+      }
       this.setData({ kmSegs: segs, displaySegs: segs.slice(0, 5) });
     } catch (e) {
       wx.showToast({ title: '加载详情失败', icon: 'none' });
@@ -275,6 +281,26 @@ Page({
     } else {
       wx.showToast({ title: '组件未就绪', icon: 'none' });
     }
+  },
+
+  /** 判断当前轨迹是否为该类型的个人最佳纪录（用纪录 id 对比） */
+  computeBestBadges(activity) {
+    const app = getApp();
+    const best = getBestCache(app.globalData.user ? app.globalData.user.id : '');
+    if (!best) return [];
+    const id = String(activity.id || this.data.id);
+    const rows = [
+      { list: best.maxDistanceByType, label: '最远距离' },
+      { list: best.minPaceByType, label: '最快配速' },
+      { list: best.maxDurationByType, label: '最长时长' },
+      { list: best.maxElevationByType, label: '最大爬升' },
+    ];
+    const badges = [];
+    for (const { list, label } of rows) {
+      const rec = (list || []).find((r) => r.type === activity.type);
+      if (rec && String(rec.id) === id) badges.push(label);
+    }
+    return badges;
   },
 
   /** 单段明细：按每公里切分段（序号/时间/配速），最后不足 1km 记为余段 */
