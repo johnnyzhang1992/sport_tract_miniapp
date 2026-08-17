@@ -54,6 +54,12 @@ Page({
         })),
         best: this.decorateBest(best),
       });
+      // 缓存原始 best 数据（记录页打破纪录提示用）
+      if (best) {
+        const { setBestCache } = require('../../services/storage');
+        const app = getApp();
+        setBestCache(app.globalData.user ? app.globalData.user.id : '', best);
+      }
     } catch (e) {
       console.error('加载统计失败', e);
     } finally {

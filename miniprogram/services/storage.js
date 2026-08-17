@@ -44,4 +44,18 @@ function getUser() {
   return safeGet(USER_KEY) || null;
 }
 
-module.exports = { setToken, getToken, clearToken, setUser, getUser };
+/** 个人最佳缓存（打破纪录提示用；key 带 userId 防串用户） */
+function bestCacheKey(userId) {
+  return `best_records_cache_${userId || 'anon'}`;
+}
+function getBestCache(userId) {
+  return wx.getStorageSync(bestCacheKey(userId)) || null;
+}
+function setBestCache(userId, data) {
+  wx.setStorageSync(bestCacheKey(userId), data);
+}
+function clearBestCache(userId) {
+  wx.removeStorageSync(bestCacheKey(userId));
+}
+
+module.exports = { setToken, getToken, clearToken, setUser, getUser, getBestCache, setBestCache, clearBestCache };

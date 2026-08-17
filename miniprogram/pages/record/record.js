@@ -12,6 +12,7 @@ const { SyncService } = require('../../services/sync');
 const { reverseGeocode } = require('../../services/geo');
 const { uploadPhoto } = require('../../services/oss-upload');
 const { formatPace } = require('../../utils/format');
+const { getBestCache } = require('../../services/storage');
 
 let locationListenerOn = false;
 
@@ -217,6 +218,50 @@ Page({
       },
       paused: snap.paused,
     });
+    this.checkBestRecord(snap);
+  },
+
+  /**
+   * 运动中打破个人最佳 → toast 恭喜（本地缓存 best 对比）
+   * - 仅距离/时长/爬升（实时可准确判断；最快配速为 1km 分段口径，运动中无法判定，不提示）
+   * - 每次运动每个指标只提示一次
+   */
+  checkBestRecord(snap) {
+    if (this.data.paused) return;
+    if (!this._bestLoaded) {
+      this._bestLoaded = true;
+      const app = getApp();
+      this._best = getBestCache(app.globalData.user ? app.globalData.user.id : '') || null;
+    }
+    if (!this._best) return;
+    const type = this.data.type;
+    const findBest = (rows, key) => {
+      const r = (rows || []).find((x) => x.type === type);
+      return r ? r[key] : null;
+    };
+    const checks = [
+      { metric: '最远距离', cur: snap.distance, best: findBest(this._best.maxDistanceByType, 'distance'), unit: 'm' },
+      { metric: '最长时长', cur: snap.durationSec, best: findBest(this._best.maxDurationByType, 'duration'), unit: 's' },
+      { metric: '最大爬升', cur: snap.elevationGain, best: findBest(this._best.maxElevationByType, 'elevationGain'), unit: 'm' },
+    ];
+    if (!this._bestToasted) this._bestToasted = {};
+    for (const ch of checks) {
+      if (ch.best == null || ch.cur <= ch.best) continue; // 无历史纪录或未打破
+      const key = ch.metric;
+      if (this._bestToasted[key]) continue; // 本次运动已提示过
+      this._bestToasted[key] = true;
+      wx.showToast({ title: `🎉 打破纪录：${ch.metric}！`, icon: 'none', duration: 2500 });
+      // 更新本地缓存（新纪录）
+      const app = getApp();
+      const { setBestCache } = require('../../services/storage');
+      const rowsKey = { '最远距离': 'maxDistanceByType', '最长时长': 'maxDurationByType', '最大爬升': 'maxElevationByType' }[ch.metric];
+      const rows = this._best[rowsKey] || [];
+      const idx = rows.findIndex((x) => x.type === type);
+      const rec = { ...(rows[idx] || {}), type, [ch.metric === '最远距离' ? 'distance' : ch.metric === '最长时长' ? 'duration' : 'elevationGain']: Math.round(ch.cur) };
+      if (idx >= 0) rows[idx] = rec; else rows.push(rec);
+      this._best[rowsKey] = rows;
+      setBestCache(app.globalData.user ? app.globalData.user.id : '', this._best);
+    }
   },
 
   // ==================== 打点 ====================
