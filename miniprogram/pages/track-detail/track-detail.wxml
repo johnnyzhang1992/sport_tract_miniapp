@@ -62,8 +62,8 @@
         <view class="metric-label">时长</view>
       </view>
       <view class="metric">
-        <view class="metric-num">{{activity.paceValue}}<text class="pace-unit">{{activity.paceUnit}}</text></view>
-        <view class="metric-label">配速</view>
+        <view class="metric-num">{{activity.paceValue}}</view>
+        <view class="metric-label">配速 {{activity.paceUnit}}</view>
       </view>
       <view class="metric">
         <view class="metric-num">{{activity.calories}}</view>
