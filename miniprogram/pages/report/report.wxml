@@ -107,6 +107,8 @@
         </view>
         <view class="best-value" wx:else>—</view>
       </view>
+    </view>
+  </view>
 
   <!-- 轨迹列表 -->
   <view class="section-title list-title" wx:if="{{tracks.length > 0}}">运动记录</view>
