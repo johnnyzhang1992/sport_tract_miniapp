@@ -90,7 +90,10 @@
           <text class="seg-time">{{item.durationText}}</text>
           <text class="seg-dist">{{item.distKm.toFixed(2)}} 公里{{item.partial ? '（不足 1km）' : ''}}</text>
         </view>
-        <view class="seg-pace">配速 {{item.paceText}}</view>
+        <view class="seg-pace">
+        <text>配速 {{item.paceText}}</text>
+        <text class="seg-fast" wx:if="{{item.fastest}}">最快</text>
+      </view>
       </view>
     </view>
   </view>
@@ -108,7 +111,10 @@
                 <text class="seg-time">{{item.durationText}}</text>
                 <text class="seg-dist">{{item.distKm.toFixed(2)}} 公里{{item.partial ? '（不足 1km）' : ''}}</text>
               </view>
-              <view class="seg-pace">配速 {{item.paceText}}</view>
+              <view class="seg-pace">
+                <text>配速 {{item.paceText}}</text>
+                <text class="seg-fast" wx:if="{{item.fastest}}">最快</text>
+              </view>
             </view>
           </view>
         </view>
