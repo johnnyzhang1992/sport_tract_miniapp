@@ -91,7 +91,7 @@ Page({
       return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
     };
     const item = (rec, val, unit, isPace) => ({
-      value: isPace ? (rec ? formatPace(rec.avgPace) : '—') : val,
+      value: isPace ? (rec ? formatPace(rec.fastestKm ?? rec.avgPace) : '—') : val,
       date: rec ? dayText(rec.startTime) : '',
     });
     return {
