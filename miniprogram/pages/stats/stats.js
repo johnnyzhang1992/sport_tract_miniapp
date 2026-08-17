@@ -86,19 +86,27 @@ Page({
   decorateBest(b) {
     if (!b) return null;
     const { formatDuration, formatPace } = require('../../utils/format');
+    const TYPE_META = require('../../config/index').ACTIVITY_TYPES || [];
+    const typeMeta = (t) => TYPE_META.find((x) => x.type === t) || {};
     const dayText = (t) => {
       const d = new Date(t);
       return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
     };
-    const item = (rec, val, unit, isPace) => ({
-      value: isPace ? (rec ? formatPace(rec.fastestKm ?? rec.avgPace) : '—') : val,
-      date: rec ? dayText(rec.startTime) : '',
-    });
+    const byType = (rows, valFn, unit = '') =>
+      (rows || []).map((r) => ({
+        type: r.type,
+        typeLabel: typeMeta(r.type).label || r.type,
+        typeIcon: typeMeta(r.type).iconImg || '', // 统一图片图标（非 emoji）
+        value: valFn(r),
+        unit,
+        date: dayText(r.startTime),
+      }));
     return {
-      maxDistance: item(b.maxDistance, b.maxDistance ? (b.maxDistance.distance / 1000).toFixed(1) : '—', 'km'),
-      minPace: item(b.minPace, '', '', true),
-      maxDuration: item(b.maxDuration, b.maxDuration ? formatDuration(b.maxDuration.duration) : '—', ''),
-      maxElevation: item(b.maxElevation, b.maxElevation ? `${b.maxElevation.elevationGain} m` : '—', ''),
+      maxDistanceByType: byType(b.maxDistanceByType, (r) => (r.distance / 1000).toFixed(1), 'km'),
+      // 最快配速按类型分组（不同类型不可比）：各类型最快 1km 分段
+      minPaceByType: byType(b.minPaceByType, (r) => formatPace(r.fastestKm ?? r.avgPace)),
+      maxDurationByType: byType(b.maxDurationByType, (r) => formatDuration(r.duration)),
+      maxElevationByType: byType(b.maxElevationByType, (r) => String(r.elevationGain), 'm'),
     };
   },
 
