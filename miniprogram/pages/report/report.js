@@ -104,7 +104,7 @@ Page({
         ? { value: (b.maxDistance.distance / 1000).toFixed(1), unit: 'km', date: dayText(b.maxDistance.startTime) }
         : null,
       minPace: b.minPace
-        ? { value: formatPace(b.minPace.avgPace), unit: '', date: dayText(b.minPace.startTime) }
+        ? { value: formatPace(b.minPace.fastestKm ?? b.minPace.avgPace), unit: '', date: dayText(b.minPace.startTime) }
         : null,
       maxDuration: b.maxDuration
         ? { value: formatDuration(b.maxDuration.duration), unit: '', date: dayText(b.maxDuration.startTime) }
