@@ -40,57 +40,26 @@
     </view>
   </view>
 
-  <!-- 个人最佳纪录 -->
+  <!-- 个人最佳纪录（表格：行=类型，列=4 项指标） -->
   <view class="card" wx:if="{{best}}">
     <view class="section-title">个人最佳</view>
-    <view class="best-grid">
-      <view class="best-item">
-        <view class="best-label">最远距离</view>
-        <view class="best-list" wx:if="{{best.maxDistanceByType.length}}">
-          <view class="best-row" wx:for="{{best.maxDistanceByType}}" wx:key="type">
-            <image class="best-type-icon" src="{{item.typeIcon}}" mode="aspectFit" />
-            <text class="best-row-label">{{item.typeLabel}}</text>
-            <text class="best-row-val">{{item.value}}<text class="best-row-unit">{{item.unit}}</text></text>
-            <text class="best-row-date">{{item.date}}</text>
-          </view>
-        </view>
-        <view class="best-value" wx:else>—</view>
+    <view class="best-table">
+      <view class="bt-head">
+        <view class="bt-th bt-col-type">类型</view>
+        <view class="bt-th">最远距离</view>
+        <view class="bt-th">最快配速</view>
+        <view class="bt-th">最长时长</view>
+        <view class="bt-th">最大爬升</view>
       </view>
-      <view class="best-item">
-        <view class="best-label">最快配速</view>
-        <view class="best-list" wx:if="{{best.minPaceByType.length}}">
-          <view class="best-row" wx:for="{{best.minPaceByType}}" wx:key="type">
-            <image class="best-type-icon" src="{{item.typeIcon}}" mode="aspectFit" />
-            <text class="best-row-label">{{item.typeLabel}}</text>
-            <text class="best-row-val">{{item.value}}</text>
-            <text class="best-row-date">{{item.date}}</text>
-          </view>
+      <view class="bt-row" wx:for="{{best.bestTable}}" wx:key="type">
+        <view class="bt-td bt-col-type">
+          <image class="bt-icon" src="{{item.typeIcon}}" mode="aspectFit" />
+          <text class="bt-type-label">{{item.typeLabel}}</text>
         </view>
-        <view class="best-value" wx:else>—</view>
-      </view>
-      <view class="best-item">
-        <view class="best-label">最长时长</view>
-        <view class="best-list" wx:if="{{best.maxDurationByType.length}}">
-          <view class="best-row" wx:for="{{best.maxDurationByType}}" wx:key="type">
-            <image class="best-type-icon" src="{{item.typeIcon}}" mode="aspectFit" />
-            <text class="best-row-label">{{item.typeLabel}}</text>
-            <text class="best-row-val">{{item.value}}</text>
-            <text class="best-row-date">{{item.date}}</text>
-          </view>
-        </view>
-        <view class="best-value" wx:else>—</view>
-      </view>
-      <view class="best-item">
-        <view class="best-label">最大爬升</view>
-        <view class="best-list" wx:if="{{best.maxElevationByType.length}}">
-          <view class="best-row" wx:for="{{best.maxElevationByType}}" wx:key="type">
-            <image class="best-type-icon" src="{{item.typeIcon}}" mode="aspectFit" />
-            <text class="best-row-label">{{item.typeLabel}}</text>
-            <text class="best-row-val">{{item.value}}<text class="best-row-unit">{{item.unit}}</text></text>
-            <text class="best-row-date">{{item.date}}</text>
-          </view>
-        </view>
-        <view class="best-value" wx:else>—</view>
+        <view class="bt-td">{{item.maxDistance}}</view>
+        <view class="bt-td">{{item.minPace}}</view>
+        <view class="bt-td">{{item.maxDuration}}</view>
+        <view class="bt-td">{{item.maxElevation}}</view>
       </view>
     </view>
   </view>

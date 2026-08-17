@@ -99,21 +99,21 @@ Page({
       const d = new Date(t);
       return `${d.getMonth() + 1}/${d.getDate()}`;
     };
-    const byType = (rows, valFn, unit = '') =>
-      (rows || []).map((r) => ({
-        type: r.type,
-        typeLabel: (config.ACTIVITY_TYPES.find((x) => x.type === r.type) || {}).label || r.type,
-        typeIcon: (config.ACTIVITY_TYPES.find((x) => x.type === r.type) || {}).iconImg || '',
-        value: valFn(r),
-        unit,
-        date: dayText(r.startTime),
-      }));
-    return {
-      maxDistanceByType: byType(b.maxDistanceByType, (r) => (r.distance / 1000).toFixed(1), 'km'),
-      minPaceByType: byType(b.minPaceByType, (r) => formatPace(r.fastestKm ?? r.avgPace)),
-      maxDurationByType: byType(b.maxDurationByType, (r) => formatDuration(r.duration)),
-      maxElevationByType: byType(b.maxElevationByType, (r) => String(r.elevationGain), 'm'),
+    const rowsMap = {};
+    const put = (rows, key, valFn) => {
+      (rows || []).forEach((r) => {
+        if (!rowsMap[r.type]) {
+          const meta = config.ACTIVITY_TYPES.find((x) => x.type === r.type) || {};
+          rowsMap[r.type] = { type: r.type, typeLabel: meta.label || r.type, typeIcon: meta.iconImg || '', maxDistance: '—', minPace: '—', maxDuration: '—', maxElevation: '—' };
+        }
+        rowsMap[r.type][key] = valFn(r);
+      });
     };
+    put(b.maxDistanceByType, 'maxDistance', (r) => `${(r.distance / 1000).toFixed(1)}km`);
+    put(b.minPaceByType, 'minPace', (r) => formatPace(r.fastestKm ?? r.avgPace));
+    put(b.maxDurationByType, 'maxDuration', (r) => formatDuration(r.duration));
+    put(b.maxElevationByType, 'maxElevation', (r) => `${r.elevationGain}m`);
+    return { bestTable: Object.keys(rowsMap).sort().map((t) => rowsMap[t]) };
   },
 
   /** 轨迹列表卡片（缩略图 + 类型/距离/时长/配速/时间） */
