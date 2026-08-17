@@ -89,40 +89,16 @@ Page({
         api.get('/stats/footprint').catch(() => null),
         api.get('/stats/trend?days=365').catch(() => null),
       ]);
-      // 兜底优先级：今日 → 本周 → 当月 → 今年 → 今日（都无数据）
-      const order = [
-        { key: 'today', label: '今日' },
-        { key: 'week', label: '本周' },
-        { key: 'month', label: '当月' },
-        { key: 'year', label: '今年' },
-      ];
-      const sec =
-        order.find((o) => (overview[o.key] || {}).count > 0) ||
-        { key: 'today', label: '今日' };
-      const s = overview[sec.key] || { count: 0, distance: 0, duration: 0, calories: 0 };
       const total = overview.total || { count: 0, distance: 0 };
       // 日历热力图数据（近 365 天按天距离）
       const heatData = heat && heat.data ? heat.data : [];
-      // 预处理：WXML 不支持 toFixed 等方法调用；公里/千卡 K·W 缩写、时长分钟→小时→天
-      const dur = formatDuration(s.duration || 0);
+      // 预处理：公里/千卡 K·W 缩写
       this.setData({
-        overviewLabel: sec.label + '概览',
         totalOverview: {
           trackCount: total.count || 0,
           totalKm: compact((total.distance || 0) / 1000),
           provinceCount: footprint ? footprint.provinceCount : 0,
           cityCount: footprint ? footprint.cityCount : 0,
-        },
-        overview: {
-          today: {
-            count: s.count,
-            distanceNum: compact((s.distance || 0) / 1000),
-            distanceUnit: '公里',
-            durationNum: dur.num,
-            durationUnit: dur.unit,
-            calorieNum: compact(s.calories || 0),
-            calorieUnit: '千卡',
-          },
         },
         heatData,
       });

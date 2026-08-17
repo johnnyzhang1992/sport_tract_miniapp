@@ -53,29 +53,6 @@
     </view>
   </view>
 
-  <!-- 今日概览 -->
-  <view class="card" wx:if="{{overview}}">
-    <view class="section-title">{{overviewLabel}}</view>
-    <view class="stats-row">
-      <view class="stat-item">
-        <view class="stat-num">{{overview.today.count}}</view>
-        <view class="stat-label">次数</view>
-      </view>
-      <view class="stat-item">
-        <view class="stat-num">{{overview.today.distanceNum}}</view>
-        <view class="stat-label">{{overview.today.distanceUnit}}</view>
-      </view>
-      <view class="stat-item">
-        <view class="stat-num">{{overview.today.durationNum}}</view>
-        <view class="stat-label">{{overview.today.durationUnit}}</view>
-      </view>
-      <view class="stat-item">
-        <view class="stat-num">{{overview.today.calorieNum}}</view>
-        <view class="stat-label">{{overview.today.calorieUnit}}</view>
-      </view>
-    </view>
-  </view>
-
   <!-- 运动类型选择 -->
   <view class="card">
     <view class="section-title">运动类型</view>

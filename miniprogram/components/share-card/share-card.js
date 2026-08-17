@@ -85,12 +85,21 @@ Component({
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, width, height);
 
-            // 标题（距顶部与底部时间距底一致，去加粗）
+            // 标题（两行，居左）：第一行运动类型，第二行 公里数（加大加粗）
             const act = this.data.activity || {};
+            ctx.textAlign = 'left';
             ctx.fillStyle = 'rgba(31,35,41,0.7)';
             ctx.font = '13px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText(`${act.label || '运动'} · ${act.distanceKm || '0.00'} 公里`, width / 2, 20);
+            ctx.fillText(act.label || '运动', 16, 30);
+            // 数字加大加粗，"公里"保持原样（小号灰）；先测宽再切字体（避免 13px 测量 24px 数字偏窄）
+            const kmText = `${act.distanceKm || '0.00'}`;
+            ctx.fillStyle = '#1f2329';
+            ctx.font = 'bold 24px sans-serif';
+            const kmW = ctx.measureText(kmText).width;
+            ctx.fillText(kmText, 16, 58);
+            ctx.fillStyle = 'rgba(31,35,41,0.7)';
+            ctx.font = '13px sans-serif';
+            ctx.fillText('公里', 16 + kmW + 6, 58);
 
             // 轨迹（大块完整展示）
             this.drawTrack(ctx, width, height);
@@ -117,7 +126,7 @@ Component({
       if (pts.length < 2) return;
       // 轨迹区域：标题下到指标卡上方，尽量占满（高度调高）
       const pad = 24;
-      const top = 62;
+      const top = 82; // 两行标题下
       const bottom = 240;
       const lats = pts.map((p) => p.lat);
       const lngs = pts.map((p) => p.lng);

@@ -159,7 +159,7 @@ Page({
       const timeText = valid
         ? `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
         : '';
-      return { id: t.id, points: t.points || [], timeText };
+      return { id: t.id, points: t.points || [], timeText, distance: t.distance || 0 };
     });
     this.setData({ shareVisible: true, shareTracks }, () => this.drawSharePoster());
   },
@@ -229,7 +229,7 @@ Page({
     const gap = 12;
     const pad = 16;
     // 海报高度：初始 3:4（宽300 高400），轨迹多行数多时再动态增高
-    const contentH = 46 + rows * (cellH + timeH + gap) + 30;
+    const contentH = 76 + rows * (cellH + timeH + gap) + 30;
     const H = Math.max(400, contentH);
 
     wx.createSelectorQuery()
@@ -256,12 +256,20 @@ Page({
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, width, H);
 
-        // 标题：我的{范围}轨迹分享 · N 条
-        const rangeLabel = { week: '本周', month: '本月', year: '本年', all: '全部' }[this.data.activeRange] || '当前';
+        // 标题（两行，居左）：已累计运动了 / {累计公里数} 公里（加大加粗）
+        const totalKm = (all.reduce((s, t) => s + (t.distance || 0), 0) / 1000).toFixed(2);
+        ctx.textAlign = 'left';
+        ctx.fillStyle = 'rgba(31,35,41,0.7)';
+        ctx.font = '13px sans-serif';
+        ctx.fillText('已累计运动了', 16, 30);
+        // 数字加大加粗，"公里"保持原样（小号灰）；先测宽再切字体（避免 13px 测量 24px 数字偏窄）
         ctx.fillStyle = '#1f2329';
-        ctx.font = 'bold 15px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(`我的${rangeLabel}轨迹 · ${tracks.length} 条`, width / 2, 28);
+        ctx.font = 'bold 24px sans-serif';
+        const kmW = ctx.measureText(totalKm).width;
+        ctx.fillText(totalKm, 16, 58);
+        ctx.fillStyle = 'rgba(31,35,41,0.7)';
+        ctx.font = '13px sans-serif';
+        ctx.fillText('公里', 16 + kmW + 6, 58);
         // 截断提示（在品牌行上方）
         if (truncated) {
           ctx.fillStyle = '#bbb';
@@ -318,8 +326,16 @@ Page({
     });
     const sLat = maxLat - minLat || 1e-9;
     const sLng = maxLng - minLng || 1e-9;
-    const px = (p) => x + ((p.lng - minLng) / sLng) * w;
-    const py = (p) => y + h - ((p.lat - minLat) / sLat) * h;
+    // 等比例缩放（与真实地图一致）：纬度 1°≈111km，经度 1°≈111×cos(纬度)km，避免独立拉伸变形
+    const midLat = (minLat + maxLat) / 2;
+    const kmPerDegLng = 111 * Math.cos((midLat * Math.PI) / 180);
+    const lngKm = sLng * kmPerDegLng;
+    const latKm = sLat * 111;
+    const scale = Math.min(w / lngKm, h / latKm); // px/km
+    const offX = x + (w - lngKm * scale) / 2; // 格内水平居中
+    const offY = y + h - (h - latKm * scale) / 2; // 格内垂直居中（y 轴翻转）
+    const px = (p) => offX + (p.lng - minLng) * kmPerDegLng * scale;
+    const py = (p) => offY - (p.lat - minLat) * 111 * scale;
     ctx.strokeStyle = '#808080';
     ctx.lineWidth = 1.5;
     ctx.lineJoin = 'round';
