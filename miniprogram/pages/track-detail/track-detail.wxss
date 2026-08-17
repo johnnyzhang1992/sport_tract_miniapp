@@ -369,3 +369,18 @@
   border-radius: 6rpx;
   padding: 2rpx 10rpx;
 }
+
+/* 个人最佳徽章 */
+.best-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx;
+  margin: 8rpx 0;
+}
+.best-badge {
+  font-size: 20rpx;
+  color: #ff6b3d;
+  background: #fff4ef;
+  border-radius: 999rpx;
+  padding: 4rpx 16rpx;
+}

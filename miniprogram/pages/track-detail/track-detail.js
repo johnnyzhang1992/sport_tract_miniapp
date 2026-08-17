@@ -99,6 +99,22 @@ Page({
         })),
         altitudeChart,
       });
+      // 个人最佳徽章：先取本地缓存，无则拉取一次 /stats/best 并缓存
+      const app = getApp();
+      const uid = app.globalData.user ? app.globalData.user.id : '';
+      let best = getBestCache(uid);
+      if (!best) {
+        try {
+          best = await api.get('/stats/best');
+          if (best) {
+            const { setBestCache } = require('../../services/storage');
+            setBestCache(uid, best);
+          }
+        } catch (err) {
+          best = null;
+        }
+      }
+      this.setData({ bestBadges: this.computeBestBadges(activity, best) });
       // 单段明细（每公里分段；默认展示前 10）
       const segs = this.computeKmSegments(activity.trackPoints || []);
       const full = segs.filter((s) => !s.partial);
