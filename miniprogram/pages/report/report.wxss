@@ -156,3 +156,43 @@
   color: #999;
   font-size: 24rpx;
 }
+
+/* 个人最佳按类型列表 */
+.best-list {
+  margin-top: 8rpx;
+}
+.best-row {
+  display: flex;
+  align-items: center;
+  padding: 6rpx 0;
+  border-bottom: 1rpx solid #f2f3f5;
+  font-size: 22rpx;
+}
+.best-row:last-child {
+  border-bottom: none;
+}
+.best-type-icon {
+  width: 28rpx;
+  height: 28rpx;
+  margin-right: 8rpx;
+  flex-shrink: 0;
+}
+.best-row-label {
+  color: #86909c;
+  flex: 1;
+  text-align: left;
+}
+.best-row-val {
+  font-weight: 600;
+  color: #1f2329;
+}
+.best-row-unit {
+  font-size: 18rpx;
+  color: #86909c;
+  margin-left: 2rpx;
+}
+.best-row-date {
+  color: #c9cdd4;
+  font-size: 20rpx;
+  margin-left: 12rpx;
+}

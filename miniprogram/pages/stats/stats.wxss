@@ -135,3 +135,45 @@
 .report-hover {
   opacity: 0.8;
 }
+
+/* 最快配速（按类型列表） */
+.best-item-pace {
+  width: 100% !important; /* 独占一行，放各类型配速 */
+}
+.best-list {
+  margin-top: 8rpx;
+}
+.best-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8rpx 0;
+  border-bottom: 1rpx solid #f2f3f5;
+  font-size: 24rpx;
+}
+.best-row:last-child {
+  border-bottom: none;
+}
+.best-row-label {
+  color: #86909c;
+}
+.best-row-val {
+  font-weight: 600;
+  color: #1f2329;
+}
+.best-row-date {
+  color: #c9cdd4;
+  font-size: 20rpx;
+}
+
+.best-type-icon {
+  width: 28rpx;
+  height: 28rpx;
+  margin-right: 8rpx;
+  flex-shrink: 0;
+}
+.best-row-unit {
+  font-size: 20rpx;
+  color: #86909c;
+  margin-left: 2rpx;
+}

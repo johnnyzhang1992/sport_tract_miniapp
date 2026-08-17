@@ -99,19 +99,20 @@ Page({
       const d = new Date(t);
       return `${d.getMonth() + 1}/${d.getDate()}`;
     };
+    const byType = (rows, valFn, unit = '') =>
+      (rows || []).map((r) => ({
+        type: r.type,
+        typeLabel: (config.ACTIVITY_TYPES.find((x) => x.type === r.type) || {}).label || r.type,
+        typeIcon: (config.ACTIVITY_TYPES.find((x) => x.type === r.type) || {}).iconImg || '',
+        value: valFn(r),
+        unit,
+        date: dayText(r.startTime),
+      }));
     return {
-      maxDistance: b.maxDistance
-        ? { value: (b.maxDistance.distance / 1000).toFixed(1), unit: 'km', date: dayText(b.maxDistance.startTime) }
-        : null,
-      minPace: b.minPace
-        ? { value: formatPace(b.minPace.fastestKm ?? b.minPace.avgPace), unit: '', date: dayText(b.minPace.startTime) }
-        : null,
-      maxDuration: b.maxDuration
-        ? { value: formatDuration(b.maxDuration.duration), unit: '', date: dayText(b.maxDuration.startTime) }
-        : null,
-      maxElevation: b.maxElevation
-        ? { value: String(b.maxElevation.elevationGain), unit: 'm', date: dayText(b.maxElevation.startTime) }
-        : null,
+      maxDistanceByType: byType(b.maxDistanceByType, (r) => (r.distance / 1000).toFixed(1), 'km'),
+      minPaceByType: byType(b.minPaceByType, (r) => formatPace(r.fastestKm ?? r.avgPace)),
+      maxDurationByType: byType(b.maxDurationByType, (r) => formatDuration(r.duration)),
+      maxElevationByType: byType(b.maxElevationByType, (r) => String(r.elevationGain), 'm'),
     };
   },
 
