@@ -6,6 +6,7 @@
  */
 const api = require('../../services/api');
 const config = require('../../config/index');
+const { getBestCache, setBestCache } = require('../../services/storage');
 const storage = require('../../services/storage');
 const { uploadPhoto } = require('../../services/oss-upload');
 const { formatDuration, formatPace, formatPaceParts } = require('../../utils/format');
@@ -107,7 +108,6 @@ Page({
         try {
           best = await api.get('/stats/best');
           if (best) {
-            const { setBestCache } = require('../../services/storage');
             setBestCache(uid, best);
           }
         } catch (err) {
