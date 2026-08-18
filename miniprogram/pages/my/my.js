@@ -57,16 +57,41 @@ Page({
           totalCount: total.count || 0,
           totalKm: ((total.distance || 0) / 1000).toFixed(1),
         },
+        // 轨迹合集卡片：累计 次数/公里/总时长（3 格网格）
+        overviewStats: [
+          { value: String(total.count || 0), label: '次数' },
+          { value: ((total.distance || 0) / 1000).toFixed(1), label: '公里' },
+          { value: this.fmtDuration(total.duration || 0), label: '总时长' },
+        ],
+        // 数据统计卡片：今日/本周/本月运动距离（km）
+        statsCards: ['today', 'week', 'month'].map((k) => {
+          const s = overview && overview[k] ? overview[k] : { distance: 0 };
+          return { key: k, distance: ((s.distance || 0) / 1000).toFixed(1) };
+        }),
         footprint: {
           provinceCount: footprint ? footprint.provinceCount : 0,
           cityCount: footprint ? footprint.cityCount : 0,
         },
+        // 点亮地图卡片：省份/城市（通用网格）
+        footprintStats: [
+          { value: String(footprint ? footprint.provinceCount : 0), label: '省份' },
+          { value: String(footprint ? footprint.cityCount : 0), label: '城市' },
+        ],
       });
     } catch (e) {
       console.error('加载用户信息失败', e);
     } finally {
       this.setData({ loading: false });
     }
+  },
+
+  /** 总时长格式化（秒 → 分钟/小时/天） */
+  fmtDuration(sec) {
+    const min = (sec || 0) / 60;
+    if (min < 60) return `${Math.round(min)}分钟`;
+    const h = min / 60;
+    if (h < 24) return `${Math.round(h * 10) / 10}小时`;
+    return `${Math.round((h / 24) * 10) / 10}天`;
   },
 
   /** 轨迹合集（M6：一周/一月/一年一图总览） */

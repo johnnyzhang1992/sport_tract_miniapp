@@ -18,30 +18,43 @@
     </view>
   </view>
 
-  <!-- 轨迹合集 / 点亮地图 概况卡片 -->
-  <view class="card overview-entry" hover-class="card-hover" hover-stay-time="100" bindtap="goOverview">
-    <image class="entry-icon" src="/assets/icons/lucide-compass.png" mode="aspectFit" />
-    <view class="entry-info">
-      <view class="entry-title">轨迹合集</view>
-      <view class="entry-sub text-muted">{{overview.totalCount}} 条轨迹 · {{overview.totalKm}} 公里</view>
+  <!-- 数据统计卡片（今日/本周/本月运动距离，整卡可点） -->
+  <view class="card stats-card" hover-class="card-hover" hover-stay-time="100" bindtap="goStats">
+    <view class="stats-head">
+      <view class="stats-title-row">
+        <image class="stats-icon" src="/assets/icons/lucide-chart.png" mode="aspectFit" />
+        <text class="stats-title">数据统计</text>
+      </view>
+      <view class="stats-arrow">›</view>
     </view>
-    <view class="entry-arrow">›</view>
+    <view class="stats-grid">
+      <view class="stats-cell">
+        <view class="stats-num">{{statsCards[0].distance}}</view>
+        <view class="stats-label">今日</view>
+      </view>
+      <view class="stats-cell">
+        <view class="stats-num">{{statsCards[1].distance}}</view>
+        <view class="stats-label">本周</view>
+      </view>
+      <view class="stats-cell">
+        <view class="stats-num">{{statsCards[2].distance}}</view>
+        <view class="stats-label">本月</view>
+      </view>
+    </view>
   </view>
 
-  <view class="card overview-entry" hover-class="card-hover" hover-stay-time="100" bindtap="goFootprint">
-    <image class="entry-icon" src="/assets/icons/lucide-globe.png" mode="aspectFit" />
-    <view class="entry-info">
-      <view class="entry-title">点亮地图</view>
-      <view class="entry-sub text-muted">点亮 {{footprint.provinceCount}} 省 · {{footprint.cityCount}} 城</view>
-    </view>
-    <view class="entry-arrow">›</view>
-  </view>
+  <!-- 轨迹合集 / 点亮地图（合并大卡片，菜单式） -->
+  <t-cell-group class="card menu-card">
+    <t-cell title="轨迹合集" arrow bind:click="goOverview">
+      <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-compass.png" mode="aspectFit" />
+    </t-cell>
+    <t-cell title="点亮地图" arrow bind:click="goFootprint">
+      <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-globe.png" mode="aspectFit" />
+    </t-cell>
+  </t-cell-group>
 
   <!-- 菜单 -->
   <t-cell-group class="card menu-card">
-    <t-cell title="数据统计" arrow bind:click="goStats">
-      <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-chart.png" mode="aspectFit" />
-    </t-cell>
     <t-cell title="数据导入" arrow bind:click="goImport">
       <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-download.png" mode="aspectFit" />
     </t-cell>
