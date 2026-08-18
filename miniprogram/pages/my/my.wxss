@@ -35,9 +35,9 @@
   margin-bottom: 16rpx;
 }
 .entry-icon {
-  width: 50rpx;
-  height: 50rpx;
-  margin-right: 24rpx;
+  width: 36rpx; /* 与数据统计卡图标统一 */
+  height: 36rpx;
+  margin-right: 14rpx;
   flex-shrink: 0;
 }
 .entry-info {
@@ -57,6 +57,7 @@
 .entry-arrow {
   font-size: 40rpx;
   color: #c2c7d0;
+  line-height: 1;
 }
 
 /* 身高体重展示 */
@@ -71,4 +72,70 @@
   background: #f2f3f5;
   border-radius: 999rpx;
   padding: 4rpx 16rpx;
+}
+
+/* 数据统计卡片 */
+.stats-card {
+  padding: 26rpx 28rpx;
+}
+.stats-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.stats-title-row {
+  display: flex;
+  align-items: center;
+}
+.stats-icon {
+  width: 36rpx;
+  height: 36rpx;
+  margin-right: 14rpx;
+}
+.stats-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+.stats-arrow {
+  font-size: 40rpx;
+  color: #c2c7d0;
+  line-height: 1;
+}
+.stats-grid {
+  display: flex;
+  margin-top: 26rpx;
+  background: #f7f8fa;
+  border-radius: 12rpx;
+  padding: 20rpx 0;
+}
+.stats-cell {
+  flex: 1;
+  text-align: center;
+  border-right: 1rpx solid #ececf0;
+}
+.stats-cell:last-child {
+  border-right: none;
+}
+.stats-num {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #1f2329;
+  line-height: 1.2;
+}
+.stats-label {
+  font-size: 22rpx;
+  color: #86909c;
+  margin-top: 6rpx;
+}
+
+/* 入口卡副信息（统一结构） */
+.stats-sub-row {
+  margin-top: 16rpx;
+  background: #f7f8fa;
+  border-radius: 12rpx;
+  padding: 16rpx 24rpx;
+  font-size: 26rpx;
+  color: #2b6cf6;
+  font-weight: 500;
 }
