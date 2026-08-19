@@ -3,6 +3,9 @@
  * props: points(轨迹点[{lat,lng}]), markers(打点), followMode(动态追点), mapType(图层)
  * 对外：fitView() 自适应视野、switchLayer() 图层切换
  */
+// 合集模式"密集区域"半径（km）：轨迹中心距核心在此范围内即视为同一密集簇
+const DENSE_REGION_KM = 50;
+
 Component({
   properties: {
     /** 轨迹点数组 [{lat, lng}] */
@@ -438,15 +441,65 @@ Component({
       this.setData({ polyline: polylines });
     },
 
-    /** 合集模式：视野聚焦首条轨迹（避免异地轨迹把视野拉到全国，轨迹缩成不可见） */
+    /**
+     * 合集模式：视野聚焦轨迹最密集的区域（密集簇）
+     * - 每条轨迹取采样点中位数作"中心"，找邻居最多（在 DENSE_REGION_KM 内）的核心
+     * - 视野只包含该核心周围 DENSE_REGION_KM 内的轨迹 → 展示轨迹最密集那块，不被异地轨迹拉开
+     * - 全部互不相邻（无密集簇）→ 退化为全部点；轨迹线始终全量渲染（缩小可见离群轨迹）
+     */
     fitOverviewView() {
-      const t0 = (this.data.overviewTracks || [])[0];
-      const pts = ((t0 && t0.points) || [])
-        .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng))
-        .map((p) => ({ latitude: p.lat, longitude: p.lng }));
-      if (pts.length === 0) return;
+      const tracks = this.data.overviewTracks || [];
+      // 每条轨迹均匀采样（≤12 点/条），并算中心（采样点中位数）
+      const entries = [];
+      tracks.forEach((t) => {
+        const tPts = ((t && t.points) || []).filter(
+          (p) => Number.isFinite(p.lat) && Number.isFinite(p.lng),
+        );
+        if (!tPts.length) return;
+        const step = Math.max(1, Math.floor(tPts.length / 12));
+        const pts = [];
+        for (let i = 0; i < tPts.length; i += step) {
+          pts.push({ latitude: tPts[i].lat, longitude: tPts[i].lng });
+        }
+        const median = (arr) => {
+          const s = [...arr].sort((a, b) => a - b);
+          return s[Math.floor(s.length / 2)];
+        };
+        entries.push({
+          pts,
+          center: {
+            lat: median(pts.map((p) => p.latitude)),
+            lng: median(pts.map((p) => p.longitude)),
+          },
+        });
+      });
+      if (!entries.length) return;
+
+      // 找邻居最多的中心（O(n²)，n = 轨迹条数，量级小）
+      let core = -1;
+      let maxNeighbors = 0;
+      for (let i = 0; i < entries.length; i++) {
+        let cnt = 0;
+        for (let j = 0; j < entries.length; j++) {
+          if (haversineKm(entries[i].center, entries[j].center) <= DENSE_REGION_KM) cnt++;
+        }
+        if (cnt > maxNeighbors) {
+          maxNeighbors = cnt;
+          core = i;
+        }
+      }
+
+      // 视野点：密集簇内轨迹；仅一条密集（=全部互不相邻）或无密集簇 → 全量
+      let viewPts = [];
+      if (maxNeighbors > 1) {
+        entries.forEach((e, i) => {
+          if (haversineKm(entries[core].center, e.center) <= DENSE_REGION_KM) viewPts.push(...e.pts);
+        });
+      }
+      if (!viewPts.length) viewPts = entries.reduce((acc, e) => acc.concat(e.pts), []);
+
       const mapCtx = wx.createMapContext('trackMap', this);
-      mapCtx.includePoints({ points: pts, padding: [60, 40, 60, 40] });
+      mapCtx.includePoints({ points: viewPts, padding: [60, 40, 60, 40] });
     },
 
     /**
