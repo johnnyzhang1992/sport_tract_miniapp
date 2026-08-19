@@ -17,6 +17,9 @@ function formatDuration(seconds) {
 const config = require('../../config/index');
 const api = require('../../services/api');
 
+// 首页概览本地缓存 key（先展示旧数据避免空白，接口返回后刷新）
+const OVERVIEW_CACHE_KEY = 'indexOverviewCache_v1';
+
 Page({
   data: {
     activityTypes: config.ACTIVITY_TYPES,
@@ -24,6 +27,7 @@ Page({
     overview: null,
     overviewLabel: '今日概览',
     totalOverview: null, // 累计数据：轨迹数/总公里/点亮省份/城市
+    heatData: [],
     loading: false,
     ongoingActivity: null, // 进行中（已暂停）运动入口
   },
@@ -75,10 +79,15 @@ Page({
     this.setData({ selectedType: e.currentTarget.dataset.type });
   },
 
-  /** 今日/本周/当月/今年概览（决策 F18）——请求去重 + 失败保留旧数据（切换 tab 不丢） */
+  /** 今日/本周/当月/今年概览（决策 F18）——请求去重 + 本地缓存先行 + 失败保留旧数据 */
   async loadOverview() {
     if (this._loadingOverview) return; // 进行中不重复请求（tab 快速切换竞态）
     this._loadingOverview = true;
+    // 先用本地缓存渲染（冷启动/切 tab 不再空白），接口返回后再刷新
+    const cached = wx.getStorageSync(OVERVIEW_CACHE_KEY);
+    if (cached && cached.totalOverview) {
+      this.setData({ totalOverview: cached.totalOverview, heatData: cached.heatData || [] });
+    }
     try {
       const app = getApp();
       if (!app.globalData.loggedIn) {
@@ -93,15 +102,19 @@ Page({
       // 日历热力图数据（近 365 天按天距离）
       const heatData = heat && heat.data ? heat.data : [];
       // 预处理：公里/千卡 K·W 缩写
-      this.setData({
-        totalOverview: {
-          trackCount: total.count || 0,
-          totalKm: compact((total.distance || 0) / 1000),
-          provinceCount: footprint ? footprint.provinceCount : 0,
-          cityCount: footprint ? footprint.cityCount : 0,
-        },
-        heatData,
-      });
+      const totalOverview = {
+        trackCount: total.count || 0,
+        totalKm: compact((total.distance || 0) / 1000),
+        provinceCount: footprint ? footprint.provinceCount : 0,
+        cityCount: footprint ? footprint.cityCount : 0,
+      };
+      this.setData({ totalOverview, heatData });
+      // 成功后写缓存（下次先展示旧值）
+      try {
+        wx.setStorageSync(OVERVIEW_CACHE_KEY, { totalOverview, heatData, cachedAt: Date.now() });
+      } catch (e) {
+        // 缓存写失败不影响功能
+      }
     } catch (e) {
       console.error('加载概览失败', e); // 保留旧数据（不置空，避免切换 tab 后空白）
     } finally {

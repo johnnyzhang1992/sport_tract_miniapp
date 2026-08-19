@@ -229,7 +229,8 @@ Page({
     const gap = 12;
     const pad = 16;
     // 海报高度：初始 3:4（宽300 高400），轨迹多行数多时再动态增高
-    const contentH = 76 + rows * (cellH + timeH + gap) + 30;
+    // 顶部预留 100 与 contentTop 匹配（标题区 + 间距），底部预留 30 给品牌行
+    const contentH = 100 + rows * (cellH + timeH + gap) + 30;
     const H = Math.max(400, contentH);
 
     wx.createSelectorQuery()
@@ -282,7 +283,8 @@ Page({
         const gridW = width - pad * 2;
         const cell = gridW / cols;
         const innerPad = 4;
-        const contentTop = 46; // 标题基线下方
+        // 网格上边界：标题两行底部（数字基线 58 + 24px 字号）之后留 32px 间距，避免与轨迹重叠
+        const contentTop = 90;
         const contentBottom = H - 36; // 品牌行上方
         const gridH = rows * (cellH + timeH + gap);
         const startY = contentTop + Math.max(0, (contentBottom - contentTop - gridH) / 2);
