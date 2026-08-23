@@ -81,6 +81,35 @@
   margin-bottom: 24rpx;
   box-shadow: 0 4rpx 16rpx rgba(43, 108, 246, 0.25);
 }
+/* 未登录提示条 */
+.login-tip {
+  display: flex;
+  align-items: center;
+  background: #fffbe8;
+  border: 1rpx solid #f5e6a8;
+  border-radius: 16rpx;
+  padding: 22rpx 28rpx;
+  margin-bottom: 24rpx;
+}
+.login-tip-hover {
+  opacity: 0.85;
+}
+.login-tip-icon {
+  width: 40rpx;
+  height: 40rpx;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+}
+.login-tip-text {
+  flex: 1;
+  font-size: 26rpx;
+  color: #8a6d1a;
+}
+.login-tip-arrow {
+  font-size: 26rpx;
+  color: #b8860b;
+  font-weight: 600;
+}
 .ongoing-bar-hover {
   opacity: 0.85;
 }

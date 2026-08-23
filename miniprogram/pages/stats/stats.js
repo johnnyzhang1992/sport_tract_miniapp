@@ -31,14 +31,8 @@ Page({
 
   async loadAll() {
     const app = getApp();
-    if (!app.globalData.loggedIn) {
-      try {
-        await app.login();
-      } catch {
-        wx.showToast({ title: '登录失败', icon: 'none' });
-        return;
-      }
-    }
+    // 游客态：不自动登录（登录由个人中心点击触发），直接返回
+    if (!app.globalData.loggedIn) return;
     try {
       this.setData({ loading: true });
       const [overview, trend, best] = await Promise.all([
