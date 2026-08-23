@@ -44,15 +44,8 @@ Page({
 
   /** 上传解析（后端推断类型并创建活动） */
   async upload(file) {
-    const app = getApp();
-    if (!app.globalData.loggedIn) {
-      try {
-        await app.login();
-      } catch (e) {
-        wx.showToast({ title: '登录失败', icon: 'none' });
-        return;
-      }
-    }
+    // 游客态：不自动登录（登录由个人中心点击触发），直接返回
+    if (!getApp().globalData.loggedIn) return;
     this.setData({ uploading: true, fileName: file.name, preview: null, activityId: '' });
     wx.showLoading({ title: '解析中…' });
     try {

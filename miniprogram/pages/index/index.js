@@ -28,6 +28,7 @@ Page({
     overviewLabel: '今日概览',
     totalOverview: null, // 累计数据：轨迹数/总公里/点亮省份/城市
     heatData: [],
+    notLoggedIn: false, // 游客态：展示登录引导
     loading: false,
     ongoingActivity: null, // 进行中（已暂停）运动入口
   },
@@ -44,7 +45,12 @@ Page({
     this.setData({ ongoingActivity: ongoing || null });
   },
 
-  /** 点击“继续运动”入口 → 回记录页（让用户选择继续/重新开始） */
+  /** 未登录提示条 → 个人中心（tab 页用 switchTab） */
+  goLogin() {
+    wx.switchTab({ url: '/pages/my/my' });
+  },
+
+  /** 点击"继续运动"入口 → 回记录页（让用户选择继续/重新开始） */
   goOngoing() {
     const o = this.data.ongoingActivity;
     if (!o || !o.activityId) return;
@@ -57,10 +63,8 @@ Page({
   async applyDefaultType() {
     try {
       const app = getApp();
-      // 确保已登录（onShow 时可能登录尚未完成，导致读取不到 settings）
-      if (!app.globalData.loggedIn) {
-        await app.login();
-      }
+      // 未登录不拉用户设置（登录由个人中心点击触发）
+      if (!app.globalData.loggedIn) return;
       const user = await api.get('/users/me');
       const dt = user && user.settings && user.settings.defaultType;
       if (dt && config.ACTIVITY_TYPES.some((t) => t.type === dt)) {
@@ -83,16 +87,20 @@ Page({
   async loadOverview() {
     if (this._loadingOverview) return; // 进行中不重复请求（tab 快速切换竞态）
     this._loadingOverview = true;
+    const app = getApp();
+    // 游客态：不读缓存/不请求，展示登录引导（登录后 onShow 重新加载）
+    if (!app.globalData.loggedIn) {
+      this._loadingOverview = false;
+      this.setData({ loading: false, notLoggedIn: true, totalOverview: null, heatData: [] });
+      return;
+    }
+    this.setData({ notLoggedIn: false });
     // 先用本地缓存渲染（冷启动/切 tab 不再空白），接口返回后再刷新
     const cached = wx.getStorageSync(OVERVIEW_CACHE_KEY);
     if (cached && cached.totalOverview) {
       this.setData({ totalOverview: cached.totalOverview, heatData: cached.heatData || [] });
     }
     try {
-      const app = getApp();
-      if (!app.globalData.loggedIn) {
-        await app.login();
-      }
       const [overview, footprint, heat] = await Promise.all([
         api.get('/stats/overview'),
         api.get('/stats/footprint').catch(() => null),

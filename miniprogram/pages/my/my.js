@@ -25,10 +25,12 @@ Page({
 
   async refreshUser() {
     const app = getApp();
+    // 未登录：展示登录引导（登录由用户在个人中心点击触发，不再自动）
+    if (!app.globalData.loggedIn) {
+      this.setData({ loggedIn: false, user: null, loading: false });
+      return;
+    }
     try {
-      if (!app.globalData.loggedIn) {
-        await app.login();
-      }
       this.setData({ loading: true });
       // 刷新资料 + 概况（轨迹合集总数/点亮省市数）
       const [user, overview, footprint] = await Promise.all([
@@ -115,6 +117,41 @@ Page({
 
   goSettings() {
     wx.navigateTo({ url: '/pages/settings/settings' });
+  },
+
+  /** 用户卡点击：已登录 → 编辑资料；未登录 → 弹窗登录 */
+  onUserCardTap() {
+    if (getApp().globalData.loggedIn) {
+      this.goProfile();
+    } else {
+      this.handleLogin();
+    }
+  },
+
+  /** 未登录点击登录 → 弹窗确认 → 静默登录 → 刷新 */
+  handleLogin() {
+    const app = getApp();
+    if (app.globalData.loggedIn) return;
+    wx.showModal({
+      title: '登录',
+      content: '登录后将同步你的运动数据（轨迹、点亮地图、统计等），一键微信登录，无需注册。',
+      confirmText: '登录',
+      cancelText: '暂不',
+      success: async (res) => {
+        if (!res.confirm) return;
+        wx.showLoading({ title: '登录中…', mask: true });
+        try {
+          await app.login();
+          await this.refreshUser();
+          wx.showToast({ title: '登录成功', icon: 'success' });
+        } catch (e) {
+          console.error('登录失败', e);
+          wx.showToast({ title: '登录失败，请重试', icon: 'none' });
+        } finally {
+          wx.hideLoading();
+        }
+      },
+    });
   },
 
   goProfile() {

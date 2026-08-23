@@ -1,6 +1,6 @@
 <view class="container">
-  <!-- 用户卡片 -->
-  <view class="card user-card hover-card" hover-class="card-hover" hover-stay-time="100" bindtap="goProfile">
+  <!-- 用户卡片（未登录点开登录弹窗，已登录进资料编辑） -->
+  <view class="card user-card hover-card" hover-class="card-hover" hover-stay-time="100" bindtap="onUserCardTap">
     <t-avatar
       class="user-avatar"
       image="{{user.avatarUrl || '/assets/icons/lucide-user.png'}}"
@@ -9,8 +9,8 @@
       {{user.avatarText}}
     </t-avatar>
     <view class="user-info">
-      <view class="user-name">{{user.nickname || '微信用户'}}</view>
-      <view class="text-muted">点击编辑资料</view>
+      <view class="user-name">{{loggedIn ? (user.nickname || '微信用户') : '未登录'}}</view>
+      <view class="text-muted">{{loggedIn ? '点击编辑资料' : '点击登录，同步运动数据'}}</view>
       <view class="body-data" wx:if="{{showBodyData}}">
         <text class="body-item" wx:if="{{user.heightCm}}">身高 {{user.heightCm}}cm</text>
         <text class="body-item" wx:if="{{user.weightKg}}">体重 {{user.weightKg}}kg</text>

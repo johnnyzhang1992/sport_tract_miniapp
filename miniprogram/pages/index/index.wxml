@@ -1,4 +1,11 @@
 <view class="container">
+  <!-- 未登录引导条（游客态，点击去个人中心登录） -->
+  <view wx:if="{{notLoggedIn}}" class="login-tip" hover-class="login-tip-hover" hover-stay-time="80" bindtap="goLogin">
+    <image class="login-tip-icon" src="/assets/icons/lucide-user.png" mode="aspectFit" />
+    <view class="login-tip-text">登录后同步你的运动数据</view>
+    <view class="login-tip-arrow">去登录 ›</view>
+  </view>
+
   <!-- 进行中（已暂停）运动入口 -->
   <view wx:if="{{ongoingActivity}}" class="ongoing-bar" hover-class="ongoing-bar-hover" hover-stay-time="80" bindtap="goOngoing">
     <image class="ongoing-icon" src="/assets/icons/lucide-pause-white.png" mode="aspectFit" />

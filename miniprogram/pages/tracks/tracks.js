@@ -42,15 +42,8 @@ Page({
   },
 
   async refresh() {
-    const app = getApp();
-    if (!app.globalData.loggedIn) {
-      try {
-        await app.login();
-      } catch (e) {
-        wx.showToast({ title: '登录失败，请检查后端服务', icon: 'none' });
-        return;
-      }
-    }
+    // 游客态：不自动登录（登录由个人中心点击触发），直接返回
+    if (!getApp().globalData.loggedIn) return;
     try {
       this.setData({ loading: true, page: 1 });
       const data = await api.get('/activities', this.buildParams(1));
