@@ -14,6 +14,8 @@ Component({
     markers: { type: Array, value: [] },
     /** 当前位置（动态追点 marker） */
     currentLocation: { type: Object, value: null },
+    /** 当前位置 marker 图标（运动类型图标；空则用红色圆点兜底） */
+    currentIcon: { type: String, value: '' },
     /** 动态追点：新点到来时视野跟随 */
     followMode: { type: Boolean, value: false },
     /** 图层：standard / satellite */
@@ -322,15 +324,15 @@ Component({
         }
       }
 
-      // 当前位置 marker（动态追点）
+      // 当前位置 marker（动态追点；图标 = 当前运动类型，未传则红色圆点兜底）
       if (this.data.currentLocation) {
         base.push({
           id: 999999,
           latitude: this.data.currentLocation.latitude,
           longitude: this.data.currentLocation.longitude,
-          iconPath: defaultCurrentIcon(),
-          width: 18,
-          height: 18,
+          iconPath: this.data.currentIcon || defaultCurrentIcon(),
+          width: 26,
+          height: 26,
           anchor: { x: 0.5, y: 0.5 },
         });
       }
@@ -537,9 +539,9 @@ Component({
             id: 100001,
             latitude: first.lat,
             longitude: first.lng,
-            iconPath: defaultCurrentIcon(),
-            width: 12,
-            height: 12,
+            iconPath: this.data.currentIcon || defaultCurrentIcon(),
+            width: 18,
+            height: 18,
             anchor: { x: 0.5, y: 0.5 },
           },
         ]),

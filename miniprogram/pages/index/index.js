@@ -63,7 +63,10 @@ Page({
   async applyDefaultType() {
     try {
       const app = getApp();
-      // 未登录不拉用户设置（登录由个人中心点击触发）
+      // 已注册用户（本地有 token）静默恢复登录；游客不自动登录
+      if (app.hasSession() && !app.globalData.loggedIn) {
+        await app.login();
+      }
       if (!app.globalData.loggedIn) return;
       const user = await api.get('/users/me');
       const dt = user && user.settings && user.settings.defaultType;
@@ -88,6 +91,14 @@ Page({
     if (this._loadingOverview) return; // 进行中不重复请求（tab 快速切换竞态）
     this._loadingOverview = true;
     const app = getApp();
+    // 已注册用户（本地有 token）静默恢复登录；游客不自动登录
+    if (app.hasSession() && !app.globalData.loggedIn) {
+      try {
+        await app.login();
+      } catch (e) {
+        console.warn('静默登录失败', e);
+      }
+    }
     // 游客态：不读缓存/不请求，展示登录引导（登录后 onShow 重新加载）
     if (!app.globalData.loggedIn) {
       this._loadingOverview = false;
