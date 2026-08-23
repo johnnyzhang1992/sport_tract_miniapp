@@ -25,7 +25,15 @@ Page({
 
   async refreshUser() {
     const app = getApp();
-    // 未登录：展示登录引导（登录由用户在个人中心点击触发，不再自动）
+    // 已注册用户（本地有 token）静默恢复登录；游客不自动登录
+    if (app.hasSession() && !app.globalData.loggedIn) {
+      try {
+        await app.login();
+      } catch (e) {
+        console.warn('静默登录失败', e);
+      }
+    }
+    // 游客态：展示登录引导（登录由用户点击触发）
     if (!app.globalData.loggedIn) {
       this.setData({ loggedIn: false, user: null, loading: false });
       return;

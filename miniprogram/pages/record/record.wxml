@@ -6,6 +6,7 @@
       points="{{mapPoints}}"
       markers="{{mapMarkers}}"
       currentLocation="{{currentLocation}}"
+      currentIcon="{{typeIconImg}}"
       followMode="{{followMode}}"
       mapType="{{mapType}}"
       mode="record"

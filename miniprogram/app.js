@@ -11,9 +11,18 @@ App({
   },
 
   onLaunch() {
-    // 登录改为个人中心显式触发（决策更新：不再启动静默登录，游客可先浏览）
+    // 已注册用户（本地有 token）自动静默登录恢复会话；游客（无 token）不自动登录
+    if (this.hasSession()) {
+      this.login();
+    }
     // 隐私合规（决策 M5）：检查隐私协议状态，未同意时引导（微信后台已配置《用户隐私保护指引》）
     this.checkPrivacy();
+  },
+
+  /** 本地是否有登录会话（已注册用户静默恢复的依据；游客无 token 视为未注册） */
+  hasSession() {
+    const token = getToken();
+    return !!(token && (token.accessToken || token.refreshToken));
   },
 
   /** 隐私合规：needAuthorization 时引导用户同意/查看协议 */
