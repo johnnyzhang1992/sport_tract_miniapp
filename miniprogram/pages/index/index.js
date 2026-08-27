@@ -154,11 +154,11 @@ Page({
 
   /** 分享给朋友 */
   onShareAppMessage() {
-    return { title: '记录每一次运动，我的运动小程序', path: '/pages/index/index' };
+    return { title: '记录每一次运动 · 小迹一下', path: '/pages/index/index' };
   },
 
   /** 分享到朋友圈 */
   onShareTimeline() {
-    return { title: '记录每一次运动，我的运动小程序' };
+    return { title: '记录每一次运动 · 小迹一下' };
   },
 });
