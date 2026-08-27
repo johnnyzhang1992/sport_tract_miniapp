@@ -431,11 +431,11 @@ Component({
         let width = 3;
         if (trackHeat >= 0.5) {
           color = '#FF9800'; // 高频：橙色粗线（热力强调）
-          width = 8;
+          width = 6;
         } else if (trackHeat >= 0.2) {
-          width = 5; // 中频：类型色加粗
+          width = 4; // 中频：类型色加粗
         }
-        polylines.push({ points: pts, color, width, arrowLine: false });
+        polylines.push({ points: pts, color, width, arrowLine: false, borderColor: 'rgba(255,255,255,0.95)', borderWidth: 1.5 });
       });
       console.log('[track-map] polylines=', polylines.length);
 

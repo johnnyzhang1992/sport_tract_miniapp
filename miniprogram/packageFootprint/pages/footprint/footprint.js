@@ -158,4 +158,19 @@ Page({
       this.setData({ loading: false });
     }
   },
+
+  /** 分享给朋友（带已点亮省数） */
+  onShareAppMessage() {
+    const provCnt = this.data.provinceCount || 0;
+    return {
+      title: provCnt > 0 ? `我的点亮地图 · 已点亮${provCnt}省` : '我的点亮地图',
+      path: '/packageFootprint/pages/footprint/footprint',
+    };
+  },
+
+  /** 分享到朋友圈 */
+  onShareTimeline() {
+    const provCnt = this.data.provinceCount || 0;
+    return { title: provCnt > 0 ? `我的点亮地图 · 已点亮${provCnt}省` : '我的点亮地图' };
+  },
 });

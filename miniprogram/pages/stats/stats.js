@@ -137,4 +137,14 @@ Page({
     }
     return date.slice(5); // MM-DD
   },
+
+  /** 分享给朋友 */
+  onShareAppMessage() {
+    return { title: '我的运动数据 · 个人最佳', path: '/pages/stats/stats' };
+  },
+
+  /** 分享到朋友圈 */
+  onShareTimeline() {
+    return { title: '我的运动数据 · 个人最佳' };
+  },
 });

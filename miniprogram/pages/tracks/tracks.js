@@ -109,7 +109,7 @@ Page({
       icon: meta.icon || '🏃',
       iconImg: meta.iconImg || '',
       label: meta.label || item.type,
-      color: '#808080', // 轨迹颜色统一中灰（明显灰色，非黑）
+      color: '#4A5568', // 轨迹颜色统一深灰蓝（白底地图清晰；原 #808080 中灰偏淡看不清）
       previewPoints: item.previewPoints || [],
       distanceKm: (item.distance / 1000).toFixed(2).replace(/\.?0+$/, ''),
       durationText: (() => { const d = formatDurationStat(item.duration); return `${d.num}${d.unit}`; })(),
@@ -158,5 +158,15 @@ Page({
       console.error('删除轨迹失败', err);
       wx.showToast({ title: '删除失败，请重试', icon: 'none' });
     }
+  },
+
+  /** 分享给朋友 */
+  onShareAppMessage() {
+    return { title: '我的运动轨迹合集', path: '/pages/tracks/tracks' };
+  },
+
+  /** 分享到朋友圈 */
+  onShareTimeline() {
+    return { title: '我的运动轨迹合集' };
   },
 });

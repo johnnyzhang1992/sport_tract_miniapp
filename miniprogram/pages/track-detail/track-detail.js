@@ -187,8 +187,12 @@ Page({
     }
   },
 
-  /** 点击打点时间线 → 编辑 */
+  /** 点击打点时间线 → 编辑（非本人只读，仅本人可编辑打点） */
   onTapMarkerItem(e) {
+    if (this.data.activity && this.data.activity.isOwner === false) {
+      wx.showToast({ title: '只读分享，仅本人可编辑', icon: 'none' });
+      return;
+    }
     this.openEditMarker(e.currentTarget.dataset.marker);
   },
 
@@ -514,24 +518,7 @@ Page({
       success: (res) => {
         wx.hideLoading();
         if (res.statusCode === 200) {
-          const plat =
-            (wx.getDeviceInfo ? wx.getDeviceInfo().platform : wx.getSystemInfoSync().platform || '').toLowerCase();
-          // devtools（开发者工具）：直接复制剪贴板（工具内分享不可用，复制便于粘贴分析）
-          if (plat === 'devtools') {
-            wx.setClipboardData({
-              data: String(res.data),
-              success: () => {
-                wx.showModal({
-                  title: 'GPX 已复制',
-                  content: '轨迹数据已复制到剪贴板（devtools 调试用）',
-                  showCancel: false,
-                });
-              },
-              fail: () => wx.showToast({ title: '复制失败', icon: 'none' }),
-            });
-            return;
-          }
-          // PC 微信（windows/mac）与手机端：保存 .gpx 文件并分享（文件传输助手 → 电脑下载）
+          // 保存 .gpx 文件并分享（文件传输助手 → 电脑下载）
           const fs = wx.getFileSystemManager();
           const path = `${wx.env.USER_DATA_PATH}/activity-${this.data.id}.gpx`;
           try {
