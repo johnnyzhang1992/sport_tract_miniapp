@@ -105,7 +105,7 @@ Page({
       return {
         id: t.id,
         type: t.type,
-        color: '#808080', // 轨迹颜色统一中灰（明显灰色，非黑）
+        color: '#4A5568', // 轨迹颜色统一深灰蓝（白底地图清晰；原 #808080 中灰偏淡看不清）
         points: t.points || [],
       };
     });
@@ -382,5 +382,15 @@ Page({
     const id = e.currentTarget.dataset.id;
     if (!id) return;
     wx.navigateTo({ url: `/pages/track-detail/track-detail?id=${id}` });
+  },
+
+  /** 分享给朋友 */
+  onShareAppMessage() {
+    return { title: '我的轨迹合集 · 一起来运动', path: '/pages/overview/overview' };
+  },
+
+  /** 分享到朋友圈 */
+  onShareTimeline() {
+    return { title: '我的轨迹合集 · 一起来运动' };
   },
 });
