@@ -222,16 +222,17 @@ Page({
   },
 
   /**
-   * 运动中打破个人最佳 → toast 恭喜（本地缓存 best 对比）
+   * 运动中打破个人最佳 → toast 恭喜（实时拉取个人最佳基准，避免本地缓存滞后误判）
    * - 仅距离/时长/爬升（实时可准确判断；最快配速为 1km 分段口径，运动中无法判定，不提示）
    * - 每次运动每个指标只提示一次
+   * - 首次进入异步加载基准（loadBestBase），就绪前不判定
    */
   checkBestRecord(snap) {
     if (this.data.paused) return;
     if (!this._bestLoaded) {
       this._bestLoaded = true;
-      const app = getApp();
-      this._best = getBestCache(app.globalData.user ? app.globalData.user.id : '') || null;
+      this.loadBestBase();
+      return; // 基准未就绪不判定
     }
     if (!this._best) return;
     const type = this.data.type;
@@ -261,6 +262,20 @@ Page({
       if (idx >= 0) rows[idx] = rec; else rows.push(rec);
       this._best[rowsKey] = rows;
       setBestCache(app.globalData.user ? app.globalData.user.id : '', this._best);
+    }
+  },
+
+  /** 异步加载个人最佳基准：实时拉 /stats/best 并写缓存；失败时本地缓存兜底 */
+  async loadBestBase() {
+    const app = getApp();
+    try {
+      const best = await api.get('/stats/best');
+      this._best = best;
+      const { setBestCache } = require('../../services/storage');
+      setBestCache(app.globalData.user ? app.globalData.user.id : '', best);
+    } catch (e) {
+      console.warn('加载个人最佳失败，用本地缓存兜底', e);
+      this._best = getBestCache(app.globalData.user ? app.globalData.user.id : '') || null;
     }
   },
 

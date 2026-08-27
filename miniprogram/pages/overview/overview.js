@@ -386,11 +386,11 @@ Page({
 
   /** 分享给朋友 */
   onShareAppMessage() {
-    return { title: '我的轨迹合集 · 一起来运动', path: '/pages/overview/overview' };
+    return { title: '我的轨迹合集 · 小迹一下', path: '/pages/overview/overview' };
   },
 
   /** 分享到朋友圈 */
   onShareTimeline() {
-    return { title: '我的轨迹合集 · 一起来运动' };
+    return { title: '我的轨迹合集 · 小迹一下' };
   },
 });

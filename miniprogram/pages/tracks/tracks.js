@@ -162,11 +162,11 @@ Page({
 
   /** 分享给朋友 */
   onShareAppMessage() {
-    return { title: '我的运动轨迹合集', path: '/pages/tracks/tracks' };
+    return { title: '我的运动轨迹合集 · 小迹一下', path: '/pages/tracks/tracks' };
   },
 
   /** 分享到朋友圈 */
   onShareTimeline() {
-    return { title: '我的运动轨迹合集' };
+    return { title: '我的运动轨迹合集 · 小迹一下' };
   },
 });
