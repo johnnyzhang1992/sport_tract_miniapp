@@ -37,8 +37,8 @@
     </view>
   </view>
 
-  <!-- 累计数据概览 -->
-  <view class="card" wx:if="{{totalOverview}}">
+  <!-- 累计数据概览（点击进入统计页） -->
+  <view class="card" wx:if="{{totalOverview}}" hover-class="card-hover" hover-stay-time="80" bindtap="goStats">
     <view class="section-title">累计数据</view>
     <view class="stats-row">
       <view class="stat-item">

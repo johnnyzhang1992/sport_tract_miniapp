@@ -435,7 +435,7 @@ Component({
         } else if (trackHeat >= 0.2) {
           width = 4; // 中频：类型色加粗
         }
-        polylines.push({ points: pts, color, width, arrowLine: false, borderColor: 'rgba(255,255,255,0.95)', borderWidth: 1.5 });
+        polylines.push({ points: pts, color, width, arrowLine: false });
       });
       console.log('[track-map] polylines=', polylines.length);
 

@@ -59,6 +59,11 @@ Page({
     });
   },
 
+  /** 点击累计数据卡片 → 数据统计页 */
+  goStats() {
+    wx.navigateTo({ url: '/pages/stats/stats' });
+  },
+
   /** 应用设置的默认运动类型（设置页保存到后端用户 settings） */
   async applyDefaultType() {
     try {
