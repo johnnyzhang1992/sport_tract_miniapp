@@ -6,6 +6,9 @@
   padding: 18rpx 20rpx;
   margin-bottom: 14rpx;
 }
+.card-hover {
+  opacity: 0.7;
+}
 .welcome-title {
   font-size: 38rpx;
   font-weight: 600;
