@@ -40,6 +40,10 @@ Component({
     showFullscreen: { type: Boolean, value: false },
     /** 全屏地图显示关闭按钮（组件内统一） */
     showFullscreenClose: { type: Boolean, value: false },
+    /** 运动方向（度，0-360，正北为0，顺时针）：record 模式下地图自动朝向 */
+    heading: { type: Number, value: -1 },
+    /** 是否启用地图旋转手势（record 模式禁用，避免与自动朝向冲突） */
+    enableRotate: { type: Boolean, value: true },
   },
 
   data: {
@@ -49,6 +53,8 @@ Component({
     centerLat: 31.2304,
     centerLng: 121.4737,
     enablePoi: false, // 是否展示 POI 标注（地名/道路名）——默认关闭
+    mapScale: 15, // 地图缩放级别（用户调整后记忆）
+    mapRotate: 0, // 地图旋转角度（heading 模式）
   },
 
   observers: {
@@ -66,6 +72,13 @@ Component({
       // 必须用 MapContext.includePoints 移动视野（节流 1.5s，避免频繁跳动）
       if (this.data.followMode && currentLocation) {
         this.followLocation();
+      }
+    },
+    'heading': function (heading) {
+      if (heading >= 0) {
+        // 运动方向 → 地图旋转：heading 是正北顺时针角度，
+        // map rotate 需要反转使运动方向朝上
+        this.setData({ mapRotate: (360 - heading) % 360 });
       }
     },
     'overviewTracks, heat': function () {
@@ -367,6 +380,14 @@ Component({
         points: pts,
         padding: [60, 40, 60, 40],
       });
+    },
+
+    /** 地图区域变化：记忆用户手动缩放的 scale */
+    onRegionChange(e) {
+      // 只在 scale 变化时更新（避免频繁 setData）
+      if (e.type === 'end' && e.causedBy === 'scale' && e.scale) {
+        this.setData({ mapScale: e.scale });
+      }
     },
 
     /** 图层切换 */

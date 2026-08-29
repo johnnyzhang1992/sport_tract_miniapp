@@ -31,6 +31,7 @@ Page({
     mapType: 'standard',
     weakSignal: false,
     currentAccuracy: null,
+    heading: -1, // 运动方向（度），-1 表示未计算
 
     // 实时数据
     stats: {
@@ -196,12 +197,30 @@ Page({
     const point = this.tracker.addPoint(loc);
     if (point) {
       const mapPoints = this.data.mapPoints.concat({ lat: point.lat, lng: point.lng });
+      // 计算运动方向（正北顺时针角度）
+      let heading = this.data.heading;
+      if (mapPoints.length >= 2) {
+        const prev = mapPoints[mapPoints.length - 2];
+        const cur = mapPoints[mapPoints.length - 1];
+        heading = this.calcBearing(prev.lat, prev.lng, cur.lat, cur.lng);
+      }
       this.setData({
         mapPoints,
         currentLocation: { latitude: loc.latitude, longitude: loc.longitude },
         'stats.altitude': point.altitude != null ? Math.round(point.altitude) : null,
+        heading,
       });
     }
+  },
+
+  /** 计算两点间方位角（正北顺时针，0-360度） */
+  calcBearing(lat1, lng1, lat2, lng2) {
+    const toRad = (d) => (d * Math.PI) / 180;
+    const dLng = toRad(lng2 - lng1);
+    const y = Math.sin(dLng) * Math.cos(toRad(lat2));
+    const x = Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) -
+              Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(dLng);
+    return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
   },
 
   /** 每秒刷新数据面板（时长跳动） */
