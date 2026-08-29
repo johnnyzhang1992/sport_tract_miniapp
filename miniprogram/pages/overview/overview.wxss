@@ -296,7 +296,7 @@
 }
 .share-box {
   width: 86%;
-  max-height: 80vh;
+  height: 82vh; /* 固定高度（不是 max-height），让内部 scroll-view 能正确滚动 */
   background: #fff;
   border-radius: 20rpx;
   display: flex;
@@ -331,7 +331,7 @@
 .share-scroll {
   flex: 1;
   min-height: 0;
-  max-height: 72vh; /* 增大滚动区高度 */
+  height: 0; /* 配合 flex:1 让 scroll-view 占满剩余空间并可滚动 */
 }
 .share-canvas {
   display: block;
