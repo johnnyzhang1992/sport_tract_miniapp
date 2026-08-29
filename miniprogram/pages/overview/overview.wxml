@@ -106,7 +106,7 @@
   <view wx:if="{{!loading && data.count === 0}}" class="loading-tip">该时间段还没有运动记录</view>
 
   <!-- 分享弹窗 -->
-  <view class="share-mask" wx:if="{{shareVisible}}" catchtouchmove="noop">
+  <view class="share-mask" wx:if="{{shareVisible}}">
     <view class="share-box">
       <view class="share-head">
         <text class="share-title">{{shareTitle}}</text>
