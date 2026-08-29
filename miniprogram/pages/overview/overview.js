@@ -524,10 +524,16 @@ Page({
           ctx.stroke();
         });
 
-        // 8. 绘制外围轨迹：缩小后按方位摆放在中心周围
-        //    每个外围轨迹单独适配大小（保证形状可辨认），方位 = 与密集簇中心的真实方向
-        const ringRadius = Math.min(mapW, mapH) * 0.27; // 外圈半径（px）
-        const maxFit = 110; // 外圈轨迹最大适配跨度（px）
+        // 8. 绘制外围轨迹：缩小后按方位摆放在外围（不重叠密集区域）
+        //    轨迹尺寸：适配到小包络，保证形状可辨认且不喧宾夺主
+        const maxFit = 70; // 外围轨迹最大适配跨度（px）
+        const outerHalf = maxFit / 2;
+        // 外圈半径：必须落在密集区域渲染范围之外 + 轨迹自身半宽 + 间距
+        const denseHalfW = (cSpanLng * kmPerDeg * denseScale) / 2;
+        const denseHalfH = (cSpanLat * 111 * denseScale) / 2;
+        const maxDenseHalf = Math.max(denseHalfW, denseHalfH);
+        const maxRadius = Math.min(mapW, mapH) / 2;
+        const ringRadius = Math.min(maxDenseHalf + outerHalf + 14, maxRadius * 0.92);
         outerTracks.forEach((tr) => {
           let tMinLat = Infinity, tMaxLat = -Infinity, tMinLng = Infinity, tMaxLng = -Infinity;
           tr.pts.forEach((p) => {
