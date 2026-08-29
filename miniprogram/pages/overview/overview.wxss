@@ -331,7 +331,7 @@
 .share-scroll {
   flex: 1;
   min-height: 0;
-  max-height: 58vh; /* 限制滚动区高度，海报超高时在组件内纵向滚动 */
+  max-height: 72vh; /* 增大滚动区高度 */
 }
 .share-canvas {
   display: block;
@@ -339,9 +339,9 @@
 }
 .share-foot {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center; /* 两个按钮水平居中 */
-  gap: 24rpx;
+  gap: 16rpx;
   padding: 20rpx 28rpx;
   border-top: 1rpx solid #f0f2f5;
 }
