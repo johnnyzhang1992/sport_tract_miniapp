@@ -41,7 +41,7 @@ Page({
     shareShowTime: false, // 默认不展示时间
     shareCanvasH: 200, // 海报高度（按轨迹数量动态）
     shareTitle: '', // 弹窗头标题：我的{范围}轨迹分享
-    shareMode: 'grid', // 分享模式：grid 网格 | aggregate 聚合地图
+    shareMode: 'aggregate', // 分享模式：grid 网格 | aggregate 聚合地图（默认聚合）
   },
 
   onLoad() {
@@ -163,7 +163,7 @@ Page({
         : '';
       return { id: t.id, points: t.points || [], timeText, distance: t.distance || 0 };
     });
-    this.setData({ shareVisible: true, shareTracks, shareMode: 'grid', shareCanvasH: 200 }, () => this.drawSharePoster());
+    this.setData({ shareVisible: true, shareTracks, shareMode: 'aggregate', shareCanvasH: 400 }, () => this.drawAggregatePoster());
   },
 
   closeShare() {
@@ -215,8 +215,10 @@ Page({
 
   /** 时间显示开关：重新绘制海报 */
   toggleShareTime() {
-    if (this.data.shareMode === 'aggregate') { this.drawAggregatePoster(); return; }
-    this.setData({ shareShowTime: !this.data.shareShowTime }, () => this.drawSharePoster());
+    this.setData({ shareShowTime: !this.data.shareShowTime }, () => {
+      if (this.data.shareMode === 'aggregate') this.drawAggregatePoster();
+      else this.drawSharePoster();
+    });
   },
 
   /** 列数规则：自适应公式 cols = ceil((sqrt(1+4n)-1)/2)（k²+k ≥ n 的最小 k），不限制列数上限
@@ -368,37 +370,42 @@ Page({
     const all = this.data.shareTracks || [];
     if (!all.length) return;
 
-    // 1. 密度网格
-    const cellLat = 150 / 111320;
-    const heatMap = new Map();
+    // 1. 密度网格（150m 网格统计经过点数）
+    const cellLat = 150 / 111320; // 150m 对应的纬度度数
+    const heatMap = new Map(); // key → count
+    const cellCenterMap = new Map(); // key → {lat, lng} 网格中心实际坐标
     all.forEach((t) => {
       (t.points || []).forEach((p) => {
         const cosLat = Math.cos((p.lat * Math.PI) / 180) || 1;
         const cellLng = cellLat / cosLat;
-        const key = `${Math.round(p.lat / cellLat)},${Math.round(p.lng / cellLng)}`;
+        const rLat = Math.round(p.lat / cellLat);
+        const rLng = Math.round(p.lng / cellLng);
+        const key = `${rLat},${rLng}`;
         heatMap.set(key, (heatMap.get(key) || 0) + 1);
+        if (!cellCenterMap.has(key)) {
+          cellCenterMap.set(key, { lat: rLat * cellLat, lng: rLng * cellLng });
+        }
       });
     });
     const maxWeight = Math.max(...heatMap.values(), 1);
     const normWeight = (key) => (heatMap.get(key) || 0) / maxWeight;
 
-    // 2. 找密集中心（权重加权质心）
+    // 2. 找密集中心：权重加权质心（用实际坐标，非网格索引）
     let wLat = 0, wLng = 0, wSum = 0;
     heatMap.forEach((w, key) => {
-      const [rLat, rLng] = key.split(',').map(Number);
-      const lat = rLat * cellLat;
-      const lng = rLng * cellLat;
-      wLat += lat * w;
-      wLng += lng * w;
+      const c = cellCenterMap.get(key);
+      if (!c) return;
+      wLat += c.lat * w;
+      wLng += c.lng * w;
       wSum += w;
     });
     const centerLat = wSum > 0 ? wLat / wSum : null;
     const centerLng = wSum > 0 ? wLng / wSum : null;
 
-    // 3. 计算全局 bbox + 密集区域 bbox（中心 80% 权重点）
+    // 3. 计算全局 bbox + 高密度点 bbox
     let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
     let dMinLat = Infinity, dMaxLat = -Infinity, dMinLng = Infinity, dMaxLng = -Infinity;
-    const threshold = 0.4; // 密集阈值
+    const threshold = 0.3; // 高密度阈值
     all.forEach((t) => {
       (t.points || []).forEach((p) => {
         if (p.lat < minLat) minLat = p.lat;
@@ -418,18 +425,20 @@ Page({
     });
     if (!isFinite(minLat)) return;
 
-    // 密集区域有效时，用密集区域 bbox 扩展 50% 作为可视范围（聚焦密集，外围自然延伸）
+    // 4. 可视范围：以密集中心为锚点，覆盖高密度区域 + 适当外扩
     let viewMinLat, viewMaxLat, viewMinLng, viewMaxLng;
-    if (isFinite(dMinLat)) {
-      const dSpanLat = dMaxLat - dMinLat || 0.002;
-      const dSpanLng = dMaxLng - dMinLng || 0.002;
-      const padLat = dSpanLat * 0.5;
-      const padLng = dSpanLng * 0.5;
-      viewMinLat = centerLat - padLat - dSpanLat * 0.5;
-      viewMaxLat = centerLat + padLat + dSpanLat * 0.5;
-      viewMinLng = centerLng - padLng - dSpanLng * 0.5;
-      viewMaxLng = centerLng + padLng + dSpanLng * 0.5;
-      // 不超出全局 bbox
+    if (isFinite(dMinLat) && centerLat != null) {
+      // 高密度区域的 span
+      const dSpanLat = dMaxLat - dMinLat;
+      const dSpanLng = dMaxLng - dMinLng;
+      // 以中心为锚点，向外扩展到覆盖高密度区域 + 50% padding
+      const halfH = Math.max(dSpanLat * 0.75, 0.003); // 最小 300m
+      const halfW = Math.max(dSpanLng * 0.75, 0.003);
+      viewMinLat = centerLat - halfH;
+      viewMaxLat = centerLat + halfH;
+      viewMinLng = centerLng - halfW;
+      viewMaxLng = centerLng + halfW;
+      // 裁剪到全局范围
       viewMinLat = Math.max(viewMinLat, minLat);
       viewMaxLat = Math.min(viewMaxLat, maxLat);
       viewMinLng = Math.max(viewMinLng, minLng);
