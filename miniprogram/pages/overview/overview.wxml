@@ -121,7 +121,7 @@
             <view class="share-mode-btn {{shareMode === 'grid' ? 'share-mode-active' : ''}}" bindtap="toggleShareMode" data-mode="grid">网格</view>
             <view class="share-mode-btn {{shareMode === 'aggregate' ? 'share-mode-active' : ''}}" bindtap="toggleShareMode" data-mode="aggregate">聚合</view>
           </view>
-          <view class="share-toggle" bindtap="toggleShareTime">{{shareShowTime ? '隐藏时间' : '显示时间'}}</view>
+          <view class="share-toggle" wx:if="{{shareMode === 'grid'}}" bindtap="toggleShareTime">{{shareShowTime ? '隐藏时间' : '显示时间'}}</view>
         </view>
         <button class="share-save" bindtap="saveShare">保存图片</button>
       </view>

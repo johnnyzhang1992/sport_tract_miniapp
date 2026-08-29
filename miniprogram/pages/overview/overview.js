@@ -500,18 +500,20 @@ Page({
         roundRectPath(ctx, pad, mapTop, mapW, mapH, 8);
         ctx.fill();
 
-        // 等比例缩放（基于聚焦后的可视范围）
+        // 等比例缩放（以密集中心为锚点，确保居中）
         const sLat = viewMaxLat - viewMinLat || 1e-6;
         const sLng = viewMaxLng - viewMinLng || 1e-6;
-        const midLat = (viewMinLat + viewMaxLat) / 2;
-        const kmPerDegLng = 111 * Math.cos((midLat * Math.PI) / 180);
+        const kmPerDegLng = 111 * Math.cos(((centerLat || (viewMinLat + viewMaxLat) / 2) * Math.PI) / 180);
         const lngKm = sLng * kmPerDegLng;
         const latKm = sLat * 111;
         const scale = Math.min(mapW / lngKm, mapH / latKm);
-        const offX = pad + (mapW - lngKm * scale) / 2;
-        const offY = mapTop + mapH - (mapH - latKm * scale) / 2;
-        const px = (lng) => offX + (lng - viewMinLng) * kmPerDegLng * scale;
-        const py = (lat) => offY - (lat - viewMinLat) * 111 * scale;
+        // 锚点：密集中心在画布中央
+        const anchorLng = centerLng || (viewMinLng + viewMaxLng) / 2;
+        const anchorLat = centerLat || (viewMinLat + viewMaxLat) / 2;
+        const anchorPx = pad + mapW / 2; // 锚点 x 坐标
+        const anchorPy = mapTop + mapH / 2; // 锚点 y 坐标
+        const px = (lng) => anchorPx + (lng - anchorLng) * kmPerDegLng * scale;
+        const py = (lat) => anchorPy - (lat - anchorLat) * 111 * scale;
 
         // 绘制轨迹（按密度着色）
         all.forEach((t) => {
