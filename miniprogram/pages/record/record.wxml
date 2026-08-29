@@ -9,6 +9,8 @@
       currentIcon="{{typeIconImg}}"
       followMode="{{followMode}}"
       mapType="{{mapType}}"
+      heading="{{heading}}"
+      enable-rotate="{{false}}"
       mode="record"
     />
     <!-- 图层切换 -->
