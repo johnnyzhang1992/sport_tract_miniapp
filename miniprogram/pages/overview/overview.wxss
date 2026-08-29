@@ -345,6 +345,13 @@
   padding: 20rpx 28rpx;
   border-top: 1rpx solid #f0f2f5;
 }
+.share-foot-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16rpx;
+  width: 100%;
+}
 .share-toggle {
   font-size: 26rpx;
   color: #2b6cf6;

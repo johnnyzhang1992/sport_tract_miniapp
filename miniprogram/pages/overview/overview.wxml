@@ -116,11 +116,13 @@
         <canvas type="2d" id="sharePoster" class="share-canvas" style="width: 300px; height: {{shareCanvasH}}px;"></canvas>
       </scroll-view>
       <view class="share-foot">
-        <view class="share-mode-row">
-          <view class="share-mode-btn {{shareMode === 'grid' ? 'share-mode-active' : ''}}" bindtap="toggleShareMode" data-mode="grid">网格</view>
-          <view class="share-mode-btn {{shareMode === 'aggregate' ? 'share-mode-active' : ''}}" bindtap="toggleShareMode" data-mode="aggregate">聚合</view>
+        <view class="share-foot-row">
+          <view class="share-mode-row">
+            <view class="share-mode-btn {{shareMode === 'grid' ? 'share-mode-active' : ''}}" bindtap="toggleShareMode" data-mode="grid">网格</view>
+            <view class="share-mode-btn {{shareMode === 'aggregate' ? 'share-mode-active' : ''}}" bindtap="toggleShareMode" data-mode="aggregate">聚合</view>
+          </view>
+          <view class="share-toggle" bindtap="toggleShareTime">{{shareShowTime ? '隐藏时间' : '显示时间'}}</view>
         </view>
-        <view class="share-toggle" wx:if="{{shareMode === 'grid'}}" bindtap="toggleShareTime">{{shareShowTime ? '隐藏时间' : '显示时间'}}</view>
         <button class="share-save" bindtap="saveShare">保存图片</button>
       </view>
     </view>
