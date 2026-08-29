@@ -431,9 +431,9 @@ Page({
       // 高密度区域的 span
       const dSpanLat = dMaxLat - dMinLat;
       const dSpanLng = dMaxLng - dMinLng;
-      // 以中心为锚点，向外扩展到覆盖高密度区域 + 50% padding
-      const halfH = Math.max(dSpanLat * 0.75, 0.003); // 最小 300m
-      const halfW = Math.max(dSpanLng * 0.75, 0.003);
+      // 以中心为锚点，紧凑包裹高密度区域（密集区域约占地图 70%）
+      const halfH = Math.max(dSpanLat * 0.5, 0.002); // 最小 200m
+      const halfW = Math.max(dSpanLng * 0.5, 0.002);
       viewMinLat = centerLat - halfH;
       viewMaxLat = centerLat + halfH;
       viewMinLng = centerLng - halfW;
