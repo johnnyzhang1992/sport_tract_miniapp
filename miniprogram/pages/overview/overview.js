@@ -363,13 +363,13 @@ Page({
     ctx.stroke();
   },
 
-  /** 绘制聚合分享海报：所有轨迹叠加在一张地图上 */
+  /** 绘制聚合分享海报：所有轨迹叠加，密集区域居中放大 */
   drawAggregatePoster() {
     const all = this.data.shareTracks || [];
     if (!all.length) return;
 
-    // 聚合轨迹密度网格（与 track-map buildOverview 同算法）
-    const cellLat = 150 / 111320; // 150m 网格
+    // 1. 密度网格
+    const cellLat = 150 / 111320;
     const heatMap = new Map();
     all.forEach((t) => {
       (t.points || []).forEach((p) => {
@@ -380,29 +380,69 @@ Page({
       });
     });
     const maxWeight = Math.max(...heatMap.values(), 1);
-    // 归一化权重
     const normWeight = (key) => (heatMap.get(key) || 0) / maxWeight;
 
-    // 计算全局 bbox
+    // 2. 找密集中心（权重加权质心）
+    let wLat = 0, wLng = 0, wSum = 0;
+    heatMap.forEach((w, key) => {
+      const [rLat, rLng] = key.split(',').map(Number);
+      const lat = rLat * cellLat;
+      const lng = rLng * cellLat;
+      wLat += lat * w;
+      wLng += lng * w;
+      wSum += w;
+    });
+    const centerLat = wSum > 0 ? wLat / wSum : null;
+    const centerLng = wSum > 0 ? wLng / wSum : null;
+
+    // 3. 计算全局 bbox + 密集区域 bbox（中心 80% 权重点）
     let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
+    let dMinLat = Infinity, dMaxLat = -Infinity, dMinLng = Infinity, dMaxLng = -Infinity;
+    const threshold = 0.4; // 密集阈值
     all.forEach((t) => {
       (t.points || []).forEach((p) => {
         if (p.lat < minLat) minLat = p.lat;
         if (p.lat > maxLat) maxLat = p.lat;
         if (p.lng < minLng) minLng = p.lng;
         if (p.lng > maxLng) maxLng = p.lng;
+        const cosLat = Math.cos((p.lat * Math.PI) / 180) || 1;
+        const cellLng2 = cellLat / cosLat;
+        const key = `${Math.round(p.lat / cellLat)},${Math.round(p.lng / cellLng2)}`;
+        if (normWeight(key) >= threshold) {
+          if (p.lat < dMinLat) dMinLat = p.lat;
+          if (p.lat > dMaxLat) dMaxLat = p.lat;
+          if (p.lng < dMinLng) dMinLng = p.lng;
+          if (p.lng > dMaxLng) dMaxLng = p.lng;
+        }
       });
     });
     if (!isFinite(minLat)) return;
 
-    // 海报参数
-    const W = 300;
-    const H = 400;
-    const pad = 16;
-    const mapTop = 82;
-    const mapBottom = H - 80; // 底部品牌行 + 统计
-    const mapH = mapBottom - mapTop;
-    const mapW = W - pad * 2;
+    // 密集区域有效时，用密集区域 bbox 扩展 50% 作为可视范围（聚焦密集，外围自然延伸）
+    let viewMinLat, viewMaxLat, viewMinLng, viewMaxLng;
+    if (isFinite(dMinLat)) {
+      const dSpanLat = dMaxLat - dMinLat || 0.002;
+      const dSpanLng = dMaxLng - dMinLng || 0.002;
+      const padLat = dSpanLat * 0.5;
+      const padLng = dSpanLng * 0.5;
+      viewMinLat = centerLat - padLat - dSpanLat * 0.5;
+      viewMaxLat = centerLat + padLat + dSpanLat * 0.5;
+      viewMinLng = centerLng - padLng - dSpanLng * 0.5;
+      viewMaxLng = centerLng + padLng + dSpanLng * 0.5;
+      // 不超出全局 bbox
+      viewMinLat = Math.max(viewMinLat, minLat);
+      viewMaxLat = Math.min(viewMaxLat, maxLat);
+      viewMinLng = Math.max(viewMinLng, minLng);
+      viewMaxLng = Math.min(viewMaxLng, maxLng);
+    } else {
+      viewMinLat = minLat; viewMaxLat = maxLat;
+      viewMinLng = minLng; viewMaxLng = maxLng;
+    }
+
+    // 4. 海报参数
+    const W = 300, H = 400, pad = 16;
+    const mapTop = 82, mapBottom = H - 40;
+    const mapH = mapBottom - mapTop, mapW = W - pad * 2;
 
     wx.createSelectorQuery()
       .in(this)
@@ -441,51 +481,47 @@ Page({
         ctx.fillStyle = 'rgba(31,35,41,0.7)';
         ctx.font = '13px sans-serif';
         ctx.fillText('公里', pad + kmW + 6, 58);
-        // 轨迹条数
         ctx.fillStyle = '#8a93a6';
         ctx.font = '11px sans-serif';
         ctx.fillText(`${all.length} 条轨迹`, pad, 74);
 
-        // 地图区域背景（浅灰底）
+        // 地图区域背景
         ctx.fillStyle = '#f7f8fa';
         ctx.beginPath();
         roundRectPath(ctx, pad, mapTop, mapW, mapH, 8);
         ctx.fill();
 
-        // 等比例缩放计算
-        const sLat = maxLat - minLat || 1e-6;
-        const sLng = maxLng - minLng || 1e-6;
-        const midLat = (minLat + maxLat) / 2;
+        // 等比例缩放（基于聚焦后的可视范围）
+        const sLat = viewMaxLat - viewMinLat || 1e-6;
+        const sLng = viewMaxLng - viewMinLng || 1e-6;
+        const midLat = (viewMinLat + viewMaxLat) / 2;
         const kmPerDegLng = 111 * Math.cos((midLat * Math.PI) / 180);
         const lngKm = sLng * kmPerDegLng;
         const latKm = sLat * 111;
         const scale = Math.min(mapW / lngKm, mapH / latKm);
         const offX = pad + (mapW - lngKm * scale) / 2;
         const offY = mapTop + mapH - (mapH - latKm * scale) / 2;
-        const px = (lng) => offX + (lng - minLng) * kmPerDegLng * scale;
-        const py = (lat) => offY - (lat - minLat) * 111 * scale;
+        const px = (lng) => offX + (lng - viewMinLng) * kmPerDegLng * scale;
+        const py = (lat) => offY - (lat - viewMinLat) * 111 * scale;
 
         // 绘制轨迹（按密度着色）
         all.forEach((t) => {
           const pts = (t.points || []).filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng));
           if (pts.length < 2) return;
-          // 计算该轨迹平均密度
           let sum = 0, n = 0;
           pts.forEach((p) => {
             const cosLat = Math.cos((p.lat * Math.PI) / 180) || 1;
             const cellLng2 = cellLat / cosLat;
             const key = `${Math.round(p.lat / cellLat)},${Math.round(p.lng / cellLng2)}`;
-            const w = normWeight(key);
-            sum += w; n++;
+            sum += normWeight(key); n++;
           });
           const avg = n > 0 ? sum / n : 0;
-          // 密度决定颜色和粗细
-          let color, width;
-          if (avg >= 0.6) { color = '#FF9800'; width = 2.5; } // 高频：橙色
-          else if (avg >= 0.3) { color = '#2B6CF6'; width = 1.8; } // 中频：蓝色
-          else { color = '#b0b8c4'; width = 1; } // 低频：浅灰
+          let color, lineW;
+          if (avg >= 0.6) { color = '#FF9800'; lineW = 2.5; }
+          else if (avg >= 0.3) { color = '#2B6CF6'; lineW = 1.8; }
+          else { color = '#b0b8c4'; lineW = 1; }
           ctx.strokeStyle = color;
-          ctx.lineWidth = width;
+          ctx.lineWidth = lineW;
           ctx.lineJoin = 'round';
           ctx.lineCap = 'round';
           ctx.beginPath();
@@ -495,28 +531,6 @@ Page({
           });
           ctx.stroke();
         });
-
-        // 底部统计行
-        const stats = [
-          { label: '次数', value: String(all.length) },
-          { label: '公里', value: totalKm },
-          { label: '轨迹条数', value: String(all.length) },
-        ];
-        // 改为两项：次数 + 公里（底部空间有限）
-        const btmY = H - 40;
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#1f2329';
-        ctx.font = 'bold 18px sans-serif';
-        ctx.fillText(String(all.length), W / 2 - 30, btmY);
-        ctx.fillStyle = '#8a93a6';
-        ctx.font = '10px sans-serif';
-        ctx.fillText('次', W / 2 - 30, btmY + 14);
-        ctx.fillStyle = '#1f2329';
-        ctx.font = 'bold 18px sans-serif';
-        ctx.fillText(totalKm, W / 2 + 30, btmY);
-        ctx.fillStyle = '#8a93a6';
-        ctx.font = '10px sans-serif';
-        ctx.fillText('公里', W / 2 + 30, btmY + 14);
 
         // 底部品牌行
         const app = getApp();
