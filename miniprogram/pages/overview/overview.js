@@ -533,35 +533,27 @@ Page({
             const tCenterLat = (tMinLat + tMaxLat) / 2;
             const tCenterLng = (tMinLng + tMaxLng) / 2;
 
-            // 从密集中心到轨迹中心的方向角（弧度）
-            const dLat = tCenterLat - anchorLat;
-            const dLng = (tCenterLng - anchorLng) * kmPerDegLng / 111; // 统一为近似距离单位
-            const angle = Math.atan2(dLng, dLat); // 0=上, π/2=右, π=下, -π/2=左
+            // 从密集中心到轨迹中心的方向（km 单位，保证方位正确）
+            const dLatKm = (tCenterLat - anchorLat) * 111;
+            const dLngKm = (tCenterLng - anchorLng) * kmPerDegLng;
+            const angle = Math.atan2(dLngKm, dLatKm); // 0=北(上), 90°=东(右)
 
-            // 偏移目标：画布边缘内缩一定距离
-            const marginX = mapW * 0.15; // 左右边距
-            const marginTop = mapH * 0.1; // 上边距
-            const marginBottom = mapH * 0.15; // 下边距
-            // 可用区域
-            const availW = mapW - marginX * 2;
-            const availH = mapH - marginTop - marginBottom;
-            // 目标位置：根据方向角映射到画布边缘
-            const cosA = Math.cos(angle);
-            const sinA = Math.sin(angle);
-            // 到边缘的距离（从中心出发）
-            let targetDist;
-            if (Math.abs(cosA) < 0.001) {
-              targetDist = availW / 2 / Math.abs(sinA);
-            } else if (Math.abs(sinA) < 0.001) {
-              targetDist = availH / 2 / Math.abs(cosA);
-            } else {
-              const distToEdgeX = availW / 2 / Math.abs(sinA);
-              const distToEdgeY = availH / 2 / Math.abs(cosA);
-              targetDist = Math.min(distToEdgeX, distToEdgeY);
-            }
-            // 外围轨迹中心在画布上的目标位置
-            const targetX = cx + sinA * targetDist;
-            const targetY = cy - cosA * targetDist; // y 轴翻转
+            // 外围轨迹投影到画布边缘的位置：
+            // 用密集区域的比例先算出轨迹中心在画布上的“自然”位置
+            const natX = cx + dLngKm * denseScale; // 自然位置 x（可能超出画布）
+            const natY = cy - dLatKm * denseScale; // 自然位置 y（可能超出画布）
+
+            // 将自然位置限制到画布内（保持方位不变）
+            const marginX = mapW * 0.08;
+            const marginTop = mapH * 0.06;
+            const marginBottom = mapH * 0.12;
+            const minX = pad + marginX;
+            const maxX = pad + mapW - marginX;
+            const minY = mapTop + marginTop;
+            const maxY = mapTop + mapH - marginBottom;
+            const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+            const targetX = clamp(natX, minX, maxX);
+            const targetY = clamp(natY, minY, maxY);
 
             ctx.strokeStyle = TRACK_COLOR;
             ctx.lineWidth = 1;
