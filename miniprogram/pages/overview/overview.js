@@ -365,7 +365,7 @@ Page({
     ctx.stroke();
   },
 
-  /** 绘制聚合分享海报：密集区域正常展示，外围轨迹缩小偏移 */
+  /** 绘制聚合分享海报：所有轨迹同比例绘制，密集区域居中 */
   drawAggregatePoster() {
     const all = this.data.shareTracks || [];
     if (!all.length) return;
@@ -384,7 +384,7 @@ Page({
     const maxWeight = Math.max(...heatMap.values(), 1);
     const normWeight = (key) => (heatMap.get(key) || 0) / maxWeight;
 
-    // 2. 找密集中心
+    // 2. 找密集中心（加权质心）
     let wLat = 0, wLng = 0, wSum = 0;
     heatMap.forEach((w, key) => {
       const [rLat, rLng] = key.split(',').map(Number);
@@ -396,9 +396,7 @@ Page({
     const centerLat = wSum > 0 ? wLat / wSum : null;
     const centerLng = wSum > 0 ? wLng / wSum : null;
 
-    // 3. 计算密集区域 bbox
-    const threshold = 0.3;
-    let dMinLat = Infinity, dMaxLat = -Infinity, dMinLng = Infinity, dMaxLng = -Infinity;
+    // 3. 计算全局 bbox
     let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
     all.forEach((t) => {
       (t.points || []).forEach((p) => {
@@ -406,15 +404,6 @@ Page({
         if (p.lat > maxLat) maxLat = p.lat;
         if (p.lng < minLng) minLng = p.lng;
         if (p.lng > maxLng) maxLng = p.lng;
-        const cosLat = Math.cos((p.lat * Math.PI) / 180) || 1;
-        const cellLng2 = cellLat / cosLat;
-        const key = `${Math.round(p.lat / cellLat)},${Math.round(p.lng / cellLng2)}`;
-        if (normWeight(key) >= threshold) {
-          if (p.lat < dMinLat) dMinLat = p.lat;
-          if (p.lat > dMaxLat) dMaxLat = p.lat;
-          if (p.lng < dMinLng) dMinLng = p.lng;
-          if (p.lng > dMaxLng) dMaxLng = p.lng;
-        }
       });
     });
     if (!isFinite(minLat)) return;
@@ -467,82 +456,74 @@ Page({
         ctx.font = '11px sans-serif';
         ctx.fillText(`${all.length} 条轨迹`, pad, 74);
 
-        // 统一颜色
-        const TRACK_COLOR = '#2B6CF6';
+        // 统一颜色（与网格模式一致）
+        const TRACK_COLOR = '#808080';
 
-        // --- 第一层：密集区域轨迹（正常比例，居中） ---
+        // 以密集中心为锚点，计算缩放比例
+        // 目标：让密集区域（高密度点的 bbox）占据画布约 65%
+        const threshold = 0.3;
+        let dMinLat = Infinity, dMaxLat = -Infinity, dMinLng = Infinity, dMaxLng = -Infinity;
+        all.forEach((t) => {
+          (t.points || []).forEach((p) => {
+            const cosLat = Math.cos((p.lat * Math.PI) / 180) || 1;
+            const cellLng2 = cellLat / cosLat;
+            const key = `${Math.round(p.lat / cellLat)},${Math.round(p.lng / cellLng2)}`;
+            if (normWeight(key) >= threshold) {
+              if (p.lat < dMinLat) dMinLat = p.lat;
+              if (p.lat > dMaxLat) dMaxLat = p.lat;
+              if (p.lng < dMinLng) dMinLng = p.lng;
+              if (p.lng > dMaxLng) dMaxLng = p.lng;
+            }
+          });
+        });
+
+        let scale;
         if (isFinite(dMinLat)) {
+          // 有密集区域：缩放让密集区域占 65%
           const dSpanLat = dMaxLat - dMinLat || 0.002;
           const dSpanLng = dMaxLng - dMinLng || 0.002;
           const kmPerDegLng = 111 * Math.cos((anchorLat * Math.PI) / 180);
           const dLatKm = dSpanLat * 111;
           const dLngKm = dSpanLng * kmPerDegLng;
-          // 密集区域占地图 65%
-          const denseScale = Math.min((mapW * 0.65) / dLngKm, (mapH * 0.65) / dLatKm);
-          const cx = pad + mapW / 2;
-          const cy = mapTop + mapH / 2;
-          const dPx = (lng) => cx + (lng - anchorLng) * kmPerDegLng * denseScale;
-          const dPy = (lat) => cy - (lat - anchorLat) * 111 * denseScale;
-
-          ctx.strokeStyle = TRACK_COLOR;
-          ctx.lineWidth = 1.8;
-          ctx.lineJoin = 'round';
-          ctx.lineCap = 'round';
-          all.forEach((t) => {
-            const pts = (t.points || []).filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng));
-            if (pts.length < 2) return;
-            // 判断轨迹是否与密集区域有交集
-            const inDense = pts.some((p) => {
-              const cosLat = Math.cos((p.lat * Math.PI) / 180) || 1;
-              const key = `${Math.round(p.lat / cellLat)},${Math.round(p.lng / (cellLat / cosLat))}`;
-              return normWeight(key) >= threshold;
-            });
-            if (!inDense) return;
-            ctx.beginPath();
-            pts.forEach((p, i) => {
-              const x = dPx(p.lng), y = dPy(p.lat);
-              if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-            });
-            ctx.stroke();
-          });
+          scale = Math.min((mapW * 0.65) / dLngKm, (mapH * 0.65) / dLatKm);
+        } else {
+          // 无密集区域：缩放让所有轨迹适应画布
+          const allSpanLat = maxLat - minLat || 0.002;
+          const allSpanLng = maxLng - minLng || 0.002;
+          const kmPerDegLng = 111 * Math.cos((anchorLat * Math.PI) / 180);
+          scale = Math.min(mapW / (allSpanLng * kmPerDegLng), mapH / (allSpanLat * 111)) * 0.9;
         }
 
-        // --- 第二层：外围轨迹（缩小 + 偏移，不遮挡密集区域） ---
-        const kmPerDegLngAll = 111 * Math.cos((anchorLat * Math.PI) / 180);
-        const allSpanLat = maxLat - minLat || 0.002;
-        const allSpanLng = maxLng - minLng || 0.002;
-        const allLatKm = allSpanLat * 111;
-        const allLngKm = allSpanLng * kmPerDegLngAll;
-        // 外围缩放：整体缩小到能放下，但不超出画报
-        const outerScale = Math.min(mapW / allLngKm, mapH / allLatKm) * 0.45;
-        // 偏移：往右下角偏移，避开密集区域
-        const offsetX = pad + mapW * 0.75;
-        const offsetY = mapTop + mapH * 0.82;
-        const oPx = (lng) => offsetX + (lng - anchorLng) * kmPerDegLngAll * outerScale;
-        const oPy = (lat) => offsetY - (lat - anchorLat) * 111 * outerScale;
+        // 投影函数：以密集中心为锚点，所有轨迹同比例绘制
+        const kmPerDegLng = 111 * Math.cos((anchorLat * Math.PI) / 180);
+        const cx = pad + mapW / 2; // 画布中心 x
+        const cy = mapTop + mapH / 2; // 画布中心 y
+        const px = (lng) => cx + (lng - anchorLng) * kmPerDegLng * scale;
+        const py = (lat) => cy - (lat - anchorLat) * 111 * scale;
 
+        // 裁剪到地图区域（防止超出画报）
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(pad, mapTop, mapW, mapH);
+        ctx.clip();
+
+        // 绘制所有轨迹（同比例，密集区域自然居中，外围自然延伸）
         ctx.strokeStyle = TRACK_COLOR;
-        ctx.lineWidth = 0.8;
-        ctx.globalAlpha = 0.5;
+        ctx.lineWidth = 1.5;
         ctx.lineJoin = 'round';
         ctx.lineCap = 'round';
         all.forEach((t) => {
           const pts = (t.points || []).filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng));
           if (pts.length < 2) return;
-          const inDense = pts.some((p) => {
-            const cosLat = Math.cos((p.lat * Math.PI) / 180) || 1;
-            const key = `${Math.round(p.lat / cellLat)},${Math.round(p.lng / (cellLat / cosLat))}`;
-            return normWeight(key) >= threshold;
-          });
-          if (inDense) return; // 已在第一层画过
           ctx.beginPath();
           pts.forEach((p, i) => {
-            const x = oPx(p.lng), y = oPy(p.lat);
+            const x = px(p.lng), y = py(p.lat);
             if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
           });
           ctx.stroke();
         });
-        ctx.globalAlpha = 1;
+
+        ctx.restore(); // 取消裁剪
 
         // 底部品牌行
         const app = getApp();
