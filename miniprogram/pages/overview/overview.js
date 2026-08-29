@@ -509,9 +509,9 @@ Page({
         ctx.rect(pad, mapTop, mapW, mapH);
         ctx.clip();
 
-        // 7. 绘制密集簇轨迹（同一比例，居中，形状完整）
+        // 7. 绘制密集簇轨迹（同一比例，居中，形状完整；正常线宽不加粗）
         ctx.strokeStyle = TRACK_COLOR;
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 1.5;
         ctx.lineJoin = 'round';
         ctx.lineCap = 'round';
         clusterTracks.forEach((tr) => {
@@ -526,7 +526,7 @@ Page({
 
         // 8. 绘制外围轨迹：缩小后按方位摆放在外围（不重叠密集区域）
         //    轨迹尺寸：适配到小包络，保证形状可辨认且不喧宾夺主
-        const maxFit = 70; // 外围轨迹最大适配跨度（px）
+        const maxFit = 50; // 外围轨迹最大适配跨度（px）
         const outerHalf = maxFit / 2;
         // 外圈半径：必须落在密集区域渲染范围之外 + 轨迹自身半宽 + 间距
         const denseHalfW = (cSpanLng * kmPerDeg * denseScale) / 2;
