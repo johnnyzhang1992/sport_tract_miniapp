@@ -352,6 +352,25 @@
   background: #eef4ff;
   border-radius: 999rpx;
 }
+.share-mode-row {
+  display: flex;
+  background: #f2f3f5;
+  border-radius: 999rpx;
+  padding: 4rpx;
+}
+.share-mode-btn {
+  font-size: 24rpx;
+  color: #8a93a6;
+  padding: 8rpx 28rpx;
+  border-radius: 999rpx;
+  transition: all 0.2s;
+}
+.share-mode-active {
+  background: #fff;
+  color: #2b6cf6;
+  font-weight: 600;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
+}
 .share-save {
   font-size: 26rpx;
   background: #2b6cf6;
