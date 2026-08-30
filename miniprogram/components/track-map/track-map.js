@@ -144,6 +144,12 @@ Component({
       // 按打点 + pauseGap 分段
       const segsWithGap = this.splitByPauseGaps(this.splitByMarkers(pts));
 
+      // DEBUG: 打印分段信息
+      console.log('[track-map] segs count:', segsWithGap.length, 'pts total:', pts.length);
+      segsWithGap.forEach((seg, i) => {
+        console.log(`[track-map] seg[${i}] len=${seg.length} firstPt.pauseGap=${seg[0]?.pauseGap}`);
+      });
+
       // 计算每段是否由 pauseGap 产生（用于保持同色）
       const isGapSeg = segsWithGap.map((seg, i) => {
         if (i === 0) return false;
