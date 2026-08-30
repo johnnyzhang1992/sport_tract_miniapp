@@ -144,12 +144,6 @@ Component({
       // 按打点 + pauseGap 分段
       const segsWithGap = this.splitByPauseGaps(this.splitByMarkers(pts));
 
-      // DEBUG: 打印分段信息
-      console.log('[track-map] segs count:', segsWithGap.length, 'pts total:', pts.length);
-      segsWithGap.forEach((seg, i) => {
-        console.log(`[track-map] seg[${i}] len=${seg.length} firstPt.pauseGap=${seg[0]?.pauseGap}`);
-      });
-
       // 计算每段是否由 pauseGap 产生（用于保持同色）
       const isGapSeg = segsWithGap.map((seg, i) => {
         if (i === 0) return false;
@@ -474,14 +468,14 @@ Component({
 
       const polylines = [];
       tracks.forEach((t) => {
-        const pts = (t.points || [])
-          .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng))
-          .map((p) => ({ latitude: p.lat, longitude: p.lng }));
-        if (pts.length < 2) return;
+        const raw = (t.points || []).filter(
+          (p) => Number.isFinite(p.lat) && Number.isFinite(p.lng),
+        );
+        if (raw.length < 2) return;
         // 轨迹热度 = 命中热力网格的权重均值（高频路线 → 粗橙线）
         let sum = 0;
         let n = 0;
-        (t.points || []).forEach((p) => {
+        raw.forEach((p) => {
           const cosLat = Math.cos((p.lat * Math.PI) / 180) || 1;
           const cellLng = cellLat / cosLat;
           const w = heatMap.get(`${Math.round(p.lat / cellLat)},${Math.round(p.lng / cellLng)}`);
@@ -500,7 +494,25 @@ Component({
         } else if (trackHeat >= 0.2) {
           width = 4; // 中频：类型色加粗
         }
-        polylines.push({ points: pts, color, width, arrowLine: false });
+        // 按 pauseGap 切段（暂停间隙断开连线），同色同宽多段 polyline
+        const segs = [];
+        let start = 0;
+        for (let i = 0; i < raw.length; i++) {
+          if (raw[i].pauseGap && i > start) {
+            segs.push(raw.slice(start, i));
+            start = i;
+          }
+        }
+        if (start < raw.length) segs.push(raw.slice(start));
+        segs.forEach((seg) => {
+          if (seg.length < 2) return;
+          polylines.push({
+            points: seg.map((p) => ({ latitude: p.lat, longitude: p.lng })),
+            color,
+            width,
+            arrowLine: false,
+          });
+        });
       });
       console.log('[track-map] polylines=', polylines.length);
 

@@ -86,6 +86,7 @@ Page({
           lat: p.lat,
           lng: p.lng,
           altitude: p.altitude != null ? p.altitude : null,
+          pauseGap: !!p.pauseGap,
         })),
         markers: (activity.markers || []).map((m) => ({ id: m.id, lat: m.lat, lng: m.lng, type: m.type })),
         markerList: (activity.markers || []).map((m) => ({

@@ -69,12 +69,25 @@ Component({
           ctx.lineWidth = 1.5;
           ctx.lineJoin = 'round';
           ctx.lineCap = 'round';
-          ctx.beginPath();
-          ctx.moveTo(x(points[0].lng), y(points[0].lat));
-          for (let i = 1; i < points.length; i++) {
-            ctx.lineTo(x(points[i].lng), y(points[i].lat));
+          // 按 pauseGap 切段（暂停间隙断开连线，与详情页地图一致）
+          const segs = [];
+          let segStart = 0;
+          for (let i = 0; i < points.length; i++) {
+            if (points[i].pauseGap && i > segStart) {
+              segs.push(points.slice(segStart, i));
+              segStart = i;
+            }
           }
-          ctx.stroke();
+          if (segStart < points.length) segs.push(points.slice(segStart));
+          for (const seg of segs) {
+            if (seg.length < 2) continue;
+            ctx.beginPath();
+            ctx.moveTo(x(seg[0].lng), y(seg[0].lat));
+            for (let i = 1; i < seg.length; i++) {
+              ctx.lineTo(x(seg[i].lng), y(seg[i].lat));
+            }
+            ctx.stroke();
+          }
         });
     },
   },
