@@ -142,14 +142,24 @@ Component({
       }
 
       // 按打点 + pauseGap 分段
-      const segs = this.splitByPauseGaps(this.splitByMarkers(pts));
+      const segsWithGap = this.splitByPauseGaps(this.splitByMarkers(pts));
+
+      // 计算每段是否由 pauseGap 产生（用于保持同色）
+      const isGapSeg = segsWithGap.map((seg, i) => {
+        if (i === 0) return false;
+        // 如果当前段的第一个点是 pauseGap 标记，说明这是暂停恢复后的段
+        return seg[0]?.pauseGap === true;
+      });
 
       const colors = ['#2B6CF6', '#34A853', '#FF9800', '#9C27B0'];
       // 双层抗锯齿：底层浅色宽线平滑边缘，上层 4px 彩色主体线
       const polylines = [];
-      segs.forEach((seg, i) => {
+      let colorIdx = 0;
+      segsWithGap.forEach((seg, i) => {
+        // pauseGap 产生的段复用前一段的颜色，视觉上同色断开
+        if (!isGapSeg[i]) colorIdx = i % colors.length;
+        const color = colors[colorIdx];
         const segPts = seg.map((p) => ({ latitude: p.lat, longitude: p.lng }));
-        const color = colors[i % colors.length];
         polylines.push({ points: segPts, color: '#D6E4FF', width: 9, arrowLine: false });
         polylines.push({ points: segPts, color, width: 4, arrowLine: false });
       });
