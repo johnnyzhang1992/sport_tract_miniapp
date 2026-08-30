@@ -99,11 +99,22 @@ App({
 
   async doLogin() {
     const { code } = await wx.login();
+    // 收集设备信息用于登录日志
+    const sys = wx.getSystemInfoSync();
+    const accountInfo = wx.getAccountInfoSync();
     const data = await request({
       url: '/auth/login',
       method: 'POST',
-      data: { code },
-      skipAuth: true, // 登录接口自身无鉴权
+      data: {
+        code,
+        platform: sys.platform || 'weapp',
+        system: `${sys.system} ${sys.systemVersion || ''}`.trim(),
+        brand: sys.brand || '',
+        model: sys.model || '',
+        sdkVersion: sys.SDKVersion || '',
+        appVersion: accountInfo.miniProgram.version || '',
+      },
+      skipAuth: true,
     });
     setToken(data.accessToken, data.refreshToken);
     this.globalData.userInfo = data.user;

@@ -196,7 +196,13 @@ Page({
     });
     const point = this.tracker.addPoint(loc);
     if (point) {
-      const mapPoints = this.data.mapPoints.concat({ lat: point.lat, lng: point.lng });
+      let mapPoints = this.data.mapPoints;
+      // 暂停恢复后第一个点前插入 gap 标记，让地图组件断开连线
+      if (this._pendingPauseGap) {
+        this._pendingPauseGap = false;
+        mapPoints = mapPoints.concat({ lat: point.lat, lng: point.lng, pauseGap: true });
+      }
+      mapPoints = mapPoints.concat({ lat: point.lat, lng: point.lng });
       // 计算运动方向（正北顺时针角度）
       let heading = this.data.heading;
       if (mapPoints.length >= 2) {
@@ -405,6 +411,8 @@ Page({
   togglePause() {
     if (this.data.paused) {
       this.tracker.resume();
+      // 恢复后第一个有效点前插入 pauseGap 标记，让地图组件断开连线
+      this._pendingPauseGap = true;
     } else {
       this.tracker.pause();
     }
