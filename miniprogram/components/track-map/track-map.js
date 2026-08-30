@@ -232,14 +232,15 @@ Component({
         let start = 0;
         for (let i = 0; i < seg.length; i++) {
           if (seg[i].pauseGap && i > start) {
-            // pauseGap 点本身作为下一段的起点，前一段到它之前断开
+            // 前一段不包含 pauseGap 点，后一段从 pauseGap 点开始（两段不共享端点）
             result.push(seg.slice(start, i));
             start = i;
           }
         }
         if (start < seg.length) result.push(seg.slice(start));
       }
-      return result.length > 0 ? result : segs;
+      // 过滤掉只有1个点的段（无法绘制线段）
+      return result.filter(s => s.length >= 2);
     },
 
     /** 点到轨迹点序列的最近索引（平方距离近似） */

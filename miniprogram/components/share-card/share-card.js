@@ -192,7 +192,8 @@ Component({
         }
       }
       if (start < pts.length) segs.push(pts.slice(start));
-      return segs.length > 0 ? segs : [pts];
+      // 过滤掉只有1个点的段（无法绘制线段）
+      return segs.filter(s => s.length >= 2);
     },
 
     /** 指标独立卡片：时长 / 配速 / 消耗 */
