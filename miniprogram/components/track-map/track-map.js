@@ -182,40 +182,50 @@ Component({
         this.setData({ polyline: [] });
         return;
       }
-      const min = Math.min(...alts);
-      const max = Math.max(...alts);
-      const span = max - min || 1;
-      const BUCKETS = 12;
-      const bucketIndex = (alt) => Math.min(BUCKETS - 1, Math.max(0, Math.floor(((alt - min) / span) * BUCKETS)));
 
-      const polylines = [];
-      let cur = null; // { color, points }
-      for (let i = 1; i < pts.length; i++) {
-        const a = pts[i - 1];
-        const b = pts[i];
-        if (!Number.isFinite(a.lat) || !Number.isFinite(b.lat)) continue;
-        const avgAlt =
-          a.altitude != null || b.altitude != null
-            ? (a.altitude ?? b.altitude) + ((b.altitude ?? a.altitude) - (a.altitude ?? b.altitude)) / 2
-            : null;
-        const color = avgAlt != null ? ALTITUDE_COLORS[bucketIndex(avgAlt)] : null;
-        const pt = { latitude: b.lat, longitude: b.lng };
-        if (color && cur && cur.color === color) {
-          cur.points.push(pt);
-        } else if (color) {
-          cur = {
-            color,
-            points: [{ latitude: a.lat, longitude: a.lng }, pt],
-            width: 4,
-            arrowLine: false,
-          };
-          polylines.push(cur);
-        } else {
-          cur = null;
+      // 先按 pauseGap 分段，每段独立着色（暂停间隙断开）
+      const segs = this.splitByPauseGaps([pts]);
+      const allPolylines = [];
+
+      for (const seg of segs) {
+        if (seg.length < 2) continue;
+        const segAlts = seg.map((p) => p.altitude).filter((a) => a != null);
+        if (segAlts.length < 2) continue;
+
+        const min = Math.min(...segAlts);
+        const max = Math.max(...segAlts);
+        const span = max - min || 1;
+        const BUCKETS = 12;
+        const bucketIndex = (alt) => Math.min(BUCKETS - 1, Math.max(0, Math.floor(((alt - min) / span) * BUCKETS)));
+
+        let cur = null;
+        for (let i = 1; i < seg.length; i++) {
+          const a = seg[i - 1];
+          const b = seg[i];
+          if (!Number.isFinite(a.lat) || !Number.isFinite(b.lat)) continue;
+          const avgAlt =
+            a.altitude != null || b.altitude != null
+              ? (a.altitude ?? b.altitude) + ((b.altitude ?? a.altitude) - (a.altitude ?? b.altitude)) / 2
+              : null;
+          const color = avgAlt != null ? ALTITUDE_COLORS[bucketIndex(avgAlt)] : null;
+          const pt = { latitude: b.lat, longitude: b.lng };
+          if (color && cur && cur.color === color) {
+            cur.points.push(pt);
+          } else if (color) {
+            cur = {
+              color,
+              points: [{ latitude: a.lat, longitude: a.lng }, pt],
+              width: 4,
+              arrowLine: false,
+            };
+            allPolylines.push(cur);
+          } else {
+            cur = null;
+          }
         }
       }
-      // 海拔缺失段（null）用相邻段色补画细线，保证轨迹完整
-      this.setData({ polyline: polylines });
+
+      this.setData({ polyline: allPolylines });
     },
 
     /** 以打点为分段点切分轨迹点序列 */
