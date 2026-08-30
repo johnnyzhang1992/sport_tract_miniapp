@@ -48,7 +48,11 @@ Page({
         maxAltitude: stats.maxAltitude,
         markerCount: (finalPack.markers || []).length,
       },
-      mapPoints: (finalPack.trackPoints || []).map((p) => ({ lat: p.lat, lng: p.lng })),
+      mapPoints: (finalPack.trackPoints || []).map((p) => ({
+        lat: p.lat,
+        lng: p.lng,
+        pauseGap: !!p.pauseGap,
+      })),
       markers: (finalPack.markers || []).map((m) => ({
         id: m.id,
         lat: m.lat,

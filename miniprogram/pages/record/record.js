@@ -196,13 +196,11 @@ Page({
     });
     const point = this.tracker.addPoint(loc);
     if (point) {
-      let mapPoints = this.data.mapPoints;
-      // 暂停恢复后第一个点前插入 gap 标记，让地图组件断开连线
-      if (this._pendingPauseGap) {
-        this._pendingPauseGap = false;
-        mapPoints = mapPoints.concat({ lat: point.lat, lng: point.lng, pauseGap: true });
-      }
-      mapPoints = mapPoints.concat({ lat: point.lat, lng: point.lng });
+      const mapPoints = this.data.mapPoints.concat({
+        lat: point.lat,
+        lng: point.lng,
+        pauseGap: !!point.pauseGap,
+      });
       // 计算运动方向（正北顺时针角度）
       let heading = this.data.heading;
       if (mapPoints.length >= 2) {
@@ -410,9 +408,8 @@ Page({
 
   togglePause() {
     if (this.data.paused) {
+      // tracker 会给恢复后首个有效点打 pauseGap 标记（入库 + 地图断开连线）
       this.tracker.resume();
-      // 恢复后第一个有效点前插入 pauseGap 标记，让地图组件断开连线
-      this._pendingPauseGap = true;
     } else {
       this.tracker.pause();
     }
@@ -599,7 +596,11 @@ Page({
         starting: false,
         paused: true,
         currentAccuracy: null,
-        mapPoints: activity.trackPoints.map((p) => ({ lat: p.lat, lng: p.lng })),
+        mapPoints: activity.trackPoints.map((p) => ({
+          lat: p.lat,
+          lng: p.lng,
+          pauseGap: !!p.pauseGap,
+        })),
         mapMarkers: (activity.markers || []).map((m) => ({ id: m.id, lat: m.lat, lng: m.lng })),
       });
 

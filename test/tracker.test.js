@@ -101,6 +101,29 @@ test('暂停/继续：暂停不采点、时长扣除暂停', () => {
   assert.ok(Math.abs(dur - 10) < 2, `duration=${dur}`);
 });
 
+test('暂停恢复：首个有效点带 pauseGap 标记（被过滤的点不消耗标记）', () => {
+  let clock = 0;
+  const t = new Tracker('walking', 60, () => clock);
+  t.addPoint(P(30, 120));
+  clock += 5000;
+  t.pause();
+  clock += 10000;
+  t.resume();
+  // 恢复后第一个点被漂移过滤丢弃（0.5s 瞬移 15km）→ 标记不消耗
+  clock += 500;
+  t.addPoint(P(30.1, 120.1));
+  assert.equal(t.points.length, 1);
+  // 下一个正常点应带 pauseGap
+  clock += 5000;
+  const p = t.addPoint(P(30.0002, 120));
+  assert.ok(p.pauseGap === true, '恢复后首个被接受的点应有 pauseGap');
+  assert.ok(t.points[t.points.length - 1].pauseGap === true);
+  // 后续点不再带标记
+  clock += 5000;
+  const p2 = t.addPoint(P(30.0003, 120));
+  assert.ok(!p2.pauseGap, '后续点不应带 pauseGap');
+});
+
 test('增量协议：getNewPoints 按 seq 过滤', () => {
   let clock = 0;
   const t = new Tracker('cycling', 60, () => clock);

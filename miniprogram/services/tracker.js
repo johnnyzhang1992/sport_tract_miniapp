@@ -72,6 +72,7 @@ class Tracker {
     this._typeCfg = TYPE_TRACKER_CONFIG[type] || DEFAULT_TRACKER_CONFIG;
     this.pausedAt = 0;
     this.pausedMs = 0;
+    this._pendingGap = false; // 暂停恢复后待标记的 pauseGap（打到恢复后首个有效点）
 
     this.distance = 0; // 米
     this.elevationGain = 0;
@@ -138,6 +139,12 @@ class Tracker {
       if (dt > 0 && dAlt > 5 && dAlt / dt > 0.8) {
         point.altitude = null;
       }
+    }
+
+    // 暂停恢复后首个被接受的点 → 标记 pauseGap（过滤掉的点不消耗标记）
+    if (this._pendingGap) {
+      point.pauseGap = true;
+      this._pendingGap = false;
     }
 
     if (this.lastPoint) {
@@ -256,6 +263,7 @@ class Tracker {
     this.lastSampleTime = this.lastPoint ? this.lastPoint.timestamp : 0;
     this.paused = false;
     this.pausedAt = 0;
+    this._pendingGap = false;
   }
 
   /** 切后台标记（页面 onHide 调用） */
@@ -287,6 +295,8 @@ class Tracker {
     if (this.paused) {
       this.pausedMs += this.now() - this.pausedAt;
       this.paused = false;
+      // 恢复后的首个有效点带 pauseGap 标记（入库 + 渲染断开连线）
+      this._pendingGap = true;
     }
   }
 

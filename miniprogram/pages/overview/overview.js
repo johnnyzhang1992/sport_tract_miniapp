@@ -357,12 +357,31 @@ Page({
     ctx.lineWidth = 1.5;
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
-    ctx.beginPath();
-    pts.forEach((p, i) => {
-      if (i === 0) ctx.moveTo(px(p), py(p));
-      else ctx.lineTo(px(p), py(p));
-    });
-    ctx.stroke();
+    // 按 pauseGap 切段（暂停间隙断开连线，与详情页地图一致）
+    const segs = this.splitByGap(pts);
+    for (const seg of segs) {
+      if (seg.length < 2) continue;
+      ctx.beginPath();
+      seg.forEach((p, i) => {
+        if (i === 0) ctx.moveTo(px(p), py(p));
+        else ctx.lineTo(px(p), py(p));
+      });
+      ctx.stroke();
+    }
+  },
+
+  /** 按 pauseGap 切段（暂停间隙断开连线） */
+  splitByGap(pts) {
+    const segs = [];
+    let start = 0;
+    for (let i = 0; i < pts.length; i++) {
+      if (pts[i].pauseGap && i > start) {
+        segs.push(pts.slice(start, i));
+        start = i;
+      }
+    }
+    if (start < pts.length) segs.push(pts.slice(start));
+    return segs.length > 0 ? segs : [pts];
   },
 
   /** 绘制聚合分享海报：密集区域放大居中，外围轨迹缩小偏移到对应方位 */
@@ -515,13 +534,16 @@ Page({
         ctx.lineJoin = 'round';
         ctx.lineCap = 'round';
         clusterTracks.forEach((tr) => {
-          ctx.beginPath();
-          tr.pts.forEach((p, i) => {
-            const x = cx + (p.lng - anchorLng) * kmPerDeg * denseScale;
-            const y = cy - (p.lat - anchorLat) * 111 * denseScale;
-            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+          this.splitByGap(tr.pts).forEach((seg) => {
+            if (seg.length < 2) return;
+            ctx.beginPath();
+            seg.forEach((p, i) => {
+              const x = cx + (p.lng - anchorLng) * kmPerDeg * denseScale;
+              const y = cy - (p.lat - anchorLat) * 111 * denseScale;
+              if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
           });
-          ctx.stroke();
         });
 
         // 8. 绘制外围轨迹：缩小后按方位摆放在外围（不重叠密集区域）
@@ -562,15 +584,18 @@ Page({
           ctx.strokeStyle = TRACK_COLOR;
           ctx.lineWidth = 1.2;
           ctx.globalAlpha = 0.75;
-          ctx.beginPath();
-          tr.pts.forEach((p, i) => {
-            const relLng = (p.lng - tCenterLng) * kmPerDeg * tScale;
-            const relLat = -(p.lat - tCenterLat) * 111 * tScale;
-            const x = targetX + relLng;
-            const y = targetY + relLat;
-            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+          this.splitByGap(tr.pts).forEach((seg) => {
+            if (seg.length < 2) return;
+            ctx.beginPath();
+            seg.forEach((p, i) => {
+              const relLng = (p.lng - tCenterLng) * kmPerDeg * tScale;
+              const relLat = -(p.lat - tCenterLat) * 111 * tScale;
+              const x = targetX + relLng;
+              const y = targetY + relLat;
+              if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
           });
-          ctx.stroke();
           ctx.globalAlpha = 1;
         });
 
