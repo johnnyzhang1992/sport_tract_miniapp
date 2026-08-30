@@ -128,7 +128,7 @@ Component({
       if (this.data.mode === 'overview') return; // 合集模式由 buildOverview 管理轨迹线
       // 过滤非法坐标点（undefined/NaN），空点集时传空数组避免渲染异常
       const pts = this.data.points
-        .map((p) => ({ lat: p.lat, lng: p.lng, altitude: p.altitude ?? null }))
+        .map((p) => ({ lat: p.lat, lng: p.lng, altitude: p.altitude ?? null, pauseGap: !!p.pauseGap }))
         .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng));
       if (pts.length < 2) {
         this.setData({ polyline: [] });
@@ -141,8 +141,8 @@ Component({
         return;
       }
 
-      // 按打点分段：每个打点投影到最近的轨迹点作为分段索引，轨迹切成多段
-      const segs = this.splitByMarkers(pts);
+      // 按打点 + pauseGap 分段
+      const segs = this.splitByPauseGaps(this.splitByMarkers(pts));
 
       const colors = ['#2B6CF6', '#34A853', '#FF9800', '#9C27B0'];
       // 双层抗锯齿：底层浅色宽线平滑边缘，上层 4px 彩色主体线
@@ -223,6 +223,23 @@ Component({
       }
       if (start < pts.length - 1) segs.push(pts.slice(start));
       return segs.length > 0 ? segs : [pts];
+    },
+
+    /** 按 pauseGap 标记将分段再切分（暂停间隙断开连线） */
+    splitByPauseGaps(segs) {
+      const result = [];
+      for (const seg of segs) {
+        let start = 0;
+        for (let i = 0; i < seg.length; i++) {
+          if (seg[i].pauseGap && i > start) {
+            // pauseGap 点本身作为下一段的起点，前一段到它之前断开
+            result.push(seg.slice(start, i));
+            start = i;
+          }
+        }
+        if (start < seg.length) result.push(seg.slice(start));
+      }
+      return result.length > 0 ? result : segs;
     },
 
     /** 点到轨迹点序列的最近索引（平方距离近似） */
