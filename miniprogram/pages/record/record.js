@@ -181,25 +181,6 @@ Page({
 
   /** 定位回调：喂给 tracker + 更新地图 */
   onLocation(loc) {
-    // DEBUG: 模拟暂停轨迹用于测试 pauseGap 断开效果
-    if (!this._debugSimulated && this.data.mapPoints.length === 0) {
-      this._debugSimulated = true;
-      const debugPts = [
-        { lat: 31.2304, lng: 121.4737 }, // 起点：人民广场附近
-        { lat: 31.2310, lng: 121.4750 },
-        { lat: 31.2320, lng: 121.4765 },
-        { lat: 31.2330, lng: 121.4780 },
-        { lat: 31.2340, lng: 121.4795, pauseGap: true }, // 暂停后第一个点（标记）
-        { lat: 31.2340, lng: 121.4795 },
-        { lat: 31.2355, lng: 121.4810 },
-        { lat: 31.2370, lng: 121.4825 },
-        { lat: 31.2385, lng: 121.4840 },
-      ];
-      this.setData({ mapPoints: debugPts });
-      console.log('[DEBUG] Simulated track with pauseGap at index 4');
-      return;
-    }
-
     if (this.data.paused) return;
     console.log('[record] loc accuracy=', loc.accuracy, 'lat=', loc.latitude, 'lng=', loc.longitude, 'dist=', this.tracker ? this.tracker.distance : '-');
     if (!this._firstLoc) {
