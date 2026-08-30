@@ -168,12 +168,31 @@ Component({
       ctx.lineCap = 'round';
       ctx.strokeStyle = '#808080';
       ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      pts.forEach((p, i) => {
-        if (i === 0) ctx.moveTo(px(p), py(p));
-        else ctx.lineTo(px(p), py(p));
-      });
-      ctx.stroke();
+      // 按 pauseGap 分段绘制，暂停间隙断开连线
+      const segs = this.splitByPauseGaps(pts);
+      for (const seg of segs) {
+        if (seg.length < 2) continue;
+        ctx.beginPath();
+        seg.forEach((p, i) => {
+          if (i === 0) ctx.moveTo(px(p), py(p));
+          else ctx.lineTo(px(p), py(p));
+        });
+        ctx.stroke();
+      }
+    },
+
+    /** 按 pauseGap 标记将点集切分为多段 */
+    splitByPauseGaps(pts) {
+      const segs = [];
+      let start = 0;
+      for (let i = 0; i < pts.length; i++) {
+        if (pts[i].pauseGap && i > start) {
+          segs.push(pts.slice(start, i));
+          start = i;
+        }
+      }
+      if (start < pts.length) segs.push(pts.slice(start));
+      return segs.length > 0 ? segs : [pts];
     },
 
     /** 指标独立卡片：时长 / 配速 / 消耗 */
