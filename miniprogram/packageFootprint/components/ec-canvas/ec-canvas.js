@@ -78,7 +78,7 @@ Component({
 
   methods: {
     init: function (callback) {
-      const version = wx.getSystemInfoSync().SDKVersion
+      const version = (wx.getAppBaseInfo ? wx.getAppBaseInfo() : wx.getSystemInfoSync()).SDKVersion
 
       const canUseNewCanvas = compareVersion(version, '2.9.0') >= 0;
       const forceUseOldCanvas = this.data.forceUseOldCanvas;
@@ -151,7 +151,7 @@ Component({
           this.canvasNode = canvasNode
           this._rect = res[0].rect || null // 缓存 canvas 位置（触摸坐标兜底）
 
-          const canvasDpr = wx.getSystemInfoSync().pixelRatio
+          const canvasDpr = (wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()).pixelRatio
           const canvasWidth = res[0].width
           const canvasHeight = res[0].height
 
