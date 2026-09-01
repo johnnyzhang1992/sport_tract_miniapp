@@ -110,16 +110,16 @@
 }
 .recent-thumb {
   width: 100%;
-  height: 150rpx;
+  height: 156rpx;
   display: block;
 }
 .recent-body {
-  padding: 14rpx 18rpx 18rpx;
+  padding: 16rpx 20rpx 20rpx;
 }
 .recent-head-row {
   display: flex;
   align-items: center;
-  margin-bottom: 10rpx;
+  margin-bottom: 12rpx;
 }
 .recent-icon {
   width: 30rpx;
