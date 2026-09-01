@@ -19,6 +19,7 @@
       <view class="zoom-btn" bindtap="zoomIn">+</view>
       <view class="zoom-btn" bindtap="zoomOut">−</view>
     </view>
+    <view class="fullscreen-btn share-btn" bindtap="openSharePreview"><image class="btn-icon" src="/assets/icons/lucide-share.png" mode="aspectFit" /><text>分享</text></view>
     <view class="fullscreen-btn" bindtap="openFullscreen"><image class="btn-icon" src="/assets/icons/lucide-maximize.png" mode="aspectFit" /><text>全屏</text></view>
   </view>
 
@@ -29,6 +30,36 @@
     <view class="zoom-controls fs-zoom">
       <view class="zoom-btn" bindtap="zoomIn">+</view>
       <view class="zoom-btn" bindtap="zoomOut">−</view>
+    </view>
+  </view>
+
+  <!-- 省份下钻弹窗（展示该省各城市点亮情况） -->
+  <view class="prov-mask" wx:if="{{provinceModal}}" catchtouchmove="noop">
+    <view class="prov-dialog">
+      <view class="prov-header">
+        <text class="prov-title">{{provinceModalName}} · 城市点亮</text>
+        <view class="prov-header-actions">
+          <view class="prov-save" bindtap="saveProvinceImage"><image class="save-icon" src="/assets/icons/lucide-download.png" mode="aspectFit" /></view>
+          <view class="prov-close" bindtap="closeProvinceMap"><image class="close-icon" src="/assets/icons/lucide-x.png" mode="aspectFit" /></view>
+        </view>
+      </view>
+      <ec-canvas id="provMap" canvas-id="provMap" ec="{{ provEc }}"></ec-canvas>
+    </view>
+  </view>
+
+  <!-- 分享预览弹窗（图片 + 保存到相册） -->
+  <view class="share-mask" wx:if="{{sharePreview}}" catchtouchmove="noop">
+    <view class="share-dialog">
+      <view class="share-header">
+        <text class="share-title">分享预览</text>
+        <view class="share-close" bindtap="closeSharePreview"><image class="close-icon" src="/assets/icons/lucide-x.png" mode="aspectFit" /></view>
+      </view>
+      <view class="share-img-wrap">
+        <image class="share-img" src="{{shareImageSrc}}" mode="widthFix" />
+      </view>
+      <view class="share-footer">
+        <view class="share-save-btn" bindtap="saveShareImage">保存到相册</view>
+      </view>
     </view>
   </view>
 

@@ -124,14 +124,20 @@ ec-canvas {
   position: absolute;
   bottom: 48rpx; /* 右下角，离地图内容远一点 */
   right: 48rpx;
-  background: rgba(255, 255, 255, 0.9);
+  z-index: 10; /* 确保盖在 canvas 之上 */
+  background: #fff;
   border-radius: 999rpx;
   padding: 10rpx 22rpx;
   font-size: 24rpx;
   color: #4e5969;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.1);
+  border: 1rpx solid #e5e6eb; /* 白底地图上也可见 */
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
   display: flex;
   align-items: center;
+}
+/* 分享按钮：全屏按钮左侧（全屏按钮约 128rpx 宽 + 间距） */
+.share-btn {
+  right: 192rpx;
 }
 .btn-icon {
   width: 28rpx;
@@ -172,6 +178,7 @@ ec-canvas {
   position: absolute;
   right: 48rpx; /* 与全屏按钮距右侧一致 */
   bottom: 120rpx; /* 全屏按钮上方 */
+  z-index: 10; /* 确保盖在 canvas 之上 */
   display: flex;
   flex-direction: column;
   box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
@@ -179,18 +186,19 @@ ec-canvas {
   overflow: hidden;
 }
 .zoom-btn {
-  width: 64rpx;
-  height: 64rpx;
-  background: rgba(255, 255, 255, 0.94);
+  width: 48rpx;
+  height: 48rpx;
+  background: #fff;
   color: #1f2329;
-  font-size: 40rpx;
+  font-size: 28rpx;
+  border: 1rpx solid #e5e6eb; /* 白底地图上也可见 */
   display: flex;
   align-items: center;
   justify-content: center;
   line-height: 1;
 }
 .zoom-btn:first-child {
-  border-bottom: 1rpx solid #eef0f3;
+  border-bottom: 1rpx solid #e5e6eb;
 }
 .zoom-btn-active {
   opacity: 0.7;
@@ -199,4 +207,145 @@ ec-canvas {
 .fs-zoom {
   bottom: 48rpx;
   right: 48rpx;
+}
+
+/* 省份下钻弹窗（底部弹出，展示城市点亮情况） */
+.prov-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 10002;
+  display: flex;
+  align-items: flex-end;
+}
+.prov-dialog {
+  width: 100%;
+  height: 76vh;
+  background: #fff;
+  border-radius: 24rpx 24rpx 0 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.prov-header {
+  height: 88rpx;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  border-bottom: 1rpx solid #f2f3f5;
+}
+.prov-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+.prov-header-actions {
+  position: absolute;
+  right: 24rpx;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+.prov-save {
+  width: 56rpx;
+  height: 56rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.save-icon {
+  width: 36rpx;
+  height: 36rpx;
+}
+.prov-close {
+  width: 56rpx;
+  height: 56rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.prov-dialog ec-canvas {
+  flex: 1;
+  width: 100%;
+  height: 0; /* 由 flex:1 撑开，覆盖全局 ec-canvas 固定高度 */
+  min-height: 0;
+}
+
+/* 分享预览弹窗（图片 + 保存到相册） */
+.share-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 10003;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.share-dialog {
+  width: 640rpx;
+  max-height: 82vh;
+  background: #fff;
+  border-radius: 24rpx;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.share-header {
+  height: 88rpx;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  border-bottom: 1rpx solid #f2f3f5;
+}
+.share-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+.share-close {
+  position: absolute;
+  right: 24rpx;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 56rpx;
+  height: 56rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.share-img-wrap {
+  flex: none; /* 高度由图片按宽高比撑开（widthFix），不参与 flex 分配 */
+  width: 100%;
+  background: #f4f6fa;
+  overflow: hidden;
+}
+.share-img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.share-footer {
+  flex-shrink: 0;
+  padding: 24rpx;
+  border-top: 1rpx solid #f2f3f5;
+}
+.share-save-btn {
+  height: 80rpx;
+  border-radius: 40rpx;
+  background: #2b6cf6;
+  color: #fff;
+  font-size: 30rpx;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.share-save-btn:active {
+  opacity: 0.8;
 }
