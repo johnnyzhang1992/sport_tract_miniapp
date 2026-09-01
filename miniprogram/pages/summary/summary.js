@@ -94,6 +94,20 @@ Page({
     } catch (e) {
       wx.hideLoading();
       this.setData({ saving: false });
+      // 409：活动已结束/被服务端作废（如 24h 惰性清理）→ 无法保存，清现场回首页
+      if (e.statusCode === 409) {
+        wx.removeStorageSync('pending_summary');
+        wx.removeStorageSync('pending_sync_activity');
+        wx.removeStorageSync('ongoingActivity');
+        wx.showModal({
+          title: '运动已失效',
+          content: '该运动在服务端已超时结束，无法保存',
+          showCancel: false,
+          success: () => wx.switchTab({ url: '/pages/index/index' }),
+        });
+        console.warn('[summary] 活动已失效（409），已清空现场', e);
+        return;
+      }
       wx.showModal({
         title: '保存失败',
         content: e.message || '网络异常，请重试',

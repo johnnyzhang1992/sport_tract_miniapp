@@ -195,7 +195,8 @@ Page({
       weakSignal: weak,
     });
     const point = this.tracker.addPoint(loc);
-    if (point) {
+    // 后台只记录坐标（tracker 已入列），不逐点渲染地图；回前台 onShow 一次性渲染
+    if (point && !this._hidden) {
       const mapPoints = this.data.mapPoints.concat({
         lat: point.lat,
         lng: point.lng,
@@ -493,6 +494,8 @@ Page({
     if (!this.tracker) return;
     // 切后台：标记时间（回前台时判断是否需要 GPS 预热，避免冷启动定位漂移）
     this.tracker.markBackground();
+    // 后台只记录坐标不渲染地图（onShow 一次性渲染，省逐点 setData + polyline 全量重建）
+    this._hidden = true;
     // 无后台定位权限：切后台自动暂停（后台无法采点，暂停避免轨迹缺失/跳变）
     if (!this._hasBackgroundAuth && !this.data.paused) {
       this.tracker.pause();
@@ -506,11 +509,38 @@ Page({
     if (!this.tracker) return;
     // 回前台：后台较久则开启预热窗口（丢弃回前台后几秒内的漂移点）
     this.tracker.onForeground();
+    this._hidden = false;
+    // 后台期间累积的轨迹一次性渲染（重新进入前台时）
+    if (this.tracker.points.length) {
+      this.renderMapFromTracker();
+    }
     // 因无后台权限被自动暂停：保持暂停，提示用户点击「继续」再次开始记录
     if (this._bgPaused) {
       this._bgPaused = false;
       wx.showToast({ title: '后台已暂停运动，点击继续', icon: 'none' });
     }
+  },
+
+  /** 用 tracker 全量重建地图数据（后台累积的轨迹一次性渲染，与逐点渲染结果一致） */
+  renderMapFromTracker() {
+    const pts = (this.tracker.points || []).map((p) => ({
+      lat: p.lat,
+      lng: p.lng,
+      pauseGap: !!p.pauseGap,
+    }));
+    const last = this.tracker.lastPoint;
+    let heading = this.data.heading;
+    if (pts.length >= 2) {
+      const a = pts[pts.length - 2];
+      const b = pts[pts.length - 1];
+      heading = this.calcBearing(a.lat, a.lng, b.lat, b.lng);
+    }
+    this.setData({
+      mapPoints: pts,
+      currentLocation: last ? { latitude: last.lat, longitude: last.lng } : this.data.currentLocation,
+      heading,
+      'stats.altitude': last && last.altitude != null ? Math.round(last.altitude) : this.data.stats.altitude,
+    });
   },
 
   onUnload() {

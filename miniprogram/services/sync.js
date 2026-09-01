@@ -57,6 +57,13 @@ class SyncService {
       this.lastUploadedSeq = res.lastPointSeq;
       this.pending = [];
     } catch (e) {
+      // 409：活动已结束/被服务端作废（如 24h 惰性清理）→ 永久性错误，停止上传，避免无限重试
+      if (e.statusCode === 409) {
+        this.stop();
+        this.pending = [];
+        console.warn('[sync] 活动已结束/作废，停止同步', e.message);
+        return;
+      }
       // 断网/服务异常：新点入待同步队列，下次补传
       const newPoints = this.tracker.getNewPoints(this.lastUploadedSeq);
       this.pending = this.pending.concat(newPoints);
