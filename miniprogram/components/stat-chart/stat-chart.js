@@ -3,7 +3,7 @@
  * - type=bar：柱状图（统计趋势）
  * - type=line：折线图（海拔/配速曲线）
  * - 布局：左侧 Y 轴刻度（min/mid/max）+ 网格线，底部 X 标签（左右留白不裁剪）
- * - 折线图数据点小圆 + 最大值标注数值
+ * - 折线图圆滑曲线（中点二次贝塞尔，无数据点圆），最大值标注数值
  */
 Component({
   properties: {
@@ -189,24 +189,19 @@ Component({
       const Y = (i) =>
         H - axis.padBottom - ((values[i] - axis.minV) / span) * axis.chartH;
 
-      // 折线
+      // 圆滑曲线：相邻数据点取中点，二次贝塞尔以数据点为控制点（平滑且不过冲出界）
       ctx.strokeStyle = this.data.color;
       ctx.lineWidth = 2;
       ctx.lineJoin = 'round';
       ctx.beginPath();
-      values.forEach((_, i) => {
-        if (i === 0) ctx.moveTo(X(i), Y(i));
-        else ctx.lineTo(X(i), Y(i));
-      });
+      ctx.moveTo(X(0), Y(0));
+      for (let i = 1; i < n - 1; i++) {
+        const xc = (X(i) + X(i + 1)) / 2;
+        const yc = (Y(i) + Y(i + 1)) / 2;
+        ctx.quadraticCurveTo(X(i), Y(i), xc, yc);
+      }
+      ctx.lineTo(X(n - 1), Y(n - 1));
       ctx.stroke();
-
-      // 数据点圆点（决策：取消数值标注，避免与曲线重叠；海拔数值看 Y 轴刻度）
-      values.forEach((_, i) => {
-        ctx.fillStyle = this.data.color;
-        ctx.beginPath();
-        ctx.arc(X(i), Y(i), 2, 0, Math.PI * 2);
-        ctx.fill();
-      });
 
       // X 标签（左右留白）
       ctx.font = '10px sans-serif';
