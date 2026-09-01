@@ -99,19 +99,20 @@ App({
 
   async doLogin() {
     const { code } = await wx.login();
-    // 收集设备信息用于登录日志
-    const sys = wx.getSystemInfoSync();
+    // 收集设备信息用于登录日志（新 API 优先，兼容旧基础库）
+    const device = wx.getDeviceInfo ? wx.getDeviceInfo() : wx.getSystemInfoSync();
+    const base = wx.getAppBaseInfo ? wx.getAppBaseInfo() : wx.getSystemInfoSync();
     const accountInfo = wx.getAccountInfoSync();
     const data = await request({
       url: '/auth/login',
       method: 'POST',
       data: {
         code,
-        platform: sys.platform || 'weapp',
-        system: `${sys.system} ${sys.systemVersion || ''}`.trim(),
-        brand: sys.brand || '',
-        model: sys.model || '',
-        sdkVersion: sys.SDKVersion || '',
+        platform: device.platform || 'weapp',
+        system: `${device.system || ''} ${device.systemVersion || ''}`.trim(),
+        brand: device.brand || '',
+        model: device.model || '',
+        sdkVersion: base.SDKVersion || '',
         appVersion: accountInfo.miniProgram.version || '',
       },
       skipAuth: true,
