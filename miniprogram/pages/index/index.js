@@ -33,10 +33,39 @@ Page({
     ongoingActivity: null, // 进行中（已暂停）运动入口
   },
 
+  onLoad() {
+    this.setupUpdateCheck();
+  },
+
   onShow() {
     this.applyDefaultType();
     this.loadOverview();
     this.checkOngoing();
+  },
+
+  /** 版本更新检测：微信后台下载完新版本包后弹窗提醒，确认即应用并重启 */
+  setupUpdateCheck() {
+    // 低版本基础库无此 API（开发版不会有更新回调），静默跳过
+    if (!wx.getUpdateManager) return;
+    const manager = wx.getUpdateManager();
+    manager.onUpdateReady(() => {
+      wx.showModal({
+        title: '发现新版本',
+        content: '新版本已经准备好，是否重启应用？',
+        confirmText: '立即重启',
+        cancelText: '稍后',
+        success: (res) => {
+          if (res.confirm) manager.applyUpdate();
+        },
+      });
+    });
+    manager.onUpdateFailed(() => {
+      wx.showModal({
+        title: '更新失败',
+        content: '新版本下载失败，请删除当前小程序后重新搜索打开',
+        showCancel: false,
+      });
+    });
   },
 
   /** 检查是否有“退出页面暂停”的运动，首页显示继续入口 */
