@@ -1,7 +1,7 @@
 /**
  * calendar-heat 日历热力图组件（GitHub contribution graph 经典样式）
  * 横向：每周一列（53 周 × 7 天），纵向：周日~周六
- * 顶部月份标签 + 底部星期标签（一/三/五）
+ * 顶部月份标签（无星期标签）
  * props: data = [{ date: 'YYYY-MM-DD', distance, count }]（近 365 天，含 0 值）
  */
 Component({
@@ -64,12 +64,12 @@ Component({
           if (!width) return;
 
           const gap = 1;
-          const leftPad = 14; // 左侧星期标签区
+          const leftPad = 2; // 无左侧星期标签，仅留少量边距
           // 格子宽浮点：leftPad + cols*(cell+gap) = width，右侧占满
           const cell = Math.max(3, (width - leftPad) / cols - gap);
           const cellW = cell;
           const labelH = 16; // 顶部月份标签（留足空间，防截取）
-          // 星期标签（一/三/五）在左侧，底部无标签区 → H 只含顶部标签 + 7 行格子
+          // H 只含顶部标签 + 7 行格子
           const H = labelH + 7 * (cell + gap);
 
           // 动态高度：canvas style 高度贴合绘制内容（无底部富余/裁剪）
@@ -123,20 +123,6 @@ Component({
             const x = leftPad + col * (cell + gap);
             ctx.fillText(`${ym % 12 + 1}月`, x, labelH - 5);
           }
-
-          // 左侧星期标签：按空间（格子大小）决定展示数量
-          ctx.fillStyle = '#bbb';
-          ctx.font = '8px sans-serif';
-          ctx.textAlign = 'right';
-          const weekLabels =
-            cell >= 11
-              ? ['日', '一', '二', '三', '四', '五', '六'] // 空间足：全部
-              : ['日', '', '', '三', '', '', '六']; // 首/中/末三行（周日/周三/周六）
-          weekLabels.forEach((t, r) => {
-            if (!t) return;
-            const y = labelH + r * (cell + gap) + cell / 2;
-            ctx.fillText(t, leftPad - 4, y + 3);
-          });
         });
     },
   },
