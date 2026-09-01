@@ -68,8 +68,7 @@ Component({
       if (this.data.mode === 'view') {
         this.fitView();
       }
-      // 动态追点：map 组件的 latitude/longitude 属性初始化后不再生效，
-      // 必须用 MapContext.includePoints 移动视野（节流 1.5s，避免频繁跳动）
+      // 动态追点：center 属性在基础库 3.x 动态生效（实测），节流 1.5s 避免频繁跳动
       if (this.data.followMode && currentLocation) {
         this.followLocation();
       }
@@ -399,11 +398,9 @@ Component({
 
       const loc = this.data.currentLocation;
       if (!loc || !Number.isFinite(loc.latitude) || !Number.isFinite(loc.longitude)) return;
-      const mapCtx = wx.createMapContext('trackMap', this);
-      mapCtx.includePoints({
-        points: [{ latitude: loc.latitude, longitude: loc.longitude }],
-        padding: [80, 40, 80, 40],
-      });
+      // 追点用 center 属性动态更新（基础库 3.x 对 map 的 lat/lng/scale/rotate 属性均动态生效）。
+      // 不能用 includePoints：单点（零面积包围盒）会把 scale 顶到最大值 20，用户手动调整的缩放每次追点都被重置
+      this.setData({ centerLat: loc.latitude, centerLng: loc.longitude });
     },
 
     /** 自适应视野（fitView 思路：include-points） */
