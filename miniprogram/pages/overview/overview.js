@@ -1,6 +1,6 @@
 const api = require('../../services/api');
 const config = require('../../config/index');
-const { formatDuration, compact, formatDurationStat } = require('../../utils/format');
+const { compact, formatDurationStat } = require('../../utils/format');
 
 const RANGES = [
   { value: 'week', label: '本周' },
@@ -112,25 +112,28 @@ Page({
     });
   },
 
-  /** 最近轨迹列表（取前 20 条） */
+  /** 最近轨迹列表（取前 20 条；卡片样式与文案与"我的轨迹"列表保持一致） */
   decorateRecent(tracks) {
     return (tracks || []).map((t) => {
       const meta = config.ACTIVITY_TYPES.find((x) => x.type === t.type) || {};
       const start = new Date(t.startTime);
       const timeText =
         Math.floor((Date.now() - start.getTime()) / 86400000) < 7
-          ? ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][start.getDay()]
+          ? ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'][start.getDay()]
           : `${start.getFullYear()}/${start.getMonth() + 1}/${start.getDate()}`;
       return {
         id: t.id,
         icon: meta.icon || '🏃',
         iconImg: meta.iconImg || '',
         label: meta.label || t.type,
-        color: '#808080', // 轨迹颜色（与我的轨迹一致）
+        color: '#4A5568', // 轨迹颜色统一深灰蓝（与我的轨迹一致）
         previewPoints: t.points || [], // 轨迹缩略图点
         timeText,
         distanceKm: (t.distance / 1000).toFixed(2).replace(/\.?0+$/, ''),
-        durationText: formatDuration(t.duration),
+        durationText: (() => {
+          const d = formatDurationStat(t.duration);
+          return `${d.num}${d.unit}`;
+        })(),
       };
     });
   },
