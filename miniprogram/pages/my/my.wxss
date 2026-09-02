@@ -23,6 +23,26 @@
   margin-right: 8rpx;
   flex-shrink: 0;
 }
+
+/* 运动报告入口行 */
+.link-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.switch-info {
+  flex: 1;
+}
+.switch-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+.link-arrow {
+  font-size: 40rpx;
+  color: #c2c7d0;
+  margin-left: 12rpx;
+}
 .version-tip {
   text-align: center;
   padding: 40rpx 0;

@@ -1,4 +1,4 @@
-<view class="container" wx:if="{{summary}}">
+<view class="container" wx:if="{{summary || loading}}">
   <!-- 维度切换 -->
   <view class="card range-card">
     <view class="range-row">
@@ -9,6 +9,19 @@
         data-value="{{item.value}}"
         bindtap="onRangeChange"
       >{{item.label}}</view>
+    </view>
+    <!-- 历史周期翻页（周/月/年）；中间区间可点击弹出周期选择 -->
+    <view class="period-nav" wx:if="{{activeRange !== 'all'}}">
+      <view class="period-arrow" hover-class="period-arrow-hover" bindtap="onPrevPeriod">‹</view>
+      <view class="period-label" hover-class="period-label-hover" bindtap="onTapPeriodLabel">
+        <text>{{periodLabel}}</text>
+        <image class="period-label-caret" src="/assets/icons/lucide-chevron-down.svg" mode="aspectFit" />
+      </view>
+      <view
+        class="period-arrow {{canGoNext ? '' : 'period-arrow-disabled'}}"
+        hover-class="{{canGoNext ? 'period-arrow-hover' : ''}}"
+        bindtap="onNextPeriod"
+      >›</view>
     </view>
   </view>
 
@@ -51,6 +64,18 @@
       <view class="sum-item">
         <view class="sum-num">{{summary.dailyKm}}</view>
         <view class="sum-label">日均 km</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 周期对比（当前周期 vs 上一周期） -->
+  <view class="card" wx:if="{{compare.length > 0}}">
+    <view class="section-title">周期对比</view>
+    <view class="cmp-row" wx:for="{{compare}}" wx:key="label">
+      <view class="cmp-label">{{item.label}}</view>
+      <view class="cmp-cell" wx:for="{{item.items}}" wx:for-item="it" wx:key="key">
+        <view class="cmp-val">{{it.val}}</view>
+        <view class="cmp-diff cmp-diff-{{it.diff.cls}}">{{it.diff.text}}</view>
       </view>
     </view>
   </view>
@@ -105,6 +130,28 @@
     </view>
   </view>
 
-  <view wx:if="{{!loading && summary.count === 0}}" class="loading-tip">该时间段还没有运动记录</view>
+  <view wx:if="{{!loading && summary && summary.count === 0}}" class="loading-tip">该时间段还没有运动记录</view>
   <view wx:if="{{loading}}" class="loading-tip">加载中…</view>
+</view>
+
+<!-- 周期选择弹窗（底部抽屉） -->
+<view class="picker-mask" wx:if="{{showPeriodPicker}}" bindtap="onClosePeriodPicker">
+  <view class="picker-sheet" catchtap="noop">
+    <view class="picker-head">
+      <text>选择周期</text>
+      <text class="picker-close" catchtap="onClosePeriodPicker">✕</text>
+    </view>
+    <scroll-view class="picker-list" scroll-y scroll-into-view="{{pickerScrollInto}}">
+      <view class="picker-grid">
+        <view
+          wx:for="{{periodOptions}}"
+          wx:key="offset"
+          id="period-{{item.offset}}"
+          class="picker-card {{item.selected ? 'picker-card-active' : ''}} {{item.compact ? 'picker-card-compact' : ''}}"
+          data-offset="{{item.offset}}"
+          bindtap="onSelectPeriod"
+        >{{item.label}}</view>
+      </view>
+    </scroll-view>
+  </view>
 </view>

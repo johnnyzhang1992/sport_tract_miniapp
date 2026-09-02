@@ -4,6 +4,7 @@
  */
 const api = require('../../services/api');
 const { formatDuration } = require('../../utils/format');
+const { calcDiff } = require('../../utils/diff');
 
 Page({
   data: {
@@ -19,6 +20,7 @@ Page({
     chartUnit: 'km',
     loading: true,
     best: null, // 个人最佳纪录
+    compare: [], // 周期对比 [{label, items: [{key, val, diff}]}]
   },
 
   onShow() {
@@ -47,13 +49,15 @@ Page({
         api.get(`/stats/trend?type=${this.data.trendType}`),
         api.get('/stats/best').catch(() => null),
       ]);
+      const decorated = this.decorateOverview(overview);
       this.setData({
-        overview: this.decorateOverview(overview),
+        overview: decorated,
         chartData: trend.data.map((d) => ({
           label: this.trendLabel(d.date),
           value: Math.round((d.distance / 1000) * 100) / 100, // 公里
         })),
         best: this.decorateBest(best),
+        compare: this.buildCompare(decorated),
       });
       // 缓存原始 best 数据（记录页打破纪录提示用）
       if (best) {
@@ -81,12 +85,22 @@ Page({
       month: sec(o.month),
       year: sec(o.year),
       total: sec(o.total),
+      prevWeek: sec(o.prevWeek),
+      prevMonth: sec(o.prevMonth),
     };
   },
 
-  /** 运动报告入口 */
-  goReport() {
-    wx.navigateTo({ url: '/pages/report/report' });
+  /** 周期对比行：本周vs上周 / 本月vs上月（次数/距离/时长） */
+  buildCompare(o) {
+    const rows = (cur, prev, label) => ({
+      label,
+      items: [
+        { key: 'count', val: String(cur.count), diff: calcDiff(cur.count, prev.count) },
+        { key: 'distance', val: `${(cur.distance / 1000).toFixed(1)}km`, diff: calcDiff(cur.distance, prev.distance) },
+        { key: 'duration', val: formatDuration(cur.duration), diff: calcDiff(cur.duration, prev.duration) },
+      ],
+    });
+    return [rows(o.week, o.prevWeek, '本周 vs 上周'), rows(o.month, o.prevMonth, '本月 vs 上月')];
   },
 
   /** 个人最佳装饰：距离/配速/时长格式化 + 日期 */
