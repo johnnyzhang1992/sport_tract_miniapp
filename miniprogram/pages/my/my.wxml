@@ -43,6 +43,15 @@
     </view>
   </view>
 
+  <!-- 运动报告入口（周/月/年汇总 + 个人最佳 + 轨迹记录） -->
+  <view class="card link-row" hover-class="card-hover" hover-stay-time="100" bindtap="goReport">
+    <view class="switch-info">
+      <view class="switch-title">运动报告</view>
+      <view class="text-muted">周/月/年运动汇总 · 个人最佳 · 轨迹记录</view>
+    </view>
+    <view class="link-arrow">›</view>
+  </view>
+
   <!-- 轨迹合集 / 点亮地图（合并大卡片，菜单式） -->
   <t-cell-group class="card menu-card">
     <t-cell title="轨迹合集" arrow bind:click="goOverview">

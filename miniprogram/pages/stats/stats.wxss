@@ -118,25 +118,44 @@
   white-space: nowrap;
 }
 
-/* 运动报告入口 */
-.link-row {
+/* 周期对比 */
+.cmp-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  padding: 18rpx 0;
+  border-bottom: 1rpx solid #f2f3f5;
 }
-.report-hover {
-  background: #f7f8fa;
+.cmp-row:last-child {
+  border-bottom: none;
 }
-.switch-info {
+.cmp-label {
+  width: 176rpx;
+  flex-shrink: 0;
+  font-size: 24rpx;
+  color: #86909c;
+}
+.cmp-cell {
   flex: 1;
+  text-align: center;
+  min-width: 0;
 }
-.switch-title {
-  font-size: 30rpx;
+.cmp-val {
+  font-size: 28rpx;
   font-weight: 600;
   color: #1f2329;
+  white-space: nowrap;
 }
-.link-arrow {
-  font-size: 40rpx;
+.cmp-diff {
+  font-size: 20rpx;
+  margin-top: 4rpx;
+  white-space: nowrap;
+}
+.cmp-diff-up {
+  color: #2bb673;
+}
+.cmp-diff-down {
+  color: #e54d42;
+}
+.cmp-diff-flat {
   color: #c2c7d0;
-  margin-left: 12rpx;
 }

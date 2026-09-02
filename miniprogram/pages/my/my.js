@@ -123,6 +123,11 @@ Page({
     wx.navigateTo({ url: '/pages/stats/stats' });
   },
 
+  /** 运动报告（周/月/年汇总 + 个人最佳 + 轨迹记录） */
+  goReport() {
+    wx.navigateTo({ url: '/pages/report/report' });
+  },
+
   goSettings() {
     wx.navigateTo({ url: '/pages/settings/settings' });
   },

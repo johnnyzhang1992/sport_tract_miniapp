@@ -25,6 +25,153 @@
   color: #2b6cf6;
   border: 2rpx solid #2b6cf6;
 }
+/* 历史周期翻页 */
+.period-nav {
+  display: flex;
+  align-items: center;
+  margin-top: 14rpx;
+}
+.period-arrow {
+  width: 56rpx;
+  height: 56rpx;
+  line-height: 54rpx;
+  text-align: center;
+  font-size: 36rpx;
+  color: #2b6cf6;
+  border-radius: 50%;
+  background: #f2f3f5;
+}
+.period-arrow-hover {
+  background: #e2e6eb;
+}
+.period-arrow-disabled {
+  color: #c0c4cc;
+}
+.period-label {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #333;
+}
+.period-label-hover {
+  opacity: 0.7;
+}
+.period-label-caret {
+  margin-left: 10rpx;
+  width: 32rpx;
+  height: 32rpx;
+  flex-shrink: 0;
+}
+
+/* 周期选择弹窗（底部抽屉，样式待调） */
+.picker-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+}
+.picker-sheet {
+  width: 100%;
+  background: #fff;
+  border-radius: 24rpx 24rpx 0 0;
+  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
+}
+.picker-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 28rpx 32rpx 12rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+.picker-close {
+  font-size: 32rpx;
+  color: #999;
+  padding: 8rpx 8rpx 8rpx 24rpx;
+}
+.picker-list {
+  max-height: 60vh;
+}
+/* 周期选项卡片网格（2 列） */
+.picker-grid {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 16rpx 24rpx 24rpx;
+}
+.picker-card {
+  width: calc(50% - 24rpx);
+  box-sizing: border-box;
+  margin: 12rpx;
+  padding: 26rpx 8rpx;
+  text-align: center;
+  font-size: 24rpx;
+  color: #333;
+  background: #f7f8fa;
+  border: 2rpx solid transparent;
+  border-radius: 24rpx;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.picker-card-active {
+  background: #eef4ff;
+  border-color: #2b6cf6;
+  color: #2b6cf6;
+  font-weight: 600;
+}
+.picker-card-compact {
+  font-size: 20rpx;
+}
+
+/* 周期对比 */
+.cmp-row {
+  display: flex;
+  align-items: center;
+  padding: 18rpx 0;
+  border-bottom: 1rpx solid #f2f3f5;
+}
+.cmp-row:last-child {
+  border-bottom: none;
+}
+.cmp-label {
+  width: 176rpx;
+  flex-shrink: 0;
+  font-size: 24rpx;
+  color: #86909c;
+}
+.cmp-cell {
+  flex: 1;
+  text-align: center;
+  min-width: 0;
+}
+.cmp-val {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1f2329;
+  white-space: nowrap;
+}
+.cmp-diff {
+  font-size: 20rpx;
+  margin-top: 4rpx;
+  white-space: nowrap;
+}
+.cmp-diff-up {
+  color: #2bb673;
+}
+.cmp-diff-down {
+  color: #e54d42;
+}
+.cmp-diff-flat {
+  color: #c2c7d0;
+}
 
 .section-title {
   font-size: 30rpx;

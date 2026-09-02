@@ -40,6 +40,18 @@
     </view>
   </view>
 
+  <!-- 周期对比（本周vs上周 / 本月vs上月） -->
+  <view class="card" wx:if="{{compare.length > 0}}">
+    <view class="section-title">周期对比</view>
+    <view class="cmp-row" wx:for="{{compare}}" wx:key="label">
+      <view class="cmp-label">{{item.label}}</view>
+      <view class="cmp-cell" wx:for="{{item.items}}" wx:for-item="it" wx:key="key">
+        <view class="cmp-val">{{it.val}}</view>
+        <view class="cmp-diff cmp-diff-{{it.diff.cls}}">{{it.diff.text}}</view>
+      </view>
+    </view>
+  </view>
+
   <!-- 个人最佳纪录（表格：行=类型，列=4 项指标） -->
   <view class="card" wx:if="{{best}}">
     <view class="section-title">个人最佳</view>
@@ -62,15 +74,6 @@
         <view class="bt-td">{{item.maxElevation}}</view>
       </view>
     </view>
-  </view>
-
-  <!-- 运动报告入口（独立报告页） -->
-  <view class="card link-row" bindtap="goReport" hover-class="report-hover">
-    <view class="switch-info">
-      <view class="switch-title">运动报告</view>
-      <view class="text-muted">周/月/年运动汇总 · 个人最佳 · 轨迹记录</view>
-    </view>
-    <view class="link-arrow">›</view>
   </view>
 
   <!-- 趋势柱状图 -->
