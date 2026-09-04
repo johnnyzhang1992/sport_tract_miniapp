@@ -5,6 +5,7 @@
  * 支持保存 canvas 海报到相册
  */
 const api = require('../../services/api');
+const config = require('../../config/index');
 const loading = require('../../utils/loading');
 const { formatDuration } = require('../../utils/format');
 
@@ -38,6 +39,7 @@ Page({
     summary: null, // { count, distanceKm, durationText, activeDays, elevationGain, calories }
     chartData: [], // 月度距离 [{label:'1月', value:km}]
     highlights: [], // [{ key, label, value, sub, id }]
+    milestones: [], // 今年新解锁 [{icon, text, date}]
     streakDays: 0, // 最长连续运动天数
     posterVisible: false,
     posterPath: '',
@@ -81,9 +83,13 @@ Page({
     this.setData({ loading: true });
     try {
       const r = this.yearRange(this.data.year);
-      const o = await api.get(`/overview?from=${r.from}&to=${r.to}`);
+      const [o, milestones] = await Promise.all([
+        api.get(`/overview?from=${r.from}&to=${r.to}`),
+        api.get(`/stats/year-milestones?year=${this.data.year}`).catch(() => null),
+      ]);
       const tracks = o.tracks || [];
       this.setData(this.buildReport(tracks, o));
+      this.setData({ milestones: this.buildMilestones(milestones) });
     } catch (e) {
       console.error('加载年度报告失败', e);
       wx.showToast({ title: '加载失败', icon: 'none' });
@@ -186,6 +192,33 @@ Page({
       highlights,
       streakDays: streak,
     };
+  },
+
+  /** 里程碑合并渲染：省/市/类型按首次时间排序 */
+  buildMilestones(m) {
+    if (!m) return [];
+    const items = [];
+    (m.newProvinces || []).forEach((p) =>
+      items.push({ icon: '🗺️', text: `首次点亮 ${p.name}`, firstAt: p.firstAt }),
+    );
+    (m.newCities || []).forEach((c) =>
+      items.push({ icon: '🏙️', text: `首次打卡 ${c.name}（${c.province}）`, firstAt: c.firstAt }),
+    );
+    (m.newTypes || []).forEach((t) => {
+      const meta = config.ACTIVITY_TYPES.find((x) => x.type === t.name) || {};
+      items.push({
+        icon: meta.icon || '🏃',
+        text: `首次尝试${meta.label || t.name}${t.countInYear ? ` · ${t.countInYear} 次` : ''}`,
+        firstAt: t.firstAt,
+      });
+    });
+    items.sort((a, b) => a.firstAt - b.firstAt);
+    return items.map((it) => ({ icon: it.icon, text: it.text, date: this.md(it.firstAt) }));
+  },
+
+  md(ts) {
+    const d = new Date(ts);
+    return `${d.getMonth() + 1}-${d.getDate()}`;
   },
 
   dayKey(ts) {

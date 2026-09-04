@@ -163,3 +163,34 @@
   text-align: center;
   padding: 24rpx 0;
 }
+
+/* 今年新解锁 */
+.ms-row {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  padding: 18rpx 8rpx;
+  border-bottom: 2rpx solid #f2f3f5;
+}
+.ms-row:last-child {
+  border-bottom: none;
+}
+.ms-row-hover {
+  background: #f7f8fa;
+}
+.ms-icon {
+  font-size: 38rpx;
+  flex-shrink: 0;
+}
+.ms-info {
+  flex: 1;
+}
+.ms-text {
+  font-size: 27rpx;
+  color: #1f2329;
+}
+.ms-date {
+  font-size: 24rpx;
+  color: #999;
+  flex-shrink: 0;
+}
