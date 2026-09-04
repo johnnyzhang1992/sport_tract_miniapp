@@ -91,6 +91,8 @@ Page({
       wx.removeStorageSync('pending_sync_activity');
       wx.removeStorageSync('ongoingActivity');
       wx.showToast({ title: '已保存', icon: 'success' });
+      // 轨迹列表 tab 页无法带参：打标记让 onShow 重新拉取最新数据
+      getApp().globalData.tracksNeedRefresh = true;
       setTimeout(() => wx.switchTab({ url: '/pages/tracks/tracks' }), 600);
     } catch (e) {
       loading.hide();

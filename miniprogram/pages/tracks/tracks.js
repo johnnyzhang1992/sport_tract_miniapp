@@ -28,6 +28,13 @@ Page({
       this.refresh();
       return;
     }
+    // 保存完新运动后跳转回来：强制拉取最新数据（switchTab 无法带参，走 globalData 标记）
+    if (app.globalData.tracksNeedRefresh) {
+      app.globalData.tracksNeedRefresh = false;
+      this.setData({ page: 1, items: [], hasMore: true });
+      this.refresh();
+      return;
+    }
     if (!this.data.initialized) {
       this.refresh();
     }
