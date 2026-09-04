@@ -28,6 +28,17 @@ function getToken() {
   return safeGet(TOKEN_KEY) || null;
 }
 
+const PROFILE_GUIDE_KEY = 'sport_track_profile_guide';
+
+function setProfileGuideDone() {
+  safeSet(PROFILE_GUIDE_KEY, { done: true, ts: Date.now() });
+}
+
+function getProfileGuideDone() {
+  const v = safeGet(PROFILE_GUIDE_KEY);
+  return !!(v && v.done);
+}
+
 function clearToken() {
   try {
     wx.removeStorageSync(TOKEN_KEY);
@@ -58,4 +69,4 @@ function clearBestCache(userId) {
   wx.removeStorageSync(bestCacheKey(userId));
 }
 
-module.exports = { setToken, getToken, clearToken, setUser, getUser, getBestCache, setBestCache, clearBestCache };
+module.exports = { setToken, getToken, clearToken, setUser, getUser, getProfileGuideDone, setProfileGuideDone, getBestCache, setBestCache, clearBestCache };

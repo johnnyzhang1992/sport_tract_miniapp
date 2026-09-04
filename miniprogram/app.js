@@ -1,6 +1,6 @@
 const api = require('./services/api');
 const { request } = api;
-const { getToken, setToken, clearToken } = require('./services/storage');
+const { getToken, setToken, clearToken, getProfileGuideDone, setProfileGuideDone } = require('./services/storage');
 
 App({
   globalData: {
@@ -120,7 +120,37 @@ App({
     setToken(data.accessToken, data.refreshToken);
     this.globalData.userInfo = data.user;
     this.globalData.loggedIn = true;
+    this.globalData.isNewUser = !!data.isNewUser; // 首次注册标记（引导完善资料用）
     return data.user;
+  },
+
+  /**
+   * 首次注册后引导完善资料（身高体重影响卡路里计算）
+   * 条件：本次登录为新注册 / 或上次引导被占用未完成；未标记 done；体重未设置
+   * 「跳过」只弹一次（写 done 标记）
+   */
+  maybeShowProfileGuide() {
+    if (getProfileGuideDone()) return;
+    const user = this.globalData.userInfo;
+    if (!user || (user.weightKg && user.heightCm)) {
+      setProfileGuideDone();
+      return;
+    }
+    if (!this.globalData.isNewUser && !this.globalData.profileGuidePending) return;
+    this.globalData.profileGuidePending = true;
+    wx.showModal({
+      title: '完善资料',
+      content: '设置身高和体重后，运动卡路里消耗的计算会更精准，还可以挑选头像和昵称～',
+      confirmText: '去完善',
+      cancelText: '跳过',
+      success: (res) => {
+        if (res.confirm) {
+          wx.navigateTo({ url: '/pages/profile/profile?from=guide' });
+        } else {
+          setProfileGuideDone();
+        }
+      },
+    });
   },
 
   /** 登出（token 失效时由 api.js 调用） */

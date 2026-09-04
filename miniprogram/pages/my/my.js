@@ -52,6 +52,10 @@ Page({
 
       // 头像缓存判断：基础 URL 没变且缓存未过期 → 复用缓存签名 URL（image src 不变 → 微信缓存命中，不重复下载）
       let avatarUrl = user.avatarUrl || '';
+      if (!avatarUrl && user.avatarPreset) {
+        // 默认头像预设（本地包内资源，不走 OSS 签名缓存）
+        avatarUrl = '/assets/avatars/' + user.avatarPreset + '.png';
+      }
       const cache = wx.getStorageSync(AVATAR_CACHE_KEY) || {};
       if (cache.url && cache.base === baseUrl(avatarUrl) && Date.now() - (cache.ts || 0) < AVATAR_CACHE_TTL) {
         avatarUrl = cache.url;
@@ -167,6 +171,7 @@ Page({
         try {
           await app.login();
           await this.refreshUser();
+          app.maybeShowProfileGuide(); // 首次注册引导完善资料
           wx.showToast({ title: '登录成功', icon: 'success' });
         } catch (e) {
           console.error('登录失败', e);

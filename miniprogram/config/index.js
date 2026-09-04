@@ -47,6 +47,36 @@ module.exports = {
     { type: 'note', label: '备注', icon: '📝', iconImg: '/assets/icons/lucide-note.png' },
   ],
 
+  /** 默认头像预设：资源放 miniprogram/assets/avatars/<key>.png（建议 200×200 png）
+   * 非空时资料编辑页头像区显示预设网格，选中存 avatarPreset（avatarUrl 为空时生效） */
+  DEFAULT_AVATARS: [
+        { key: 'cartoon-cyclist-riding' },
+    { key: 'cartoon-face-profile' },
+    { key: 'cartoon-person-swimming-outdoors' },
+    { key: 'crossing-road' },
+    { key: 'cyclist-riding' },
+    { key: 'doing-yoga' },
+    { key: 'face' },
+    { key: 'face-closed-smile' },
+    { key: 'face-profile' },
+    { key: 'hiking-up-hill' },
+    { key: 'leaving-bag' },
+    { key: 'lotus-sitting' },
+    { key: 'meditating' },
+    { key: 'paddling-canoe' },
+    { key: 'paddling-kayak' },
+    { key: 'person-climbing-coastal-path' },
+    { key: 'person-climbing-field' },
+    { key: 'person-climbing-forest-track' },
+    { key: 'person-climbing-valley' },
+    { key: 'person-leaving-depot' },
+    { key: 'person-paddling-board' },
+    { key: 'running-park' },
+    { key: 'running-player-action' },
+    { key: 'skier-going-downhill' },
+    { key: 'skiing-downhill' },
+  ],
+
   /** 打点图标预设盘：用户选图标+文案（category 决定统计归类；文案可在表单里自定义） */
   MARKER_ICON_PRESETS: [
     { icon: '📍', label: '打卡点', category: 'checkpoint' },
