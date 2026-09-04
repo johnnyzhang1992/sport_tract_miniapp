@@ -51,3 +51,24 @@
   text-align: center;
   padding: 24rpx 0;
 }
+
+/* 快捷记录今日体重 */
+.weight-input-card {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  padding: 20rpx 24rpx;
+}
+.weight-input {
+  flex: 1;
+  background: #f2f3f5;
+  border-radius: 12rpx;
+  padding: 16rpx 24rpx;
+  font-size: 28rpx;
+}
+.weight-save-btn {
+  background: #2b6cf6;
+  color: #fff;
+  font-size: 26rpx;
+  padding: 0 32rpx;
+}

@@ -1,9 +1,25 @@
 <view class="container">
+  <!-- 快捷记录今日体重 -->
+  <view class="card weight-input-card">
+    <input
+      class="weight-input"
+      type="digit"
+      value="{{inputWeight}}"
+      placeholder="记录今日体重（kg）"
+      bindinput="onWeightInput"
+    />
+    <button class="weight-save-btn" size="mini" loading="{{saving}}" bindtap="saveWeight">记录</button>
+  </view>
+
   <!-- 最新体重统计卡 -->
   <view class="card stat-card">
     <view class="stat-block">
       <view class="stat-value">{{latestWeight != null ? latestWeight : '—'}}</view>
       <view class="stat-label">最新体重 kg</view>
+    </view>
+    <view class="stat-block" wx:if="{{bmi != null}}">
+      <view class="stat-value">{{bmi}}</view>
+      <view class="stat-label">BMI（{{bmiLabel}}）</view>
     </view>
     <view class="stat-block">
       <view class="stat-value">{{chartData.length}}</view>
