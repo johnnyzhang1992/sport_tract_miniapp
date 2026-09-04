@@ -2,18 +2,29 @@
   <view class="sheet" catchtap="noop">
     <view class="sheet-title">{{editMode ? '编辑打点' : '打点'}}</view>
 
-    <!-- 类型选择 -->
-    <view class="type-row">
+    <!-- 图标 + 文案选择 -->
+    <view class="preset-grid">
       <view
-        wx:for="{{typeOptions}}"
-        wx:key="type"
-        class="type-pill {{selectedType === item.type ? 'type-pill-active' : ''}}"
-        data-type="{{item.type}}"
-        bindtap="selectType"
+        wx:for="{{presets}}"
+        wx:key="icon"
+        class="preset-pill {{selectedIcon === item.icon ? 'preset-pill-active' : ''}}"
+        data-icon="{{item.icon}}"
+        data-label="{{item.label}}"
+        data-category="{{item.category}}"
+        bindtap="selectPreset"
       >
-        <image class="type-icon" src="{{item.iconImg}}" mode="aspectFit" />
+        <text class="preset-emoji">{{item.icon}}</text>
         <text>{{item.label}}</text>
       </view>
+    </view>
+    <view class="input-wrap label-wrap">
+      <input
+        class="label-input"
+        placeholder="打点文案（可自定义，如：补水点）"
+        maxlength="12"
+        value="{{label}}"
+        bindinput="onLabelInput"
+      />
     </view>
 
     <!-- 备注 -->

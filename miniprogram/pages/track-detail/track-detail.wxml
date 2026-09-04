@@ -5,6 +5,7 @@
       id="detailMap"
       points="{{mapPoints}}"
       markers="{{markers}}"
+      kmMarkers="{{kmMarkers}}"
       mapType="{{mapType}}"
       mode="view"
       altitudeColor
@@ -64,6 +65,10 @@
       <view class="metric">
         <view class="metric-num">{{activity.paceValue}}</view>
         <view class="metric-label">配速 {{activity.paceUnit}}</view>
+      </view>
+      <view class="metric" wx:if="{{activity.fastestKmValue}}">
+        <view class="metric-num">{{activity.fastestKmValue}}</view>
+        <view class="metric-label">最快1km</view>
       </view>
       <view class="metric">
         <view class="metric-num">{{activity.calories}}</view>
@@ -142,12 +147,13 @@
       bindtap="onTapMarkerItem"
       hover-class="marker-hover"
     >
-      <image class="marker-icon" src="{{item.typeMeta.iconImg || '/assets/icons/lucide-pin.png'}}" mode="aspectFit" />
+      <text class="marker-emoji">{{item.icon || '📍'}}</text>
       <view class="marker-body">
-        <view class="marker-note">{{item.note || item.typeMeta.label || '打点'}}</view>
+        <view class="marker-note">{{item.label || item.typeMeta.label || '打点'}}</view>
+        <view class="text-muted" wx:if="{{item.note}}">{{item.note}}</view>
         <view class="text-muted">{{item.timeText}}{{item.address ? ' · ' + item.address : ''}}</view>
       </view>
-      <t-tag size="small" variant="light">{{item.typeMeta.label || '打点'}}</t-tag>
+      <t-tag size="small" variant="light" wx:if="{{item.label && item.note}}">{{item.typeMeta.label || '打点'}}</t-tag>
     </view>
   </view>
 

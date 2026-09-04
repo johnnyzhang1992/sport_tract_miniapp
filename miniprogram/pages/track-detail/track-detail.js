@@ -68,6 +68,11 @@ Page({
         .filter((a) => typeof a === 'number' && a > 0);
       const avgAccuracy = accs.length > 0 ? Math.round(accs.reduce((s, a) => s + a, 0) / accs.length) : null;
       const endTime = activity.endTime || activity.startTime + (activity.duration || 0) * 1000;
+      // 最快 1km（服务端分段计算；游泳/骑行无配速概念不展示）
+      const fastestParts =
+        activity.fastestKm && !['swimming', 'cycling'].includes(activity.type)
+          ? formatPaceParts(activity.fastestKm)
+          : null;
       this.setData({
         activity: {
           ...activity,
@@ -78,6 +83,8 @@ Page({
           durationText: formatDuration(activity.duration),
           paceValue: (formatPaceParts(activity.avgPace) || {}).value || '—',
           paceUnit: (formatPaceParts(activity.avgPace) || {}).unit || '',
+          fastestKmValue: fastestParts ? fastestParts.value : '',
+          fastestKmUnit: fastestParts ? fastestParts.unit : '',
           startTimeText: fmtTime(activity.startTime),
           endTimeText: fmtTime(endTime),
           avgAccuracy,
@@ -88,7 +95,8 @@ Page({
           altitude: p.altitude != null ? p.altitude : null,
           pauseGap: !!p.pauseGap,
         })),
-        markers: (activity.markers || []).map((m) => ({ id: m.id, lat: m.lat, lng: m.lng, type: m.type })),
+        kmMarkers: this.computeKmMarkers(activity.trackPoints || []),
+        markers: (activity.markers || []).map((m) => ({ id: m.id, lat: m.lat, lng: m.lng, type: m.type, icon: m.icon })),
         markerList: (activity.markers || []).map((m) => ({
           ...m,
           typeMeta: config.MARKER_TYPES.find((t) => t.type === m.type) || {},
@@ -211,7 +219,7 @@ Page({
   },
 
   async onMarkerConfirm(e) {
-    const { markerId, type, note, photos, existingPhotos } = e.detail;
+    const { markerId, type, icon, label, note, photos, existingPhotos } = e.detail;
     if (this.data.markerBusy) return;
     this.setData({ markerBusy: true });
 
@@ -236,6 +244,8 @@ Page({
         const finalPhotos = (existingPhotos || []).concat(urls).slice(0, 3);
         await api.put(`/activities/${this.data.id}/markers/${markerId}`, {
           type,
+          icon,
+          label,
           note,
           photos: finalPhotos,
         });
@@ -250,6 +260,8 @@ Page({
           lng: loc.lng,
           timestamp: Date.now(),
           type,
+          icon: icon || '',
+          label: label || '',
           note,
           photoUrl: urls[0] || '',
           photos: urls,
@@ -305,6 +317,32 @@ Page({
   },
 
   /** 判断当前轨迹是否为该类型的个人最佳纪录（用纪录 id 对比） */
+  /** 每满一公里的地图标记点（圆圈数字，上限 100 个防长轨迹卡顿） */
+  computeKmMarkers(points) {
+    if (!points || points.length < 2) return [];
+    const toRad = (d) => (d * Math.PI) / 180;
+    const distM = (a, b) => {
+      const R = 6371000;
+      const dLat = toRad(b.lat - a.lat);
+      const dLng = toRad(b.lng - a.lng);
+      const s =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+      return 2 * R * Math.asin(Math.sqrt(s));
+    };
+    const out = [];
+    let acc = 0;
+    let nextKm = 1;
+    for (let i = 1; i < points.length && nextKm <= 100; i++) {
+      acc += distM(points[i - 1], points[i]);
+      if (acc >= nextKm * 1000) {
+        out.push({ lat: points[i].lat, lng: points[i].lng, km: nextKm });
+        nextKm += 1;
+      }
+    }
+    return out;
+  },
+
   computeBestBadges(activity) {
     const app = getApp();
     const best = getBestCache(app.globalData.user ? app.globalData.user.id : '');

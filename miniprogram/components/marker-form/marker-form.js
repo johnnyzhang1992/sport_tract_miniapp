@@ -21,6 +21,9 @@ Component({
 
   data: {
     typeOptions: config.MARKER_TYPES,
+    presets: config.MARKER_ICON_PRESETS,
+    selectedIcon: '📍',
+    label: '', // 打点文案（可自定义）
     selectedType: 'checkpoint',
     note: '',
     photos: [], // 新选待上传（本地路径）
@@ -43,21 +46,35 @@ Component({
           seen.add(bare);
           return true;
         });
+        const preset = config.MARKER_ICON_PRESETS.find((p) => p.icon === marker.icon);
         this.setData({
           selectedType: marker.type || 'checkpoint',
+          selectedIcon: marker.icon || (preset && preset.icon) || '📍',
+          label: marker.label || (marker.type && !marker.icon ? (config.MARKER_TYPES.find((t) => t.type === marker.type) || {}).label : '') || '',
           note: marker.note || '',
           photos: [],
           existingPhotos,
         });
       } else {
-        this.setData({ selectedType: 'checkpoint', note: '', photos: [], existingPhotos: [] });
+        this.setData({ selectedType: 'checkpoint', selectedIcon: '📍', label: '', note: '', photos: [], existingPhotos: [] });
       }
     },
   },
 
   methods: {
-    selectType(e) {
-      this.setData({ selectedType: e.currentTarget.dataset.type });
+    /** 选图标预设：设定图标 + 统计归类；文案为空或等于其他预设默认文案时才跟随（不覆盖用户自拟） */
+    selectPreset(e) {
+      const { icon, label, category } = e.currentTarget.dataset;
+      const keep = this.data.label === '' || config.MARKER_ICON_PRESETS.some((p) => p.label === this.data.label);
+      this.setData({
+        selectedIcon: icon,
+        selectedType: category,
+        label: keep ? label : this.data.label,
+      });
+    },
+
+    onLabelInput(e) {
+      this.setData({ label: e.detail.value });
     },
 
     onNoteInput(e) {
@@ -101,6 +118,8 @@ Component({
       this.triggerEvent('confirm', {
         markerId: this.data.editMode && this.data.marker ? this.data.marker.id : undefined,
         type: this.data.selectedType,
+        icon: this.data.selectedIcon,
+        label: this.data.label.trim().slice(0, 20),
         note: this.data.note.trim(),
         photos: this.data.photos,
         existingPhotos: this.data.existingPhotos,
