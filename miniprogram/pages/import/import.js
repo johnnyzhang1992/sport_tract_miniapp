@@ -1,4 +1,5 @@
 const api = require('../../services/api');
+const loading = require('../../utils/loading');
 const config = require('../../config/index');
 const { formatDuration } = require('../../utils/format');
 
@@ -55,7 +56,7 @@ Page({
     }
     if (!app.globalData.loggedIn) return;
     this.setData({ uploading: true, fileName: file.name, preview: null, activityId: '' });
-    wx.showLoading({ title: '解析中…' });
+    loading.show('解析中…');
     try {
       const res = await api.uploadFile('/activities/import', file.path);
       this.setData({
@@ -70,9 +71,10 @@ Page({
         },
       });
     } catch (e) {
+      loading.hide();
       wx.showToast({ title: e.message || '导入失败', icon: 'none' });
     } finally {
-      wx.hideLoading();
+      loading.hide();
       this.setData({ uploading: false });
     }
   },

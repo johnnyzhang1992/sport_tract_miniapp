@@ -133,7 +133,8 @@ Page({
         console.warn('静默登录失败', e);
       }
     }
-    if (app.globalData.loggedIn) app.maybeShowProfileGuide();
+    // 有未保存运动时让位（避免两个原生 Modal 同帧互顶），本次会话进个人中心登录时仍会补弹
+    if (app.globalData.loggedIn && !wx.getStorageSync('pending_summary')) app.maybeShowProfileGuide();
     // 游客态：不读缓存/不请求，展示登录引导（登录后 onShow 重新加载）
     if (!app.globalData.loggedIn) {
       this._loadingOverview = false;

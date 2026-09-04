@@ -30,13 +30,19 @@ function getToken() {
 
 const PROFILE_GUIDE_KEY = 'sport_track_profile_guide';
 
-function setProfileGuideDone() {
-  safeSet(PROFILE_GUIDE_KEY, { done: true, ts: Date.now() });
+/** 标记某用户已处理完善资料引导（跳过/已完善）；按 userId 记，避免同机多用户互相抑制 */
+function setProfileGuideDone(userId) {
+  safeSet(PROFILE_GUIDE_KEY, { done: true, userId: userId || '', ts: Date.now() });
 }
 
-function getProfileGuideDone() {
+/**
+ * 某用户是否已处理过引导。
+ * 历史版本存的是无 userId 的全局标记 —— 视为未处理（让老用户/测试环境重新弹一次）
+ */
+function getProfileGuideDone(userId) {
   const v = safeGet(PROFILE_GUIDE_KEY);
-  return !!(v && v.done);
+  if (!userId) return !!(v && v.done);
+  return !!(v && v.done && v.userId === userId);
 }
 
 function clearToken() {

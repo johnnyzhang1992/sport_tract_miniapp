@@ -5,6 +5,7 @@
  * 支持保存 canvas 海报到相册
  */
 const api = require('../../services/api');
+const loading = require('../../utils/loading');
 const { formatDuration } = require('../../utils/format');
 
 /** 圆角矩形路径 */
@@ -203,7 +204,7 @@ Page({
   async openPoster() {
     if (!this.data.hasData) return;
     this.setData({ posterVisible: true, posterPath: '' });
-    wx.showLoading({ title: '生成海报…' });
+    loading.show('生成海报…');
     try {
       await new Promise((r) => setTimeout(r, 150)); // 等弹窗渲染出 canvas
       const res = await new Promise((resolve, reject) => {
@@ -225,9 +226,9 @@ Page({
         wx.canvasToTempFilePath({ canvas: this._canvasNode, success: (r2) => resolve(r2.tempFilePath), fail: reject });
       });
       this.setData({ posterPath: path });
-      wx.hideLoading();
+      loading.hide();
     } catch (e) {
-      wx.hideLoading();
+      loading.hide();
       console.error('[year-report] 海报生成失败', e);
       wx.showToast({ title: '海报生成失败', icon: 'none' });
     }

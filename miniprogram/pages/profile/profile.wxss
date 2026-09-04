@@ -1,3 +1,8 @@
+/* 页面根容器覆盖全局 .container：底部留出 iPhone Home Indicator 安全区 */
+.container {
+  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
+}
+
 .avatar-card {
   display: flex;
   justify-content: center;

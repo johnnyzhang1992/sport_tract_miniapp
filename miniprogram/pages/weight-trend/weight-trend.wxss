@@ -1,5 +1,6 @@
 .container {
   padding: 24rpx;
+  padding-bottom: calc(24rpx + env(safe-area-inset-bottom)); /* iPhone 底部安全区 */
 }
 
 /* 最新体重统计卡 */

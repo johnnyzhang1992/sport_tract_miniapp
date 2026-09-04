@@ -5,6 +5,7 @@
  * 结束不直接 finish：跳摘要页，用户确认"保存"才提交 final 包（文档 3.3）
  */
 const config = require('../../config/index');
+const loading = require('../../utils/loading');
 const api = require('../../services/api');
 const { Tracker } = require('../../services/tracker');
 const { ensureLocationAuth } = require('../../services/location-auth');
@@ -13,6 +14,10 @@ const { reverseGeocode } = require('../../services/geo');
 const { uploadPhoto } = require('../../services/oss-upload');
 const { formatPace } = require('../../utils/format');
 const { getBestCache } = require('../../services/storage');
+
+// 胶囊最小化引导展示记录：ack=点「知道了」永不再弹；dismissedAt=点空白关闭，冷却期后再次提醒
+const CAPSULE_GUIDE_KEY = 'sport_track_capsule_guide';
+const CAPSULE_GUIDE_COOLDOWN = 7 * 24 * 60 * 60 * 1000; // 空白关闭后 7 天不再弹
 
 let locationListenerOn = false;
 
@@ -30,6 +35,9 @@ Page({
     followMode: true,
     mapType: 'standard',
     weakSignal: false,
+
+    // 胶囊最小化引导（卡片位置由 CSS 定：页面顶部 ≈ 胶囊正下方）
+    capsuleGuide: { visible: false },
     currentAccuracy: null,
     heading: -1, // 运动方向（度），-1 表示未计算
 
@@ -147,6 +155,7 @@ Page({
       this.setData({ starting: false });
       this.updateStats(); // 立即渲染一帧
       this.statsTimer = setInterval(() => this.updateStats(), 1000);
+      this.maybeShowCapsuleGuide(); // 首几次运动：引导点胶囊最小化后台记录
     } catch (e) {
       console.error('[record] init 失败', e);
       if (e && e.statusCode === 429) {
@@ -380,13 +389,13 @@ Page({
 
     try {
       // 多图直传 OSS（每张先微信合规检测，违规中止）
-      wx.showLoading({ title: '保存打点…' });
+      loading.show('保存打点…');
       const urls = [];
       if (photos && photos.length) {
         for (const f of photos) {
           const up = await uploadPhoto(f);
           if (up && up.blocked) {
-            wx.hideLoading();
+            loading.hide();
             wx.showToast({ title: '图片包含不当内容', icon: 'none' });
             return;
           }
@@ -431,10 +440,10 @@ Page({
         }
       });
 
-      wx.hideLoading();
+      loading.hide();
       wx.showToast({ title: '已打点', icon: 'success' });
     } catch (err) {
-      wx.hideLoading();
+      loading.hide();
       wx.showToast({ title: '打点失败', icon: 'none' });
       console.error(err);
     } finally {
@@ -494,7 +503,7 @@ Page({
     }
 
     try {
-      wx.showLoading({ title: '生成摘要…' });
+      loading.show('生成摘要…');
       // 终点地址（未配置 key 时为空）
       const last = this.tracker.lastPoint;
       const startAddress = '';
@@ -514,10 +523,10 @@ Page({
       // 暂存 sync 实例（摘要页"保存"时提交 finish）
       wx.setStorageSync('pending_sync_activity', this.sync.activityId);
 
-      wx.hideLoading();
+      loading.hide();
       wx.redirectTo({ url: '/pages/summary/summary' });
     } catch (e) {
-      wx.hideLoading();
+      loading.hide();
       console.error('[record] 生成摘要失败', e);
       this.setData({ starting: false });
     }
@@ -546,6 +555,39 @@ Page({
         }
       },
     });
+  },
+
+  /**
+   * 展示条件：未点过「知道了」且不在 7 天冷却期（点空白关闭后进入冷却）。
+   * 页面为默认导航栏：fixed 坐标系从导航栏下方开始，胶囊在导航栏内（坐标系之外），
+   * 卡片定位在页面顶部即可 —— 视觉上正好在胶囊正下方，无需计算状态栏/胶囊高度。
+   */
+  maybeShowCapsuleGuide() {
+    try {
+      const st = wx.getStorageSync(CAPSULE_GUIDE_KEY) || {};
+      if (st.ack) return; // 点过「知道了」：永不再弹
+      if (st.dismissedAt && Date.now() - st.dismissedAt < CAPSULE_GUIDE_COOLDOWN) return; // 冷却期内不弹
+      if (this.data.capsuleGuide.visible) return;
+      this.setData({ capsuleGuide: { visible: true } });
+    } catch (e) {
+      console.warn('[record] 胶囊引导展示失败', e);
+    }
+  },
+
+  /** 点「知道了」：永久关闭，永不再弹 */
+  ackCapsuleGuide() {
+    try {
+      wx.setStorageSync(CAPSULE_GUIDE_KEY, { ack: true });
+    } catch (e) { /* ignore */ }
+    this.setData({ 'capsuleGuide.visible': false });
+  },
+
+  /** 点空白/遮罩：暂时关闭，7 天后再次提醒 */
+  dismissCapsuleGuide() {
+    try {
+      wx.setStorageSync(CAPSULE_GUIDE_KEY, { dismissedAt: Date.now() });
+    } catch (e) { /* ignore */ }
+    this.setData({ 'capsuleGuide.visible': false });
   },
 
   onHide() {
@@ -610,6 +652,7 @@ Page({
     }
     if (this.tracker) this.tracker.onKilometer = null;
     wx.setKeepScreenOn({ keepScreenOn: false });
+    loading.reset(); // 兜底：页面卸载时若还有 Loading 残留则清理
 
     // 运动进行中退出（非结束跳摘要、非放弃）：自动暂停并保留现场，首页可“继续”
     if (!this._ending && !this._canceled && this.tracker && this.sync && this.sync.activityId) {
@@ -659,10 +702,10 @@ Page({
     const meta = config.ACTIVITY_TYPES.find((t) => t.type === type) || {};
     this.setData({ type, typeLabel: meta.label || type, typeIcon: meta.icon || '🏃', typeIconImg: meta.iconImg || '' });
     try {
-      wx.showLoading({ title: '恢复中…' });
+      loading.show('恢复中…');
       const activity = await api.get(`/activities/${activityId}`);
       if (!activity || activity.status !== 'in_progress') {
-        wx.hideLoading();
+        loading.hide();
         wx.removeStorageSync('ongoingActivity');
         wx.showToast({ title: '该运动已结束', icon: 'none' });
         return;
@@ -698,9 +741,10 @@ Page({
       this.sync.start(this.tracker);
       this.updateStats();
       this.statsTimer = setInterval(() => this.updateStats(), 1000);
-      wx.hideLoading();
+      loading.hide();
+      this.maybeShowCapsuleGuide(); // 恢复运动也补一次引导（未学会前）
     } catch (e) {
-      wx.hideLoading();
+      loading.hide();
       console.error('[record] 恢复运动失败', e);
       wx.showToast({ title: '恢复失败，请重试', icon: 'none' });
     }

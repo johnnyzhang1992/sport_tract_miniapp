@@ -1,4 +1,5 @@
 const echarts = require('../../components/ec-canvas/echarts');
+const loading = require('../../../utils/loading');
 
 // 省份名称 → 行政区划代码（与 web 后台 FootprintMap 一致）
 const PROVINCE_TO_CODE = {
@@ -298,7 +299,7 @@ Page({
       wx.showToast({ title: '地图尚未就绪', icon: 'none' });
       return;
     }
-    wx.showLoading({ title: '生成中…' });
+    loading.show('生成中…');
     const chart = comp.chart || null;
     if (chart) {
       const exportOpt = { backgroundColor: '#ffffff' };
@@ -334,7 +335,7 @@ Page({
             chart.setOption(restoreOpt);
             chart.getZr().flush();
           }
-          wx.hideLoading();
+          loading.hide();
         },
       });
     }, 250);

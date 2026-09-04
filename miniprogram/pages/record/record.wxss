@@ -170,3 +170,64 @@
   font-size: 30rpx;
   color: #999;
 }
+
+/* 胶囊最小化引导（运动开始后弹，点击任意处关闭） */
+.capsule-guide-mask {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 500; /* 压过页面所有层（打点表单 200） */
+}
+.capsule-guide-card {
+  position: absolute;
+  /* 默认导航栏页：fixed 坐标系从导航栏下方开始，胶囊在导航栏内（视口上方约 8px 处收尾）
+     top:8px → 卡片视觉上贴在胶囊正下方；right:10px → 与胶囊右缘对齐，箭头指向 ⊙ */
+  top: 8px;
+  right: 10px;
+  max-width: 440rpx;
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 26rpx 28rpx 18rpx;
+  box-shadow: 0 12rpx 40rpx rgba(0, 0, 0, 0.25);
+}
+.capsule-guide-arrow {
+  position: absolute;
+  top: -12rpx;
+  right: 36rpx; /* 指向导航栏内的 ⊙（胶囊右侧按钮） */
+  width: 24rpx;
+  height: 24rpx;
+  background: #fff;
+  transform: rotate(45deg);
+  border-radius: 4rpx;
+}
+.capsule-guide-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1f2329;
+  margin-bottom: 10rpx;
+}
+.capsule-guide-text {
+  font-size: 26rpx;
+  color: #5c6470;
+  line-height: 1.5;
+}
+.capsule-guide-footer {
+  margin-top: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.capsule-guide-btn {
+  font-size: 26rpx;
+  font-weight: 500;
+  color: #2b6cf6;
+  padding: 6rpx 20rpx;
+  margin-left: -20rpx; /* 文字视觉贴卡片左缘 */
+}
+.capsule-guide-hint {
+  font-size: 22rpx;
+  color: #9aa3ad;
+}

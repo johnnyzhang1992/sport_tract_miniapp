@@ -5,6 +5,7 @@
  * 后端接口：GET /activities/:id、PUT/DELETE /markers/:markerId、POST /markers
  */
 const api = require('../../services/api');
+const loading = require('../../utils/loading');
 const config = require('../../config/index');
 const { getBestCache, setBestCache } = require('../../services/storage');
 const storage = require('../../services/storage');
@@ -223,7 +224,7 @@ Page({
     if (this.data.markerBusy) return;
     this.setData({ markerBusy: true });
 
-    wx.showLoading({ title: '保存中…' });
+    loading.show('保存中…');
     try {
       // 新图直传（合规检测内置；违规中止）
       const urls = [];
@@ -231,7 +232,7 @@ Page({
         for (const f of photos) {
           const up = await uploadPhoto(f);
           if (up && up.blocked) {
-            wx.hideLoading();
+            loading.hide();
             wx.showToast({ title: '图片包含不当内容', icon: 'none' });
             return;
           }
@@ -268,12 +269,12 @@ Page({
         });
       }
 
-      wx.hideLoading();
+      loading.hide();
       wx.showToast({ title: markerId ? '已更新' : '已添加', icon: 'success' });
       this.setData({ markerFormVisible: false });
       await this.loadDetail();
     } catch (err) {
-      wx.hideLoading();
+      loading.hide();
       wx.showToast({ title: '保存失败', icon: 'none' });
       console.error(err);
     } finally {
@@ -533,29 +534,31 @@ Page({
       });
     });
     if (!res.confirm) return;
-    wx.showLoading({ title: '纠偏中…' });
+    loading.show('纠偏中…');
     try {
       const data = await api.post(`/activities/${this.data.id}/reprocess`);
       this.loadDetail();
+      loading.hide();
       wx.showToast({ title: '纠偏完成', icon: 'success' });
     } catch (e) {
       console.error('纠偏失败', e);
+      loading.hide();
       wx.showToast({ title: '纠偏失败', icon: 'none' });
     } finally {
-      wx.hideLoading();
+      loading.hide();
     }
   },
 
   /** 导出 GPX */
   exportGpx() {
     const token = storage.getToken();
-    wx.showLoading({ title: '生成中…' });
+    loading.show('生成中…');
     wx.request({
       url: config.API_BASE_URL + '/api' + `/activities/${this.data.id}/gpx`,
       method: 'GET',
       header: { Authorization: `Bearer ${(token && token.accessToken) || ''}` },
       success: (res) => {
-        wx.hideLoading();
+        loading.hide();
         if (res.statusCode === 200) {
           // 保存 .gpx 文件并分享（文件传输助手 → 电脑下载）
           const fs = wx.getFileSystemManager();
@@ -583,7 +586,7 @@ Page({
         }
       },
       fail: () => {
-        wx.hideLoading();
+        loading.hide();
         wx.showToast({ title: '导出失败', icon: 'none' });
       },
     });
