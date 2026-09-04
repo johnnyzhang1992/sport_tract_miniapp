@@ -62,6 +62,18 @@
       </view>
     </view>
 
+    <!-- 今年新解锁 -->
+    <view class="card" wx:if="{{milestones.length}}">
+      <view class="section-title">今年新解锁（{{milestones.length}}）</view>
+      <view class="ms-row" wx:for="{{milestones}}" wx:key="index" hover-class="ms-row-hover">
+        <text class="ms-icon">{{item.icon}}</text>
+        <view class="ms-info">
+          <view class="ms-text">{{item.text}}</view>
+        </view>
+        <view class="ms-date">{{item.date}}</view>
+      </view>
+    </view>
+
     <!-- 保存海报 -->
     <button class="poster-btn" bindtap="openPoster">生成年度海报</button>
   </block>
