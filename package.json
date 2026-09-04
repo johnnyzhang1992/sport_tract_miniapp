@@ -4,7 +4,8 @@
   "description": "小迹一下，每一次walk都值得被记录",
   "private": true,
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "prune-icons": "node scripts/tree-shake-icons.mjs"
   },
   "dependencies": {
     "@rollup/plugin-node-resolve": "^16.0.3",
