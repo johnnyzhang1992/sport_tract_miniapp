@@ -22,6 +22,14 @@ Page({
     this.loadUser();
   },
 
+  onShow() {
+    // 从体重趋势页返回时同步最新体重（只覆盖体重，避免冲掉其他未保存编辑；首进时 user 未加载完跳过）
+    if (!this.data.user) return;
+    api.get('/users/me')
+      .then((user) => this.setData({ weightKg: user.weightKg || 60 }))
+      .catch(() => {});
+  },
+
   async loadUser() {
     try {
       const user = await api.get('/users/me');

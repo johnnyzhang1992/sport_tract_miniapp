@@ -349,3 +349,23 @@ ec-canvas {
 .share-save-btn:active {
   opacity: 0.8;
 }
+
+/* 省份弹窗：查看该省轨迹入口 */
+.prov-track-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 24rpx 12rpx;
+  padding: 16rpx 24rpx;
+  border-radius: 12rpx;
+  background: #eef4ff;
+  color: #2b6cf6;
+  font-size: 26rpx;
+}
+.prov-track-entry-hover {
+  background: #dce7fd;
+}
+.prov-entry-arrow {
+  font-size: 32rpx;
+  line-height: 1;
+}

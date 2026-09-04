@@ -14,6 +14,12 @@
     />
   </t-tabs>
 
+  <!-- 省份筛选条（足迹地图跳转带入） -->
+  <view class="province-bar" wx:if="{{provinceFilter}}">
+    <text class="province-bar-text">📍 {{provinceFilter}}</text>
+    <view class="province-bar-close" hover-class="province-bar-close-hover" bindtap="clearProvince">✕</view>
+  </view>
+
   <!-- 轨迹列表 -->
   <view wx:if="{{items.length === 0 && !loading}}">
     <view class="empty" wx:if="{{initialized}}">还没有运动记录，去开始第一次吧</view>

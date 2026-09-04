@@ -10,6 +10,7 @@ Page({
       config.ACTIVITY_TYPES.map((t) => ({ type: t.type, label: t.label })),
     ),
     activeFilter: '',
+    provinceFilter: '', // 省份筛选（足迹地图跳转带入）
     items: [],
     page: 1,
     hasMore: true,
@@ -18,9 +19,24 @@ Page({
   },
 
   onShow() {
+    // 足迹地图"查看该省轨迹"入口：tab 页不能带参，经 globalData 传递
+    const app = getApp();
+    if (app.globalData.pendingTracksProvince) {
+      const province = app.globalData.pendingTracksProvince;
+      app.globalData.pendingTracksProvince = '';
+      this.setData({ provinceFilter: province, page: 1, items: [], hasMore: true });
+      this.refresh();
+      return;
+    }
     if (!this.data.initialized) {
       this.refresh();
     }
+  },
+
+  /** 清除省份筛选 */
+  clearProvince() {
+    this.setData({ provinceFilter: '', page: 1, items: [], hasMore: true });
+    this.refresh();
   },
 
   onPullDownRefresh() {
@@ -89,6 +105,9 @@ Page({
     const params = { page, pageSize: PAGE_SIZE };
     if (this.data.activeFilter) {
       params.type = this.data.activeFilter;
+    }
+    if (this.data.provinceFilter) {
+      params.province = this.data.provinceFilter;
     }
     return params;
   },

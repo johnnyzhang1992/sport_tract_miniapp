@@ -5,6 +5,8 @@
  * props: activityId, activity(指标), mapPoints, miniCodeUrl
  * 方法: preview()；事件: posterready({ path }) 海报临时路径
  */
+const api = require('../../services/api');
+
 /** 圆角矩形路径（arcTo 手写，真机基础库无 ctx.roundRect 时兜底为直角） */
 function roundRectPath(ctx, x, y, w, h, r) {
   ctx.beginPath();
@@ -34,6 +36,7 @@ Component({
     previewVisible: false,
     previewPath: '', // 海报临时文件（保存/分享用）
     saving: false,
+    showMiniCode: true, // 海报是否带小程序码（用户可关）
   },
 
   methods: {
@@ -106,9 +109,64 @@ Component({
             // 指标卡片（时长/配速/消耗 独立卡）
             this.drawStatsCards(ctx, width, height, act);
 
-            resolve();
+            // 小程序码（异步取码/加载图片，失败静默降级为无码海报）
+            this.drawMiniCode(ctx, canvas, width)
+              .catch((e) => console.warn('[share-card] 小程序码绘制跳过', e))
+              .then(resolve);
           });
       });
+    },
+
+    /** 切换小程序码展示（重绘海报 + 刷新临时文件） */
+    async toggleMiniCode(e) {
+      this.setData({ showMiniCode: e.detail.value });
+      if (!this.data.previewVisible) return;
+      if (e.detail.value) this._miniCodeSrc = undefined; // 重新尝试取码
+      try {
+        await this.drawPoster();
+        this.setData({ previewPath: await this.toTempFile() });
+        if (e.detail.value && this._miniCodeSrc === null) {
+          wx.showToast({ title: '小程序码获取失败', icon: 'none' });
+        }
+      } catch (err) {
+        console.error('[share-card] 重绘失败', err);
+      }
+    },
+
+    /** 取小程序码图片源（url 为签名 OSS 地址；失败降级 base64；整体失败缓存 null） */
+    async ensureMiniCodeSrc() {
+      if (this._miniCodeSrc !== undefined) return this._miniCodeSrc;
+      try {
+        const res = await api.post('/share/mini-code', { activityId: this.data.activityId });
+        this._miniCodeSrc = res.url || res.base64 || null;
+      } catch (e) {
+        console.warn('[share-card] mini-code 接口失败', e);
+        this._miniCodeSrc = null;
+      }
+      return this._miniCodeSrc;
+    },
+
+    /** 画小程序码 + 引导文案（轨迹区与指标卡之间的空白带右侧） */
+    async drawMiniCode(ctx, canvas, width) {
+      if (!this.data.showMiniCode || !this.data.activityId) return;
+      const src = await this.ensureMiniCodeSrc();
+      if (!src) return;
+      const img = await new Promise((resolve, reject) => {
+        const im = canvas.createImage();
+        im.onload = () => resolve(im);
+        im.onerror = reject;
+        im.src = src;
+      });
+      const size = 52;
+      const x = width - 16 - size;
+      const y = 244; // 轨迹区(bottom 240)之下、指标卡(top 304)之上
+      ctx.drawImage(img, x, y, size, size);
+      ctx.fillStyle = 'rgba(31,35,41,0.7)';
+      ctx.font = '11px sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText('微信扫码', x - 8, y + 20);
+      ctx.fillText('查看轨迹', x - 8, y + 36);
+      ctx.textAlign = 'left';
     },
 
     toTempFile() {

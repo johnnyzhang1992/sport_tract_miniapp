@@ -43,6 +43,10 @@
           <view class="prov-close" bindtap="closeProvinceMap"><image class="close-icon" src="/assets/icons/lucide-x.png" mode="aspectFit" /></view>
         </view>
       </view>
+      <view class="prov-track-entry" hover-class="prov-track-entry-hover" bindtap="viewProvinceTracks">
+        <text>查看{{provinceModalName}}的轨迹</text>
+        <text class="prov-entry-arrow">›</text>
+      </view>
       <ec-canvas id="provMap" canvas-id="provMap" ec="{{ provEc }}"></ec-canvas>
     </view>
   </view>

@@ -87,3 +87,26 @@
   justify-content: center;
   font-size: 26rpx;
 }
+
+/* 省份筛选条 */
+.province-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 16rpx 24rpx 0;
+  padding: 12rpx 24rpx;
+  border-radius: 12rpx;
+  background: #eef4ff;
+}
+.province-bar-text {
+  font-size: 26rpx;
+  color: #2b6cf6;
+}
+.province-bar-close {
+  padding: 4rpx 12rpx;
+  font-size: 26rpx;
+  color: #2b6cf6;
+}
+.province-bar-close-hover {
+  opacity: 0.6;
+}

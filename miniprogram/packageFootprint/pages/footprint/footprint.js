@@ -257,6 +257,16 @@ Page({
     this.provChart = null; // 组件（wx:if）销毁重建，下次打开需重新初始化
   },
 
+  /** 弹窗入口 → 跳轨迹列表看该省轨迹（tab 页不带参，走 globalData 传递） */
+  viewProvinceTracks() {
+    const name = this.data.provinceModalName;
+    if (!name) return;
+    this.setData({ provinceModal: false });
+    this.provChart = null;
+    getApp().globalData.pendingTracksProvince = name;
+    wx.switchTab({ url: '/pages/tracks/tracks' });
+  },
+
   noop() {},
 
   /** 分享：生成当前地图图片 → 预览弹窗（支持保存到相册） */
