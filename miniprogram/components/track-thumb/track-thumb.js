@@ -81,10 +81,19 @@ Component({
           if (segStart < points.length) segs.push(points.slice(segStart));
           for (const seg of segs) {
             if (seg.length < 2) continue;
+            const pts = seg.map((p) => ({ x: x(p.lng), y: y(p.lat) }));
             ctx.beginPath();
-            ctx.moveTo(x(seg[0].lng), y(seg[0].lat));
-            for (let i = 1; i < seg.length; i++) {
-              ctx.lineTo(x(seg[i].lng), y(seg[i].lat));
+            ctx.moveTo(pts[0].x, pts[0].y);
+            if (pts.length === 2) {
+              ctx.lineTo(pts[1].x, pts[1].y);
+            } else {
+              // 中点二次贝塞尔平滑：以相邻点中点为端点、原点为控制点，拐角变圆滑
+              for (let i = 1; i < pts.length - 1; i++) {
+                const mx = (pts[i].x + pts[i + 1].x) / 2;
+                const my = (pts[i].y + pts[i + 1].y) / 2;
+                ctx.quadraticCurveTo(pts[i].x, pts[i].y, mx, my);
+              }
+              ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
             }
             ctx.stroke();
           }
