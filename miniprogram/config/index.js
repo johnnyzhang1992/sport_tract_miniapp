@@ -47,6 +47,18 @@ module.exports = {
     { type: 'note', label: '备注', icon: '📝', iconImg: '/assets/icons/lucide-note.png' },
   ],
 
+  /** 打点图标预设盘：用户选图标+文案（category 决定统计归类；文案可在表单里自定义） */
+  MARKER_ICON_PRESETS: [
+    { icon: '📍', label: '打卡点', category: 'checkpoint' },
+    { icon: '☕', label: '休息点', category: 'rest' },
+    { icon: '📷', label: '拍照点', category: 'photo' },
+    { icon: '📝', label: '备注', category: 'note' },
+    { icon: '💧', label: '补水点', category: 'rest' },
+    { icon: '🍚', label: '补给点', category: 'rest' },
+    { icon: '⛰️', label: '风景点', category: 'photo' },
+    { icon: '⚠️', label: '注意', category: 'note' },
+  ],
+
   /** 同步协议参数（与后端一致） */
   SYNC: {
     /** 增量上传间隔（毫秒） */
