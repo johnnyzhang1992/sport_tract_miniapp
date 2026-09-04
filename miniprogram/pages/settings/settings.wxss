@@ -73,3 +73,16 @@
   height: 48rpx;
   margin-right: 10rpx;
 }
+
+/* 退出登录（居中红字行） */
+.logout-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 26rpx 0;
+  color: #e34d59;
+  font-size: 30rpx;
+}
+.logout-row-hover {
+  opacity: 0.7;
+}
