@@ -43,6 +43,15 @@
     <t-switch value="{{settings.showBodyData}}" bind:change="onShowBodyDataChange" />
   </view>
 
+  <!-- 整公里播报 -->
+  <view class="card switch-row">
+    <view class="switch-info">
+      <view class="switch-title">整公里播报</view>
+      <view class="text-muted">运动中每满一公里震动并显示分段用时</view>
+    </view>
+    <t-switch value="{{settings.kmAnnounce}}" bind:change="onKmAnnounceChange" />
+  </view>
+
   <!-- 隐私政策 -->
   <view class="card link-row" bindtap="openPrivacy">
     <view class="switch-info">
@@ -50,6 +59,11 @@
       <view class="text-muted">查看我们如何收集与使用您的信息</view>
     </view>
     <view class="link-arrow">›</view>
+  </view>
+
+  <!-- 退出登录（仅登录态展示） -->
+  <view class="card logout-row" wx:if="{{loggedIn}}" hover-class="logout-row-hover" bindtap="logout">
+    <text>退出登录</text>
   </view>
 
   <t-button

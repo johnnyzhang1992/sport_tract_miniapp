@@ -78,6 +78,12 @@ class Tracker {
     this.elevationGain = 0;
     this.maxAltitude = null;
 
+    // 整公里检测：上次整公里标记（距离/时点）+ 回调（record 页震动横幅播报）
+    this._kmMark = { dist: 0, ts: this.startTime };
+    this._kmWindowPauseMs = 0; // 当前公里窗口内的暂停时长（分段用时扣除用）
+    this._kmWindowPauseStartedAt = 0; // 本次暂停的开始时刻（暂停中）
+    this.onKilometer = null;
+
     // 前后台切换：切后台时间戳 + 回前台预热窗口（冷启动漂移过滤）
     this._backgroundAt = 0;
     this._resumeWarmupUntil = 0;
@@ -148,7 +154,19 @@ class Tracker {
     }
 
     if (this.lastPoint) {
+      const prevDist = this.distance;
       this.distance += haversine(this.lastPoint, point);
+      // 整公里检测：跨越公里界 → 回调（分段用时扣除本窗口内的暂停时长）
+      if (Math.floor(this.distance / 1000) > Math.floor(prevDist / 1000) && this.onKilometer) {
+        const km = Math.floor(this.distance / 1000);
+        const splitSec = Math.max(
+          0,
+          Math.round((point.timestamp - this._kmMark.ts - this._kmWindowPauseMs) / 1000),
+        );
+        this._kmMark = { dist: this.distance, ts: point.timestamp };
+        this._kmWindowPauseMs = 0;
+        this.onKilometer({ km, splitSec, totalSec: this.getDurationSec() });
+      }
       // 爬升：死区阈值滤波（决策 D16）
       if (point.altitude != null && this.lastPoint.altitude != null) {
         const diff = point.altitude - this.lastPoint.altitude;
@@ -246,6 +264,8 @@ class Tracker {
     this.distance = 0;
     this.elevationGain = 0;
     this.maxAltitude = null;
+    this._kmMark = { dist: 0, ts: this.startTime };
+    this._kmWindowPauseMs = 0; // 历史点无法还原每个公里的暂停分布，恢复后从零累计
     for (let i = 0; i < this.points.length; i++) {
       const p = this.points[i];
       if (p.altitude != null) {
@@ -253,7 +273,12 @@ class Tracker {
       }
       if (i > 0) {
         const prev = this.points[i - 1];
+        const prevDist = this.distance;
         this.distance += haversine(prev, p);
+        // 整公里标记回放：恢复现场后播报从下一整公里继续
+        if (Math.floor(this.distance / 1000) > Math.floor(prevDist / 1000)) {
+          this._kmMark = { dist: this.distance, ts: p.timestamp };
+        }
         if (p.altitude != null && prev.altitude != null && p.altitude - prev.altitude > CLIMB_DEAD_ZONE_M) {
           this.elevationGain += p.altitude - prev.altitude;
         }
@@ -288,12 +313,17 @@ class Tracker {
     if (!this.paused) {
       this.paused = true;
       this.pausedAt = this.now();
+      this._kmWindowPauseStartedAt = this.pausedAt; // 当前公里窗口的暂停起点
     }
   }
 
   resume() {
     if (this.paused) {
       this.pausedMs += this.now() - this.pausedAt;
+      if (this._kmWindowPauseStartedAt) {
+        this._kmWindowPauseMs += this.now() - this._kmWindowPauseStartedAt;
+        this._kmWindowPauseStartedAt = 0;
+      }
       this.paused = false;
       // 恢复后的首个有效点带 pauseGap 标记（入库 + 渲染断开连线）
       this._pendingGap = true;

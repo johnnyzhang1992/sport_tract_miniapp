@@ -56,9 +56,10 @@
   width: 430rpx; /* 缩小宽度：右侧留白，不盖住右上角指南针 */
   z-index: 10;
 }
-/* 贴左收齐态：窄条只显示距离+时长 */
+/* 贴左收齐态：窄条只显示距离+时长（宽度随内容自适应，文字不换行） */
 .stats-collapsed {
-  width: 260rpx;
+  width: fit-content;
+  max-width: 70vw;
 }
 .stats-collapsed-bar {
   display: flex;
@@ -67,24 +68,28 @@
   border-radius: 999rpx;
   padding: 14rpx 24rpx;
   box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.08);
+  white-space: nowrap;
 }
 .scb-dist {
   font-size: 34rpx;
   font-weight: 700;
   color: #2b6cf6;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .scb-unit {
   font-size: 20rpx;
   color: #999;
   margin-left: 6rpx;
   margin-right: 16rpx;
+  white-space: nowrap;
 }
 .scb-dur {
   font-size: 26rpx;
   color: #1f2329;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .action-bar {
   position: absolute;
@@ -129,8 +134,12 @@
   justify-content: center;
 }
 .init-box {
-  font-size: 32rpx;
+  font-size: 36rpx;
   color: #666;
+  padding: 48rpx;
+  max-width: 620rpx;
+  text-align: center;
+  line-height: 1.7;
 }
 
 .title-icon {
@@ -153,4 +162,11 @@
 }
 .auth-btn::after {
   border: none;
+}
+
+/* 错误次要提示行 */
+.error-hint {
+  margin-top: 12rpx;
+  font-size: 30rpx;
+  color: #999;
 }

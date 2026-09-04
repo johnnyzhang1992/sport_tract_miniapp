@@ -53,6 +53,8 @@ Page({
     // 状态
     starting: true,
     error: '',
+    errorHint: '', // 错误次要提示行
+    error429: false, // 创建频控（429）专用错误态：按钮换成“回首页”
     endConfirmVisible: false,
   },
 
@@ -67,10 +69,48 @@ Page({
     const meta = config.ACTIVITY_TYPES.find((t) => t.type === type) || {};
     this.setData({ type, typeLabel: meta.label || type, typeIcon: meta.icon || '🏃', typeIconImg: meta.iconImg || '' });
 
-    this.tracker = new Tracker(type, this.getWeightKg());
+    this.tracker = this.newTracker(type);
     this.sync = new SyncService();
 
     this.init();
+  },
+
+  /** 创建 tracker 并绑定整公里播报回调（新建/重新开始/恢复共用） */
+  newTracker(type) {
+    const t = new Tracker(type, this.getWeightKg());
+    t.onKilometer = (info) => this.onKilometer(info);
+    return t;
+  },
+
+  /** 整公里播报开关（设置页 kmAnnounce，默认开；触发时动态读取，改设置即时生效） */
+  kmAnnounceEnabled() {
+    try {
+      const u = getApp().globalData.userInfo;
+      return !(u && u.settings && u.settings.kmAnnounce === false);
+    } catch (e) {
+      return true;
+    }
+  },
+
+  /** 整公里播报：震动 + toast（toast 自动消失，无需清理） */
+  onKilometer(info) {
+    if (!this.kmAnnounceEnabled()) return;
+    wx.vibrateShort({ type: 'heavy', fail: () => wx.vibrateShort({}) });
+    wx.showToast({
+      title: `第 ${info.km} 公里 · 分段 ${this.fmtDur(info.splitSec)} · 累计 ${this.fmtDur(info.totalSec)}`,
+      icon: 'none',
+      duration: 3000,
+    });
+  },
+
+  /** 秒 → mm:ss / h:mm:ss */
+  fmtDur(sec) {
+    const s = Math.max(0, Math.round(sec || 0));
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const ss = s % 60;
+    const p = (n) => String(n).padStart(2, '0');
+    return h > 0 ? `${h}:${p(m)}:${p(ss)}` : `${p(m)}:${p(ss)}`;
   },
 
   /** 用户体重（卡路里计算用；未设置默认 60kg） */
@@ -109,15 +149,30 @@ Page({
       this.statsTimer = setInterval(() => this.updateStats(), 1000);
     } catch (e) {
       console.error('[record] init 失败', e);
-      this.setData({ error: e.message || '初始化失败' });
+      if (e && e.statusCode === 429) {
+        // 创建频控（1 小时 10 条）：重试无意义，引导回首页（可从“继续上次运动”恢复）
+        this.setData({
+          starting: false,
+          error429: true,
+          error: '最近新建的运动太多啦（1 小时内最多 10 条）',
+          errorHint: '请稍后再试，或回首页继续上次运动',
+        });
+      } else {
+        this.setData({ error: e.message || '初始化失败' });
+      }
     }
+  },
+
+  /** 429 频控：返回首页（首页可“继续上次运动”） */
+  goHome() {
+    wx.navigateBack({ fail: () => wx.switchTab({ url: '/pages/index/index' }) });
   },
 
   /** 错误状态下的重新授权：授权成功后重新初始化 */
   async retryAuth() {
     const authed = await ensureLocationAuth();
     if (authed) {
-      this.setData({ error: '' });
+      this.setData({ error: '', error429: false, errorHint: '' });
       this.init();
     }
   },
@@ -314,7 +369,7 @@ Page({
   },
 
   async onMarkerConfirm(e) {
-    const { type, note, photos } = e.detail;
+    const { type, icon, label, note, photos } = e.detail;
     const loc = this.data.currentLocation;
     if (!loc) {
       wx.showToast({ title: '暂未获取到位置', icon: 'none' });
@@ -345,6 +400,8 @@ Page({
         lng: loc.longitude,
         timestamp: Date.now(),
         type,
+        icon: icon || '',
+        label: label || '',
         note,
         photoUrl: urls[0] || '',
         photos: urls,
@@ -363,6 +420,7 @@ Page({
         lat: marker.lat,
         lng: marker.lng,
         type: marker.type, // 打点类型（地图图标区分）
+        icon: marker.icon, // 用户自选 emoji 图标
       });
       this.setData({ mapMarkers });
 
@@ -550,6 +608,7 @@ Page({
       clearInterval(this.statsTimer);
       this.statsTimer = null;
     }
+    if (this.tracker) this.tracker.onKilometer = null;
     wx.setKeepScreenOn({ keepScreenOn: false });
 
     // 运动进行中退出（非结束跳摘要、非放弃）：自动暂停并保留现场，首页可“继续”
@@ -589,7 +648,7 @@ Page({
       wx.removeStorageSync('ongoingActivity');
       const meta = config.ACTIVITY_TYPES.find((t) => t.type === type) || {};
       this.setData({ type, typeLabel: meta.label || type, typeIcon: meta.icon || '🏃', typeIconImg: meta.iconImg || '' });
-      this.tracker = new Tracker(type, this.getWeightKg());
+      this.tracker = this.newTracker(type);
       this.sync = new SyncService();
       this.init();
     }
@@ -608,7 +667,7 @@ Page({
         wx.showToast({ title: '该运动已结束', icon: 'none' });
         return;
       }
-      this.tracker = new Tracker(type, this.getWeightKg());
+      this.tracker = this.newTracker(type);
       this.tracker.restoreFromPoints(activity.trackPoints, activity.markers, activity.startTime, activity.pausedMs);
       // 退出时已暂停：退出→现在的时长也算暂停（补进 pausedMs），恢复后保持暂停
       const ongoing = wx.getStorageSync('ongoingActivity');
