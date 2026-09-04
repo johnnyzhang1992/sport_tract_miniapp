@@ -20,6 +20,27 @@ const RANGES = [
   { value: 'all', label: '全部' },
 ];
 
+/** 圆角矩形路径 */
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+/** 逐级缩小字号直到文本宽度 ≤ maxW */
+function fitFont(ctx, text, maxW, base, weight) {
+  let size = base;
+  ctx.font = `${weight} ${size}px sans-serif`;
+  while (size > 9 && ctx.measureText(text).width > maxW) {
+    size -= 1;
+    ctx.font = `${weight} ${size}px sans-serif`;
+  }
+}
+
 /** 周期选择弹窗：每个粒度展示最近 N 个周期 */
 const PICKER_COUNT = { week: 24, month: 12, year: 5 };
 
@@ -43,14 +64,14 @@ function periodRange(range, offset) {
   return { from: start.getTime(), to: end.getTime() };
 }
 
-/** 周期文案：周 → "8/24 - 8/30"（跨年带年份），月 → "2026年8月"，年 → "2025年" */
+/** 周期文案：周 → "8-31 - 9-6"（跨年带年份），月 → "2026年8月"，年 → "2025年" */
 function periodLabel(range, p) {
-  const md = (d) => `${d.getMonth() + 1}/${d.getDate()}`;
+  const md = (d) => `${d.getMonth() + 1}-${d.getDate()}`;
   if (range === 'week') {
     const start = new Date(p.from);
     const last = new Date(p.to - 1);
-    const yd = (d) => `${d.getFullYear()}/${md(d)}`;
-    return start.getFullYear() === last.getFullYear() ? `${md(start)} - ${md(last)}` : `${yd(start)} - ${yd(last)}`;
+    const yd = (d) => `${d.getFullYear()}-${md(d)}`;
+    return start.getFullYear() === last.getFullYear() ? `${md(start)} 至 ${md(last)}` : `${yd(start)} 至 ${yd(last)}`;
   }
   const start = new Date(p.from);
   return range === 'month' ? `${start.getFullYear()}年${start.getMonth() + 1}月` : `${start.getFullYear()}年`;
@@ -60,6 +81,7 @@ Page({
   data: {
     ranges: RANGES,
     activeRange: 'week',
+    year: new Date().getFullYear(), // 年度报告入口年份
     periodOffset: 0, // 往前的周期数（0=当前周/月/年）
     periodLabel: '',
     canGoNext: false,
@@ -71,6 +93,9 @@ Page({
     showPeriodPicker: false, // 周期选择弹窗
     periodOptions: [], // 弹窗选项 [{offset, label, selected}]
     pickerScrollInto: '', // 弹窗滚动定位到当前周期
+    posterVisible: false, // 周期海报预览弹窗
+    posterPath: '',
+    saving: false,
   },
 
   onLoad(options) {
@@ -149,10 +174,190 @@ Page({
     this.fetch();
   },
 
+  /** 打开年度运动报告（全年回顾 + 海报） */
+  goYearReport() {
+    wx.navigateTo({ url: '/pages/year-report/year-report' });
+  },
+
   /** 查询参数：全部用 range，其余用精确 epoch ms 区间（后端按自然周期查） */
   buildOverviewQuery() {
     if (this.data.activeRange === 'all' || !this._period) return 'range=all';
     return `from=${this._period.from}&to=${this._period.to}`;
+  },
+
+  // ==================== 周期海报（周/月/年，canvas 自绘） ====================
+
+  /** 打开海报预览弹窗并绘制 */
+  async openPoster() {
+    if (!this.data.summary || this.data.activeRange === 'all') return;
+    this.setData({ posterVisible: true, posterPath: '' });
+    wx.showLoading({ title: '生成海报…' });
+    try {
+      await new Promise((r) => setTimeout(r, 150)); // 等弹窗渲染出 canvas
+      const res = await new Promise((resolve, reject) => {
+        wx.createSelectorQuery()
+          .in(this)
+          .select('#periodPoster')
+          .fields({ node: true, size: true })
+          .exec((q) => (q && q[0] && q[0].node ? resolve(q[0]) : reject(new Error('canvas 不存在'))));
+      });
+      this._canvasNode = res.node;
+      const { width, height } = res;
+      const ctx = res.node.getContext('2d');
+      const dpr = (wx.getWindowInfo ? wx.getWindowInfo().pixelRatio : 2) || 2;
+      res.node.width = width * dpr;
+      res.node.height = height * dpr;
+      ctx.scale(dpr, dpr);
+      this.drawPeriodPoster(ctx, width, height);
+      const path = await new Promise((resolve, reject) => {
+        wx.canvasToTempFilePath({ canvas: this._canvasNode, success: (r) => resolve(r.tempFilePath), fail: reject });
+      });
+      this.setData({ posterPath: path });
+      wx.hideLoading();
+    } catch (e) {
+      wx.hideLoading();
+      console.error('[report] 海报生成失败', e);
+      wx.showToast({ title: '海报生成失败', icon: 'none' });
+    }
+  },
+
+  drawPeriodPoster(ctx, W, H) {
+    const s = this.data.summary;
+    const ink = '#1f2329';
+    const muted = 'rgba(31,35,41,0.62)';
+    const accent = '#2b6cf6';
+    const cardBg = '#f5f7fb';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, W, H);
+
+    // 顶部品牌色带（渐变、圆角内缩）+ 周期标签
+    const grad = ctx.createLinearGradient(0, 0, W, 0);
+    grad.addColorStop(0, '#2b6cf6');
+    grad.addColorStop(1, '#6a9bff');
+    ctx.fillStyle = grad;
+    roundRect(ctx, 12, 12, W - 24, 76, 14);
+    ctx.fill();
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(255,255,255,0.78)';
+    ctx.font = '11px sans-serif';
+    ctx.fillText('小迹一下 · 周期运动报告', W / 2, 40);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 22px sans-serif';
+    ctx.fillText(this.data.periodLabel, W / 2, 68);
+
+    // 主指标：总距离（数字 + 单位整体居中）
+    ctx.fillStyle = accent;
+    ctx.font = 'bold 42px sans-serif';
+    const numW = ctx.measureText(`${s.distanceKm}`).width;
+    ctx.font = '13px sans-serif';
+    const unitW = ctx.measureText('公里').width;
+    const startX = W / 2 - (numW + 4 + unitW) / 2;
+    ctx.fillStyle = accent;
+    ctx.font = 'bold 42px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(`${s.distanceKm}`, startX, 142);
+    ctx.fillStyle = muted;
+    ctx.font = '13px sans-serif';
+    ctx.fillText('公里', startX + numW + 4, 142);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = muted;
+    ctx.font = '11px sans-serif';
+    ctx.fillText('总距离', W / 2, 162);
+
+    // 数据卡 × 4
+    const cols = [
+      { v: `${s.count}`, l: '运动次数' },
+      { v: s.durationText, l: '总时长' },
+      { v: `${s.activeDays}`, l: '活跃天数' },
+      { v: `${s.dailyKm}`, l: '日均公里' },
+    ];
+    const cardW = (W - 24 * 2 - 10 * 3) / 4;
+    const cardY = 184;
+    cols.forEach((c, i) => {
+      const x = 24 + i * (cardW + 10);
+      ctx.fillStyle = cardBg;
+      roundRect(ctx, x, cardY, cardW, 52, 10);
+      ctx.fill();
+      ctx.fillStyle = ink;
+      fitFont(ctx, c.v, cardW - 8, 14, 'bold');
+      ctx.fillText(c.v, x + cardW / 2, cardY + 22);
+      ctx.fillStyle = muted;
+      ctx.font = '9px sans-serif';
+      ctx.fillText(c.l, x + cardW / 2, cardY + 40);
+    });
+
+    // 较上一周期：彩色胶囊
+    const items = (this.data.compare[0] && this.data.compare[0].items) || [];
+    const byKey = {};
+    items.forEach((it) => (byKey[it.key] = it.diff || {}));
+    ctx.fillStyle = muted;
+    ctx.font = '10px sans-serif';
+    ctx.fillText('较上一周期', W / 2, 260);
+    const chipW = (W - 24 * 2 - 10 * 2) / 3;
+    const chipY = 272;
+    const diffCols = [
+      { key: 'distance', l: '距离' },
+      { key: 'count', l: '次数' },
+      { key: 'duration', l: '时长' },
+    ];
+    diffCols.forEach((c, i) => {
+      const d = byKey[c.key] || { text: '—', cls: 'flat' };
+      const up = d.cls === 'up';
+      const down = d.cls === 'down';
+      const x = 24 + i * (chipW + 10);
+      ctx.fillStyle = up ? '#e6f6ee' : down ? '#fdecea' : cardBg;
+      roundRect(ctx, x, chipY, chipW, 36, 10);
+      ctx.fill();
+      ctx.fillStyle = up ? '#0f9d63' : down ? '#e34d59' : muted;
+      ctx.font = 'bold 12px sans-serif';
+      ctx.fillText(d.text || '—', x + chipW / 2, chipY + 15);
+      ctx.fillStyle = muted;
+      ctx.font = '9px sans-serif';
+      ctx.fillText(c.l, x + chipW / 2, chipY + 29);
+    });
+
+    // 品牌行：左昵称 + 右 @小迹一下
+    const u = getApp().globalData.userInfo;
+    const nick = (u && u.nickname) || '';
+    ctx.font = '10px sans-serif';
+    ctx.fillStyle = muted;
+    if (nick) {
+      ctx.textAlign = 'left';
+      ctx.fillText(nick, 24, H - 14);
+    }
+    ctx.textAlign = 'right';
+    ctx.fillText('@小迹一下', W - 24, H - 14);
+  },
+
+  async savePoster() {
+    if (this.data.saving || !this.data.posterPath) return;
+    this.setData({ saving: true });
+    wx.saveImageToPhotosAlbum({
+      filePath: this.data.posterPath,
+      success: () => {
+        this.setData({ posterVisible: false, saving: false });
+        wx.showToast({ title: '已保存到相册', icon: 'success' });
+      },
+      fail: (e) => {
+        this.setData({ saving: false });
+        if (String(e.errMsg || '').includes('auth deny') || String(e.errMsg || '').includes('authorize')) {
+          wx.showModal({
+            title: '需要相册权限',
+            content: '请允许保存图片到相册',
+            confirmText: '去设置',
+            success: (r) => {
+              if (r.confirm) wx.openSetting();
+            },
+          });
+        } else {
+          wx.showToast({ title: '保存失败', icon: 'none' });
+        }
+      },
+    });
+  },
+
+  closePoster() {
+    this.setData({ posterVisible: false });
   },
 
   /** 上一周期查询参数：当前周期往前翻一档；"全部"无对比 */
@@ -253,7 +458,7 @@ Page({
     if (!b) return null;
     const dayText = (t) => {
       const d = new Date(t);
-      return `${d.getMonth() + 1}/${d.getDate()}`;
+      return `${d.getMonth() + 1}-${d.getDate()}`;
     };
     const rowsMap = {};
     const put = (rows, key, valFn) => {
@@ -288,7 +493,7 @@ Page({
         distanceKm: (t.distance / 1000).toFixed(1),
         durationText: formatDuration(t.duration),
         paceText,
-        timeText: `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`,
+        timeText: `${d.getMonth() + 1}-${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`,
       };
     });
   },

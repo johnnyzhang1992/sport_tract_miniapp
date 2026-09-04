@@ -23,11 +23,19 @@
         bindtap="onNextPeriod"
       >›</view>
     </view>
+    <!-- 年度报告入口（全年回顾） -->
+    <view class="year-entry" hover-class="year-entry-hover" bindtap="goYearReport">
+      <text class="year-entry-text">{{year}} 年度报告 · 全年回顾与海报</text>
+      <text class="year-entry-arrow">›</text>
+    </view>
   </view>
 
   <!-- 汇总 -->
   <view class="card">
-    <view class="section-title">汇总</view>
+    <view class="summary-head">
+      <view class="section-title">汇总</view>
+      <view class="poster-link" wx:if="{{activeRange !== 'all'}}" hover-class="poster-link-hover" bindtap="openPoster">🖼 生成海报</view>
+    </view>
     <view class="summary-grid">
       <view class="sum-item">
         <view class="sum-num">{{summary.count}}</view>
@@ -153,5 +161,17 @@
         >{{item.label}}</view>
       </view>
     </scroll-view>
+  </view>
+</view>
+
+<!-- 周期海报预览弹窗 -->
+<view class="poster-mask" wx:if="{{posterVisible}}" catchtouchmove="noop">
+  <view class="poster-box">
+    <view class="poster-head">
+      <text class="poster-title">周期海报</text>
+      <view class="poster-close" bindtap="closePoster">✕</view>
+    </view>
+    <canvas type="2d" id="periodPoster" class="period-poster-canvas" style="width: 300px; height: 380px;"></canvas>
+    <button class="poster-save" loading="{{saving}}" bindtap="savePoster">保存到相册</button>
   </view>
 </view>

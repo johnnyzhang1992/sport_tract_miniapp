@@ -10,12 +10,13 @@
     </t-avatar>
     <view class="user-info">
       <view class="user-name">{{loggedIn ? (user.nickname || '微信用户') : '未登录'}}</view>
-      <view class="text-muted">{{loggedIn ? '点击编辑资料' : '点击登录，同步运动数据'}}</view>
+      <view class="text-muted">{{loggedIn ? (user.uid ? '迹路者' + user.uid + ' · 已加入 ' + user.joinDays + ' 天' : '点击编辑资料') : '点击登录，同步运动数据'}}</view>
       <view class="body-data" wx:if="{{showBodyData}}">
         <text class="body-item" wx:if="{{user.heightCm}}">身高 {{user.heightCm}}cm</text>
         <text class="body-item" wx:if="{{user.weightKg}}">体重 {{user.weightKg}}kg</text>
       </view>
     </view>
+    <view class="link-arrow user-arrow">›</view>
   </view>
 
   <!-- 数据统计卡片（今日/本周/本月运动距离，整卡可点） -->
@@ -48,6 +49,15 @@
     <view class="switch-info">
       <view class="switch-title">运动报告</view>
       <view class="text-muted">周/月/年运动汇总 · 个人最佳 · 轨迹记录</view>
+    </view>
+    <view class="link-arrow">›</view>
+  </view>
+
+  <!-- 年度运动报告入口（仅年末 12 月展示，平时从运动报告页进入） -->
+  <view class="card link-row" hover-class="card-hover" hover-stay-time="100" bindtap="goYearReport" wx:if="{{showYearReport}}">
+    <view class="switch-info">
+      <view class="switch-title">年度运动报告</view>
+      <view class="text-muted">年度总评 · 月度分解 · 高光时刻 · 海报</view>
     </view>
     <view class="link-arrow">›</view>
   </view>
