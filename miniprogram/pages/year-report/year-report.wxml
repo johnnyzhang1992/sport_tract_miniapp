@@ -1,0 +1,82 @@
+<view class="container">
+  <!-- 年份切换 -->
+  <view class="year-nav">
+    <view class="year-arrow" hover-class="year-arrow-hover" bindtap="onPrevYear">‹</view>
+    <view class="year-label">{{year}} 年</view>
+    <view
+      class="year-arrow {{canGoNext ? '' : 'year-arrow-disabled'}}"
+      hover-class="{{canGoNext ? 'year-arrow-hover' : ''}}"
+      bindtap="onNextYear"
+    >›</view>
+  </view>
+
+  <view wx:if="{{!loading && !hasData}}" class="text-muted empty-tip">该年度还没有运动记录</view>
+
+  <block wx:if="{{hasData && summary}}">
+    <!-- 总评 -->
+    <view class="card hero-card">
+      <view class="hero-num">{{summary.distanceKm}}</view>
+      <view class="hero-label">全年总距离（公里）</view>
+      <view class="hero-grid">
+        <view class="hero-item">
+          <view class="hero-item-value">{{summary.count}}</view>
+          <view class="hero-item-label">运动次数</view>
+        </view>
+        <view class="hero-item">
+          <view class="hero-item-value">{{summary.durationText}}</view>
+          <view class="hero-item-label">总时长</view>
+        </view>
+        <view class="hero-item">
+          <view class="hero-item-value">{{summary.activeDays}}</view>
+          <view class="hero-item-label">活跃天数</view>
+        </view>
+        <view class="hero-item">
+          <view class="hero-item-value">{{streakDays}}天</view>
+          <view class="hero-item-label">最长连续</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 月度分解 -->
+    <view class="card">
+      <view class="section-title">月度运动距离（公里）</view>
+      <stat-chart data="{{chartData}}" type="bar" unit="km" color="#2b6cf6" height="300" empty-text="" />
+    </view>
+
+    <!-- 高光时刻 -->
+    <view class="card" wx:if="{{highlights.length}}">
+      <view class="section-title">高光时刻</view>
+      <view
+        class="hl-row"
+        hover-class="hl-row-hover"
+        wx:for="{{highlights}}"
+        wx:key="key"
+        data-id="{{item.id}}"
+        bindtap="onTapHighlight"
+      >
+        <view class="hl-info">
+          <view class="hl-value">{{item.value}}</view>
+          <view class="hl-label">{{item.label}}</view>
+        </view>
+        <view class="hl-sub">{{item.sub}} ›</view>
+      </view>
+    </view>
+
+    <!-- 保存海报 -->
+    <button class="poster-btn" bindtap="openPoster">生成年度海报</button>
+  </block>
+
+  <view wx:if="{{loading}}" class="text-muted loading-tip">加载中…</view>
+
+  <!-- 海报预览弹窗 -->
+  <view class="poster-mask" wx:if="{{posterVisible}}" catchtouchmove="noop">
+    <view class="poster-box">
+      <view class="poster-head">
+        <text class="poster-title">年度海报</text>
+        <view class="poster-close" bindtap="closePoster">✕</view>
+      </view>
+      <canvas type="2d" id="yearPoster" class="year-poster-canvas" style="width: 300px; height: 420px;"></canvas>
+      <button class="poster-save" loading="{{saving}}" bindtap="savePoster">保存到相册</button>
+    </view>
+  </view>
+</view>

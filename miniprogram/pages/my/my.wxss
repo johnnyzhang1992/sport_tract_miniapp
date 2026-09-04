@@ -10,6 +10,12 @@
 .user-avatar {
   margin-right: 24rpx;
 }
+.user-info {
+  flex: 1; /* 撑满中部，箭头靠右 */
+}
+.user-arrow {
+  flex-shrink: 0;
+}
 .user-name {
   font-size: 34rpx;
   font-weight: 600;

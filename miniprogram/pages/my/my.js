@@ -16,6 +16,8 @@ Page({
   },
 
   onShow() {
+    // 年度报告入口仅年末（12 月）展示，平时从运动报告页进入
+    this.setData({ showYearReport: new Date().getMonth() === 11 });
     this.refreshUser();
   },
 
@@ -59,8 +61,12 @@ Page({
 
       // WXML 不支持字符串下标，预处理好头像首字
       const showBodyData = (user.weightKg || user.heightCm) && (!user.settings || user.settings.showBodyData !== false);
+      // 加入天数（ createdAt → 今天，至少 1 天）
+      const joinDays = user.createdAt
+        ? Math.max(1, Math.ceil((Date.now() - new Date(user.createdAt).getTime()) / 86400000))
+        : null;
       this.setData({
-        user: { ...user, avatarUrl, avatarText: user.nickname ? user.nickname[0] : '' },
+        user: { ...user, avatarUrl, avatarText: user.nickname ? user.nickname[0] : '', joinDays },
         showBodyData,
         loggedIn: true,
         overview: {
@@ -126,6 +132,11 @@ Page({
   /** 运动报告（周/月/年汇总 + 个人最佳 + 轨迹记录） */
   goReport() {
     wx.navigateTo({ url: '/pages/report/report' });
+  },
+
+  /** 年度运动报告（年度总评 + 月度分解 + 高光时刻 + 海报） */
+  goYearReport() {
+    wx.navigateTo({ url: '/pages/year-report/year-report' });
   },
 
   goSettings() {

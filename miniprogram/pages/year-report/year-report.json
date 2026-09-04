@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "年度运动报告",
+  "usingComponents": {
+    "stat-chart": "/components/stat-chart/stat-chart"
+  }
+}

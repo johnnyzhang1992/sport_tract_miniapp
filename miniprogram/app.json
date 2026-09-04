@@ -13,7 +13,8 @@
     "pages/overview/overview",
     "pages/import/import",
     "pages/weight-trend/weight-trend",
-    "pages/report/report"
+    "pages/report/report",
+    "pages/year-report/year-report"
   ],
   "window": {
     "navigationBarBackgroundColor": "#ffffff",
