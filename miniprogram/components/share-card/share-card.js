@@ -6,6 +6,7 @@
  * 方法: preview()；事件: posterready({ path }) 海报临时路径
  */
 const api = require('../../services/api');
+const loading = require('../../utils/loading');
 
 /** 圆角矩形路径（arcTo 手写，真机基础库无 ctx.roundRect 时兜底为直角） */
 function roundRectPath(ctx, x, y, w, h, r) {
@@ -25,6 +26,11 @@ const ALTITUDE_COLORS = [
 ];
 
 Component({
+  lifetimes: {
+    detached() {
+      loading.reset(); // 兜底：组件销毁时若有 Loading 残留则清理
+    },
+  },
   properties: {
     activityId: { type: String, value: '' },
     activity: { type: Object, value: null },
@@ -43,7 +49,7 @@ Component({
     /** 打开预览弹窗并绘制海报 */
     async preview() {
       this.setData({ previewVisible: true });
-      wx.showLoading({ title: '生成海报…' });
+      loading.show('生成海报…');
       try {
         // 等弹窗渲染出 canvas
         await new Promise((r) => setTimeout(r, 150));
@@ -53,9 +59,9 @@ Component({
         const path = await this.toTempFile();
         this.setData({ previewPath: path });
         this.triggerEvent('posterready', { path });
-        wx.hideLoading();
+        loading.hide();
       } catch (e) {
-        wx.hideLoading();
+        loading.hide();
         this.setData({ previewVisible: false });
         wx.showToast({ title: '海报生成失败', icon: 'none' });
         console.error('[share-card]', e);

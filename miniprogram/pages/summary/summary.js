@@ -5,6 +5,7 @@
  * 放弃：取消活动 → 回首页
  */
 const config = require('../../config/index');
+const loading = require('../../utils/loading');
 const { SyncService } = require('../../services/sync');
 const { formatDuration, formatPace } = require('../../utils/format');
 
@@ -72,7 +73,7 @@ Page({
   async save() {
     if (this.data.saving) return;
     this.setData({ saving: true });
-    wx.showLoading({ title: '保存中…' });
+    loading.show('保存中…');
     try {
       // 清洗 final 包：负 speed（微信异常值）→ null，负 pausedMs → 0（兜底历史数据）
       const pack = this.finalPack;
@@ -85,14 +86,14 @@ Page({
         pausedMs: pack.pausedMs != null && pack.pausedMs < 0 ? 0 : pack.pausedMs,
       };
       await this.sync.finish(cleanPack);
-      wx.hideLoading();
+      loading.hide();
       wx.removeStorageSync('pending_summary');
       wx.removeStorageSync('pending_sync_activity');
       wx.removeStorageSync('ongoingActivity');
       wx.showToast({ title: '已保存', icon: 'success' });
       setTimeout(() => wx.switchTab({ url: '/pages/tracks/tracks' }), 600);
     } catch (e) {
-      wx.hideLoading();
+      loading.hide();
       this.setData({ saving: false });
       // 409：活动已结束/被服务端作废（如 24h 惰性清理）→ 无法保存，清现场回首页
       if (e.statusCode === 409) {

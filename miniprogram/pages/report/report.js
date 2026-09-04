@@ -3,6 +3,7 @@
  * 汇总 → 个人最佳 → 轨迹列表
  */
 const api = require('../../services/api');
+const loading = require('../../utils/loading');
 const config = require('../../config/index');
 const { formatDuration, formatPace, formatDurationStat } = require('../../utils/format');
 const { calcDiff } = require('../../utils/diff');
@@ -191,7 +192,7 @@ Page({
   async openPoster() {
     if (!this.data.summary || this.data.activeRange === 'all') return;
     this.setData({ posterVisible: true, posterPath: '' });
-    wx.showLoading({ title: '生成海报…' });
+    loading.show('生成海报…');
     try {
       await new Promise((r) => setTimeout(r, 150)); // 等弹窗渲染出 canvas
       const res = await new Promise((resolve, reject) => {
@@ -213,9 +214,9 @@ Page({
         wx.canvasToTempFilePath({ canvas: this._canvasNode, success: (r) => resolve(r.tempFilePath), fail: reject });
       });
       this.setData({ posterPath: path });
-      wx.hideLoading();
+      loading.hide();
     } catch (e) {
-      wx.hideLoading();
+      loading.hide();
       console.error('[report] 海报生成失败', e);
       wx.showToast({ title: '海报生成失败', icon: 'none' });
     }

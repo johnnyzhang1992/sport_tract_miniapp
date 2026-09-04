@@ -7,6 +7,7 @@ App({
     userInfo: null,
     loggedIn: false,
     loginPromise: null,
+    profileGuideAsked: false, // 完善资料引导本次会话是否已弹过
     api, // 网络层挂全局（分包页面无法 require 主包 JS，经 getApp() 访问）
   },
 
@@ -125,32 +126,47 @@ App({
   },
 
   /**
-   * 首次注册后引导完善资料（身高体重影响卡路里计算）
-   * 条件：本次登录为新注册 / 或上次引导被占用未完成；未标记 done；体重未设置
-   * 「跳过」只弹一次（写 done 标记）
+   * 引导完善资料（身高体重影响卡路里计算）
+   * 弹出条件：资料已加载且不完整（缺体重或身高）+ 该用户未跳过/未完善 + 本次会话未弹过。
+   * 不依赖 isNewUser（后端只在 openid 首次入库时为 true，老用户补登录永远不触发）。
+   * 「跳过」按 userId 记 done，该用户不再弹；完善后下次检查自动落 done。
+   * @returns {boolean} 是否弹出了引导（调用方可据此决定是否再 toast）
    */
   maybeShowProfileGuide() {
-    if (getProfileGuideDone()) return;
     const user = this.globalData.userInfo;
-    if (!user || (user.weightKg && user.heightCm)) {
-      setProfileGuideDone();
-      return;
+    if (!user) {
+      console.debug('[guide] 不弹：userInfo 未加载');
+      return false; // 资料未加载：不弹也不标 done（等下次登录/首页再试）
     }
-    if (!this.globalData.isNewUser && !this.globalData.profileGuidePending) return;
-    this.globalData.profileGuidePending = true;
+    if (user.profileCompleted) {
+      console.debug('[guide] 不弹：资料已完善（用户提交过身高/体重），落 done 标记');
+      if (!getProfileGuideDone(user.id)) setProfileGuideDone(user.id);
+      return false;
+    }
+    if (getProfileGuideDone(user.id)) {
+      console.debug('[guide] 不弹：该用户已跳过/处理过', user.id);
+      return false;
+    }
+    if (this.globalData.profileGuideAsked) {
+      console.debug('[guide] 不弹：本次会话已弹过（首次触发点可能是首页静默登录后）');
+      return false;
+    }
+    console.debug('[guide] 弹出完善资料引导, userId=', user.id);
+    this.globalData.profileGuideAsked = true;
     wx.showModal({
       title: '完善资料',
-      content: '设置身高和体重后，运动卡路里消耗的计算会更精准，还可以挑选头像和昵称～',
+      content: '设置身高和体重后，运动卡路里消耗的计算会更精准，还可以挑选头像、设置昵称～',
       confirmText: '去完善',
       cancelText: '跳过',
       success: (res) => {
         if (res.confirm) {
           wx.navigateTo({ url: '/pages/profile/profile?from=guide' });
         } else {
-          setProfileGuideDone();
+          setProfileGuideDone(user.id);
         }
       },
     });
+    return true;
   },
 
   /** 登出（token 失效时由 api.js 调用） */

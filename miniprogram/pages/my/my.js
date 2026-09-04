@@ -1,4 +1,5 @@
 const api = require('../../services/api');
+const loading = require('../../utils/loading');
 
 /** 头像签名 URL 缓存（OSS 签名 URL 每次生成都不同，导致 image 无法缓存、每次进入重复下载）
  * 基础 URL（去签名参数）没变 → 复用缓存签名 URL（微信 image 缓存命中，不重复请求 CDN） */
@@ -167,17 +168,19 @@ Page({
       cancelText: '暂不',
       success: async (res) => {
         if (!res.confirm) return;
-        wx.showLoading({ title: '登录中…', mask: true });
+        loading.show('登录中…', { mask: true });
         try {
           await app.login();
           await this.refreshUser();
-          app.maybeShowProfileGuide(); // 首次注册引导完善资料
+          app.maybeShowProfileGuide(); // 登录后引导完善资料（身高体重 → 卡路里更准）
+          loading.hide();
           wx.showToast({ title: '登录成功', icon: 'success' });
         } catch (e) {
           console.error('登录失败', e);
+          loading.hide();
           wx.showToast({ title: '登录失败，请重试', icon: 'none' });
         } finally {
-          wx.hideLoading();
+          loading.hide();
         }
       },
     });

@@ -90,4 +90,17 @@
       <view wx:else><image class="title-icon" src="{{typeIconImg}}" mode="aspectFit"></image> {{typeLabel}} · 定位中…</view>
     </view>
   </view>
+
+  <!-- 胶囊最小化引导：运动开始后指右上角胶囊，提醒可最小化后台记录（点击任意处关闭） -->
+  <view class="capsule-guide-mask" wx:if="{{capsuleGuide.visible}}" bindtap="dismissCapsuleGuide">
+    <view class="capsule-guide-card">
+      <view class="capsule-guide-arrow"></view>
+      <view class="capsule-guide-title">点击右上角 ⊙ 最小化</view>
+      <view class="capsule-guide-text">小程序会转入后台持续记录轨迹，随时回来看进度，不丢里程</view>
+      <view class="capsule-guide-footer">
+        <view class="capsule-guide-btn" catchtap="ackCapsuleGuide">知道了</view>
+        <view class="capsule-guide-hint">点击空白区域关闭</view>
+      </view>
+    </view>
+  </view>
 </view>

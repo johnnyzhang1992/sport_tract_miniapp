@@ -1,3 +1,8 @@
+/* 底部安全区：iPhone Home Indicator 遮挡防护 */
+.container {
+  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
+}
+
 .map-card {
   height: 420rpx;
   border-radius: 16rpx;

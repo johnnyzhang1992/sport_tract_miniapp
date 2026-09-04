@@ -4,6 +4,7 @@
  * - 昵称：保存时后端 msgSecCheck 检测（违规拒绝）
  */
 const api = require('../../services/api');
+const loading = require('../../utils/loading');
 const { uploadPhoto } = require('../../services/oss-upload');
 const config = require('../../config/index');
 const { setProfileGuideDone } = require('../../services/storage');
@@ -134,7 +135,7 @@ Page({
       return;
     }
     this.setData({ saving: true });
-    wx.showLoading({ title: '保存中…' });
+    loading.show('保存中…');
 
     try {
       const weight = Number(this.data.weightKg);
@@ -158,7 +159,7 @@ Page({
             prefix: 'avatar_',
           });
           if (up && up.blocked) {
-            wx.hideLoading();
+            loading.hide();
             wx.showToast({ title: '头像包含不当内容', icon: 'none' });
             return;
           }
@@ -176,7 +177,7 @@ Page({
       }
 
       const saved = await api.put('/users/me', body);
-      wx.hideLoading();
+      loading.hide();
       wx.showToast({ title: '已保存', icon: 'success' });
       // 同步全局用户信息（体重/身高供运动卡路里计算使用）
       const app = getApp();
@@ -188,7 +189,7 @@ Page({
       setProfileGuideDone(); // 保存过资料视为已完成首次引导（不再弹）
       setTimeout(() => wx.navigateBack(), 600);
     } catch (e) {
-      wx.hideLoading();
+      loading.hide();
       const msg = (e && e.message) || '保存失败';
       wx.showToast({ title: msg.includes('不当内容') ? msg : '保存失败', icon: 'none' });
       console.error(e);
