@@ -16,3 +16,6 @@ npm-debug.log*
 config/*.local.js
 miniprogram/config/*.local.js
 .echarts-build/
+
+# ZCode 会话产物
+.zcode/
