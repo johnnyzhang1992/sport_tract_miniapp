@@ -23,10 +23,10 @@
 ## 技术栈
 
 - 微信小程序**原生**开发（不引入 Taro/uni-app）
-- UI：**tdesign-miniprogram**（`miniprogram_npm` 按需构建，clone 后 `bash scripts/build-tdesign.sh` 重建）
+- UI：**tdesign-miniprogram**（`miniprogram_npm` 按需构建，clone 后 `bash scripts/build-tdesign.sh` 重建，含 icon.wxss 自动裁剪）
 - 地图：微信 `map` 组件（GCJ-02）+ echarts（**按需引入**，clone 后 `bash scripts/build-echarts.sh` 重建）
 - 分包：点亮地图（echarts + footprint 页）在 `packageFootprint` 分包，主包 ~1.6MB
-- 图标：Lucide 图标（PNG，`assets/icons/lucide-*.png`）
+- 图标：Lucide 图标（PNG，`assets/icons/lucide-*.png`）；tdesign 字体图标由 build-tdesign.sh 自动裁剪（icon.wxss 112KB→~1KB，保留组件库内部用到的 close/chevron-right）
 - 后端：`../sport_track_api/`（Fastify 5 + MongoDB，端口 3004，线上 api.historybook.cn）
 
 ## 关键设计
@@ -48,6 +48,7 @@
 npm install
 
 # 2. 重建 tdesign 按需组件 + echarts 按需（clone 后必需）
+#    （tdesign 构建完成后自动裁剪未使用的字体图标样式，无需额外步骤）
 bash scripts/build-tdesign.sh
 bash scripts/build-echarts.sh
 
@@ -67,7 +68,8 @@ cd ../sport_track_api && npm run dev
 sport_track_miniapp/
 ├── project.config.json        # AppID wx68ebe78cca4dc17c + packNpmManually
 ├── scripts/
-│   ├── build-tdesign.sh       # tdesign 按需重建（组件+依赖）
+│   ├── build-tdesign.sh       # tdesign 按需重建（组件+依赖；结尾自动裁剪 icon.wxss）
+│   ├── tree-shake-icons.mjs   # 图标样式裁剪：扫描业务代码 + 组件库内部用法，按需保留（112KB→~1KB）
 │   └── build-echarts.sh       # echarts 按需构建（地图模块，996KB→496KB）
 ├── docs/                      # 需求/架构/上线/导入/纠偏/构建 文档
 ├── miniprogram/
@@ -113,7 +115,7 @@ sport_track_miniapp/
 - [x] 体重管理：身高体重 + 趋势表 + 展示开关
 - [x] 运动日历：GitHub 热力图（365 天）
 - [x] 后台定位：接口申请通过 + 前后台持续记录 + 退出恢复
-- [x] 包体积优化：tdesign 按需（5.1MB→1.1MB）、echarts 按需（996KB→496KB）、分包
+- [x] 包体积优化：tdesign 按需（5.1MB→1.1MB）、icon.wxss 图标裁剪（112KB→~1KB）、echarts 按需（996KB→496KB）、分包
 - [ ] 体验版/正式版发布（合法域名 + 提审）
 
 ## 上线待办（详见 docs/05）

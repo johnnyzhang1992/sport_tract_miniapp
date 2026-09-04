@@ -35,3 +35,6 @@ for d in $DEPS; do
 done
 
 echo "✅ tdesign 按需构建完成：$(du -sh "$DST" | cut -f1)"
+
+# 裁剪 tdesign 图标样式：删除 icon.wxss 中未使用的图标类（112KB → ~0.8KB）
+node "$ROOT/scripts/tree-shake-icons.mjs"
