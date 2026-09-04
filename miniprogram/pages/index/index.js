@@ -133,6 +133,7 @@ Page({
         console.warn('静默登录失败', e);
       }
     }
+    if (app.globalData.loggedIn) app.maybeShowProfileGuide();
     // 游客态：不读缓存/不请求，展示登录引导（登录后 onShow 重新加载）
     if (!app.globalData.loggedIn) {
       this._loadingOverview = false;

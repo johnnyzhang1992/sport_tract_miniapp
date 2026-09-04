@@ -1,11 +1,17 @@
 <view class="container">
   <!-- 头像 -->
+  <!-- 首次注册引导说明 -->
+  <view class="guide-tip" wx:if="{{fromGuide}}">设置身高和体重后，运动卡路里消耗的计算会更精准哦～</view>
+
   <view class="card avatar-card">
-    <view class="avatar-wrap" bindtap="chooseAvatar" hover-class="avatar-hover">
-      <image wx:if="{{avatarTemp || avatarUrl}}" class="avatar-img" src="{{avatarTemp || avatarUrl}}" mode="aspectFill" />
+    <view class="avatar-wrap" bindtap="openAvatarSheet" hover-class="avatar-hover">
+      <image wx:if="{{avatarTemp}}" class="avatar-img" src="{{avatarTemp}}" mode="aspectFill" />
+      <image wx:elif="{{avatarPreset}}" class="avatar-img" src="/assets/avatars/{{avatarPreset}}.png" mode="aspectFill" />
+      <image wx:elif="{{avatarUrl}}" class="avatar-img" src="{{avatarUrl}}" mode="aspectFill" />
       <image wx:else class="avatar-placeholder" src="/assets/icons/lucide-user.png" mode="aspectFit" />
-      <view class="avatar-edit">更换头像</view>
+      <view class="avatar-edit">{{avatarPreset ? '选择头像' : '更换头像'}}</view>
     </view>
+
   </view>
 
   <!-- 昵称 -->
@@ -57,4 +63,38 @@
     loading="{{saving}}"
     bind:tap="save"
   >保存</t-button>
+
+  <!-- 选择头像弹窗：顶部自定义上传，下方默认头像 -->
+  <view class="mask" wx:if="{{avatarSheetVisible}}" bindtap="closeAvatarSheet">
+    <view class="sheet" catchtap="noop">
+      <view class="sheet-title">选择头像</view>
+
+      <!-- 自定义上传（拍照 / 相册） -->
+      <view class="upload-entry" hover-class="upload-entry-hover" bindtap="chooseAvatar">
+        <text class="upload-entry-icon">🖼️</text>
+        <view class="upload-entry-text">
+          <view class="upload-entry-title">自定义上传头像</view>
+          <view class="upload-entry-sub">拍一张或从相册选择，会自动审核后上传</view>
+        </view>
+        <view class="upload-entry-arrow">›</view>
+      </view>
+
+      <!-- 默认头像区域 -->
+      <view class="avatar-presets">
+        <view class="presets-title">默认头像</view>
+        <view class="presets-grid" wx:if="{{defaultAvatars.length}}">
+          <view
+            wx:for="{{defaultAvatars}}"
+            wx:key="key"
+            class="preset-avatar {{avatarPreset === item.key ? 'preset-avatar-active' : ''}}"
+            data-key="{{item.key}}"
+            catchtap="selectDefaultAvatar"
+          >
+            <image src="/assets/avatars/{{item.key}}.png" mode="aspectFill" />
+          </view>
+        </view>
+        <view class="presets-empty" wx:else>默认头像即将上线，敬请期待～</view>
+      </view>
+    </view>
+  </view>
 </view>

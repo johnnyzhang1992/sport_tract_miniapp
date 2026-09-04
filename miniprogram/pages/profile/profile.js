@@ -5,6 +5,8 @@
  */
 const api = require('../../services/api');
 const { uploadPhoto } = require('../../services/oss-upload');
+const config = require('../../config/index');
+const { setProfileGuideDone } = require('../../services/storage');
 
 Page({
   data: {
@@ -16,9 +18,14 @@ Page({
     weightKg: 60,
     heightCm: 170,
     saving: false,
+    fromGuide: false, // 首次注册引导进入（顶部展示完善资料说明）
+    avatarSheetVisible: false, // 选择头像弹窗
+    avatarPreset: '', // 默认头像预设 key（与上传头像互斥）
+    defaultAvatars: config.DEFAULT_AVATARS, // 资源到位后非空，头像区显示预设网格
   },
 
-  onLoad() {
+  onLoad(options) {
+    this.setData({ fromGuide: !!(options && options.from === 'guide') }); // 首次注册引导进入
     this.loadUser();
   },
 
@@ -36,6 +43,7 @@ Page({
       this.setData({
         user,
         avatarUrl: user.avatarUrl || '',
+        avatarPreset: user.avatarPreset || '',
         nickname: user.nickname || '',
         gender: user.gender || 0,
         weightKg: user.weightKg || 60,
@@ -57,9 +65,30 @@ Page({
       success: (res) => {
         const file = res.tempFiles && res.tempFiles[0];
         if (file) {
-          this.setData({ avatarTemp: file.tempFilePath });
+          this.setData({ avatarTemp: file.tempFilePath, avatarPreset: '', avatarSheetVisible: false }); // 上传优先于预设
         }
       },
+    });
+  },
+
+  /** 打开选择头像弹窗 */
+  openAvatarSheet() {
+    this.setData({ avatarSheetVisible: true });
+  },
+
+  closeAvatarSheet() {
+    this.setData({ avatarSheetVisible: false });
+  },
+
+  noop() {},
+
+  /** 选择默认头像预设（选中即清空上传态，并关闭弹窗） */
+  selectDefaultAvatar(e) {
+    this.setData({
+      avatarPreset: e.currentTarget.dataset.key,
+      avatarTemp: '',
+      avatarUrl: '',
+      avatarSheetVisible: false,
     });
   },
 
@@ -139,6 +168,11 @@ Page({
           }
         }
         // unchanged：头像没变，不更新 avatarUrl（保持当前，避免重复上传）
+        body.avatarPreset = ''; // 上传头像优先，清掉预设
+      } else if (this.data.avatarPreset) {
+        // 选择了默认头像预设：清空上传头像，保存预设 key
+        body.avatarPreset = this.data.avatarPreset;
+        body.avatarUrl = '';
       }
 
       const saved = await api.put('/users/me', body);
@@ -151,6 +185,7 @@ Page({
         app.globalData.userInfo.heightCm = saved.heightCm ?? (Number(this.data.heightCm) || 170);
         app.globalData.userInfo.nickname = saved.nickname || this.data.nickname;
       }
+      setProfileGuideDone(); // 保存过资料视为已完成首次引导（不再弹）
       setTimeout(() => wx.navigateBack(), 600);
     } catch (e) {
       wx.hideLoading();
