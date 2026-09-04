@@ -92,6 +92,10 @@
   background: #2b6cf6;
   color: #fff;
 }
+/* 公里标记开关：标注按钮左侧 */
+.km-btn {
+  right: 330rpx;
+}
 .poi-icon {
   width: 26rpx;
   height: 26rpx;

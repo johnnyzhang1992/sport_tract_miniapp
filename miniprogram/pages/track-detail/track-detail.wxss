@@ -384,3 +384,10 @@
   border-radius: 999rpx;
   padding: 4rpx 16rpx;
 }
+
+/* 打点 emoji 图标 */
+.marker-emoji {
+  font-size: 40rpx;
+  margin-right: 20rpx;
+  flex-shrink: 0;
+}

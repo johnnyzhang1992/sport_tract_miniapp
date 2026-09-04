@@ -12,6 +12,8 @@ Component({
     points: { type: Array, value: [] },
     /** 打点 [{id, lat, lng, iconPath, width, height, label}] */
     markers: { type: Array, value: [] },
+    /** 每满一公里标记 [{lat, lng, km}]（圆圈数字图标） */
+    kmMarkers: { type: Array, value: [] },
     /** 当前位置（动态追点 marker） */
     currentLocation: { type: Object, value: null },
     /** 当前位置 marker 图标（运动类型图标；空则用红色圆点兜底） */
@@ -53,12 +55,13 @@ Component({
     centerLat: 31.2304,
     centerLng: 121.4737,
     enablePoi: false, // 是否展示 POI 标注（地名/道路名）——默认关闭
+    showKm: true, // 公里圆圈数字标记展示开关（默认开）
     mapScale: 15, // 地图缩放级别（用户调整后记忆）
     mapRotate: 0, // 地图旋转角度（heading 模式）
   },
 
   observers: {
-    'points, markers, currentLocation': function (points, markers, currentLocation) {
+    'points, markers, currentLocation, kmMarkers': function (points, markers, currentLocation) {
       this.updateCenter();
       // overview 模式轨迹线由 buildOverview 管理，buildPolyline 会清空（points 为空）
       if (this.data.mode !== 'overview') {
@@ -287,9 +290,9 @@ Component({
         note: '/assets/icons/lucide-note.png',
       };
       const MARKER_ICON_CACHE = (this._markerIconCache = this._markerIconCache || {});
-      const build = async (type, num) => {
-        // 图标不依赖序号，缓存键只用类型（加 v2 版本避免旧带数字图残留）
-        const key = `v2-${type || 'checkpoint'}`;
+      const build = async (m) => {
+        // 图标不依赖序号，缓存键只用图标/类型（v3：支持 emoji 自定义图标）
+        const key = `v3-${m.icon || m.type || 'checkpoint'}`;
         if (MARKER_ICON_CACHE[key]) return MARKER_ICON_CACHE[key];
         try {
           const canvas = wx.createOffscreenCanvas({ type: '2d', width: 48, height: 48 });
@@ -302,20 +305,28 @@ Component({
           ctx.strokeStyle = '#c8d0dc';
           ctx.lineWidth = 1.5;
           ctx.stroke();
-          // 图标内缩居中（36×36，留边距不铺满）
-          ctx.save();
-          ctx.beginPath();
-          ctx.arc(24, 24, 19, 0, Math.PI * 2);
-          ctx.clip();
-          const icon = TYPE_ICONS[type] || TYPE_ICONS.checkpoint;
-          const img = canvas.createImage();
-          img.src = icon;
-          await new Promise((res, rej) => {
-            img.onload = res;
-            img.onerror = rej;
-          });
-          ctx.drawImage(img, 9, 9, 30, 30);
-          ctx.restore();
+          if (m.icon) {
+            // 用户自选 emoji 图标：直接绘制在圆内
+            ctx.font = '26px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(m.icon, 24, 25);
+          } else {
+            // 图标内缩居中（36×36，留边距不铺满）
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(24, 24, 19, 0, Math.PI * 2);
+            ctx.clip();
+            const icon = TYPE_ICONS[m.type] || TYPE_ICONS.checkpoint;
+            const img = canvas.createImage();
+            img.src = icon;
+            await new Promise((res, rej) => {
+              img.onload = res;
+              img.onerror = rej;
+            });
+            ctx.drawImage(img, 9, 9, 30, 30);
+            ctx.restore();
+          }
           const path = await new Promise((res) => {
             wx.canvasToTempFilePath({
               canvas,
@@ -330,7 +341,7 @@ Component({
         }
       };
       Promise.all(
-        this.data.markers.map((m, idx) => build(m.type, idx + 1)),
+        this.data.markers.map((m) => build(m)),
       ).then((icons) => {
         const base = this.data.markers.map((m, idx) => {
           const num = idx + 1;
@@ -386,8 +397,55 @@ Component({
           anchor: { x: 0.5, y: 0.5 },
         });
       }
-      this.setData({ displayMarkers: base });
+
+      // 每满一公里标记（圆圈数字）
+      this.buildKmMarkerList().then((kmMarkers) => {
+        this.setData({ displayMarkers: base.concat(kmMarkers) });
       });
+      });
+    },
+
+    /** 公里标记：白底蓝边圆 + 数字图标（离屏 canvas，按公里数缓存） */
+    async buildKmMarkerList() {
+      if (!this.data.showKm) return []; // 开关关闭时不生成
+      const kms = this.data.kmMarkers || [];
+      if (!kms.length) return [];
+      const MARKER_ICON_CACHE = (this._markerIconCache = this._markerIconCache || {});
+      const buildKm = async (km) => {
+        const key = `km-${km}`;
+        if (MARKER_ICON_CACHE[key]) return MARKER_ICON_CACHE[key];
+        const canvas = wx.createOffscreenCanvas({ type: '2d', width: 48, height: 48 });
+        const ctx = canvas.getContext('2d');
+        ctx.beginPath();
+        ctx.arc(24, 24, 22, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+        ctx.strokeStyle = '#2b6cf6';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        ctx.fillStyle = '#2b6cf6';
+        ctx.font = `bold ${km >= 100 ? 14 : km >= 10 ? 17 : 19}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(km), 24, 25);
+        const path = await new Promise((res) => {
+          wx.canvasToTempFilePath({ canvas, success: (r) => res(r.tempFilePath), fail: () => res('') });
+        });
+        MARKER_ICON_CACHE[key] = path;
+        return path;
+      };
+      const icons = await Promise.all(kms.map((k) => buildKm(k.km)));
+      return kms
+        .map((k, i) => ({
+          id: 300000 + i,
+          latitude: k.lat,
+          longitude: k.lng,
+          iconPath: icons[i],
+          width: 18,
+          height: 18,
+          anchor: { x: 0.5, y: 0.5 },
+        }))
+        .filter((m) => m.iconPath); // 图标生成失败（不支持离屏 canvas）时跳过，避免空 iconPath 渲染异常
     },
 
     /** 动态追点：视野跟随当前位置（节流） */
@@ -445,6 +503,19 @@ Component({
     /** 切换 POI 标注显示 */
     togglePoi() {
       this.setData({ enablePoi: !this.data.enablePoi });
+    },
+
+    /** 公里标记开关：关→从地图移除（id ≥ 300000），开→重新生成追加 */
+    toggleKm() {
+      const showKm = !this.data.showKm;
+      this.setData({ showKm });
+      if (!showKm) {
+        this.setData({ displayMarkers: this.data.displayMarkers.filter((m) => m.id < 300000) });
+      } else {
+        this.buildKmMarkerList().then((kmMarkers) => {
+          this.setData({ displayMarkers: this.data.displayMarkers.concat(kmMarkers) });
+        });
+      }
     },
 
 
