@@ -19,3 +19,6 @@ miniprogram/config/*.local.js
 
 # ZCode 会话产物
 .zcode/
+
+# Mimosa 安全扫描产物
+.mimosa/
