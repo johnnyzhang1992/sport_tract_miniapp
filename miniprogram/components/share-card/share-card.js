@@ -184,32 +184,34 @@ Component({
       const y = height - 56;
       ctx.drawImage(img, x, y, size, size);
       ctx.fillStyle = 'rgba(31,35,41,0.7)';
-      ctx.font = '11px sans-serif';
+      ctx.font = '9px sans-serif';
       ctx.textAlign = 'right';
       ctx.fillText('微信扫码', x - 8, y + 18);
-      ctx.fillText('查看轨迹', x - 8, y + 34);
+      ctx.fillText('查看轨迹', x - 8, y + 32);
       ctx.textAlign = 'left';
       return true;
     },
 
-    /** 带码底部左侧：第一行时间，第二行 昵称 + @小迹一下（居左，超长省略） */
+    /** 带码底部左侧：第一行时间，第二行 昵称（居左，超长省略） */
     drawBottomWithCode(ctx, width, height, act) {
       ctx.fillStyle = 'rgba(31,35,41,0.7)';
       ctx.font = '11px sans-serif';
       ctx.textAlign = 'left';
-      if (act.startTimeText) ctx.fillText(act.startTimeText, 24, height - 38);
+      if (act.startTimeText) ctx.fillText(act.startTimeText, 24, height - 40);
       const u = getApp().globalData.userInfo;
       const nick = (u && u.nickname) || '';
-      let line2 = nick ? nick + ' @小迹一下' : '@小迹一下';
-      // 限宽到「微信扫码」文案左缘之前，避免与码区重叠
-      const maxW = width - 14 - 44 - 8 - ctx.measureText('微信扫码').width - 12 - 24;
-      if (ctx.measureText(line2).width > maxW) {
-        while (line2.length > 0 && ctx.measureText(line2 + '…').width > maxW) {
-          line2 = line2.slice(0, -1);
+      let line2 = nick;
+      if (line2) {
+        // 限宽到「微信扫码」文案左缘之前，避免与码区重叠
+        const maxW = width - 14 - 44 - 8 - ctx.measureText('微信扫码').width - 12 - 24;
+        if (ctx.measureText(line2).width > maxW) {
+          while (line2.length > 0 && ctx.measureText(line2 + '…').width > maxW) {
+            line2 = line2.slice(0, -1);
+          }
+          line2 += '…';
         }
-        line2 += '…';
+        ctx.fillText(line2, 24, height - 20);
       }
-      ctx.fillText(line2, 24, height - 22);
     },
 
     /** 无码底部品牌行（原样保留）：左时间 + 右 @小迹一下 */
@@ -238,13 +240,14 @@ Component({
       });
     },
 
+    /** 轨迹绘图参数：带码时指标卡在 292，无码在 304，下边界随之前留 20 间距 */
     drawTrack(ctx, width, height) {
       const pts = this.data.mapPoints || [];
       if (pts.length < 2) return;
-      // 轨迹区域：标题下到指标卡上方，尽量占满（高度调高）
+      // 轨迹区域：标题下到指标卡上方，尽量占满（压缩死区）
       const pad = 24;
       const top = 82; // 两行标题下
-      const bottom = 240;
+      const bottom = this.data.showMiniCode ? 272 : 284;
       const lats = pts.map((p) => p.lat);
       const lngs = pts.map((p) => p.lng);
       let minLat = Math.min(...lats);
@@ -262,7 +265,7 @@ Component({
       const sLng = maxLng - minLng || 0.001;
 
       // 轨迹区域（白底无卡底背景，直接画轨迹线）
-      const innerPad = 20;
+      const innerPad = 12;
       const plotLeft = pad / 2 + innerPad;
       const plotRight = width - pad / 2 - innerPad;
       const plotTop = top + innerPad;
