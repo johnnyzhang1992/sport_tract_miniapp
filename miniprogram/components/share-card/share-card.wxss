@@ -99,3 +99,7 @@
   font-size: 26rpx;
   color: #333;
 }
+.mini-switch {
+  transform: scale(0.8);
+  transform-origin: right center;
+}

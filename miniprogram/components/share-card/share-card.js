@@ -112,13 +112,24 @@ Component({
 
             // 轨迹（大块完整展示）
             this.drawTrack(ctx, width, height);
-            // 指标卡片（时长/配速/消耗 独立卡）
-            this.drawStatsCards(ctx, width, height, act);
 
-            // 小程序码（异步取码/加载图片，失败静默降级为无码海报）
-            this.drawMiniCode(ctx, canvas, width)
-              .catch((e) => console.warn('[share-card] 小程序码绘制跳过', e))
-              .then(resolve);
+            // 底部布局由小程序码是否绘出决定：带码 → 指标卡上移，底部左侧两行文字；
+            // 无码（未开启/取码失败）→ 原布局（指标卡 + 品牌行）
+            this.drawMiniCode(ctx, canvas, width, height)
+              .catch((e) => {
+                console.warn('[share-card] 小程序码绘制跳过', e);
+                return false;
+              })
+              .then((drew) => {
+                if (drew) {
+                  this.drawStatsCards(ctx, width, height, act, 292);
+                  this.drawBottomWithCode(ctx, width, height, act);
+                } else {
+                  this.drawStatsCards(ctx, width, height, act, 304);
+                  this.drawBrandRow(ctx, width, height, act);
+                }
+                resolve();
+              });
           });
       });
     },
@@ -152,26 +163,68 @@ Component({
       return this._miniCodeSrc;
     },
 
-    /** 画小程序码 + 引导文案（轨迹区与指标卡之间的空白带右侧） */
-    async drawMiniCode(ctx, canvas, width) {
-      if (!this.data.showMiniCode || !this.data.activityId) return;
+    /** 画小程序码（底部右侧）+ 原引导文案；返回是否绘出（决定底部布局，失败降级无码） */
+    async drawMiniCode(ctx, canvas, width, height) {
+      if (!this.data.showMiniCode || !this.data.activityId) return false;
       const src = await this.ensureMiniCodeSrc();
-      if (!src) return;
-      const img = await new Promise((resolve, reject) => {
-        const im = canvas.createImage();
-        im.onload = () => resolve(im);
-        im.onerror = reject;
-        im.src = src;
-      });
-      const size = 52;
-      const x = width - 16 - size;
-      const y = 244; // 轨迹区(bottom 240)之下、指标卡(top 304)之上
+      if (!src) return false;
+      let img;
+      try {
+        img = await new Promise((resolve, reject) => {
+          const im = canvas.createImage();
+          im.onload = () => resolve(im);
+          im.onerror = reject;
+          im.src = src;
+        });
+      } catch (e) {
+        return false;
+      }
+      const size = 44;
+      const x = width - 14 - size;
+      const y = height - 56;
       ctx.drawImage(img, x, y, size, size);
       ctx.fillStyle = 'rgba(31,35,41,0.7)';
       ctx.font = '11px sans-serif';
       ctx.textAlign = 'right';
-      ctx.fillText('微信扫码', x - 8, y + 20);
-      ctx.fillText('查看轨迹', x - 8, y + 36);
+      ctx.fillText('微信扫码', x - 8, y + 18);
+      ctx.fillText('查看轨迹', x - 8, y + 34);
+      ctx.textAlign = 'left';
+      return true;
+    },
+
+    /** 带码底部左侧：第一行时间，第二行 昵称 + @小迹一下（居左，超长省略） */
+    drawBottomWithCode(ctx, width, height, act) {
+      ctx.fillStyle = 'rgba(31,35,41,0.7)';
+      ctx.font = '11px sans-serif';
+      ctx.textAlign = 'left';
+      if (act.startTimeText) ctx.fillText(act.startTimeText, 24, height - 38);
+      const u = getApp().globalData.userInfo;
+      const nick = (u && u.nickname) || '';
+      let line2 = nick ? nick + ' @小迹一下' : '@小迹一下';
+      // 限宽到「微信扫码」文案左缘之前，避免与码区重叠
+      const maxW = width - 14 - 44 - 8 - ctx.measureText('微信扫码').width - 12 - 24;
+      if (ctx.measureText(line2).width > maxW) {
+        while (line2.length > 0 && ctx.measureText(line2 + '…').width > maxW) {
+          line2 = line2.slice(0, -1);
+        }
+        line2 += '…';
+      }
+      ctx.fillText(line2, 24, height - 22);
+    },
+
+    /** 无码底部品牌行（原样保留）：左时间 + 右 @小迹一下 */
+    drawBrandRow(ctx, width, height, act) {
+      const brandY = height - 20;
+      if (act.startTimeText) {
+        ctx.fillStyle = 'rgba(31,35,41,0.7)';
+        ctx.font = '11px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(act.startTimeText, 24, brandY);
+      }
+      ctx.fillStyle = 'rgba(31,35,41,0.7)'; // 与左侧日期一致
+      ctx.font = '11px sans-serif'; // 与左侧日期一致
+      ctx.textAlign = 'right';
+      ctx.fillText('@小迹一下', width - 14, brandY);
       ctx.textAlign = 'left';
     },
 
@@ -260,8 +313,8 @@ Component({
       return segs.filter(s => s.length >= 2);
     },
 
-    /** 指标独立卡片：时长 / 配速 / 消耗 */
-    drawStatsCards(ctx, width, height, act) {
+    /** 指标独立卡片：时长 / 配速 / 消耗（top 可调：带码时上移让出底部空间） */
+    drawStatsCards(ctx, width, height, act, top = 304) {
       // 配速：去掉 /公里 单位（只显示数值，如 5'30"）；消耗单位移到 label
       const paceFull = act.paceText || (act.paceValue ? `${act.paceValue}${act.paceUnit || ''}` : '—');
       const paceText = String(paceFull).replace(/\s*\/公里.*$/, '');
@@ -270,8 +323,6 @@ Component({
         { label: '配速', value: paceText },
         { label: '消耗/千卡', value: `${act.calories || 0}` },
       ];
-      const top = 304; // 再往下移
-      const cardH = 56; // 内边距减小
       const gap = 10;
       const cardW = (width - 24 * 2 - gap * 2) / 3;
       cards.forEach((c, i) => {
@@ -311,19 +362,6 @@ Component({
         ctx.fillText(c.label, x + cardW / 2, top + 40);
         ctx.textBaseline = 'alphabetic';
       });
-
-      // 品牌行（底部）：左时间 + 右 @小迹一下（水平居右）
-      const brandY = height - 20;
-      if (act.startTimeText) {
-        ctx.fillStyle = 'rgba(31,35,41,0.7)';
-        ctx.font = '11px sans-serif';
-        ctx.textAlign = 'left';
-        ctx.fillText(act.startTimeText, 24, brandY);
-      }
-      ctx.fillStyle = 'rgba(31,35,41,0.7)'; // 与左侧日期一致
-      ctx.font = '11px sans-serif'; // 与左侧日期一致
-      ctx.textAlign = 'right';
-      ctx.fillText('@小迹一下', width - 14, brandY);
     },
 
     /** 保存到相册 */
