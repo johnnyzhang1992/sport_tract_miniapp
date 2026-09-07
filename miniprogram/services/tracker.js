@@ -9,8 +9,12 @@ const EARTH_RADIUS_M = 6371000;
 const MIN_DISTANCE_M = 3;
 /** 节流：最小采点间隔（毫秒） */
 const MIN_INTERVAL_MS = 3000;
-/** 爬升死区阈值（米，海拔误差范围内不累计） */
-const CLIMB_DEAD_ZONE_M = 2;
+/** 爬升确认阈值（米）：待确认累计爬升达到该值才计入（滞回式，噪声上下抵消不计） */
+const CLIMB_CONFIRM_M = 3;
+/** 爬升确认所需的最少连续上升步数：单点大跳（GPS 噪声）无法凭一步确认 */
+const CLIMB_MIN_UP_STEPS = 2;
+/** 爬升用海拔 EMA 平滑系数（0~1，越小越平滑）：抑制 GPS 海拔单点跳变后再做滞回判断 */
+const CLIMB_EMA_ALPHA = 0.3;
 /** 配速最小有效距离（米）：低于此值配速无意义（如刚起步/静止），显示 “—” */
 const MIN_PACE_DISTANCE_M = 200;
 /** 后台恢复预热：切后台超过该时长（毫秒）才启用；回前台 GPS 冷启动，前几秒定位漂移大 */
@@ -76,7 +80,12 @@ class Tracker {
 
     this.distance = 0; // 米
     this.elevationGain = 0;
+    this.minAltitude = null;
     this.maxAltitude = null;
+    // 爬升状态：EMA 平滑海拔 + 待确认累计（滞回），缓坡可持续累计达标、噪声上下抵消
+    this._climbEma = null;
+    this._pendingClimb = 0;
+    this._climbUpSteps = 0;
 
     // 整公里检测：上次整公里标记（距离/时点）+ 回调（record 页震动横幅播报）
     this._kmMark = { dist: 0, ts: this.startTime };
@@ -167,13 +176,22 @@ class Tracker {
         this._kmWindowPauseMs = 0;
         this.onKilometer({ km, splitSec, totalSec: this.getDurationSec() });
       }
-      // 爬升：死区阈值滤波（决策 D16）
-      if (point.altitude != null && this.lastPoint.altitude != null) {
-        const diff = point.altitude - this.lastPoint.altitude;
-        if (diff > CLIMB_DEAD_ZONE_M) this.elevationGain += diff;
+    }
+    // 爬升：EMA 平滑 + 滞回确认（决策 D16 v2：替换原"单步>2m 死区"——缓坡每步差值
+    // 远小于阈值会整体漏计，而慢噪声单步大跳反而被累计；滞回让噪声上下抵消）。
+    // 与 lastPoint 无关（首点即喂，保证与 restoreFromPoints 重放一致）
+    if (point.altitude != null) {
+      if (point.pauseGap) {
+        // 暂停期间海拔可能漂移：以恢复后首个点重置爬升状态，不参与差值
+        this._climbEma = point.altitude;
+        this._pendingClimb = 0;
+        this._climbUpSteps = 0;
+      } else {
+        this._feedClimb(point.altitude);
       }
     }
     if (point.altitude != null) {
+      this.minAltitude = this.minAltitude == null ? point.altitude : Math.min(this.minAltitude, point.altitude);
       this.maxAltitude =
         this.maxAltitude == null ? point.altitude : Math.max(this.maxAltitude, point.altitude);
     }
@@ -196,10 +214,11 @@ class Tracker {
         const med = this._recentSpeeds.slice().sort((x, y) => x - y)[Math.floor(this._recentSpeeds.length / 2)];
         const spikeV = Math.max(this._typeCfg.minSpikeSpeed, med * 4);
         if (v1 > spikeV && v2 > spikeV && this._turnAngle(a, b, point) > 110) {
-          // 剔除 b：距离重算（去掉 a→b、b→c，改用 a→c）；爬升回退 b 段
+          // 剔除 b：距离重算（去掉 a→b、b→c，改用 a→c）；爬升近似回退（尖刺海拔大跳
+          // 多已被突变过滤置空，走到这里的 b 海拔平稳，扣未确认 pending 即可）
           this.distance = Math.max(0, this.distance - d1 - d2 + haversine(a, point));
-          if (b.altitude != null && a.altitude != null && b.altitude - a.altitude > CLIMB_DEAD_ZONE_M) {
-            this.elevationGain = Math.max(0, this.elevationGain - (b.altitude - a.altitude));
+          if (b.altitude != null && a.altitude != null && b.altitude > a.altitude) {
+            this._pendingClimb = Math.max(0, this._pendingClimb - (b.altitude - a.altitude));
           }
           this.points.pop();
           this.points.pop();
@@ -220,6 +239,29 @@ class Tracker {
     }
 
     return point;
+  }
+
+  /** 爬升累计：EMA 平滑后做滞回确认（下坡先"吃掉"未确认爬升，吃穿归零） */
+  _feedClimb(alt) {
+    if (this._climbEma == null) {
+      this._climbEma = alt; // 首个海拔点作为 EMA 起点
+      return;
+    }
+    const prev = this._climbEma;
+    this._climbEma = prev + CLIMB_EMA_ALPHA * (alt - prev);
+    const diff = this._climbEma - prev;
+    if (diff > 0) {
+      this._pendingClimb += diff;
+      this._climbUpSteps++;
+      if (this._pendingClimb >= CLIMB_CONFIRM_M && this._climbUpSteps >= CLIMB_MIN_UP_STEPS) {
+        this.elevationGain += this._pendingClimb;
+        this._pendingClimb = 0;
+        this._climbUpSteps = 0;
+      }
+    } else if (diff < 0) {
+      this._pendingClimb = Math.max(0, this._pendingClimb + diff);
+      if (this._pendingClimb === 0) this._climbUpSteps = 0;
+    }
   }
 
   /** 方向转角（度，0~180） */
@@ -263,13 +305,26 @@ class Tracker {
     // 指标从点重算（比信任旧值更准）
     this.distance = 0;
     this.elevationGain = 0;
+    this.minAltitude = null;
     this.maxAltitude = null;
+    this._climbEma = null;
+    this._pendingClimb = 0;
+    this._climbUpSteps = 0;
     this._kmMark = { dist: 0, ts: this.startTime };
     this._kmWindowPauseMs = 0; // 历史点无法还原每个公里的暂停分布，恢复后从零累计
     for (let i = 0; i < this.points.length; i++) {
       const p = this.points[i];
       if (p.altitude != null) {
+        this.minAltitude = this.minAltitude == null ? p.altitude : Math.min(this.minAltitude, p.altitude);
         this.maxAltitude = this.maxAltitude == null ? p.altitude : Math.max(this.maxAltitude, p.altitude);
+        // 爬升重放与实时同规则（暂停恢复点重置爬升状态）
+        if (p.pauseGap) {
+          this._climbEma = p.altitude;
+          this._pendingClimb = 0;
+          this._climbUpSteps = 0;
+        } else {
+          this._feedClimb(p.altitude);
+        }
       }
       if (i > 0) {
         const prev = this.points[i - 1];
@@ -278,9 +333,6 @@ class Tracker {
         // 整公里标记回放：恢复现场后播报从下一整公里继续
         if (Math.floor(this.distance / 1000) > Math.floor(prevDist / 1000)) {
           this._kmMark = { dist: this.distance, ts: p.timestamp };
-        }
-        if (p.altitude != null && prev.altitude != null && p.altitude - prev.altitude > CLIMB_DEAD_ZONE_M) {
-          this.elevationGain += p.altitude - prev.altitude;
         }
       }
     }
@@ -350,7 +402,8 @@ class Tracker {
           : null,
       calories: Math.round(met * this.weightKg * (durationSec / 3600)),
       elevationGain: Math.round(this.elevationGain),
-      maxAltitude: this.maxAltitude,
+      minAltitude: this.minAltitude == null ? null : Math.round(this.minAltitude),
+      maxAltitude: this.maxAltitude == null ? null : Math.round(this.maxAltitude),
       pointCount: this.points.length,
       paused: this.paused,
     };

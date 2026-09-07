@@ -69,6 +69,14 @@ Page({
         .filter((a) => typeof a === 'number' && a > 0);
       const avgAccuracy = accs.length > 0 ? Math.round(accs.reduce((s, a) => s + a, 0) / accs.length) : null;
       const endTime = activity.endTime || activity.startTime + (activity.duration || 0) * 1000;
+      // 最低/最高海拔（决策：徒步/爬山展示海拔区间；其他类型与其他旧数据回退仅最高海拔）
+      const isAltType = ['hiking', 'mountaineering'].includes(activity.type);
+      const hasAltRange = isAltType && activity.minAltitude != null && activity.maxAltitude != null;
+      const altRangeText = hasAltRange
+        ? `${activity.minAltitude} ~ ${activity.maxAltitude}m`
+        : activity.maxAltitude != null
+          ? `${activity.maxAltitude}m`
+          : '';
       // 最快 1km（服务端分段计算；游泳/骑行无配速概念不展示）
       const fastestParts =
         activity.fastestKm && !['swimming', 'cycling'].includes(activity.type)
@@ -89,6 +97,8 @@ Page({
           startTimeText: fmtTime(activity.startTime),
           endTimeText: fmtTime(endTime),
           avgAccuracy,
+          altRangeText,
+          altRangeIsRange: hasAltRange,
         },
         mapPoints: (activity.trackPoints || []).map((p) => ({
           lat: p.lat,
