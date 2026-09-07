@@ -50,21 +50,93 @@ test('漂移过滤：瞬时速度超阈值（>30m/s）的点被过滤', () => {
   assert.equal(t.points.length, before);
 });
 
-test('指标：配速/卡路里/爬升死区/最高海拔', () => {
+test('指标：配速/卡路里/最高海拔', () => {
   let clock = 0;
   const t = new Tracker('hiking', 65, () => clock);
-  // 11 点 × 22m = 220m（> 200m 配速门槛）；海拔 +5/-3 交替
-  const alts = [100, 105, 102, 107, 104, 109, 106, 111, 108, 113, 110];
+  // 11 点 × 22m = 220m（> 200m 配速门槛）；缓坡 +0.5m/步 连续爬升 5m
+  const alts = [100, 100.4, 100.9, 101.3, 101.9, 102.4, 102.9, 103.4, 103.9, 104.4, 105];
   alts.forEach((alt, i) => {
     t.addPoint(P(30 + i * 0.0002, 120, alt));
     clock += 5000;
   });
   const s = t.getStats();
   assert.ok(s.distance > 200, `距离 ${s.distance}m`);
-  assert.equal(s.maxAltitude, 113);
-  assert.ok(s.elevationGain >= 15, `爬升 ${s.elevationGain}`);
+  assert.equal(s.maxAltitude, 105);
   assert.ok(s.calories > 0);
   assert.ok(s.pace !== null, 'hiking 应展示配速');
+});
+
+test('爬升：滞回确认——缓坡累计计入、零均值噪声不计（决策 D16 v2）', () => {
+  // 缓坡 +0.5m/步：旧"单步>2m 死区"完全漏计，滞回可持续累计达标（EMA 滞后保留少量未确认）
+  let clock = 0;
+  const ramp = new Tracker('hiking', 65, () => clock);
+  const up = [100, 100.4, 100.9, 101.3, 101.9, 102.4, 102.9, 103.4, 103.9, 104.4, 105];
+  up.forEach((alt, i) => {
+    ramp.addPoint(P(30 + i * 0.0002, 120, alt));
+    clock += 5000;
+  });
+  const g1 = ramp.getStats().elevationGain;
+  assert.ok(g1 >= 2 && g1 <= 5, `缓坡 +5m 应计入大部分，实际 ${g1}`);
+
+  // 零均值锯齿（±5m 交替、净高差 0）：噪声上下抵消，不应累计
+  clock = 0;
+  const noise = new Tracker('hiking', 65, () => clock);
+  const saw = [100, 105, 100, 105, 100, 105, 100, 105, 100, 105, 100];
+  saw.forEach((alt, i) => {
+    noise.addPoint(P(30 + i * 0.0002, 120, alt));
+    clock += 5000;
+  });
+  assert.equal(noise.getStats().elevationGain, 0, '零均值噪声不应产生爬升');
+});
+
+test('爬升：单点大跳（GPS 噪声）不确认', () => {
+  let clock = 0;
+  const t = new Tracker('hiking', 65, () => clock);
+  // +5m 单步跳后立即回落（5m 恰好不触发海拔突变过滤，模拟漏网慢跳）
+  const alts = [100, 100.2, 100.4, 105.4, 100.6, 100.8, 101];
+  alts.forEach((alt, i) => {
+    t.addPoint(P(30 + i * 0.0002, 120, alt));
+    clock += 5000;
+  });
+  assert.ok(t.getStats().elevationGain < 1, `单点大跳不应确认爬升`);
+});
+
+test('爬升：暂停恢复点海拔漂移不计入', () => {
+  let clock = 0;
+  const t = new Tracker('hiking', 65, () => clock);
+  [100, 100.5, 101, 101.5].forEach((alt, i) => {
+    t.addPoint(P(30 + i * 0.0002, 120, alt));
+    clock += 5000;
+  });
+  t.pause();
+  clock += 60000;
+  t.resume();
+  // 恢复后首个点（pauseGap）：暂停期间漂移 +30m，应重置爬升状态而非计入
+  t.addPoint(P(30 + 4 * 0.0002, 120, 131.5));
+  clock += 5000;
+  t.addPoint(P(30 + 5 * 0.0002, 120, 132));
+  clock += 5000;
+  t.addPoint(P(30 + 6 * 0.0002, 120, 132.5));
+  assert.ok(t.getStats().elevationGain < 1, `暂停漂移不应计入，实际 ${t.getStats().elevationGain}`);
+});
+
+test('爬升：restoreFromPoints 重放与实时累计一致', () => {
+  let clock = 0;
+  const t = new Tracker('hiking', 65, () => clock);
+  const alts = [100, 105, 102, 107, 104, 109, 106, 111, 108, 113, 110];
+  alts.forEach((alt, i) => {
+    t.addPoint(P(30 + i * 0.0002, 120, alt));
+    clock += 5000;
+  });
+  const live = t.getStats().elevationGain;
+  const t2 = new Tracker('hiking', 65, () => clock);
+  t2.restoreFromPoints(
+    t.points.map((p) => ({ seq: p.seq, lat: p.lat, lng: p.lng, altitude: p.altitude, timestamp: p.timestamp, pauseGap: !!p.pauseGap })),
+    [],
+    clock,
+    0,
+  );
+  assert.equal(t2.getStats().elevationGain, live, `重放 ${t2.getStats().elevationGain} ≠ 实时 ${live}`);
 });
 
 test('配速：距离过短（<200m）不展示（显示 —）', () => {
