@@ -36,15 +36,68 @@ const GENDER_ICONS = {
   2: '/assets/icons/gender-female.png',
 };
 
-/** 行数据装饰：性别图标 + 前三名奖牌图标（共用 TOP10 与我的排名卡） */
+/** 本榜最佳指标：key → 展示名（顺序后端定，前端只负责文案与格式化） */
+const BEST_LABELS = {
+  farthest: '最长距离',
+  longest: '最长时间',
+  fastestKm: '最快配速',
+  fastestAvg: '最快均速',
+  maxClimb: '最大爬升',
+};
+
+/** 秒 → mm:ss / h:mm:ss */
+function fmtDur(sec) {
+  const s = Math.max(0, Math.round(sec || 0));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const p = (n) => String(n).padStart(2, '0');
+  return h > 0 ? `${h}:${p(m)}:${p(s % 60)}` : `${p(m)}:${p(s % 60)}`;
+}
+
+/** 本榜最佳值格式化：key 决定单位语义（后端只回原始值：米/秒） */
+function fmtBestValue(key, v) {
+  if (v == null) return '';
+  if (key === 'farthest') return `${(v / 1000).toFixed(2)} km`;
+  if (key === 'longest') return fmtDur(v);
+  if (key === 'fastestKm') {
+    // 秒/公里 → 分'秒"
+    const m = Math.floor(v / 60);
+    const s = Math.round(v - m * 60);
+    return `${m}'${String(s).padStart(2, '0')}"`;
+  }
+  if (key === 'fastestAvg') return `${(3600 / v).toFixed(1)} km/h`; // 秒/公里 → km/h
+  if (key === 'maxClimb') return `${Math.round(v)} m`;
+  return String(v);
+}
+
+/** 头像：OSS 签名 URL 优先 → 预设头像本地资源 → 昵称首字（由 WXML 兒底展示） */
+function avatarOf(r) {
+  return {
+    avatarSrc: r.avatarUrl || (r.avatarPreset ? `/assets/avatars/${r.avatarPreset}.png` : ''),
+    avatarText: (r.name || '迹')[0],
+  };
+}
+
+/** 行数据装饰：性别图标 + 前三名奖牌图标 + 头像（共用 TOP10 / 本榜最佳 / 我的排名卡） */
 function decorateRows(board) {
   if (!board) return board;
   const deco = (r) => ({
     ...r,
     genderIcon: GENDER_ICONS[r.gender] || GENDER_ICONS[0],
     medalIcon: r.rank <= 3 ? `/assets/icons/rank-medal-${r.rank}.png` : '',
+    ...avatarOf(r),
   });
-  return { ...board, top: (board.top || []).map(deco), me: board.me ? deco(board.me) : null };
+  return {
+    ...board,
+    top: (board.top || []).map(deco),
+    me: board.me ? deco(board.me) : null,
+    best: (board.best || []).map((b) => ({
+      ...b,
+      label: BEST_LABELS[b.key] || b.key,
+      valueText: fmtBestValue(b.key, b.value),
+      ...avatarOf(b),
+    })),
+  };
 }
 
 /** 榜单周期 */
@@ -65,9 +118,9 @@ Page({
     totalUsers: 0,
     // 排行
     periods: PERIODS,
-    periodIndex: 3, // 默认总榜
+    periodIndex: 0, // 默认周榜
     types: ACTIVITY_TYPES,
-    typeIndex: 1, // 默认跑步（config 顺序：0散步 1跑步）
+    typeIndex: 0, // 默认散步（config 顺序：0散步 1跑步）
     provinceOptions: ['全国'],
     provinceIndex: 0,
     board: null, // { players, top, me }

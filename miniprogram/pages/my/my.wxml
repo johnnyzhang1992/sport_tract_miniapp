@@ -82,5 +82,5 @@
     </t-cell>
   </t-cell-group>
 
-  <view class="text-muted version-tip">小迹一下 v1.0 @小小梦工场</view>
+  <view class="text-muted version-tip">小迹一下 @小小梦工场</view>
 </view>
