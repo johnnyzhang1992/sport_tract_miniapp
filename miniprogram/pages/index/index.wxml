@@ -60,6 +60,17 @@
     </view>
   </view>
 
+  <!-- 运动榜入口卡片（全国点亮 + 我的排名摘要） -->
+  <view class="card lb-card" hover-class="card-hover" hover-stay-time="80" bindtap="goLeaderboard">
+    <image class="lb-icon" src="/assets/icons/tab-rank-blue.png" mode="aspectFit" />
+    <view class="lb-body">
+      <view class="lb-title">运动榜</view>
+      <view class="lb-sub text-muted" wx:if="{{lbSummary}}">全国 {{lbSummary.totalUsers}} 位迹路者{{lbSummary.meText}}</view>
+      <view class="lb-sub text-muted" wx:else>看看全国的迹路者都在哪运动</view>
+    </view>
+    <view class="lb-arrow">›</view>
+  </view>
+
   <!-- 运动类型选择 -->
   <view class="card">
     <view class="section-title">运动类型</view>

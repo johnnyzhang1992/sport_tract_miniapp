@@ -1,0 +1,116 @@
+<view class="page">
+  <!-- 游客提示 -->
+  <view class="login-hint" wx:if="{{!loggedIn && !loading}}">
+    <image class="login-hint-icon" src="/assets/icons/tab-rank-gray.png" mode="aspectFit" />
+    <view class="login-hint-text">登录后查看全国运动榜，看看其他迹路者都在哪运动</view>
+    <button class="login-hint-btn" bindtap="guestLogin">去登录</button>
+  </view>
+
+  <block wx:if="{{loggedIn}}">
+    <!-- 全国点亮地图 -->
+    <view class="card map-card">
+      <view class="card-head">
+        <view class="card-title">全国点亮地图</view>
+        <view class="card-sub">{{provinceCount}} 个省份 · {{totalUsers}} 位迹路者</view>
+      </view>
+      <view class="map-loading" wx:if="{{loading}}">加载中…</view>
+      <canvas
+        type="2d"
+        id="chinaMap"
+        class="china-map"
+        bindtap="onChinaMapTap"
+      ></canvas>
+      <view class="map-tip">点击省份查看城市点亮 · {{cityCount}} 个城市已点亮</view>
+    </view>
+
+    <!-- 排行榜 -->
+    <view class="card rank-card">
+      <view class="card-head">
+        <view class="card-title">运动排行</view>
+        <picker
+          class="province-picker"
+          mode="selector"
+          range="{{provinceOptions}}"
+          value="{{provinceIndex}}"
+          bindchange="onProvinceChange"
+        >
+          <view class="picker-value">{{provinceOptions[provinceIndex] || '全国'}} ▾</view>
+        </picker>
+      </view>
+
+      <!-- 运动类型 chips（与首页同款图标） -->
+      <scroll-view class="type-scroll" scroll-x enable-flex="{{false}}">
+        <view class="type-row">
+          <view
+            wx:for="{{types}}"
+            wx:key="type"
+            class="type-chip {{index === typeIndex ? 'active' : ''}}"
+            data-index="{{index}}"
+            bindtap="onTypeTap"
+          >
+            <image class="type-chip-img {{index === typeIndex ? '' : 'gray'}}" src="{{item.iconImg}}" mode="aspectFit" />
+            <text>{{item.label}}</text>
+          </view>
+        </view>
+      </scroll-view>
+
+      <!-- TOP10 -->
+      <view class="rank-list" wx:if="{{board && board.top.length > 0}}">
+        <view class="rank-row" wx:for="{{board.top}}" wx:key="rank">
+          <view class="rank-no">
+            <image wx:if="{{item.medalIcon}}" class="medal-img" src="{{item.medalIcon}}" mode="aspectFit" />
+            <text wx:else>{{item.rank}}</text>
+          </view>
+          <view class="rank-name-wrap">
+            <text class="rank-name">{{item.name}}</text>
+            <image class="gender-img" src="{{item.genderIcon}}" mode="aspectFit" />
+          </view>
+          <view class="rank-meta">{{item.count}} 条</view>
+          <view class="rank-dist">{{item.distanceKm}} km</view>
+        </view>
+      </view>
+      <view class="rank-empty" wx:if="{{board && board.top.length === 0}}">
+        {{provinceOptions[provinceIndex]}}还没有{{types[typeIndex].label}}轨迹，快来抢占第一名的位置！
+      </view>
+    </view>
+
+    <!-- 我的排名：固定在页面底部区域（入榜也展示；1-3 名显示奖牌图标） -->
+    <view class="me-card" wx:if="{{board && board.me}}">
+      <image wx:if="{{board.me.medalIcon}}" class="me-medal" src="{{board.me.medalIcon}}" mode="aspectFit" />
+      <view wx:else class="me-rank-no">{{board.me.rank}}</view>
+      <view class="me-body">
+        <view class="me-name-wrap">
+          <text class="me-name">{{board.me.name}}</text>
+          <image class="gender-img" src="{{board.me.genderIcon}}" mode="aspectFit" />
+        </view>
+        <view class="me-sub">我的{{types[typeIndex].label}}排名 · {{provinceOptions[provinceIndex]}}</view>
+      </view>
+      <view class="me-stats">
+        <view class="me-dist">{{board.me.distanceKm}} km</view>
+        <view class="me-count">{{board.me.count}} 条轨迹</view>
+      </view>
+    </view>
+    <view class="me-card empty" wx:if="{{board && !board.me}}">
+      <view class="me-hint">完成一条{{types[typeIndex].label}}轨迹，就能上榜啦</view>
+    </view>
+  </block>
+
+  <!-- 省份下钻弹窗：城市地图 + 点亮列表 -->
+  <view class="modal-mask" wx:if="{{provinceModal}}" bindtap="closeProvinceModal">
+    <view class="modal-box" catchtap="noop">
+      <view class="modal-head">
+        <view class="modal-title">{{provinceModalName}} · 城市点亮</view>
+        <view class="modal-close" bindtap="closeProvinceModal">✕</view>
+      </view>
+      <canvas type="2d" id="provMap" class="prov-map"></canvas>
+      <view class="city-scroll">
+        <view class="city-row" wx:for="{{provinceCities}}" wx:key="name">
+          <view class="city-name">{{item.name}}</view>
+          <view class="city-meta">{{item.count}} 条 · {{item.users}} 人</view>
+        </view>
+        <view class="city-empty" wx:if="{{provinceCities.length === 0}}">该省还没有点亮的城市</view>
+      </view>
+      <button class="modal-btn" bindtap="rankThisProvince">看{{provinceModalName}}排行榜</button>
+    </view>
+  </view>
+</view>

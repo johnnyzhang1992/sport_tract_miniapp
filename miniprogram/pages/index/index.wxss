@@ -168,3 +168,33 @@
   height: 18rpx;
   border-radius: 4rpx;
 }
+
+/* 运动榜入口卡片 */
+.lb-card {
+  display: flex;
+  align-items: center;
+  gap: 18rpx;
+}
+.lb-icon {
+  width: 52rpx;
+  height: 52rpx;
+  flex-shrink: 0;
+}
+.lb-body {
+  flex: 1;
+  min-width: 0;
+}
+.lb-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+.lb-sub {
+  font-size: 22rpx;
+  margin-top: 2rpx;
+}
+.lb-arrow {
+  font-size: 36rpx;
+  color: #c8d0dc;
+  flex-shrink: 0;
+}
