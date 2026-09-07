@@ -47,6 +47,14 @@ function decorateRows(board) {
   return { ...board, top: (board.top || []).map(deco), me: board.me ? deco(board.me) : null };
 }
 
+/** 榜单周期 */
+const PERIODS = [
+  { key: 'week', label: '周榜' },
+  { key: 'month', label: '月榜' },
+  { key: 'year', label: '年榜' },
+  { key: 'all', label: '总榜' },
+];
+
 Page({
   data: {
     loggedIn: false,
@@ -56,6 +64,8 @@ Page({
     cityCount: 0,
     totalUsers: 0,
     // 排行
+    periods: PERIODS,
+    periodIndex: 3, // 默认总榜
     types: ACTIVITY_TYPES,
     typeIndex: 1, // 默认跑步（config 顺序：0散步 1跑步）
     provinceOptions: ['全国'],
@@ -92,7 +102,7 @@ Page({
       const api = app.globalData.api;
       const [regions, boardRaw] = await Promise.all([
         api.get('/stats/leaderboard-regions'),
-        api.get(`/stats/leaderboard?type=${this.curType()}&province=${encodeURIComponent(this.curProvince())}`),
+        api.get(`/stats/leaderboard?type=${this.curType()}&province=${encodeURIComponent(this.curProvince())}&period=${this.curPeriod()}`),
       ]);
       const board = decorateRows(boardRaw);
       this._regions = regions;
@@ -121,6 +131,12 @@ Page({
   },
   curProvince() {
     return this.data.provinceOptions[this.data.provinceIndex] || '全国';
+  },
+  curPeriod() {
+    return this.data.periods[this.data.periodIndex].key;
+  },
+  periodLabel() {
+    return this.data.periods[this.data.periodIndex].label;
   },
 
   async ensureChinaMap() {
@@ -235,6 +251,13 @@ Page({
     wx.pageScrollTo({ selector: '.rank-card', duration: 300 });
   },
 
+  onPeriodTap(e) {
+    const index = Number(e.currentTarget.dataset.index);
+    if (index === this.data.periodIndex) return;
+    this.setData({ periodIndex: index });
+    this.fetchBoard();
+  },
+
   onTypeTap(e) {
     const index = Number(e.currentTarget.dataset.index);
     if (index === this.data.typeIndex) return;
@@ -251,7 +274,7 @@ Page({
     try {
       const board = decorateRows(
         await getApp().globalData.api.get(
-          `/stats/leaderboard?type=${this.curType()}&province=${encodeURIComponent(this.curProvince())}`,
+          `/stats/leaderboard?type=${this.curType()}&province=${encodeURIComponent(this.curProvince())}&period=${this.curPeriod()}`,
         ),
       );
       this.setData({ board });

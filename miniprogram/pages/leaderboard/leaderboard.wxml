@@ -38,6 +38,17 @@
         </picker>
       </view>
 
+      <!-- 榜单周期：周榜/月榜/年榜/总榜 -->
+      <view class="period-row">
+        <view
+          wx:for="{{periods}}"
+          wx:key="key"
+          class="period-seg {{index === periodIndex ? 'active' : ''}}"
+          data-index="{{index}}"
+          bindtap="onPeriodTap"
+        >{{item.label}}</view>
+      </view>
+
       <!-- 运动类型 chips（与首页同款图标） -->
       <scroll-view class="type-scroll" scroll-x enable-flex="{{false}}">
         <view class="type-row">
@@ -70,7 +81,7 @@
         </view>
       </view>
       <view class="rank-empty" wx:if="{{board && board.top.length === 0}}">
-        {{provinceOptions[provinceIndex]}}还没有{{types[typeIndex].label}}轨迹，快来抢占第一名的位置！
+        {{periods[periodIndex].label}}{{provinceIndex > 0 ? ' · ' + provinceOptions[provinceIndex] : ''}}还没有{{types[typeIndex].label}}轨迹，快来抢占第一名的位置！
       </view>
     </view>
 
@@ -83,7 +94,7 @@
           <text class="me-name">{{board.me.name}}</text>
           <image class="gender-img" src="{{board.me.genderIcon}}" mode="aspectFit" />
         </view>
-        <view class="me-sub">我的{{types[typeIndex].label}}排名 · {{provinceOptions[provinceIndex]}}</view>
+        <view class="me-sub">我的{{types[typeIndex].label}} · {{periods[periodIndex].label}} · {{provinceOptions[provinceIndex]}}</view>
       </view>
       <view class="me-stats">
         <view class="me-dist">{{board.me.distanceKm}} km</view>
