@@ -147,6 +147,23 @@
   width: 44rpx;
   height: 44rpx;
 }
+.rank-avatar {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 50%;
+  margin: 0 14rpx 0 6rpx;
+  flex-shrink: 0;
+  background: #f2f3f5;
+}
+.rank-avatar-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #fff;
+  background: #b8c4d9;
+}
 .rank-name-wrap {
   flex: 1;
   display: flex;
@@ -178,6 +195,63 @@
   color: #1f2329;
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
+}
+
+/* 本榜最佳：当前筛选下的单项纪录 */
+.best-row {
+  display: flex;
+  gap: 16rpx;
+  margin: 8rpx 0 16rpx;
+}
+.best-item {
+  flex: 1;
+  min-width: 0;
+  background: #f7f9fd;
+  border-radius: 14rpx;
+  padding: 16rpx;
+}
+.best-label {
+  font-size: 20rpx;
+  color: #8a93a6;
+}
+.best-value {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #1f2329;
+  margin-top: 4rpx;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.best-owner {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  margin-top: 10rpx;
+  min-width: 0;
+}
+.best-avatar {
+  width: 32rpx;
+  height: 32rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: #e8edf5;
+}
+.best-avatar-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18rpx;
+  color: #fff;
+  background: #b8c4d9;
+}
+.best-name {
+  font-size: 20rpx;
+  color: #8a93a6;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* 我的排名卡：通栏贴底（边缘 0），与边的距离用内边距体现 */
@@ -213,6 +287,22 @@
   text-align: center;
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
+}
+.me-avatar {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.3);
+}
+.me-avatar-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.28);
 }
 .me-body {
   flex: 1;
@@ -259,6 +349,10 @@
 .me-hint {
   font-size: 24rpx;
   color: #8a93a6;
+}
+/* TOP10 列表：约 5 行的最小高度，入榜人数少时不显拥挤 */
+.rank-list {
+  min-height: 460rpx;
 }
 .rank-empty {
   text-align: center;

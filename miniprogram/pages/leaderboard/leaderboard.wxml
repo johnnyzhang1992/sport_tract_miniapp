@@ -65,6 +65,19 @@
         </view>
       </scroll-view>
 
+      <!-- 本榜最佳：当前 类型/省份/周期 筛选下的单项纪录 -->
+      <view class="best-row" wx:if="{{board && board.best.length > 0}}">
+        <view class="best-item" wx:for="{{board.best}}" wx:key="key">
+          <view class="best-label">{{item.label}}</view>
+          <view class="best-value">{{item.valueText}}</view>
+          <view class="best-owner">
+            <image wx:if="{{item.avatarSrc}}" class="best-avatar" src="{{item.avatarSrc}}" mode="aspectFill" />
+            <view wx:else class="best-avatar best-avatar-text">{{item.avatarText}}</view>
+            <text class="best-name">{{item.name}}</text>
+          </view>
+        </view>
+      </view>
+
       <!-- TOP10 -->
       <view class="rank-list" wx:if="{{board && board.top.length > 0}}">
         <view class="rank-row" wx:for="{{board.top}}" wx:key="rank">
@@ -72,6 +85,8 @@
             <image wx:if="{{item.medalIcon}}" class="medal-img" src="{{item.medalIcon}}" mode="aspectFit" />
             <text wx:else>{{item.rank}}</text>
           </view>
+          <image wx:if="{{item.avatarSrc}}" class="rank-avatar" src="{{item.avatarSrc}}" mode="aspectFill" />
+          <view wx:else class="rank-avatar rank-avatar-text">{{item.avatarText}}</view>
           <view class="rank-name-wrap">
             <text class="rank-name">{{item.name}}</text>
             <image class="gender-img" src="{{item.genderIcon}}" mode="aspectFit" />
@@ -89,6 +104,8 @@
     <view class="me-card" wx:if="{{board && board.me}}">
       <image wx:if="{{board.me.medalIcon}}" class="me-medal" src="{{board.me.medalIcon}}" mode="aspectFit" />
       <view wx:else class="me-rank-no">{{board.me.rank}}</view>
+      <image wx:if="{{board.me.avatarSrc}}" class="me-avatar" src="{{board.me.avatarSrc}}" mode="aspectFill" />
+      <view wx:else class="me-avatar me-avatar-text">{{board.me.avatarText}}</view>
       <view class="me-body">
         <view class="me-name-wrap">
           <text class="me-name">{{board.me.name}}</text>
