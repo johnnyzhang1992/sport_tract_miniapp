@@ -14,13 +14,21 @@
         <view class="card-sub">{{provinceCount}} 个省份 · {{totalUsers}} 位迹路者</view>
       </view>
       <view class="map-loading" wx:if="{{loading}}">加载中…</view>
-      <canvas
-        type="2d"
-        id="chinaMap"
-        class="china-map"
-        bindtap="onChinaMapTap"
-      ></canvas>
-      <view class="map-tip">点击省份查看城市点亮 · {{cityCount}} 个城市已点亮</view>
+      <view class="map-wrap">
+        <canvas
+          type="2d"
+          id="chinaMap"
+          class="china-map"
+          data-map="china"
+          bindtap="onMapTap"
+          bindtouchstart="onMapTouchStart"
+          catchtouchmove="onMapTouchMove"
+          bindtouchend="onMapTouchEnd"
+          bindtouchcancel="onMapTouchEnd"
+        ></canvas>
+        <view class="map-reset" wx:if="{{mapScaled}}" catchtap="resetMapView">重置地图</view>
+      </view>
+      <view class="map-tip">单指拖动 · 双指缩放 · 点击省份查看{{cityCount}}个点亮城市</view>
     </view>
 
     <!-- 排行榜 -->
@@ -130,7 +138,16 @@
         <view class="modal-title">{{provinceModalName}} · 城市点亮</view>
         <view class="modal-close" bindtap="closeProvinceModal">✕</view>
       </view>
-      <canvas type="2d" id="provMap" class="prov-map"></canvas>
+      <canvas
+        type="2d"
+        id="provMap"
+        class="prov-map"
+        data-map="prov"
+        bindtouchstart="onMapTouchStart"
+        catchtouchmove="onMapTouchMove"
+        bindtouchend="onMapTouchEnd"
+        bindtouchcancel="onMapTouchEnd"
+      ></canvas>
       <view class="city-scroll">
         <view class="city-row" wx:for="{{provinceCities}}" wx:key="name">
           <view class="city-name">{{item.name}}</view>

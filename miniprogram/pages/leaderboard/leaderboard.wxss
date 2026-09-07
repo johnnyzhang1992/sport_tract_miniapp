@@ -34,9 +34,24 @@
 .map-card {
   padding-bottom: 16rpx;
 }
+.map-wrap {
+  position: relative;
+}
 .china-map {
   width: 100%;
   height: 640rpx;
+}
+.map-reset {
+  position: absolute;
+  right: 16rpx;
+  bottom: 16rpx;
+  padding: 8rpx 22rpx;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1rpx solid #dfe3ea;
+  border-radius: 999rpx;
+  font-size: 22rpx;
+  color: #4b5568;
+  box-shadow: 0 2rpx 8rpx rgba(30, 40, 60, 0.08);
 }
 .map-loading {
   position: absolute;
