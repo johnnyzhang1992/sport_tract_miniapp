@@ -105,7 +105,7 @@ Page({
     if (!this.kmAnnounceEnabled()) return;
     wx.vibrateShort({ type: 'heavy', fail: () => wx.vibrateShort({}) });
     wx.showToast({
-      title: `第 ${info.km} 公里 · 分段 ${this.fmtDur(info.splitSec)} · 累计 ${this.fmtDur(info.totalSec)}`,
+      title: `第 ${info.km} 公里 · 分段 ${this.fmtDur(info.splitSec)}`,
       icon: 'none',
       duration: 3000,
     });
