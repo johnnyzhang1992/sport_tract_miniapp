@@ -2,6 +2,7 @@
   "pages": [
     "pages/index/index",
     "pages/tracks/tracks",
+    "pages/leaderboard/leaderboard",
     "pages/my/my",
     "pages/record/record",
     "pages/summary/summary",

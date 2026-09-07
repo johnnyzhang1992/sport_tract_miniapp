@@ -31,6 +31,7 @@ Page({
     notLoggedIn: false, // 游客态：展示登录引导
     loading: false,
     ongoingActivity: null, // 进行中（已暂停）运动入口
+    lbSummary: null, // 运动榜摘要（卡片副标题）
   },
 
   onLoad() {
@@ -40,6 +41,7 @@ Page({
   onShow() {
     this.applyDefaultType();
     this.loadOverview();
+    this.loadLeaderboardSummary();
     this.checkOngoing();
   },
 
@@ -68,15 +70,41 @@ Page({
     });
   },
 
-  /** 检查是否有“退出页面暂停”的运动，首页显示继续入口 */
+  /** 检查是否有“退出页面暂停”的运动，首页显示继续入口（超过 24h 不再展示并清理本地标记） */
   checkOngoing() {
     const ongoing = wx.getStorageSync('ongoingActivity');
-    this.setData({ ongoingActivity: ongoing || null });
+    let show = ongoing || null;
+    if (ongoing && ongoing.startTime && Date.now() - ongoing.startTime > 24 * 3600 * 1000) {
+      wx.removeStorageSync('ongoingActivity');
+      show = null;
+    }
+    this.setData({ ongoingActivity: show });
   },
 
   /** 未登录提示条 → 个人中心（tab 页用 switchTab） */
   goLogin() {
     wx.switchTab({ url: '/pages/my/my' });
+  },
+
+  /** 运动榜入口卡片 → 榜单页 */
+  goLeaderboard() {
+    wx.navigateTo({ url: '/pages/leaderboard/leaderboard' });
+  },
+
+  /** 运动榜摘要（卡片副标题）：全国点亮人数 + 我的跑步全国名次（失败静默） */
+  async loadLeaderboardSummary() {
+    if (this.data.notLoggedIn) return;
+    try {
+      const api = getApp().globalData.api;
+      const [regions, board] = await Promise.all([
+        api.get('/stats/leaderboard-regions'),
+        api.get('/stats/leaderboard?type=running&province=%E5%85%A8%E5%9B%BD'),
+      ]);
+      const meText = board.me ? `，我的跑步排第 ${board.me.rank} 名` : '';
+      this.setData({ lbSummary: { totalUsers: regions.totalUsers, meText } });
+    } catch (e) {
+      // 静默：卡片仍展示默认文案
+    }
   },
 
   /** 点击"继续运动"入口 → 回记录页（让用户选择继续/重新开始） */
