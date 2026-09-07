@@ -1,6 +1,7 @@
 /**
  * 运动榜（新 tab）：全平台点亮地图 + 按运动类型/省份排行
  * - 地图：canvas 2d 直绘 GeoJSON（utils/map-draw），点亮省按轨迹数上色，点击省份弹窗下钻城市
+ *   支持单指拖拽平移、双指捏合缩放（主图与省份弹窗地图均可），缩放后出现"重置地图"
  * - 排行：类型 chips + 省份选择，TOP10 昵称模糊（服务端处理，不可点击），底部当前用户真实排名
  */
 const drawGeoMap = require('../../utils/map-draw');
@@ -19,6 +20,15 @@ const PROVINCE_TO_CODE = {
   '青海省': '630000', '宁夏回族自治区': '640000', '新疆维吾尔自治区': '650000',
   '台湾省': '710000', '香港特别行政区': '810000', '澳门特别行政区': '820000',
 };
+
+/** 地图缩放上限 */
+const MAX_MAP_SCALE = 8;
+
+/** 平移偏移限幅：地图中心始终留在画布内（scale=1 时不可平移） */
+function clampOffset(v, scale, size) {
+  const lim = ((scale - 1) / 2) * size;
+  return Math.max(-lim, Math.min(lim, v));
+}
 
 /** 轨迹数 → 点亮色深浅（浅蓝 → 品牌蓝） */
 function heatColor(count, max) {
@@ -124,6 +134,7 @@ Page({
     provinceOptions: ['全国'],
     provinceIndex: 0,
     board: null, // { players, top, me }
+    mapScaled: false, // 主图处于缩放/平移状态（展示"重置地图"按钮）
     // 省份弹窗
     provinceModal: false,
     provinceModalName: '',
@@ -134,6 +145,13 @@ Page({
   onLoad() {
     this._chinaMap = null;
     this._provinceMaps = {};
+    // 地图手势状态：每张图的视图变换 + 触摸轨迹 + 合帧重绘标记
+    this._views = {
+      china: { scale: 1, offsetX: 0, offsetY: 0 },
+      prov: { scale: 1, offsetX: 0, offsetY: 0 },
+    };
+    this._gestures = {};
+    this._renderPending = {};
     this.refresh();
   },
 
@@ -203,46 +221,178 @@ Page({
     }
   },
 
-  /** 主图：全国点亮状态（所有用户） */
-  drawChinaMap() {
+  /** 查询 canvas 节点并缓存渲染环境（尺寸/dpr/ctx/投影缓存），china 与 prov 各一份 */
+  bindMapCanvas(key, selector) {
     return new Promise((resolve) => {
       this.createSelectorQuery()
-        .select('#chinaMap')
+        .select(selector)
         .fields({ node: true, size: true, rect: true })
         .exec((res) => {
-          if (!res || !res[0] || !res[0].node || !this._regions || !this._chinaMap) {
-            resolve(null);
-            return;
-          }
+          if (!res || !res[0] || !res[0].node) { resolve(null); return; }
           const canvas = res[0].node;
           const dpr = (wx.getWindowInfo ? wx.getWindowInfo().pixelRatio : 2) || 2;
           canvas.width = res[0].width * dpr;
           canvas.height = res[0].height * dpr;
-          const ctx = canvas.getContext('2d');
-          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-          const byName = {};
-          this._regions.provinces.forEach((p) => { byName[p.name] = p.count; });
-          const max = Math.max(...this._regions.provinces.map((p) => p.count), 1);
-          const tester = drawGeoMap(ctx, res[0].width, res[0].height, {
-            geojson: this._chinaMap,
-            valueOf: (name) => byName[name],
-            colorFor: (name, v) => heatColor(v, max),
-          });
-          this._chinaRect = { left: res[0].left, top: res[0].top };
-          this._chinaTester = tester;
-          resolve(tester);
+          const rt = {
+            canvas,
+            dpr,
+            ctx: canvas.getContext('2d'),
+            width: res[0].width,
+            height: res[0].height,
+            left: res[0].left, // 画布视口位置：触摸坐标 → 画布坐标
+            top: res[0].top,
+            cache: {}, // 投影结果缓存（传给 drawGeoMap）
+            geo: null,
+            layer: null, // { valueOf, colorFor }
+            unlitColor: key === 'prov' ? '#ececec' : undefined,
+            tester: null,
+          };
+          if (key === 'china') this._chinaRt = rt;
+          else this._provRt = rt;
+          resolve(rt);
         });
     });
   },
 
-  onChinaMapTap(e) {
-    if (!this._chinaTester || !this._chinaRect) return;
+  mapRt(key) {
+    return key === 'china' ? this._chinaRt : this._provRt;
+  },
+
+  /** 按当前视图（缩放/平移）重绘地图 */
+  renderMap(key) {
+    const rt = this.mapRt(key);
+    if (!rt || !rt.ctx || !rt.geo || !rt.layer) return;
+    rt.ctx.setTransform(rt.dpr, 0, 0, rt.dpr, 0, 0);
+    rt.tester = drawGeoMap(rt.ctx, rt.width, rt.height, {
+      geojson: rt.geo,
+      valueOf: rt.layer.valueOf,
+      colorFor: rt.layer.colorFor,
+      unlitColor: rt.unlitColor,
+      view: this._views[key],
+      cache: rt.cache,
+    });
+  },
+
+  /** 手势期间把重绘合并到每一帧，避免 touchmove 高频重绘掉帧 */
+  scheduleMapRender(key) {
+    const rt = this.mapRt(key);
+    if (!rt || this._renderPending[key]) return;
+    this._renderPending[key] = true;
+    const run = () => {
+      this._renderPending[key] = false;
+      this.renderMap(key);
+    };
+    if (rt.canvas.requestAnimationFrame) rt.canvas.requestAnimationFrame(run);
+    else setTimeout(run, 16);
+  },
+
+  syncMapScaled(key) {
+    if (key !== 'china') return;
+    const scaled = this._views.china.scale > 1.01;
+    if (scaled !== this.data.mapScaled) this.setData({ mapScaled: scaled });
+  },
+
+  /** 主图：全国点亮状态（所有用户） */
+  drawChinaMap() {
+    if (!this._regions || !this._chinaMap) return Promise.resolve(null);
+    const ready = this._chinaRt ? Promise.resolve(this._chinaRt) : this.bindMapCanvas('china', '#chinaMap');
+    return ready.then((rt) => {
+      if (!rt) return null;
+      const byName = {};
+      this._regions.provinces.forEach((p) => { byName[p.name] = p.count; });
+      const max = Math.max(...this._regions.provinces.map((p) => p.count), 1);
+      rt.geo = this._chinaMap;
+      rt.layer = {
+        valueOf: (name) => byName[name],
+        colorFor: (name, v) => heatColor(v, max),
+      };
+      this.renderMap('china');
+      return rt.tester;
+    });
+  },
+
+  // ---------- 地图手势：单指拖拽平移 / 双指捏合缩放 ----------
+
+  onMapTouchStart(e) {
+    const key = e.currentTarget.dataset.map;
+    if (!key) return;
+    this._gestures[key] = {
+      touches: e.touches.map((t) => ({ x: t.clientX, y: t.clientY })),
+      dist: 0, // 单指累计位移，超过阈值视为拖拽（抑制随后的 tap）
+    };
+  },
+
+  onMapTouchMove(e) {
+    const key = e.currentTarget.dataset.map;
+    const g = this._gestures[key];
+    const rt = this.mapRt(key);
+    if (!g || !rt) return;
+    const ts = e.touches.map((t) => ({ x: t.clientX, y: t.clientY }));
+    const prev = g.touches;
+    const view = this._views[key];
+    let changed = false;
+
+    if (ts.length >= 2 && prev.length >= 2) {
+      // 双指捏合：以双指中点为锚缩放，并跟随中点位移（坐标统一到画布系）
+      const d0 = Math.max(Math.hypot(prev[0].x - prev[1].x, prev[0].y - prev[1].y), 1);
+      const d1 = Math.hypot(ts[0].x - ts[1].x, ts[0].y - ts[1].y);
+      const scale = Math.min(MAX_MAP_SCALE, Math.max(1, view.scale * (d1 / d0)));
+      const k = scale / view.scale;
+      const ax = (prev[0].x + prev[1].x) / 2 - rt.left;
+      const ay = (prev[0].y + prev[1].y) / 2 - rt.top;
+      const dx = (ts[0].x + ts[1].x) / 2 - (prev[0].x + prev[1].x) / 2;
+      const dy = (ts[0].y + ts[1].y) / 2 - (prev[0].y + prev[1].y) / 2;
+      view.offsetX = clampOffset(ax + dx - (ax - view.offsetX) * k, scale, rt.width);
+      view.offsetY = clampOffset(ay + dy - (ay - view.offsetY) * k, scale, rt.height);
+      view.scale = scale;
+      changed = true;
+    } else if (ts.length === 1 && prev.length === 1 && view.scale > 1) {
+      const dx = ts[0].x - prev[0].x;
+      const dy = ts[0].y - prev[0].y;
+      g.dist += Math.hypot(dx, dy);
+      if (g.dist > 6) {
+        view.offsetX = clampOffset(view.offsetX + dx, view.scale, rt.width);
+        view.offsetY = clampOffset(view.offsetY + dy, view.scale, rt.height);
+        changed = true;
+      }
+    } else if (ts.length === 1 && prev.length === 1) {
+      // 未缩放时不可平移，但仍累计位移以抑制 tap
+      g.dist += Math.hypot(ts[0].x - prev[0].x, ts[0].y - prev[0].y);
+    }
+    g.touches = ts;
+    if (changed) {
+      this.scheduleMapRender(key);
+      this.syncMapScaled(key);
+    }
+  },
+
+  onMapTouchEnd(e) {
+    const key = e.currentTarget.dataset.map;
+    const g = this._gestures[key];
+    if (!g) return;
+    if (e.touches && e.touches.length > 0) {
+      // 双指抬其一：以剩余手指为新的拖拽起点
+      g.touches = e.touches.map((t) => ({ x: t.clientX, y: t.clientY }));
+    }
+    // 保留手势记录（dist 供 tap 抑制判断），下次 touchstart 重置
+  },
+
+  onMapTap(e) {
+    const key = e.currentTarget.dataset.map;
+    const rt = this.mapRt(key);
+    const g = this._gestures[key];
+    if (!rt || !rt.tester || (g && g.dist > 6)) return; // 拖拽/缩放后不触发省份点击
     const t = e.changedTouches && e.changedTouches[0];
     if (!t) return;
     // tap 的 clientX/Y 是视口坐标，减去画布视口位置才是画布内坐标
-    const name = this._chinaTester.hitTest(t.clientX - this._chinaRect.left, t.clientY - this._chinaRect.top);
-    if (name) this.openProvinceModal(name);
+    const name = rt.tester.hitTest(t.clientX - rt.left, t.clientY - rt.top);
+    if (name && key === 'china') this.openProvinceModal(name);
+  },
+
+  resetMapView() {
+    this._views.china = { scale: 1, offsetX: 0, offsetY: 0 };
+    this.setData({ mapScaled: false });
+    this.renderMap('china');
   },
 
   /** 省份弹窗：城市地图（全平台口径）+ 城市点亮列表 */
@@ -257,30 +407,21 @@ Page({
           this._provinceMaps[code] = await getApp().globalData.api.get(`/geo/province-map?adcode=${code}`);
         }
         const geo = this._provinceMaps[code];
-        await new Promise((resolve) => {
-          this.createSelectorQuery()
-            .select('#provMap')
-            .fields({ node: true, size: true })
-            .exec((res) => {
-              if (!res || !res[0] || !res[0].node) { resolve(); return; }
-              const canvas = res[0].node;
-              const dpr = (wx.getWindowInfo ? wx.getWindowInfo().pixelRatio : 2) || 2;
-              canvas.width = res[0].width * dpr;
-              canvas.height = res[0].height * dpr;
-              const ctx = canvas.getContext('2d');
-              ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-              const byName = {};
-              cities.forEach((c) => { byName[c.name] = c.count; });
-              const max = Math.max(...cities.map((c) => c.count), 1);
-              drawGeoMap(ctx, res[0].width, res[0].height, {
-                geojson: geo,
-                valueOf: (n) => byName[n],
-                colorFor: (n, v) => heatColor(v, max),
-                unlitColor: '#ececec',
-              });
-              resolve();
-            });
-        });
+        if (!this.data.provinceModal || this._modalProvince !== name) return; // 弹窗已关或已切省
+        // 弹窗 canvas 每次 wx:if 重建，需重新绑定并复位视图
+        this._provRt = null;
+        this._views.prov = { scale: 1, offsetX: 0, offsetY: 0 };
+        const rt = await this.bindMapCanvas('prov', '#provMap');
+        if (!rt) return;
+        const byName = {};
+        cities.forEach((c) => { byName[c.name] = c.count; });
+        const max = Math.max(...cities.map((c) => c.count), 1);
+        rt.geo = geo;
+        rt.layer = {
+          valueOf: (n) => byName[n],
+          colorFor: (n, v) => heatColor(v, max),
+        };
+        this.renderMap('prov');
       } catch (e) {
         console.error('加载省份地图失败', e);
         wx.showToast({ title: '地图加载失败', icon: 'none' });
