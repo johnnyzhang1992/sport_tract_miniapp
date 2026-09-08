@@ -20,6 +20,7 @@ Page({
     chartUnit: 'km',
     loading: true,
     best: null, // 个人最佳纪录
+    typeSummary: [], // 分类型汇总（各类型总距离/总时长/次数）
     compare: [], // 周期对比 [{label, items: [{key, val, diff}]}]
   },
 
@@ -57,6 +58,7 @@ Page({
           value: Math.round((d.distance / 1000) * 100) / 100, // 公里
         })),
         best: this.decorateBest(best),
+        typeSummary: this.decorateTypeSummary(overview.total && overview.total.byType),
         compare: this.buildCompare(decorated),
       });
       // 缓存原始 best 数据（记录页打破纪录提示用）
@@ -88,6 +90,25 @@ Page({
       prevWeek: sec(o.prevWeek),
       prevMonth: sec(o.prevMonth),
     };
+  },
+
+  /** 分类型汇总：各类型总距离/总时长/次数（后端 byType 为次数降序，这里按总距离降序展示） */
+  decorateTypeSummary(byType) {
+    const TYPE_META = require('../../config/index').ACTIVITY_TYPES || [];
+    return (byType || [])
+      .slice()
+      .sort((a, b) => (b.distance || 0) - (a.distance || 0))
+      .map((r) => {
+        const meta = TYPE_META.find((x) => x.type === r.type) || {};
+        return {
+          type: r.type,
+          typeLabel: meta.label || r.type,
+          typeIcon: meta.iconImg || '',
+          count: r.count || 0,
+          distanceKm: ((r.distance || 0) / 1000).toFixed(1),
+          durationText: formatDuration(r.duration || 0),
+        };
+      });
   },
 
   /** 周期对比行：本周vs上周 / 本月vs上月（次数/距离/时长） */

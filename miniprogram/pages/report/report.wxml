@@ -88,6 +88,28 @@
     </view>
   </view>
 
+  <!-- 分类型汇总（各类型总距离/总时长/次数） -->
+  <view class="card" wx:if="{{typeSummary.length > 0}}">
+    <view class="section-title">分类型汇总</view>
+    <view class="best-table">
+      <view class="bt-head">
+        <view class="bt-th bt-col-type">类型</view>
+        <view class="bt-th">总距离 km</view>
+        <view class="bt-th">总时长</view>
+        <view class="bt-th">次数</view>
+      </view>
+      <view class="bt-row" wx:for="{{typeSummary}}" wx:key="type">
+        <view class="bt-td bt-col-type">
+          <image class="bt-icon" src="{{item.typeIcon}}" mode="aspectFit" />
+          <text class="bt-type-label">{{item.typeLabel}}</text>
+        </view>
+        <view class="bt-td">{{item.distanceKm}}</view>
+        <view class="bt-td">{{item.durationText}}</view>
+        <view class="bt-td">{{item.count}}</view>
+      </view>
+    </view>
+  </view>
+
   <!-- 个人最佳纪录（表格） -->
   <view class="card" wx:if="{{best}}">
     <view class="section-title">个人最佳</view>
