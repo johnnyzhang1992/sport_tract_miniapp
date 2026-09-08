@@ -65,14 +65,14 @@ function periodRange(range, offset) {
   return { from: start.getTime(), to: end.getTime() };
 }
 
-/** 周期文案：周 → "8-31 - 9-6"（跨年带年份），月 → "2026年8月"，年 → "2025年" */
+/** 周期文案：周 → "0907至0913"（跨年 20251231至20260106），月 → "2026年8月"，年 → "2025年" */
 function periodLabel(range, p) {
-  const md = (d) => `${d.getMonth() + 1}-${d.getDate()}`;
+  const md = (d) => `${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
   if (range === 'week') {
     const start = new Date(p.from);
     const last = new Date(p.to - 1);
-    const yd = (d) => `${d.getFullYear()}-${md(d)}`;
-    return start.getFullYear() === last.getFullYear() ? `${md(start)} 至 ${md(last)}` : `${yd(start)} 至 ${yd(last)}`;
+    const yd = (d) => `${d.getFullYear()}${md(d)}`;
+    return start.getFullYear() === last.getFullYear() ? `${md(start)}至${md(last)}` : `${yd(start)}至${yd(last)}`;
   }
   const start = new Date(p.from);
   return range === 'month' ? `${start.getFullYear()}年${start.getMonth() + 1}月` : `${start.getFullYear()}年`;
