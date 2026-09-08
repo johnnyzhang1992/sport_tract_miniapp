@@ -315,8 +315,16 @@ Page({
       }
     }
     setTimeout(() => {
+      // 显式按整个 buffer 导出：不传尺寸时默认值各端不一致，真机上可能按逻辑尺寸截取 → 地图被裁剪
+      const node = comp.canvasNode;
       wx.canvasToTempFilePath({
-        canvas: comp.canvasNode,
+        canvas: node,
+        x: 0,
+        y: 0,
+        width: node.width,
+        height: node.height,
+        destWidth: node.width,
+        destHeight: node.height,
         fileType: 'png',
         success: (res) => {
           this._shareFilePath = res.tempFilePath;
