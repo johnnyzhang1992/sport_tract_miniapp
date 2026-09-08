@@ -5,6 +5,7 @@
  * - 排行：类型 chips + 省份选择，TOP10 昵称模糊（服务端处理，不可点击），底部当前用户真实排名
  */
 const drawGeoMap = require('../../utils/map-draw');
+const loading = require('../../utils/loading');
 
 const ACTIVITY_TYPES = require('../../config/index').ACTIVITY_TYPES;
 
@@ -135,6 +136,9 @@ Page({
     provinceIndex: 0,
     board: null, // { players, top, me }
     mapScaled: false, // 主图处于缩放/平移状态（展示"重置地图"按钮）
+    mapFullscreen: false, // 地图全屏查看
+    sharePreview: false, // 分享图预览弹窗
+    shareImageSrc: '',
     // 省份弹窗
     provinceModal: false,
     provinceModalName: '',
@@ -145,11 +149,13 @@ Page({
   onLoad() {
     this._chinaMap = null;
     this._provinceMaps = {};
-    // 地图手势状态：每张图的视图变换 + 触摸轨迹 + 合帧重绘标记
+    // 地图手势状态：每张图的视图变换 + 触摸轨迹 + 合帧重绘标记（china 主图 / prov 省份弹窗 / fs 全屏）
     this._views = {
       china: { scale: 1, offsetX: 0, offsetY: 0 },
       prov: { scale: 1, offsetX: 0, offsetY: 0 },
+      fs: { scale: 1, offsetX: 0, offsetY: 0 },
     };
+    this._mapRts = {};
     this._gestures = {};
     this._renderPending = {};
     this.refresh();
@@ -221,7 +227,7 @@ Page({
     }
   },
 
-  /** 查询 canvas 节点并缓存渲染环境（尺寸/dpr/ctx/投影缓存），china 与 prov 各一份 */
+  /** 查询 canvas 节点并缓存渲染环境（尺寸/dpr/ctx/投影缓存），china / prov / fs 各一份 */
   bindMapCanvas(key, selector) {
     return new Promise((resolve) => {
       this.createSelectorQuery()
@@ -247,15 +253,14 @@ Page({
             unlitColor: key === 'prov' ? '#ececec' : undefined,
             tester: null,
           };
-          if (key === 'china') this._chinaRt = rt;
-          else this._provRt = rt;
+          this._mapRts[key] = rt;
           resolve(rt);
         });
     });
   },
 
   mapRt(key) {
-    return key === 'china' ? this._chinaRt : this._provRt;
+    return this._mapRts ? this._mapRts[key] : null;
   },
 
   /** 按当前视图（缩放/平移）重绘地图 */
@@ -295,20 +300,25 @@ Page({
   /** 主图：全国点亮状态（所有用户） */
   drawChinaMap() {
     if (!this._regions || !this._chinaMap) return Promise.resolve(null);
-    const ready = this._chinaRt ? Promise.resolve(this._chinaRt) : this.bindMapCanvas('china', '#chinaMap');
+    const ready = this._mapRts.china ? Promise.resolve(this._mapRts.china) : this.bindMapCanvas('china', '#chinaMap');
     return ready.then((rt) => {
       if (!rt) return null;
-      const byName = {};
-      this._regions.provinces.forEach((p) => { byName[p.name] = p.count; });
-      const max = Math.max(...this._regions.provinces.map((p) => p.count), 1);
       rt.geo = this._chinaMap;
-      rt.layer = {
-        valueOf: (name) => byName[name],
-        colorFor: (name, v) => heatColor(v, max),
-      };
+      rt.layer = this._chinaLayer = this.buildChinaLayer();
       this.renderMap('china');
       return rt.tester;
     });
+  },
+
+  /** 全国点亮图层：省名 → 轨迹数上色（主图 / 全屏共用同一份） */
+  buildChinaLayer() {
+    const byName = {};
+    this._regions.provinces.forEach((p) => { byName[p.name] = p.count; });
+    const max = Math.max(...this._regions.provinces.map((p) => p.count), 1);
+    return {
+      valueOf: (name) => byName[name],
+      colorFor: (name, v) => heatColor(v, max),
+    };
   },
 
   // ---------- 地图手势：单指拖拽平移 / 双指捏合缩放 ----------
@@ -386,13 +396,143 @@ Page({
     if (!t) return;
     // tap 的 clientX/Y 是视口坐标，减去画布视口位置才是画布内坐标
     const name = rt.tester.hitTest(t.clientX - rt.left, t.clientY - rt.top);
-    if (name && key === 'china') this.openProvinceModal(name);
+    if (name && (key === 'china' || key === 'fs')) this.openProvinceModal(name);
   },
 
   resetMapView() {
     this._views.china = { scale: 1, offsetX: 0, offsetY: 0 };
     this.setData({ mapScaled: false });
     this.renderMap('china');
+  },
+
+  // ---------- 缩放按钮 / 全屏 / 分享图导出 ----------
+
+  /** 当前操作的地图：全屏时操作 fs，否则主图 */
+  activeMapKey() {
+    return this.data.mapFullscreen ? 'fs' : 'china';
+  },
+
+  /** 缩放按钮：以画布中心为锚放大/缩小（factor > 1 放大） */
+  zoomMapView(factor) {
+    const key = this.activeMapKey();
+    const rt = this.mapRt(key);
+    const view = this._views[key];
+    if (!rt || !view) return;
+    const scale = Math.min(MAX_MAP_SCALE, Math.max(1, view.scale * factor));
+    if (scale === view.scale) return;
+    const k = scale / view.scale;
+    const ax = rt.width / 2;
+    const ay = rt.height / 2;
+    view.offsetX = clampOffset(ax - (ax - view.offsetX) * k, scale, rt.width);
+    view.offsetY = clampOffset(ay - (ay - view.offsetY) * k, scale, rt.height);
+    view.scale = scale;
+    this.scheduleMapRender(key);
+    this.syncMapScaled(key);
+  },
+
+  zoomMapViewIn() {
+    this.zoomMapView(1.3);
+  },
+
+  zoomMapViewOut() {
+    this.zoomMapView(1 / 1.3);
+  },
+
+  /** 全屏查看：复用渲染管线，专用 canvas（data-map="fs"）+ 独立视图 */
+  openMapFullscreen() {
+    if (this.data.mapFullscreen) return;
+    if (!this._chinaMap || !this._chinaLayer) {
+      wx.showToast({ title: '地图尚未就绪', icon: 'none' });
+      return;
+    }
+    this.setData({ mapFullscreen: true }, async () => {
+      // 全屏 canvas 每次 wx:if 重建：重新绑定并复位视图
+      this._mapRts.fs = null;
+      this._views.fs = { scale: 1, offsetX: 0, offsetY: 0 };
+      const rt = await this.bindMapCanvas('fs', '#fsMap');
+      if (!rt || !this.data.mapFullscreen) return;
+      rt.geo = this._chinaMap;
+      rt.layer = this._chinaLayer;
+      this.renderMap('fs');
+    });
+  },
+
+  closeMapFullscreen() {
+    this.setData({ mapFullscreen: false });
+    this._mapRts.fs = null; // 全屏 canvas 销毁，下次打开重新绑定
+  },
+
+  /** 分享图导出：当前画布加白底与标题 → 临时图片 → 预览弹窗（保存相册/分享好友） */
+  shareMapImage() {
+    const key = this.activeMapKey();
+    const rt = this.mapRt(key);
+    if (!rt || !rt.canvas || !rt.geo || !rt.layer) {
+      wx.showToast({ title: '地图尚未就绪', icon: 'none' });
+      return;
+    }
+    loading.show('生成中…');
+    const ctx = rt.ctx;
+    // 画布平时透明（同层覆盖页面控件）；导出时用 destination-over 垫白底，再叠标题
+    ctx.setTransform(rt.dpr, 0, 0, rt.dpr, 0, 0);
+    ctx.globalCompositeOperation = 'destination-over';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, rt.width, rt.height);
+    ctx.globalCompositeOperation = 'source-over';
+    const title = `全国点亮地图 · ${this.data.provinceCount || 0} 省 · ${this.data.totalUsers || 0} 位迹路者`;
+    ctx.font = 'bold 14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    const tw = ctx.measureText(title).width;
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    ctx.fillRect((rt.width - tw) / 2 - 10, 10, tw + 20, 24);
+    ctx.fillStyle = '#1f2329';
+    ctx.fillText(title, rt.width / 2, 15);
+    setTimeout(() => {
+      wx.canvasToTempFilePath({
+        canvas: rt.canvas,
+        fileType: 'png',
+        success: (res) => {
+          this._shareFilePath = res.tempFilePath;
+          this.setData({ sharePreview: true, shareImageSrc: res.tempFilePath });
+        },
+        fail: (e) => {
+          console.error('[leaderboard] 导出分享图失败', e);
+          wx.showToast({ title: '生成失败', icon: 'none' });
+        },
+        complete: () => {
+          this.scheduleMapRender(key); // 重绘恢复透明画布（清掉白底与标题）
+          loading.hide();
+        },
+      });
+    }, 250);
+  },
+
+  closeSharePreview() {
+    this.setData({ sharePreview: false });
+  },
+
+  /** 保存预览图到相册（首次需授权，拒绝后引导去设置） */
+  saveShareImage() {
+    if (!this._shareFilePath) return;
+    wx.saveImageToPhotosAlbum({
+      filePath: this._shareFilePath,
+      success: () => wx.showToast({ title: '已保存到相册', icon: 'success' }),
+      fail: (err) => {
+        const msg = (err && err.errMsg) || '';
+        if (msg.includes('auth') || msg.includes('deny') || msg.includes('authorize')) {
+          wx.showModal({
+            title: '需要相册权限',
+            content: '保存图片需要相册权限，是否前往设置开启？',
+            confirmText: '去设置',
+            success: (r) => {
+              if (r.confirm) wx.openSetting();
+            },
+          });
+        } else {
+          wx.showToast({ title: '保存失败', icon: 'none' });
+        }
+      },
+    });
   },
 
   /** 省份弹窗：城市地图（全平台口径）+ 城市点亮列表 */
@@ -409,7 +549,7 @@ Page({
         const geo = this._provinceMaps[code];
         if (!this.data.provinceModal || this._modalProvince !== name) return; // 弹窗已关或已切省
         // 弹窗 canvas 每次 wx:if 重建，需重新绑定并复位视图
-        this._provRt = null;
+        this._mapRts.prov = null;
         this._views.prov = { scale: 1, offsetX: 0, offsetY: 0 };
         const rt = await this.bindMapCanvas('prov', '#provMap');
         if (!rt) return;

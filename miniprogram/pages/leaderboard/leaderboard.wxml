@@ -26,6 +26,18 @@
           bindtouchend="onMapTouchEnd"
           bindtouchcancel="onMapTouchEnd"
         ></canvas>
+        <view class="map-ctrl-zoom">
+          <view class="map-ctrl-btn" hover-class="map-ctrl-hover" catchtap="zoomMapViewIn">+</view>
+          <view class="map-ctrl-btn" hover-class="map-ctrl-hover" catchtap="zoomMapViewOut">−</view>
+        </view>
+        <view class="map-ctrl-pill map-ctrl-share" hover-class="map-ctrl-hover" catchtap="shareMapImage">
+          <image class="map-ctrl-icon" src="/assets/icons/lucide-share.png" mode="aspectFit" />
+          <text>分享</text>
+        </view>
+        <view class="map-ctrl-pill map-ctrl-fs" hover-class="map-ctrl-hover" catchtap="openMapFullscreen">
+          <image class="map-ctrl-icon" src="/assets/icons/lucide-maximize.png" mode="aspectFit" />
+          <text>全屏</text>
+        </view>
         <view class="map-reset" wx:if="{{mapScaled}}" catchtap="resetMapView">重置地图</view>
       </view>
       <view class="map-tip">单指拖动 · 双指缩放 · 点击省份查看{{cityCount}}个点亮城市</view>
@@ -131,6 +143,34 @@
     </view>
   </block>
 
+  <!-- 地图全屏查看（置于省份弹窗之前：省份弹窗可叠加在其上） -->
+  <view class="fs-mask" wx:if="{{mapFullscreen}}" catchtouchmove="noop">
+    <canvas
+      type="2d"
+      id="fsMap"
+      class="fs-map"
+      data-map="fs"
+      bindtap="onMapTap"
+      bindtouchstart="onMapTouchStart"
+      catchtouchmove="onMapTouchMove"
+      bindtouchend="onMapTouchEnd"
+      bindtouchcancel="onMapTouchEnd"
+    ></canvas>
+    <view class="fs-title">全国点亮地图 · {{provinceCount}} 省 · {{totalUsers}} 位迹路者</view>
+    <view class="fs-close" hover-class="map-ctrl-hover" catchtap="closeMapFullscreen">
+      <image class="fs-close-icon" src="/assets/icons/lucide-x.png" mode="aspectFit" />
+    </view>
+    <view class="map-ctrl-zoom fs-zoom">
+      <view class="map-ctrl-btn" hover-class="map-ctrl-hover" catchtap="zoomMapViewIn">+</view>
+      <view class="map-ctrl-btn" hover-class="map-ctrl-hover" catchtap="zoomMapViewOut">−</view>
+    </view>
+    <view class="map-ctrl-pill map-ctrl-share fs-share" hover-class="map-ctrl-hover" catchtap="shareMapImage">
+      <image class="map-ctrl-icon" src="/assets/icons/lucide-share.png" mode="aspectFit" />
+      <text>分享</text>
+    </view>
+    <view class="fs-tip">单指拖动 · 双指缩放 · 点击省份下钻</view>
+  </view>
+
   <!-- 省份下钻弹窗：城市地图 + 点亮列表 -->
   <view class="modal-mask" wx:if="{{provinceModal}}" bindtap="closeProvinceModal">
     <view class="modal-box" catchtap="noop">
@@ -156,6 +196,21 @@
         <view class="city-empty" wx:if="{{provinceCities.length === 0}}">该省还没有点亮的城市</view>
       </view>
       <button class="modal-btn" bindtap="rankThisProvince">看{{provinceModalName}}排行榜</button>
+    </view>
+  </view>
+
+  <!-- 分享图预览弹窗（保存相册 / 分享好友） -->
+  <view class="share-mask" wx:if="{{sharePreview}}" catchtouchmove="noop">
+    <view class="share-dialog">
+      <view class="share-head">
+        <text class="share-title">分享预览</text>
+        <view class="share-close" bindtap="closeSharePreview">✕</view>
+      </view>
+      <image class="share-img" src="{{shareImageSrc}}" mode="widthFix" />
+      <view class="share-actions">
+        <button class="share-btn share-btn-friend" open-type="share">分享给朋友</button>
+        <button class="share-btn share-btn-save" bindtap="saveShareImage">保存到相册</button>
+      </view>
     </view>
   </view>
 </view>
