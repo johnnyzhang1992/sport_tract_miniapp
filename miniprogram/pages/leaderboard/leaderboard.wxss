@@ -43,7 +43,7 @@
 }
 .map-reset {
   position: absolute;
-  right: 16rpx;
+  left: 16rpx;
   bottom: 16rpx;
   padding: 8rpx 22rpx;
   background: rgba(255, 255, 255, 0.95);
@@ -52,6 +52,181 @@
   font-size: 22rpx;
   color: #4b5568;
   box-shadow: 0 2rpx 8rpx rgba(30, 40, 60, 0.08);
+}
+
+/* 地图控制按钮：右下角 缩放(+/-) 竖排 + 分享/全屏 胶囊（与足迹页同款风格） */
+.map-ctrl-zoom {
+  position: absolute;
+  right: 16rpx;
+  bottom: 96rpx;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  border-radius: 12rpx;
+  overflow: hidden;
+  box-shadow: 0 2rpx 12rpx rgba(30, 40, 60, 0.14);
+}
+.map-ctrl-btn {
+  width: 52rpx;
+  height: 52rpx;
+  background: #fff;
+  color: #1f2329;
+  font-size: 30rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.map-ctrl-btn:first-child {
+  border-bottom: 1rpx solid #e5e6eb;
+}
+.map-ctrl-pill {
+  position: absolute;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border-radius: 999rpx;
+  padding: 10rpx 20rpx;
+  font-size: 22rpx;
+  color: #4e5969;
+  border: 1rpx solid #e5e6eb;
+  box-shadow: 0 2rpx 12rpx rgba(30, 40, 60, 0.14);
+}
+.map-ctrl-icon {
+  width: 26rpx;
+  height: 26rpx;
+  margin-right: 6rpx;
+  flex-shrink: 0;
+}
+.map-ctrl-fs {
+  right: 16rpx;
+  bottom: 16rpx;
+}
+.map-ctrl-share {
+  right: 144rpx;
+  bottom: 16rpx;
+}
+.map-ctrl-hover {
+  opacity: 0.7;
+}
+
+/* 地图全屏查看 */
+.fs-mask {
+  position: fixed;
+  inset: 0;
+  background: #fff;
+  z-index: 900; /* 省份下钻弹窗(1000)之下：全屏内点省份可直接下钻 */
+}
+.fs-map {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  background: #fff;
+}
+.fs-title {
+  position: absolute;
+  top: calc(28rpx + env(safe-area-inset-top));
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+.fs-close {
+  position: absolute;
+  top: calc(24rpx + env(safe-area-inset-top));
+  right: 24rpx;
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1rpx solid #e5e6eb;
+  padding: 14rpx;
+  box-sizing: border-box;
+  box-shadow: 0 2rpx 12rpx rgba(30, 40, 60, 0.14);
+}
+.fs-close-icon {
+  width: 36rpx;
+  height: 36rpx;
+}
+.fs-zoom {
+  bottom: 120rpx;
+}
+.fs-share {
+  right: 16rpx;
+  bottom: 44rpx;
+}
+.fs-tip {
+  position: absolute;
+  bottom: calc(16rpx + env(safe-area-inset-bottom));
+  left: 24rpx;
+  font-size: 22rpx;
+  color: #8a93a6;
+}
+
+/* 分享图预览弹窗 */
+.share-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.share-dialog {
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 24rpx;
+  width: 620rpx;
+}
+.share-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+}
+.share-title {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+.share-close {
+  padding: 4rpx 12rpx;
+  color: #999;
+  font-size: 28rpx;
+}
+.share-img {
+  display: block;
+  width: 100%;
+  border-radius: 12rpx;
+  background: #f5f7fb;
+}
+.share-actions {
+  display: flex;
+  gap: 20rpx;
+  margin-top: 20rpx;
+}
+.share-btn {
+  flex: 1;
+  margin: 0;
+  padding: 14rpx 0;
+  font-size: 28rpx;
+  border-radius: 12rpx;
+  line-height: 1.4;
+}
+.share-btn::after {
+  border: none;
+}
+.share-btn-friend {
+  background: #fff;
+  color: #2b6cf6;
+  border: 1rpx solid #2b6cf6;
+}
+.share-btn-save {
+  background: #2b6cf6;
+  color: #fff;
 }
 .map-loading {
   position: absolute;
