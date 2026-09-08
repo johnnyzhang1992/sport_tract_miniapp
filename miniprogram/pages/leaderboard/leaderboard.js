@@ -462,7 +462,11 @@ Page({
     this._mapRts.fs = null; // 全屏 canvas 销毁，下次打开重新绑定
   },
 
-  /** 分享图导出：当前画布加白底与标题 → 临时图片 → 预览弹窗（保存相册/分享好友） */
+  /**
+   * 分享图导出：正式海报版式——上部地图区 + 底部标题带
+   * 导出必须显式传 width/height/destWidth/destHeight（= 整个 buffer）：
+   * 不传时默认值在不同端不一致，真机上可能按逻辑尺寸截取 buffer 左上一块 → 地图被裁剪
+   */
   shareMapImage() {
     const key = this.activeMapKey();
     const rt = this.mapRt(key);
@@ -472,24 +476,50 @@ Page({
     }
     loading.show('生成中…');
     const ctx = rt.ctx;
-    // 画布平时透明（同层覆盖页面控件）；导出时用 destination-over 垫白底，再叠标题
+    const BAND = 64; // 底部标题带高度（逻辑 px）
+    // 1) 地图完整画进上部区域（fit 投影保证不裁剪；独立 cache 不污染实况渲染）
     ctx.setTransform(rt.dpr, 0, 0, rt.dpr, 0, 0);
+    drawGeoMap(ctx, rt.width, rt.height - BAND, {
+      geojson: rt.geo,
+      valueOf: rt.layer.valueOf,
+      colorFor: rt.layer.colorFor,
+      unlitColor: rt.unlitColor,
+      view: this._views[key],
+      cache: {},
+    });
+    // 2) 白底垫到内容之下（画布平时透明，海报需要不透明背景）
     ctx.globalCompositeOperation = 'destination-over';
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, rt.width, rt.height);
     ctx.globalCompositeOperation = 'source-over';
-    const title = `全国点亮地图 · ${this.data.provinceCount || 0} 省 · ${this.data.totalUsers || 0} 位迹路者`;
-    ctx.font = 'bold 14px sans-serif';
+    // 3) 底部标题带：分隔线 + 主标题 + 数据副标题
+    const bandTop = rt.height - BAND;
+    ctx.strokeStyle = '#eef0f3';
+    ctx.beginPath();
+    ctx.moveTo(16, bandTop + 0.5);
+    ctx.lineTo(rt.width - 16, bandTop + 0.5);
+    ctx.stroke();
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    const tw = ctx.measureText(title).width;
-    ctx.fillStyle = 'rgba(255,255,255,0.92)';
-    ctx.fillRect((rt.width - tw) / 2 - 10, 10, tw + 20, 24);
     ctx.fillStyle = '#1f2329';
-    ctx.fillText(title, rt.width / 2, 15);
+    ctx.font = 'bold 15px sans-serif';
+    ctx.fillText('全国点亮地图', rt.width / 2, bandTop + 10);
+    ctx.fillStyle = '#8a93a6';
+    ctx.font = '10px sans-serif';
+    ctx.fillText(
+      `点亮 ${this.data.provinceCount || 0} 省 · ${this.data.totalUsers || 0} 位迹路者 · 小迹一下`,
+      rt.width / 2,
+      bandTop + 36,
+    );
     setTimeout(() => {
       wx.canvasToTempFilePath({
         canvas: rt.canvas,
+        x: 0,
+        y: 0,
+        width: rt.canvas.width,
+        height: rt.canvas.height,
+        destWidth: rt.canvas.width,
+        destHeight: rt.canvas.height,
         fileType: 'png',
         success: (res) => {
           this._shareFilePath = res.tempFilePath;
@@ -500,7 +530,7 @@ Page({
           wx.showToast({ title: '生成失败', icon: 'none' });
         },
         complete: () => {
-          this.scheduleMapRender(key); // 重绘恢复透明画布（清掉白底与标题）
+          this.scheduleMapRender(key); // 重绘恢复实况画布（清掉海报内容）
           loading.hide();
         },
       });
