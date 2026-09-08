@@ -38,6 +38,7 @@ Page({
     hasData: false,
     summary: null, // { count, distanceKm, durationText, activeDays, elevationGain, calories }
     chartData: [], // 月度距离 [{label:'1月', value:km}]
+    typeSummary: [], // 分类型汇总（各类型总距离/总时长/次数）
     highlights: [], // [{ key, label, value, sub, id }]
     milestones: [], // 今年新解锁 [{icon, text, date}]
     streakDays: 0, // 最长连续运动天数
@@ -98,10 +99,12 @@ Page({
     }
   },
 
-  /** 年度数据聚合：总评 / 月度柱状 / 高光时刻 / 连续天数 */
+  /** 年度数据聚合：总评 / 月度柱状 / 分类型汇总 / 高光时刻 / 连续天数 */
   buildReport(tracks, o) {
     const hasData = (o.count || 0) > 0;
-    if (!hasData) return { hasData, summary: null, chartData: [], highlights: [], streakDays: 0 };
+    if (!hasData) {
+      return { hasData, summary: null, chartData: [], typeSummary: [], highlights: [], streakDays: 0 };
+    }
 
     // 活跃天数（不同日期）
     const daySet = new Set(tracks.map((t) => this.dayKey(t.startTime)));
@@ -117,6 +120,29 @@ Page({
       label: `${i + 1}月`,
       value: Math.round(km * 10) / 10,
     }));
+
+    // 分类型汇总：各类型总距离/总时长/次数（按总距离降序）
+    const typeMap = new Map();
+    tracks.forEach((t) => {
+      const cur = typeMap.get(t.type) || { type: t.type, count: 0, distance: 0, duration: 0 };
+      cur.count += 1;
+      cur.distance += t.distance || 0;
+      cur.duration += t.duration || 0;
+      typeMap.set(t.type, cur);
+    });
+    const typeSummary = Array.from(typeMap.values())
+      .sort((a, b) => b.distance - a.distance)
+      .map((r) => {
+        const meta = config.ACTIVITY_TYPES.find((x) => x.type === r.type) || {};
+        return {
+          type: r.type,
+          typeLabel: meta.label || r.type,
+          typeIcon: meta.iconImg || '',
+          count: r.count,
+          distanceKm: (r.distance / 1000).toFixed(1),
+          durationText: formatDuration(r.duration),
+        };
+      });
 
     // 高光时刻（按年度数据计算，avgPace 配速类排除游泳/骑行）
     const withDate = (t) => {
@@ -189,6 +215,7 @@ Page({
         calories: Math.round(o.totalCalories || 0),
       },
       chartData,
+      typeSummary,
       highlights,
       streakDays: streak,
     };

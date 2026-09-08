@@ -88,6 +88,7 @@ Page({
     canGoNext: false,
     summary: null, // 汇总
     best: null, // 个人最佳
+    typeSummary: [], // 分类型汇总（各类型总距离/总时长/次数）
     tracks: [], // 轨迹列表（卡片）
     compare: [], // 周期对比（当前周期 vs 上一周期）
     loading: true,
@@ -411,6 +412,7 @@ Page({
       this.setData({
         summary: this.buildSummary(overview),
         best: this.decorateBest(best),
+        typeSummary: this.buildTypeSummary(overview.tracks || []),
         tracks: this.decorateTracks(overview.tracks || []),
         compare: this.buildCompare(overview, prevOverview || null),
       });
@@ -452,6 +454,32 @@ Page({
       dailyKm: (distanceKm / dayCount).toFixed(2),
       hasData: count > 0,
     };
+  },
+
+  /** 分类型汇总：当前周期各类型总距离/总时长/次数（按总距离降序） */
+  buildTypeSummary(tracks) {
+    const TYPE_META = config.ACTIVITY_TYPES || [];
+    const map = new Map();
+    (tracks || []).forEach((t) => {
+      const cur = map.get(t.type) || { type: t.type, count: 0, distance: 0, duration: 0 };
+      cur.count += 1;
+      cur.distance += t.distance || 0;
+      cur.duration += t.duration || 0;
+      map.set(t.type, cur);
+    });
+    return Array.from(map.values())
+      .sort((a, b) => b.distance - a.distance)
+      .map((r) => {
+        const meta = TYPE_META.find((x) => x.type === r.type) || {};
+        return {
+          type: r.type,
+          typeLabel: meta.label || r.type,
+          typeIcon: meta.iconImg || '',
+          count: r.count,
+          distanceKm: (r.distance / 1000).toFixed(1),
+          durationText: formatDuration(r.duration),
+        };
+      });
   },
 
   /** 个人最佳：4 项 + 日期 */
