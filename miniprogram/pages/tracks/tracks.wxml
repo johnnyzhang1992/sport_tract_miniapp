@@ -53,6 +53,36 @@
   <block wx:if="{{viewMode === 'list'}}">
     <view class="month-group" wx:for="{{groups}}" wx:for-item="group" wx:key="key">
       <view class="month-title">{{group.label}}</view>
+
+      <!-- 当月统计（选中具体运动类型时展示）：累计 / 平均 -->
+      <view class="month-stats" wx:if="{{activeFilter}}">
+        <view class="ms-row ms-head">
+          <text class="ms-label"></text>
+          <text class="ms-col">累计</text>
+          <text class="ms-col">平均</text>
+        </view>
+        <view class="ms-row">
+          <text class="ms-label">次数</text>
+          <text class="ms-col">{{group.stats.count}}</text>
+          <text class="ms-col"></text>
+        </view>
+        <view class="ms-row">
+          <text class="ms-label">时间</text>
+          <text class="ms-col">{{group.stats.timeText}}</text>
+          <text class="ms-col">{{group.stats.avgTimeText}}</text>
+        </view>
+        <view class="ms-row">
+          <text class="ms-label">千卡</text>
+          <text class="ms-col">{{group.stats.kcalText}}</text>
+          <text class="ms-col">{{group.stats.avgKcalText}}</text>
+        </view>
+        <view class="ms-row">
+          <text class="ms-label">距离</text>
+          <text class="ms-col">{{group.stats.distanceKm}} 公里</text>
+          <text class="ms-col">{{group.stats.avgDistanceKm}} 公里</text>
+        </view>
+      </view>
+
       <view class="list-item" wx:for="{{group.items}}" wx:key="id">
         <t-swipe-cell
           right="{{[{ text: '删除', className: 'del-action' }]}}"

@@ -5,6 +5,33 @@ const config = require('../../config/index');
 const PAGE_SIZE = 20;
 const VIEW_MODE_KEY = 'tracksViewMode';
 
+/** 秒 → h:mm:ss（月度统计用） */
+function formatHms(seconds) {
+  const s = Math.round(seconds || 0);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  return `${h}:${String(m).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+}
+
+/** 千分位整数（千卡展示用） */
+function formatThousands(n) {
+  return String(Math.round(n || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+/** 月度汇总：累计 + 平均（次数仅累计） */
+function buildMonthStats(count, distanceM, durationS, kcal) {
+  const km = (v) => (Math.round(v / 10) / 100).toFixed(2);
+  return {
+    count,
+    distanceKm: km(distanceM),
+    timeText: formatHms(durationS),
+    kcalText: formatThousands(kcal),
+    avgDistanceKm: count ? km(distanceM / count) : '0.00',
+    avgTimeText: count ? formatHms(durationS / count) : '0:00:00',
+    avgKcalText: count ? formatThousands(kcal / count) : '0',
+  };
+}
+
 Page({
   data: {
     filters: [{ type: '', label: '全部' }].concat(
@@ -132,7 +159,8 @@ Page({
     }
   },
 
-  /** 列表模式按月分组：items 时间倒序，依次归入「YYYY年M月」组（分页/删除后全量重建） */
+  /** 列表模式按月分组：items 时间倒序，依次归入「YYYY年M月」组（分页/删除后全量重建）；
+   *  每组附带当月 次数/距离/时间/千卡 的累计与平均（选中运动类型时展示） */
   buildGroups(items) {
     const groups = [];
     const byKey = new Map();
@@ -141,11 +169,30 @@ Page({
       const key = `${d.getFullYear()}-${d.getMonth() + 1}`;
       let group = byKey.get(key);
       if (!group) {
-        group = { key, label: `${d.getFullYear()}年${d.getMonth() + 1}月`, items: [] };
+        group = {
+          key,
+          label: `${d.getFullYear()}年${d.getMonth() + 1}月`,
+          items: [],
+          _count: 0,
+          _distance: 0,
+          _duration: 0,
+          _kcal: 0,
+        };
         byKey.set(key, group);
         groups.push(group);
       }
       group.items.push(item);
+      group._count += 1;
+      group._distance += item.distance || 0;
+      group._duration += item.duration || 0;
+      group._kcal += item.calories || 0;
+    }
+    for (const g of groups) {
+      g.stats = buildMonthStats(g._count, g._distance, g._duration, g._kcal);
+      delete g._count;
+      delete g._distance;
+      delete g._duration;
+      delete g._kcal;
     }
     return groups;
   },
