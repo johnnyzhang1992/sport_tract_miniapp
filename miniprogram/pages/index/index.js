@@ -91,20 +91,38 @@ Page({
     wx.navigateTo({ url: '/pages/leaderboard/leaderboard' });
   },
 
-  /** 运动榜摘要（卡片副标题）：全国点亮人数 + 我的跑步全国名次（失败静默） */
+  /** 运动榜摘要（卡片副标题）：全国点亮人数 + 我的排名（失败静默） */
   async loadLeaderboardSummary() {
     if (this.data.notLoggedIn) return;
     try {
       const api = getApp().globalData.api;
-      const [regions, board] = await Promise.all([
-        api.get('/stats/leaderboard-regions'),
-        api.get('/stats/leaderboard?type=running&province=%E5%85%A8%E5%9B%BD'),
-      ]);
-      const meText = board.me ? `，我的跑步排第 ${board.me.rank} 名` : '';
+      const regions = await api.get('/stats/leaderboard-regions');
+      const meText = await this.findMyRankText(api);
       this.setData({ lbSummary: { totalUsers: regions.totalUsers, meText } });
     } catch (e) {
       // 静默：卡片仍展示默认文案
     }
+  },
+
+  /** 依次查 周榜→月榜→年榜→总榜，取最先在榜的周期生成文案（都不在榜返回空） */
+  async findMyRankText(api) {
+    const periods = [
+      { key: 'week', label: '周榜' },
+      { key: 'month', label: '月榜' },
+      { key: 'year', label: '年榜' },
+      { key: 'all', label: '总榜' },
+    ];
+    for (const { key, label } of periods) {
+      try {
+        const board = await api.get(
+          `/stats/leaderboard?type=running&province=${encodeURIComponent('全国')}&period=${key}`
+        );
+        if (board.me) return `，我的跑步全国${label}第${board.me.rank}名`;
+      } catch (e) {
+        return ''; // 单个周期查询失败则放弃，静默
+      }
+    }
+    return '';
   },
 
   /** 点击"继续运动"入口 → 回记录页（让用户选择继续/重新开始） */
