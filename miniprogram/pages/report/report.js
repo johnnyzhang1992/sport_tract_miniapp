@@ -89,7 +89,9 @@ Page({
     summary: null, // 汇总
     best: null, // 个人最佳
     typeSummary: [], // 分类型汇总（各类型总距离/总时长/次数）
-    tracks: [], // 轨迹列表（卡片）
+    dateSummary: [], // 日期汇总（按当前维度日期桶聚合：次数/距离/时长/千卡）
+    dateSummaryTitle: '', // 桶粒度文案：按天/按星期/按月/按半年
+    dateBucketLabel: '', // 桶列头：日期/星期/月份/半年
     compare: [], // 周期对比（当前周期 vs 上一周期）
     loading: true,
     showPeriodPicker: false, // 周期选择弹窗
@@ -409,11 +411,14 @@ Page({
       if (prevQuery) reqs.push(api.get(`/overview?${prevQuery}`).catch(() => null));
       const [overview, best, prevOverview] = await Promise.all(reqs);
       if (seq !== this._fetchSeq) return;
+      const dateBuckets = this.buildDateSummary(overview.tracks || []);
       this.setData({
         summary: this.buildSummary(overview),
         best: this.decorateBest(best),
         typeSummary: this.buildTypeSummary(overview.tracks || []),
-        tracks: this.decorateTracks(overview.tracks || []),
+        dateSummary: dateBuckets.rows,
+        dateSummaryTitle: dateBuckets.title,
+        dateBucketLabel: dateBuckets.label,
         compare: this.buildCompare(overview, prevOverview || null),
       });
     } catch (e) {
@@ -506,30 +511,77 @@ Page({
     return { bestTable: Object.keys(rowsMap).sort().map((t) => rowsMap[t]) };
   },
 
-  /** 轨迹列表卡片（缩略图 + 类型/距离/时长/配速/时间） */
-  decorateTracks(tracks) {
-    return tracks.map((t) => {
-      const meta = config.ACTIVITY_TYPES.find((x) => x.type === t.type) || {};
-      const d = new Date(t.startTime);
-      const paceText =
-        t.avgPace && !['swimming', 'cycling'].includes(t.type) ? formatPace(t.avgPace) : '';
-      return {
-        id: t.id,
-        iconImg: meta.iconImg || '',
-        label: meta.label || t.type,
-        color: '#808080',
-        previewPoints: t.points || [],
-        distanceKm: (t.distance / 1000).toFixed(1),
-        durationText: formatDuration(t.duration),
-        paceText,
-        timeText: `${d.getMonth() + 1}-${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`,
-      };
-    });
-  },
+  /** 日期汇总：按当前维度切桶聚合（overview.tracks 为周期内全量数据，前端聚合即全量口径）
+   *  周→按天 / 月→按星期（整月累计到周一~周日）/ 年→按月 / 全部→按半年 */
+  buildDateSummary(tracks) {
+    const WEEKDAYS = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+    const meta = {
+      week: { title: '按天', label: '日期' },
+      month: { title: '按星期', label: '星期' },
+      year: { title: '按月', label: '月份' },
+      all: { title: '按半年', label: '半年' },
+    }[this.data.activeRange] || { title: '', label: '' };
 
-  /** 进入轨迹详情 */
-  onTapTrack(e) {
-    const id = e.currentTarget.dataset.id;
-    if (id) wx.navigateTo({ url: `/pages/track-detail/track-detail?id=${id}` });
+    const buckets = [];
+    const byKey = new Map();
+    const addBucket = (key, label) => {
+      const b = { key, label, count: 0, distance: 0, duration: 0, calories: 0 };
+      buckets.push(b);
+      byKey.set(key, b);
+    };
+
+    if (this.data.activeRange === 'week') {
+      // 周期起点（周一）起连续 7 天，完整时间线含 0 记录日
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(this._period.from + i * 86400000);
+        addBucket(d.toDateString(), `${d.getMonth() + 1}/${d.getDate()}`);
+      }
+    } else if (this.data.activeRange === 'month') {
+      WEEKDAYS.forEach((w) => addBucket(w, w));
+    } else if (this.data.activeRange === 'year') {
+      for (let m = 1; m <= 12; m++) addBucket(`m${m}`, `${m}月`);
+    } else {
+      // 全部：从最早活动所在半年到当前半年（H1=1-6月，H2=7-12月）
+      const starts = (tracks || []).map((t) => new Date(t.startTime).getTime()).filter((t) => t > 0);
+      if (starts.length) {
+        const min = new Date(Math.min(...starts));
+        const now = new Date();
+        let y = min.getFullYear();
+        let h = min.getMonth() < 6 ? 0 : 1;
+        while (y < now.getFullYear() || (y === now.getFullYear() && h <= (now.getMonth() < 6 ? 0 : 1))) {
+          addBucket(`${y}H${h}`, `${y} ${h === 0 ? '上半年' : '下半年'}`);
+          h += 1;
+          if (h > 1) { h = 0; y += 1; }
+        }
+      }
+    }
+
+    (tracks || []).forEach((t) => {
+      const d = new Date(t.startTime);
+      let key;
+      if (this.data.activeRange === 'week') key = d.toDateString();
+      else if (this.data.activeRange === 'month') key = WEEKDAYS[(d.getDay() + 6) % 7];
+      else if (this.data.activeRange === 'year') key = `m${d.getMonth() + 1}`;
+      else key = `${d.getFullYear()}H${d.getMonth() < 6 ? 0 : 1}`;
+      const b = byKey.get(key);
+      if (!b) return;
+      b.count += 1;
+      b.distance += t.distance || 0;
+      b.duration += t.duration || 0;
+      b.calories += t.calories || 0;
+    });
+
+    return {
+      title: meta.title,
+      label: meta.label,
+      rows: buckets.map((b) => ({
+        key: b.key,
+        label: b.label,
+        count: b.count,
+        distanceKm: (b.distance / 1000).toFixed(1),
+        durationText: durText(b.duration),
+        kcal: Math.round(b.calories),
+      })),
+    };
   },
 });
