@@ -3,6 +3,7 @@ const { formatDuration, formatPace, formatDurationStat } = require('../../utils/
 const config = require('../../config/index');
 
 const PAGE_SIZE = 20;
+const VIEW_MODE_KEY = 'tracksViewMode';
 
 Page({
   data: {
@@ -11,11 +12,31 @@ Page({
     ),
     activeFilter: '',
     provinceFilter: '', // 省份筛选（足迹地图跳转带入）
+    viewMode: 'list', // 展示模式：list 单行列表（默认，按月分组）/ grid 图片（轨迹缩略图卡片）
     items: [],
+    groups: [], // 列表模式按月分组：[{ key: '2026-9', label: '2026年9月', items }]
     page: 1,
     hasMore: true,
     loading: false,
     initialized: false,
+  },
+
+  onLoad() {
+    // 记忆用户上次的展示模式选择
+    try {
+      const saved = wx.getStorageSync(VIEW_MODE_KEY);
+      if (saved === 'grid' || saved === 'list') this.setData({ viewMode: saved });
+    } catch (e) {}
+  },
+
+  /** 切换展示模式（lucide layout-list / layout-grid 图标按钮） */
+  onToggleMode(e) {
+    const mode = e.currentTarget.dataset.mode;
+    if (!mode || mode === this.data.viewMode) return;
+    this.setData({ viewMode: mode });
+    try {
+      wx.setStorageSync(VIEW_MODE_KEY, mode);
+    } catch (err) {}
   },
 
   onShow() {
@@ -78,8 +99,10 @@ Page({
     try {
       this.setData({ loading: true, page: 1 });
       const data = await api.get('/activities', this.buildParams(1));
+      const items = data.items.map(this.decorate);
       this.setData({
-        items: data.items.map(this.decorate),
+        items,
+        groups: this.buildGroups(items),
         hasMore: data.items.length >= PAGE_SIZE,
         initialized: true,
       });
@@ -95,8 +118,10 @@ Page({
     try {
       this.setData({ loading: true });
       const data = await api.get('/activities', this.buildParams(next));
+      const items = this.data.items.concat(data.items.map(this.decorate));
       this.setData({
-        items: this.data.items.concat(data.items.map(this.decorate)),
+        items,
+        groups: this.buildGroups(items),
         page: next,
         hasMore: data.items.length >= PAGE_SIZE,
       });
@@ -105,6 +130,24 @@ Page({
     } finally {
       this.setData({ loading: false });
     }
+  },
+
+  /** 列表模式按月分组：items 时间倒序，依次归入「YYYY年M月」组（分页/删除后全量重建） */
+  buildGroups(items) {
+    const groups = [];
+    const byKey = new Map();
+    for (const item of items) {
+      const d = new Date(item.startTime);
+      const key = `${d.getFullYear()}-${d.getMonth() + 1}`;
+      let group = byKey.get(key);
+      if (!group) {
+        group = { key, label: `${d.getFullYear()}年${d.getMonth() + 1}月`, items: [] };
+        byKey.set(key, group);
+        groups.push(group);
+      }
+      group.items.push(item);
+    }
+    return groups;
   },
 
   /** 构造查询参数：空筛选不传 type（后端 enum 校验不接受空串） */
@@ -178,7 +221,8 @@ Page({
     if (!res.confirm) return;
     try {
       await api.del(`/activities/${id}`);
-      this.setData({ items: this.data.items.filter((i) => i.id !== id) });
+      const items = this.data.items.filter((i) => i.id !== id);
+      this.setData({ items, groups: this.buildGroups(items) });
       wx.showToast({ title: '已删除', icon: 'success' });
     } catch (err) {
       console.error('删除轨迹失败', err);
