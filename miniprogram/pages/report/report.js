@@ -183,10 +183,10 @@ Page({
     wx.navigateTo({ url: '/pages/year-report/year-report' });
   },
 
-  /** 查询参数：全部用 range，其余用精确 epoch ms 区间（后端按自然周期查） */
+  /** 查询参数：全部用 range，其余用精确 epoch ms 区间（后端按自然周期查）；报告页只需元数据，走 lean 模式 */
   buildOverviewQuery() {
-    if (this.data.activeRange === 'all' || !this._period) return 'range=all';
-    return `from=${this._period.from}&to=${this._period.to}`;
+    if (this.data.activeRange === 'all' || !this._period) return 'range=all&lean=1';
+    return `from=${this._period.from}&to=${this._period.to}&lean=1`;
   },
 
   // ==================== 周期海报（周/月/年，canvas 自绘） ====================
@@ -368,7 +368,7 @@ Page({
   buildPrevQuery() {
     if (this.data.activeRange === 'all' || !this._period) return null;
     const prev = periodRange(this.data.activeRange, this.data.periodOffset + 1);
-    return `from=${prev.from}&to=${prev.to}`;
+    return `from=${prev.from}&to=${prev.to}&lean=1`;
   },
 
   /** 周期对比：当前查看周期 vs 上一周期（次数/距离/时长 ±%） */
@@ -512,12 +512,11 @@ Page({
   },
 
   /** 日期汇总：按当前维度切桶聚合（overview.tracks 为周期内全量数据，前端聚合即全量口径）
-   *  周→按天 / 月→按星期（整月累计到周一~周日）/ 年→按月 / 全部→按半年 */
+   *  周→按天 / 月→按月内自然周（首尾周裁剪到月界）/ 年→按月 / 全部→按半年 */
   buildDateSummary(tracks) {
-    const WEEKDAYS = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
     const meta = {
       week: { title: '按天', label: '日期' },
-      month: { title: '按星期', label: '星期' },
+      month: { title: '按周', label: '周' },
       year: { title: '按月', label: '月份' },
       all: { title: '按半年', label: '半年' },
     }[this.data.activeRange] || { title: '', label: '' };
@@ -539,7 +538,30 @@ Page({
         addBucket(d.toDateString(), `${d.getMonth() + 1}/${d.getDate()}`);
       }
     } else if (this.data.activeRange === 'month') {
-      WEEKDAYS.forEach((w) => addBucket(w, w));
+      // 月内自然周（周一为界）切桶：首尾周裁剪到月界，标签如 0901-0906周；当前月裁到今天
+      const monthStart = new Date(this._period.from);
+      const monthEnd = new Date(this._period.to);
+      const today0 = new Date();
+      today0.setHours(0, 0, 0, 0);
+      const md = (d) => `${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+      const cursor = new Date(monthStart);
+      while (cursor < monthEnd) {
+        const monday = new Date(cursor);
+        monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+        const nextMon = new Date(monday);
+        nextMon.setDate(nextMon.getDate() + 7);
+        const s = monday < monthStart ? new Date(monthStart) : new Date(monday);
+        let e = nextMon > monthEnd ? new Date(monthEnd) : nextMon;
+        if (this.data.periodOffset === 0) {
+          const todayEnd = new Date(today0.getTime() + 86400000);
+          if (e > todayEnd) e = todayEnd; // 当前月：最后一周裁到今天
+        }
+        if (s < e) {
+          const last = new Date(e.getTime() - 1);
+          addBucket(monday.getTime(), `${md(s)}-${md(last)}周`);
+        }
+        cursor.setTime(nextMon.getTime());
+      }
     } else if (this.data.activeRange === 'year') {
       // 当前年份只展示到当前月，之后的月份必无数据
       const maxMonth = this.data.periodOffset === 0 ? new Date().getMonth() + 1 : 12;
@@ -564,8 +586,12 @@ Page({
       const d = new Date(t.startTime);
       let key;
       if (this.data.activeRange === 'week') key = d.toDateString();
-      else if (this.data.activeRange === 'month') key = WEEKDAYS[(d.getDay() + 6) % 7];
-      else if (this.data.activeRange === 'year') key = `m${d.getMonth() + 1}`;
+      else if (this.data.activeRange === 'month') {
+        // 归入该日期所在自然周（周一）的桶
+        const w = new Date(d);
+        w.setDate(w.getDate() - ((w.getDay() + 6) % 7));
+        key = w.getTime();
+      } else if (this.data.activeRange === 'year') key = `m${d.getMonth() + 1}`;
       else key = `${d.getFullYear()}H${d.getMonth() < 6 ? 0 : 1}`;
       const b = byKey.get(key);
       if (!b) return;
