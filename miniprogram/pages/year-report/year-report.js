@@ -85,7 +85,7 @@ Page({
     try {
       const r = this.yearRange(this.data.year);
       const [o, milestones] = await Promise.all([
-        api.get(`/overview?from=${r.from}&to=${r.to}`),
+        api.get(`/overview?from=${r.from}&to=${r.to}&lean=1`), // 年度报告只用元数据，走精简模式
         api.get(`/stats/year-milestones?year=${this.data.year}`).catch(() => null),
       ]);
       const tracks = o.tracks || [];
