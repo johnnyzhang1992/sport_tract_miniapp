@@ -32,6 +32,13 @@ function buildMonthStats(count, distanceM, durationS, kcal) {
   };
 }
 
+/** 月度聚合映射合并：列表响应附带的月份全量聚合并入 map（key '2026-9' → 聚合行） */
+function mergeMonthly(map, rows) {
+  const out = { ...map };
+  (rows || []).forEach((m) => { out[`${m.year}-${m.month}`] = m; });
+  return out;
+}
+
 Page({
   data: {
     filters: [{ type: '', label: '全部' }].concat(
@@ -42,6 +49,7 @@ Page({
     viewMode: 'list', // 展示模式：list 单行列表（默认，按月分组）/ grid 图片（轨迹缩略图卡片）
     items: [],
     groups: [], // 列表模式按月分组：[{ key: '2026-9', label: '2026年9月', items }]
+    monthlyStats: {}, // 后端按月聚合（整月全量）：key '2026-9' → { count, distance, duration, calories }
     page: 1,
     hasMore: true,
     loading: false,
@@ -124,12 +132,14 @@ Page({
     }
     if (!app.globalData.loggedIn) return;
     try {
-      this.setData({ loading: true, page: 1 });
+      this.setData({ loading: true, page: 1, monthlyStats: {} }); // 重置聚合缓存，防上一次筛选的数据串味
       const data = await api.get('/activities', this.buildParams(1));
       const items = data.items.map(this.decorate);
+      const monthly = mergeMonthly({}, data.monthlyStats); // 列表响应附带页内月份的全量聚合
       this.setData({
         items,
-        groups: this.buildGroups(items),
+        groups: this.buildGroups(items, monthly),
+        monthlyStats: monthly,
         hasMore: data.items.length >= PAGE_SIZE,
         initialized: true,
       });
@@ -140,15 +150,32 @@ Page({
     }
   },
 
+  /** 删除轨迹后重拉整月聚合（/stats/activity-monthly）；常规路径的聚合由列表响应附带 */
+  async syncMonthlyStats() {
+    const type = this.data.activeFilter;
+    if (!type) return;
+    try {
+      const data = await api.get('/stats/activity-monthly', { type });
+      if (this.data.activeFilter !== type) return; // 期间已切换筛选，丢弃过期响应
+      const map = {};
+      (data.months || []).forEach((m) => { map[`${m.year}-${m.month}`] = m; });
+      this.setData({ monthlyStats: map, groups: this.buildGroups(this.data.items, map) });
+    } catch (e) {
+      console.warn('月度统计拉取失败', e); // 静默：统计块沿用已加载条目的汇总
+    }
+  },
+
   async loadMore() {
     const next = this.data.page + 1;
     try {
       this.setData({ loading: true });
       const data = await api.get('/activities', this.buildParams(next));
       const items = this.data.items.concat(data.items.map(this.decorate));
+      const monthly = mergeMonthly(this.data.monthlyStats, data.monthlyStats); // 新出现月份增量并入
       this.setData({
         items,
-        groups: this.buildGroups(items),
+        groups: this.buildGroups(items, monthly),
+        monthlyStats: monthly,
         page: next,
         hasMore: data.items.length >= PAGE_SIZE,
       });
@@ -160,8 +187,8 @@ Page({
   },
 
   /** 列表模式按月分组：items 时间倒序，依次归入「YYYY年M月」组（分页/删除后全量重建）；
-   *  每组附带当月 次数/距离/时间/千卡 的累计与平均（选中运动类型时展示） */
-  buildGroups(items) {
+   *  每组附带当月统计，优先用后端整月聚合（monthly 参数），未命中时回退到已加载条目的汇总 */
+  buildGroups(items, monthly = this.data.monthlyStats || {}) {
     const groups = [];
     const byKey = new Map();
     for (const item of items) {
@@ -188,7 +215,10 @@ Page({
       group._kcal += item.calories || 0;
     }
     for (const g of groups) {
-      g.stats = buildMonthStats(g._count, g._distance, g._duration, g._kcal);
+      const m = monthly[g.key];
+      g.stats = m
+        ? buildMonthStats(m.count, m.distance, m.duration, m.calories)
+        : buildMonthStats(g._count, g._distance, g._duration, g._kcal);
       delete g._count;
       delete g._distance;
       delete g._duration;
@@ -270,6 +300,7 @@ Page({
       await api.del(`/activities/${id}`);
       const items = this.data.items.filter((i) => i.id !== id);
       this.setData({ items, groups: this.buildGroups(items) });
+      this.syncMonthlyStats(); // 删除影响整月累计，重新拉取聚合
       wx.showToast({ title: '已删除', icon: 'success' });
     } catch (err) {
       console.error('删除轨迹失败', err);
