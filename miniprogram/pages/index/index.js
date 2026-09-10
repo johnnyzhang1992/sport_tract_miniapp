@@ -104,7 +104,7 @@ Page({
     }
   },
 
-  /** 依次查 周榜→月榜→年榜→总榜，取最先在榜的周期生成文案（都不在榜返回空） */
+  /** 依次查 周榜→月榜→年榜→总榜，取最先有上榜类型的周期生成文案（都不在榜返回空） */
   async findMyRankText(api) {
     const periods = [
       { key: 'week', label: '周榜' },
@@ -114,12 +114,14 @@ Page({
     ];
     for (const { key, label } of periods) {
       try {
-        const board = await api.get(
-          `/stats/leaderboard?type=running&province=${encodeURIComponent('全国')}&period=${key}`
-        );
-        if (board.me) return `，我的跑步全国${label}第${board.me.rank}名`;
+        const res = await api.get(`/stats/leaderboard/me?period=${key}`);
+        if (res.best) {
+          // 多类型同时上榜时后端已取名次最优（best），类型文案从本地配置映射
+          const t = config.ACTIVITY_TYPES.find((x) => x.type === res.best.type);
+          return `，我的${(t && t.label) || '运动'}全国${label}第${res.best.rank}名`;
+        }
       } catch (e) {
-        return ''; // 单个周期查询失败则放弃，静默
+        return ''; // 查询失败则放弃，静默
       }
     }
     return '';
