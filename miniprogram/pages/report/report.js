@@ -531,15 +531,19 @@ Page({
     };
 
     if (this.data.activeRange === 'week') {
-      // 周期起点（周一）起连续 7 天，完整时间线含 0 记录日
-      for (let i = 0; i < 7; i++) {
+      // 周期起点（周一）起连续 7 天，完整时间线含 0 记录日；当前周只展示到今天，之后的日期必无数据
+      const todayIdx = (new Date().getDay() + 6) % 7; // 今天是本周第几天（0=周一）
+      const days = this.data.periodOffset === 0 ? todayIdx + 1 : 7;
+      for (let i = 0; i < days; i++) {
         const d = new Date(this._period.from + i * 86400000);
         addBucket(d.toDateString(), `${d.getMonth() + 1}/${d.getDate()}`);
       }
     } else if (this.data.activeRange === 'month') {
       WEEKDAYS.forEach((w) => addBucket(w, w));
     } else if (this.data.activeRange === 'year') {
-      for (let m = 1; m <= 12; m++) addBucket(`m${m}`, `${m}月`);
+      // 当前年份只展示到当前月，之后的月份必无数据
+      const maxMonth = this.data.periodOffset === 0 ? new Date().getMonth() + 1 : 12;
+      for (let m = 1; m <= maxMonth; m++) addBucket(`m${m}`, `${m}月`);
     } else {
       // 全部：从最早活动所在半年到当前半年（H1=1-6月，H2=7-12月）
       const starts = (tracks || []).map((t) => new Date(t.startTime).getTime()).filter((t) => t > 0);
