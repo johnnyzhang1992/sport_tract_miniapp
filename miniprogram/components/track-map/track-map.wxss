@@ -121,7 +121,19 @@
   width: 16rpx;
   height: 16rpx;
   border-radius: 50%;
-  background: #ff9800;
   margin-right: 10rpx;
+}
+.heat-legend-dot-0 {
+  background: #1f2329;
+}
+.heat-legend-dot-1 {
+  background: #ffc107;
+}
+.heat-legend-dot-2 {
+  background: #ff9800;
+}
+.heat-legend-dot-3 {
+  background: #e53935;
+  margin-right: 14rpx;
 }
 

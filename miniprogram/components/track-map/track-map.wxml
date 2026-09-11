@@ -39,9 +39,12 @@
     <image class="poi-icon" src="{{enablePoi ? '/assets/icons/lucide-pin-white.png' : '/assets/icons/lucide-pin.png'}}" mode="aspectFit" />
     <text>标注</text>
   </view>
-  <!-- 高频路线图例（与 POI 同容器，底部基准一致） -->
+  <!-- 高频路线图例（四档频率配色：黑→黄→橙→红；与 POI 同容器，底部基准一致） -->
   <view class="heat-legend" wx:if="{{showHeatLegend}}">
-    <view class="heat-legend-dot"></view>
-    <text>高频路线</text>
+    <view class="heat-legend-dot heat-legend-dot-0"></view>
+    <view class="heat-legend-dot heat-legend-dot-1"></view>
+    <view class="heat-legend-dot heat-legend-dot-2"></view>
+    <view class="heat-legend-dot heat-legend-dot-3"></view>
+    <text>低频 → 高频</text>
   </view>
 </view>
