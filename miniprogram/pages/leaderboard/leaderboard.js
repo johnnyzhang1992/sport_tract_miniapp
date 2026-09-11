@@ -50,26 +50,17 @@ const GENDER_ICONS = {
 /** 本榜最佳指标：key → 展示名（顺序后端定，前端只负责文案与格式化） */
 const BEST_LABELS = {
   farthest: '最长距离',
-  longest: '最长时间',
   fastestKm: '最快配速',
   fastestAvg: '最快均速',
   maxClimb: '最大爬升',
 };
 
 /** 秒 → mm:ss / h:mm:ss */
-function fmtDur(sec) {
-  const s = Math.max(0, Math.round(sec || 0));
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const p = (n) => String(n).padStart(2, '0');
-  return h > 0 ? `${h}:${p(m)}:${p(s % 60)}` : `${p(m)}:${p(s % 60)}`;
-}
 
 /** 本榜最佳值格式化：key 决定单位语义（后端只回原始值：米/秒） */
 function fmtBestValue(key, v) {
   if (v == null) return '';
   if (key === 'farthest') return `${(v / 1000).toFixed(2)} km`;
-  if (key === 'longest') return fmtDur(v);
   if (key === 'fastestKm') {
     // 秒/公里 → 分'秒"
     const m = Math.floor(v / 60);
