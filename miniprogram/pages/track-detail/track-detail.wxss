@@ -391,3 +391,35 @@
   margin-right: 20rpx;
   flex-shrink: 0;
 }
+
+/* 轨迹线颜色说明（海拔/配速着色图例） */
+.color-legend {
+  padding: 12rpx 32rpx 0;
+}
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+.legend-text {
+  font-size: 20rpx;
+  color: #86909c;
+  flex-shrink: 0;
+}
+.legend-bar {
+  flex: 1;
+  height: 12rpx;
+  border-radius: 6rpx;
+}
+.legend-bar-altitude {
+  background: linear-gradient(90deg, #2979ff, #00c753, #ffd500, #f44336);
+}
+.legend-bar-pace {
+  background: linear-gradient(90deg, #ffe58f, #820014);
+}
+.legend-note {
+  margin-top: 6rpx;
+  font-size: 20rpx;
+  color: #86909c;
+  text-align: center;
+}

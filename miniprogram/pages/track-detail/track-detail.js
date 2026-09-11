@@ -100,10 +100,17 @@ Page({
           altRangeText,
           altRangeIsRange: hasAltRange,
         },
+        // 轨迹线着色：徒步/爬山且有海拔数据 → 按海拔；否则按配速（颜色越深配速越快）
+        colorMode:
+          ['hiking', 'mountaineering'].includes(activity.type) &&
+          (activity.trackPoints || []).some((p) => p.altitude != null)
+            ? 'altitude'
+            : 'pace',
         mapPoints: (activity.trackPoints || []).map((p) => ({
           lat: p.lat,
           lng: p.lng,
           altitude: p.altitude != null ? p.altitude : null,
+          timestamp: p.timestamp,
           pauseGap: !!p.pauseGap,
         })),
         kmMarkers: this.computeKmMarkers(activity.trackPoints || []),
