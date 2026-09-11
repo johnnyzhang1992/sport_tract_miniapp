@@ -15,6 +15,7 @@
     "pages/import/import",
     "pages/weight-trend/weight-trend",
     "pages/report/report",
+    "pages/topic/topic",
     "pages/year-report/year-report"
   ],
   "window": {

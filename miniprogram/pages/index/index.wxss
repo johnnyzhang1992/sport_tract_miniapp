@@ -198,3 +198,28 @@
   color: #c8d0dc;
   flex-shrink: 0;
 }
+
+/* 官方专题入口（复用 lb-card 布局） */
+.topic-cover {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 12rpx;
+}
+.topic-emoji {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 34rpx;
+  background: #fff7e6;
+  border-radius: 12rpx;
+}
+.topic-tag {
+  display: inline-block;
+  font-size: 18rpx;
+  line-height: 1;
+  padding: 4rpx 10rpx;
+  border-radius: 6rpx;
+  color: #2b6cf6;
+  background: #eef4ff;
+  margin-bottom: 8rpx;
+}

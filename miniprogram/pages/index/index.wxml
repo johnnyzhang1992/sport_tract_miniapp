@@ -71,6 +71,25 @@
     <view class="lb-arrow">›</view>
   </view>
 
+  <!-- 官方专题入口（生效中的专题，点击查看详情） -->
+  <view
+    wx:for="{{topics}}"
+    wx:key="id"
+    class="card lb-card"
+    hover-class="card-hover"
+    hover-stay-time="80"
+    data-id="{{item.id}}"
+    bindtap="goTopic"
+  >
+    <image wx:if="{{item.coverUrl}}" class="lb-icon topic-cover" src="{{item.coverUrl}}" mode="aspectFill" />
+    <view wx:else class="lb-icon topic-emoji">🎉</view>
+    <view class="lb-body">
+      <view class="topic-tag">官方专题</view>
+      <view class="lb-title">{{item.title}}</view>
+    </view>
+    <view class="lb-arrow">›</view>
+  </view>
+
   <!-- 运动类型选择 -->
   <view class="card">
     <view class="section-title">运动类型</view>
