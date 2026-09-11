@@ -83,6 +83,21 @@ Page({
         activity.fastestKm && !['swimming', 'cycling'].includes(activity.type)
           ? formatPaceParts(activity.fastestKm)
           : null;
+      // 轨迹线着色：徒步/爬山且有海拔数据 → 按海拔；否则按配速（绝对刻度，越快越偏黄）
+      const colorMode =
+        ['hiking', 'mountaineering'].includes(activity.type) &&
+        (activity.trackPoints || []).some((p) => p.altitude != null)
+          ? 'altitude'
+          : 'pace';
+      // 最高海拔点（仅海拔着色时在图上标注坐标与海拔值）
+      let peakMarker = null;
+      if (colorMode === 'altitude') {
+        for (const p of activity.trackPoints || []) {
+          if (p.altitude != null && (!peakMarker || p.altitude > peakMarker.altitude)) {
+            peakMarker = { lat: p.lat, lng: p.lng, altitude: p.altitude };
+          }
+        }
+      }
       this.setData({
         activity: {
           ...activity,
@@ -102,12 +117,9 @@ Page({
           altRangeIsRange: hasAltRange,
         },
         // 轨迹线着色：徒步/爬山且有海拔数据 → 按海拔；否则按配速（绝对刻度，越快越偏黄）
-        colorMode:
-          ['hiking', 'mountaineering'].includes(activity.type) &&
-          (activity.trackPoints || []).some((p) => p.altitude != null)
-            ? 'altitude'
-            : 'pace',
+        colorMode,
         activityType: activity.type,
+        peakMarker,
         paceSlowText: (formatPaceParts(getPaceScale(activity.type).slow) || {}).value || '—',
         paceFastText: (formatPaceParts(getPaceScale(activity.type).fast) || {}).value || '—',
         mapPoints: (activity.trackPoints || []).map((p) => ({

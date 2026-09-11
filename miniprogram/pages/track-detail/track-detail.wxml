@@ -10,6 +10,7 @@
       mode="view"
       color-mode="{{colorMode}}"
       activity-type="{{activityType}}"
+      peak-marker="{{peakMarker}}"
       showStartEnd
       bindmarkertap="onMarkerTap"
       bindreplayend="onReplayEnd"
@@ -50,6 +51,7 @@
         mode="view"
         color-mode="{{colorMode}}"
         activity-type="{{activityType}}"
+        peak-marker="{{peakMarker}}"
         showStartEnd
         poi-top-right
         show-fullscreen-close

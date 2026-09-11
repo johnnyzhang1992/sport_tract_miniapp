@@ -33,6 +33,8 @@ Component({
     colorMode: { type: String, value: '' },
     /** 运动类型（running/walking/...）：pace 着色时选取对应类型的绝对配速刻度 */
     activityType: { type: String, value: '' },
+    /** 最高海拔点标记（徒步/爬山）：{lat, lng, altitude}；非空时在地图上展示「▲ xxxm」 */
+    peakMarker: { type: Object, value: null },
     /** 起点/终点标记（起/终 文字标签） */
     showStartEnd: { type: Boolean, value: false },
     /** 显示高频路线图例（overview 合集模式） */
@@ -64,7 +66,7 @@ Component({
   },
 
   observers: {
-    'points, markers, currentLocation, kmMarkers, colorMode, activityType': function (points, markers, currentLocation) {
+    'points, markers, currentLocation, kmMarkers, colorMode, activityType, peakMarker': function (points, markers, currentLocation) {
       this.updateCenter();
       // overview 模式轨迹线由 buildOverview 管理，buildPolyline 会清空（points 为空）
       if (this.data.mode !== 'overview') {
@@ -496,11 +498,67 @@ Component({
         });
       }
 
+      // 最高海拔标记（徒步/爬山）：最高点坐标处展示「▲ xxxm」
+      const peak = this.data.peakMarker;
+      const peakJob =
+        peak && Number.isFinite(peak.lat) && Number.isFinite(peak.lng) && peak.altitude != null
+          ? this.buildPeakMarker(peak).then((m) => {
+              if (m) base.push(m);
+            })
+          : Promise.resolve();
+
       // 每满一公里标记（圆圈数字）
-      this.buildKmMarkerList().then((kmMarkers) => {
+      Promise.all([this.buildKmMarkerList(), peakJob]).then(([kmMarkers]) => {
         this.setData({ displayMarkers: base.concat(kmMarkers) });
       });
       });
+    },
+
+    /** 最高海拔标记：橙色药丸 + 白色「▲ xxxm」（离屏 canvas，按海拔值缓存） */
+    async buildPeakMarker(peak) {
+      const MARKER_ICON_CACHE = (this._markerIconCache = this._markerIconCache || {});
+      const key = `peak-${Math.round(peak.altitude)}`;
+      let iconPath = MARKER_ICON_CACHE[key];
+      if (!iconPath) {
+        const canvas = wx.createOffscreenCanvas({ type: '2d', width: 20, height: 20 });
+        let ctx = canvas.getContext('2d');
+        ctx.font = 'bold 24px sans-serif';
+        const text = `▲ ${Math.round(peak.altitude)}m`;
+        const w = Math.ceil(ctx.measureText(text).width) + 44;
+        const h = 40;
+        canvas.width = w;
+        canvas.height = h;
+        ctx = canvas.getContext('2d');
+        ctx.font = 'bold 24px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const r = 18;
+        ctx.beginPath();
+        ctx.moveTo(2 + r, 2);
+        ctx.arcTo(2 + w - 4, 2, 2 + w - 4, 2 + h - 4, r);
+        ctx.arcTo(2 + w - 4, 2 + h - 4, 2, 2 + h - 4, r);
+        ctx.arcTo(2, 2 + h - 4, 2, 2, r);
+        ctx.arcTo(2, 2, 2 + w - 4, 2, r);
+        ctx.closePath();
+        ctx.fillStyle = '#ff7a1a';
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(text, w / 2, h / 2 + 1);
+        iconPath = await new Promise((res) => {
+          wx.canvasToTempFilePath({ canvas, success: (r2) => res(r2.tempFilePath), fail: () => res('') });
+        });
+        if (iconPath) MARKER_ICON_CACHE[key] = iconPath;
+      }
+      if (!iconPath) return null;
+      return {
+        id: 200001,
+        latitude: peak.lat,
+        longitude: peak.lng,
+        iconPath,
+        width: Math.round(w * 0.6),
+        height: Math.round(h * 0.6),
+        anchor: { x: 0.5, y: 1 },
+      };
     },
 
     /** 公里标记：白底蓝边圆 + 数字图标（离屏 canvas，按公里数缓存） */
