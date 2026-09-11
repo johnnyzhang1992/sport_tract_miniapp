@@ -90,7 +90,7 @@ Page({
     best: null, // 个人最佳
     typeSummary: [], // 分类型汇总（各类型总距离/总时长/次数）
     dateSummary: [], // 日期汇总（按当前维度日期桶聚合：次数/距离/时长/千卡）
-    dateSummaryTitle: '', // 桶粒度文案：按天/按星期/按月/按半年
+    dateSummaryTitle: '', // 桶粒度文案：按天/按周/按月/按半年（后端下发）
     dateBucketLabel: '', // 桶列头：日期/星期/月份/半年
     compare: [], // 周期对比（当前周期 vs 上一周期）
     loading: true,
@@ -183,10 +183,12 @@ Page({
     wx.navigateTo({ url: '/pages/year-report/year-report' });
   },
 
-  /** 查询参数：全部用 range，其余用精确 epoch ms 区间（后端按自然周期查）；报告页只需元数据，走 lean 模式 */
+  /** 查询参数：全部用 range，其余用精确 epoch ms 区间（后端按自然周期查）；报告页只需元数据，走 lean 模式
+   *  dateSummary=1：由后端按 range 粒度分桶返回日期汇总（周→按天 / 月→按自然周 / 年→按月 / 全部→按半年）
+   *  精确区间也必须带 range，后端据此决定分桶粒度 */
   buildOverviewQuery() {
-    if (this.data.activeRange === 'all' || !this._period) return 'range=all&lean=1';
-    return `from=${this._period.from}&to=${this._period.to}&lean=1`;
+    if (this.data.activeRange === 'all' || !this._period) return 'range=all&lean=1&dateSummary=1';
+    return `range=${this.data.activeRange}&from=${this._period.from}&to=${this._period.to}&lean=1&dateSummary=1`;
   },
 
   // ==================== 周期海报（周/月/年，canvas 自绘） ====================
@@ -411,14 +413,22 @@ Page({
       if (prevQuery) reqs.push(api.get(`/overview?${prevQuery}`).catch(() => null));
       const [overview, best, prevOverview] = await Promise.all(reqs);
       if (seq !== this._fetchSeq) return;
-      const dateBuckets = this.buildDateSummary(overview.tracks || []);
+      // 日期汇总改由后端按东八区分桶下发（避免前端日期运算出错）
+      const ds = overview.dateSummary || { title: '', label: '', rows: [] };
       this.setData({
         summary: this.buildSummary(overview),
         best: this.decorateBest(best),
         typeSummary: this.buildTypeSummary(overview.tracks || []),
-        dateSummary: dateBuckets.rows,
-        dateSummaryTitle: dateBuckets.title,
-        dateBucketLabel: dateBuckets.label,
+        dateSummary: (ds.rows || []).map((r) => ({
+          key: r.key,
+          label: r.label,
+          count: r.count,
+          distanceKm: (r.distance / 1000).toFixed(1),
+          durationText: durText(r.duration),
+          kcal: Math.round(r.calories || 0),
+        })),
+        dateSummaryTitle: ds.title,
+        dateBucketLabel: ds.label,
         compare: this.buildCompare(overview, prevOverview || null),
       });
     } catch (e) {
@@ -435,8 +445,12 @@ Page({
     const distanceKm = o.totalDistanceKm || 0;
     const durationSec = o.totalDurationSec || 0;
     const avgPer = count > 0 ? distanceKm / count : 0;
-    // 活跃天数（不同日期的轨迹数）
-    const days = new Set((o.tracks || []).map((t) => String(t.startTime).slice(0, 10))).size;
+    // 活跃天数：按设备本地自然日去重（不能用 ISO 串 slice(0,10)——那是 UTC 日期，东八区凌晨轨迹会算到前一天）
+    const dayKey = (t) => {
+      const d = new Date(t.startTime);
+      return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+    };
+    const days = new Set((o.tracks || []).map(dayKey)).size;
     // 日均分母：周/月/年按所选周期实际天数；全部按最早轨迹至今
     let dayCount;
     if (this.data.activeRange === 'all') {
@@ -511,107 +525,4 @@ Page({
     return { bestTable: Object.keys(rowsMap).sort().map((t) => rowsMap[t]) };
   },
 
-  /** 日期汇总：按当前维度切桶聚合（overview.tracks 为周期内全量数据，前端聚合即全量口径）
-   *  周→按天 / 月→按月内自然周（首尾周裁剪到月界）/ 年→按月 / 全部→按半年 */
-  buildDateSummary(tracks) {
-    const meta = {
-      week: { title: '按天', label: '日期' },
-      month: { title: '按周', label: '周' },
-      year: { title: '按月', label: '月份' },
-      all: { title: '按半年', label: '半年' },
-    }[this.data.activeRange] || { title: '', label: '' };
-
-    const buckets = [];
-    const byKey = new Map();
-    const addBucket = (key, label) => {
-      const b = { key, label, count: 0, distance: 0, duration: 0, calories: 0 };
-      buckets.push(b);
-      byKey.set(key, b);
-    };
-
-    if (this.data.activeRange === 'week') {
-      // 周期起点（周一）起连续 7 天，完整时间线含 0 记录日；当前周只展示到今天，之后的日期必无数据
-      const todayIdx = (new Date().getDay() + 6) % 7; // 今天是本周第几天（0=周一）
-      const days = this.data.periodOffset === 0 ? todayIdx + 1 : 7;
-      for (let i = 0; i < days; i++) {
-        const d = new Date(this._period.from + i * 86400000);
-        addBucket(d.toDateString(), `${d.getMonth() + 1}/${d.getDate()}`);
-      }
-    } else if (this.data.activeRange === 'month') {
-      // 月内自然周（周一为界）切桶：首尾周裁剪到月界，标签如 0901-0906周；当前月裁到今天
-      const monthStart = new Date(this._period.from);
-      const monthEnd = new Date(this._period.to);
-      const today0 = new Date();
-      today0.setHours(0, 0, 0, 0);
-      const md = (d) => `${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
-      const cursor = new Date(monthStart);
-      while (cursor < monthEnd) {
-        const monday = new Date(cursor);
-        monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
-        const nextMon = new Date(monday);
-        nextMon.setDate(nextMon.getDate() + 7);
-        const s = monday < monthStart ? new Date(monthStart) : new Date(monday);
-        let e = nextMon > monthEnd ? new Date(monthEnd) : nextMon;
-        if (this.data.periodOffset === 0) {
-          const todayEnd = new Date(today0.getTime() + 86400000);
-          if (e > todayEnd) e = todayEnd; // 当前月：最后一周裁到今天
-        }
-        if (s < e) {
-          const last = new Date(e.getTime() - 1);
-          addBucket(monday.getTime(), `${md(s)}-${md(last)}周`);
-        }
-        cursor.setTime(nextMon.getTime());
-      }
-    } else if (this.data.activeRange === 'year') {
-      // 当前年份只展示到当前月，之后的月份必无数据
-      const maxMonth = this.data.periodOffset === 0 ? new Date().getMonth() + 1 : 12;
-      for (let m = 1; m <= maxMonth; m++) addBucket(`m${m}`, `${m}月`);
-    } else {
-      // 全部：从最早活动所在半年到当前半年（H1=1-6月，H2=7-12月）
-      const starts = (tracks || []).map((t) => new Date(t.startTime).getTime()).filter((t) => t > 0);
-      if (starts.length) {
-        const min = new Date(Math.min(...starts));
-        const now = new Date();
-        let y = min.getFullYear();
-        let h = min.getMonth() < 6 ? 0 : 1;
-        while (y < now.getFullYear() || (y === now.getFullYear() && h <= (now.getMonth() < 6 ? 0 : 1))) {
-          addBucket(`${y}H${h}`, `${y} ${h === 0 ? '上半年' : '下半年'}`);
-          h += 1;
-          if (h > 1) { h = 0; y += 1; }
-        }
-      }
-    }
-
-    (tracks || []).forEach((t) => {
-      const d = new Date(t.startTime);
-      let key;
-      if (this.data.activeRange === 'week') key = d.toDateString();
-      else if (this.data.activeRange === 'month') {
-        // 归入该日期所在自然周（周一）的桶
-        const w = new Date(d);
-        w.setDate(w.getDate() - ((w.getDay() + 6) % 7));
-        key = w.getTime();
-      } else if (this.data.activeRange === 'year') key = `m${d.getMonth() + 1}`;
-      else key = `${d.getFullYear()}H${d.getMonth() < 6 ? 0 : 1}`;
-      const b = byKey.get(key);
-      if (!b) return;
-      b.count += 1;
-      b.distance += t.distance || 0;
-      b.duration += t.duration || 0;
-      b.calories += t.calories || 0;
-    });
-
-    return {
-      title: meta.title,
-      label: meta.label,
-      rows: buckets.map((b) => ({
-        key: b.key,
-        label: b.label,
-        count: b.count,
-        distanceKm: (b.distance / 1000).toFixed(1),
-        durationText: durText(b.duration),
-        kcal: Math.round(b.calories),
-      })),
-    };
-  },
 });
