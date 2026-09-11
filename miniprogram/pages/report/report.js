@@ -5,7 +5,7 @@
 const api = require('../../services/api');
 const loading = require('../../utils/loading');
 const config = require('../../config/index');
-const { formatDuration, formatPace, formatDurationStat } = require('../../utils/format');
+const { formatDuration, formatPace, formatDurationStat, compact } = require('../../utils/format');
 const { calcDiff } = require('../../utils/diff');
 
 /** 时长带单位（分钟/小时/天） */
@@ -455,7 +455,7 @@ Page({
           count: r.count,
           distanceKm: (r.distance / 1000).toFixed(1),
           durationText: durText(r.duration),
-          kcal: Math.round(r.calories || 0),
+          kcal: compact(Math.round(r.calories || 0)),
         })),
         dateSummaryTitle: ds.title,
         dateBucketLabel: ds.label,
