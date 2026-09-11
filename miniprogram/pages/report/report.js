@@ -197,9 +197,9 @@ Page({
   /** 打开海报预览弹窗并绘制 */
   async openPoster() {
     if (!this.data.summary || this.data.activeRange === 'all') return;
-    // 海报高度随分类汇总行数动态撑高（无分类数据则保持原尺寸）
+    // 海报高度随分类汇总行数动态撑高（无分类数据则保持紧凑尺寸）
     const rowsCount = (this.data.typeSummary || []).length;
-    const posterH = rowsCount > 0 ? 372 + rowsCount * 26 + 38 : 380;
+    const posterH = rowsCount > 0 ? 300 + rowsCount * 26 + 38 : 290;
     this.setData({
       posterVisible: true,
       posterPath: '',
@@ -300,41 +300,11 @@ Page({
       ctx.fillText(c.l, x + cardW / 2, cardY + 40);
     });
 
-    // 较上一周期：彩色胶囊
-    const items = (this.data.compare[0] && this.data.compare[0].items) || [];
-    const byKey = {};
-    items.forEach((it) => (byKey[it.key] = it.diff || {}));
-    ctx.fillStyle = muted;
-    ctx.font = '10px sans-serif';
-    ctx.fillText('较上一周期', W / 2, 260);
-    const chipW = (W - 24 * 2 - 10 * 2) / 3;
-    const chipY = 272;
-    const diffCols = [
-      { key: 'distance', l: '距离' },
-      { key: 'count', l: '次数' },
-      { key: 'duration', l: '时长' },
-    ];
-    diffCols.forEach((c, i) => {
-      const d = byKey[c.key] || { text: '—', cls: 'flat' };
-      const up = d.cls === 'up';
-      const down = d.cls === 'down';
-      const x = 24 + i * (chipW + 10);
-      ctx.fillStyle = up ? '#e6f6ee' : down ? '#fdecea' : cardBg;
-      roundRect(ctx, x, chipY, chipW, 36, 10);
-      ctx.fill();
-      ctx.fillStyle = up ? '#0f9d63' : down ? '#e34d59' : muted;
-      ctx.font = 'bold 12px sans-serif';
-      ctx.fillText(d.text || '—', x + chipW / 2, chipY + 15);
-      ctx.fillStyle = muted;
-      ctx.font = '9px sans-serif';
-      ctx.fillText(c.l, x + chipW / 2, chipY + 29);
-    });
-
     // 分类汇总表（按距离降序，全量行数，高度已在 openPoster 按行数撑高）
     const rows = this.data.typeSummary || [];
     if (rows.length > 0) {
       const dotColors = ['#2B6CF6', '#34A853', '#FF9800', '#9C27B0', '#00A6C0', '#E34D59', '#13C2C2', '#722ED1'];
-      let y = 336;
+      let y = 264;
       ctx.textAlign = 'left';
       ctx.fillStyle = ink;
       ctx.font = 'bold 12px sans-serif';
