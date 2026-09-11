@@ -237,34 +237,45 @@ Component({
 
     /**
      * 配速着色：轨迹线按配速分桶变色，颜色越深配速越快（浅黄慢 → 深红快）
-     * - 每步配速 = 步内用时 / 步内距离；整条轨迹取 P10~P90 分位做色带范围（防个别跳点拉爆色阶）
-     * - 原地漂移（距离≈0）无有效配速，按最慢档（最浅）处理；暂停间隙断开不跨段
+     * - 逐点/逐步配速噪声极大（GPS 抖动会让颜色逐段乱跳），先做「滑动窗口平滑」：
+     *   以每个点为终点，回溯累计近 WINDOW_SEC 秒内的距离/用时，得到该点的平滑配速，再决定这一步的颜色
+     * - 整条轨迹取平滑配速的 P10~P90 分位做色带范围（防个别异常值拉爆色阶）
+     * - 暂停间隙断开不跨段；累计距离过小（原地）按最慢档处理
      */
     buildPacePolyline(pts) {
+      const WINDOW_SEC = 45; // 滑动窗口时长：配速平滑粒度
       const segs = this.splitByPauseGaps([pts]).filter((seg) => seg.length >= 2);
       if (segs.length === 0) {
         this.setData({ polyline: [] });
         return;
       }
 
-      // 每步配速（秒/公里）：无 timestamp 或距离≈0 → null
-      const stepPace = (a, b) => {
-        if (!a.timestamp || !b.timestamp) return null;
-        const dt = (b.timestamp - a.timestamp) / 1000;
-        if (!Number.isFinite(dt) || dt <= 0) return null;
-        const d = haversineKm(a, b) * 1000; // 米
-        if (d < 0.5) return null;
-        return dt / (d / 1000);
-      };
-
-      // 全轨迹有效配速样本 → P10/P90 色带范围
-      const samples = [];
-      for (const seg of segs) {
+      // 每个点的平滑配速（秒/公里）：回溯累计近 WINDOW_SEC 秒；无 timestamp / 累计距离过小（原地）→ null
+      const segPaces = segs.map((seg) => {
+        const paces = new Array(seg.length).fill(null);
         for (let i = 1; i < seg.length; i++) {
-          const pace = stepPace(seg[i - 1], seg[i]);
-          if (pace != null) samples.push(pace);
+          const a = seg[i - 1];
+          const b = seg[i];
+          if (!a.timestamp || !b.timestamp) continue;
+          let dt = (b.timestamp - a.timestamp) / 1000;
+          if (!Number.isFinite(dt) || dt <= 0) continue;
+          let d = haversineKm(a, b) * 1000;
+          let j = i - 1;
+          while (j > 0 && dt < WINDOW_SEC) {
+            const sdt = (seg[j].timestamp - seg[j - 1].timestamp) / 1000;
+            if (!Number.isFinite(sdt) || sdt < 0 || sdt > 60) break; // 不跨断档回溯
+            dt += sdt;
+            d += haversineKm(seg[j - 1], seg[j]) * 1000;
+            j--;
+          }
+          paces[i] = d >= 5 ? dt / (d / 1000) : null;
         }
-      }
+        return paces;
+      });
+
+      // 平滑配速样本 → P10/P90 色带范围
+      const samples = [];
+      segPaces.forEach((paces) => paces.forEach((p) => { if (p != null) samples.push(p); }));
       if (samples.length === 0) {
         // 无 timestamp 等异常情况：回退默认分段配色
         this.buildDefaultPolyline(pts);
@@ -283,14 +294,15 @@ Component({
       };
 
       const allPolylines = [];
-      for (const seg of segs) {
+      segs.forEach((seg, si) => {
+        const paces = segPaces[si];
         let cur = null;
         for (let i = 1; i < seg.length; i++) {
           const a = seg[i - 1];
           const b = seg[i];
           if (!Number.isFinite(a.lat) || !Number.isFinite(b.lat)) continue;
-          const pace = stepPace(a, b);
-          const color = pace != null ? colorOf(pace) : PACE_COLORS[0]; // 无有效配速按最慢档
+          const pace = paces[i];
+          const color = pace != null ? colorOf(pace) : PACE_COLORS[0]; // 原地/无数据按最慢档
           const pt = { latitude: b.lat, longitude: b.lng };
           if (cur && cur.color === color) {
             cur.points.push(pt);
@@ -304,7 +316,7 @@ Component({
             allPolylines.push(cur);
           }
         }
-      }
+      });
       this.setData({ polyline: allPolylines });
     },
 
