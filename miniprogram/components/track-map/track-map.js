@@ -498,13 +498,16 @@ Component({
         });
       }
 
-      // 最高海拔标记（徒步/爬山）：最高点坐标处展示「▲ xxxm」
+      // 最高海拔标记（徒步/爬山）：最高点坐标处展示「▲ xxxm」；catch 兑底，单个标记失败不影响公里标等其它标记
       const peak = this.data.peakMarker;
       const peakJob =
         peak && Number.isFinite(peak.lat) && Number.isFinite(peak.lng) && peak.altitude != null
-          ? this.buildPeakMarker(peak).then((m) => {
-              if (m) base.push(m);
-            })
+          ? this.buildPeakMarker(peak).then(
+              (m) => {
+                if (m) base.push(m);
+              },
+              () => {},
+            )
           : Promise.resolve();
 
       // 每满一公里标记（圆圈数字）
@@ -514,43 +517,53 @@ Component({
       });
     },
 
-    /** 最高海拔标记：橙色药丸 + 白色「▲ xxxm」（离屏 canvas，按海拔值缓存） */
+    /** 最高海拔标记：橙色药丸 + 白色「▲ xxxm」（离屏 canvas，按海拔值缓存图标与尺寸） */
     async buildPeakMarker(peak) {
       const MARKER_ICON_CACHE = (this._markerIconCache = this._markerIconCache || {});
       const key = `peak-${Math.round(peak.altitude)}`;
-      let iconPath = MARKER_ICON_CACHE[key];
-      if (!iconPath) {
-        const canvas = wx.createOffscreenCanvas({ type: '2d', width: 20, height: 20 });
-        let ctx = canvas.getContext('2d');
-        ctx.font = 'bold 24px sans-serif';
-        const text = `▲ ${Math.round(peak.altitude)}m`;
-        const w = Math.ceil(ctx.measureText(text).width) + 44;
-        const h = 40;
-        canvas.width = w;
-        canvas.height = h;
-        ctx = canvas.getContext('2d');
-        ctx.font = 'bold 24px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        const r = 18;
-        ctx.beginPath();
-        ctx.moveTo(2 + r, 2);
-        ctx.arcTo(2 + w - 4, 2, 2 + w - 4, 2 + h - 4, r);
-        ctx.arcTo(2 + w - 4, 2 + h - 4, 2, 2 + h - 4, r);
-        ctx.arcTo(2, 2 + h - 4, 2, 2, r);
-        ctx.arcTo(2, 2, 2 + w - 4, 2, r);
-        ctx.closePath();
-        ctx.fillStyle = '#ff7a1a';
-        ctx.fill();
-        ctx.fillStyle = '#ffffff';
-        ctx.fillText(text, w / 2, h / 2 + 1);
-        iconPath = await new Promise((res) => {
-          wx.canvasToTempFilePath({ canvas, success: (r2) => res(r2.tempFilePath), fail: () => res('') });
-        });
-        if (iconPath) MARKER_ICON_CACHE[key] = iconPath;
+      const cached = MARKER_ICON_CACHE[key];
+      if (cached) {
+        return {
+          id: 200001,
+          latitude: peak.lat,
+          longitude: peak.lng,
+          iconPath: cached.iconPath,
+          width: cached.width,
+          height: cached.height,
+          anchor: { x: 0.5, y: 1 },
+        };
       }
+      let w = 0;
+      let h = 0;
+      const canvas = wx.createOffscreenCanvas({ type: '2d', width: 20, height: 20 });
+      let ctx = canvas.getContext('2d');
+      ctx.font = 'bold 24px sans-serif';
+      const text = `▲ ${Math.round(peak.altitude)}m`;
+      w = Math.ceil(ctx.measureText(text).width) + 44;
+      h = 40;
+      canvas.width = w;
+      canvas.height = h;
+      ctx = canvas.getContext('2d');
+      ctx.font = 'bold 24px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const r = 18;
+      ctx.beginPath();
+      ctx.moveTo(2 + r, 2);
+      ctx.arcTo(2 + w - 4, 2, 2 + w - 4, 2 + h - 4, r);
+      ctx.arcTo(2 + w - 4, 2 + h - 4, 2, 2 + h - 4, r);
+      ctx.arcTo(2, 2 + h - 4, 2, 2, r);
+      ctx.arcTo(2, 2, 2 + w - 4, 2, r);
+      ctx.closePath();
+      ctx.fillStyle = '#ff7a1a';
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(text, w / 2, h / 2 + 1);
+      const iconPath = await new Promise((res) => {
+        wx.canvasToTempFilePath({ canvas, success: (r2) => res(r2.tempFilePath), fail: () => res('') });
+      });
       if (!iconPath) return null;
-      return {
+      const marker = {
         id: 200001,
         latitude: peak.lat,
         longitude: peak.lng,
@@ -559,6 +572,8 @@ Component({
         height: Math.round(h * 0.6),
         anchor: { x: 0.5, y: 1 },
       };
+      MARKER_ICON_CACHE[key] = { iconPath, width: marker.width, height: marker.height };
+      return marker;
     },
 
     /** 公里标记：白底蓝边圆 + 数字图标（离屏 canvas，按公里数缓存） */
