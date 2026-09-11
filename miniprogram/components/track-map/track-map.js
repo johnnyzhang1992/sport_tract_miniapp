@@ -540,25 +540,40 @@ Component({
       ctx.font = 'bold 24px sans-serif';
       const text = `▲ ${Math.round(peak.altitude)}m`;
       w = Math.ceil(ctx.measureText(text).width) + 44;
-      h = 40;
+      h = 56; // 药丸 40 + 三角指针 16（尖端即最高点坐标）
       canvas.width = w;
       canvas.height = h;
       ctx = canvas.getContext('2d');
       ctx.font = 'bold 24px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
+      // 尾部三角指针（尖端钉在最高点上）
+      ctx.beginPath();
+      ctx.moveTo(w / 2 - 11, 38);
+      ctx.lineTo(w / 2 + 11, 38);
+      ctx.lineTo(w / 2, h - 2);
+      ctx.closePath();
+      ctx.fillStyle = '#ff7a1a';
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+      // 药丸主体
       const r = 18;
       ctx.beginPath();
       ctx.moveTo(2 + r, 2);
-      ctx.arcTo(2 + w - 4, 2, 2 + w - 4, 2 + h - 4, r);
-      ctx.arcTo(2 + w - 4, 2 + h - 4, 2, 2 + h - 4, r);
-      ctx.arcTo(2, 2 + h - 4, 2, 2, r);
+      ctx.arcTo(2 + w - 4, 2, 2 + w - 4, 42, r);
+      ctx.arcTo(2 + w - 4, 42, 2, 42, r);
+      ctx.arcTo(2, 42, 2, 2, r);
       ctx.arcTo(2, 2, 2 + w - 4, 2, r);
       ctx.closePath();
       ctx.fillStyle = '#ff7a1a';
       ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 3;
+      ctx.stroke();
       ctx.fillStyle = '#ffffff';
-      ctx.fillText(text, w / 2, h / 2 + 1);
+      ctx.fillText(text, w / 2, 22);
       const iconPath = await new Promise((res) => {
         wx.canvasToTempFilePath({ canvas, success: (r2) => res(r2.tempFilePath), fail: () => res('') });
       });
