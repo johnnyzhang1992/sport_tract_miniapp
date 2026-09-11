@@ -93,7 +93,7 @@ function decorateRows(board) {
     ...board,
     top: (board.top || []).map(deco),
     me: board.me ? deco(board.me) : null,
-    best: (board.best || []).map((b) => ({
+    best: (board.best || []).filter((b) => b.key !== 'longest').map((b) => ({
       ...b,
       label: BEST_LABELS[b.key] || b.key,
       valueText: fmtBestValue(b.key, b.value),
