@@ -32,7 +32,7 @@
       <view class="legend-bar {{colorMode === 'altitude' ? 'legend-bar-altitude' : 'legend-bar-pace'}}"></view>
       <text class="legend-text">{{colorMode === 'altitude' ? '海拔高' : paceFastText}}</text>
     </view>
-    <view class="legend-note">{{colorMode === 'altitude' ? '轨迹颜色越深，代表海拔越高' : '轨迹颜色由绿到黄，越偏黄代表配速越快'}}</view>
+    <view class="legend-note">{{colorMode === 'altitude' ? '轨迹颜色越深，代表海拔越高' : '颜色 绿→黄→橙→红→黑，代表配速由慢到快'}}</view>
   </view>
 
   <!-- 全屏地图弹窗（不拦截 touch：map 手势需要 touchmove 做缩放/拖动） -->

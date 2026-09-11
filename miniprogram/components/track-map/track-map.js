@@ -239,11 +239,11 @@ Component({
     },
 
     /**
-     * 配速着色：轨迹线按配速分桶变色，越快越偏黄（浅绿慢 → 深黄快）
+     * 配速着色：轨迹线按配速分 5 档平色，绿（慢）→ 黄 → 橙 → 红 → 黑（快），不做渐变
      * - 逐点/逐步配速噪声极大（GPS 抖动会让颜色逐段乱跳），先做「滑动窗口平滑」：
      *   以每个点为终点，回溯累计近 WINDOW_SEC 秒内的距离/用时，得到该点的平滑配速，再决定这一步的颜色
-     * - 绝对刻度：按运动类型固定的配速区间（getPaceScale）映射颜色，同类型跨轨迹可比；
-     *   超出刻度截断（比 fast 更快 → 最深；比 slow 更慢 → 最浅）
+     * - 绝对刻度：按运动类型固定的配速区间（getPaceScale）等分 5 档，同类型跨轨迹可比；
+     *   超出刻度截断（比 fast 更快 → 黑；比 slow 更慢 → 绿）
      * - 暂停间隙断开不跨段；累计距离过小（原地）按最慢档处理
      */
     buildPacePolyline(pts) {
@@ -285,14 +285,14 @@ Component({
         return;
       }
       const scale = getPaceScale(this.data.activityType);
-      const lo = scale.fast; // 最快档 → 深黄
-      const hi = scale.slow; // 最慢档 → 浅绿
+      const lo = scale.fast; // 最快档 → 黑
+      const hi = scale.slow; // 最慢档 → 绿
       const span = hi - lo || 1;
       const N = PACE_COLORS.length;
-      // pace 越小（越快）→ k 越小 → 取数组末位（深色）
+      // 按刻度等分 N 档取平色，不做渐变
       const colorOf = (pace) => {
         const k = Math.min(1, Math.max(0, (pace - lo) / span));
-        return PACE_COLORS[N - 1 - Math.round(k * (N - 1))];
+        return PACE_COLORS[Math.min(N - 1, Math.floor(k * N))];
       };
 
       const allPolylines = [];
@@ -905,34 +905,5 @@ const ALTITUDE_COLORS = (() => {
   return colors;
 })();
 
-/** 配速色带：浅绿 → 深绿 → 黄绿 → 浅黄 → 深黄（慢→快），12 档线性插值；index 0 = 最慢（浅绿）
- *  中间用黄绿桥接，避免深绿直插浅黄时出现暗橄榄色导致过渡发灰发怪 */
-const PACE_COLORS = (() => {
-  const stops = [
-    [0, [183, 235, 143]], // 浅绿（慢）
-    [0.28, [35, 120, 4]], // 深绿
-    [0.55, [160, 217, 17]], // 黄绿（桥接）
-    [0.8, [255, 236, 61]], // 浅黄
-    [1, [212, 177, 6]], // 深黄（快）
-  ];
-  const N = 12;
-  const hex = (n) => n.toString(16).padStart(2, '0');
-  const colors = [];
-  for (let i = 0; i < N; i++) {
-    const t = i / (N - 1);
-    let lo = stops[0];
-    let hi = stops[stops.length - 1];
-    for (let s = 0; s < stops.length - 1; s++) {
-      if (t >= stops[s][0] && t <= stops[s + 1][0]) {
-        lo = stops[s];
-        hi = stops[s + 1];
-        break;
-      }
-    }
-    const span = hi[0] - lo[0] || 1;
-    const k = (t - lo[0]) / span;
-    const rgb = lo[1].map((c, idx) => Math.round(c + (hi[1][idx] - c) * k));
-    colors.push(`#${hex(rgb[0])}${hex(rgb[1])}${hex(rgb[2])}`);
-  }
-  return colors;
-})();
+/** 配速分档色：绿 → 黄 → 橙 → 红 → 黑（慢→快），平色分档不做渐变；index 0 = 最慢（绿） */
+const PACE_COLORS = ['#22c55e', '#facc15', '#f97316', '#ef4444', '#111111'];
