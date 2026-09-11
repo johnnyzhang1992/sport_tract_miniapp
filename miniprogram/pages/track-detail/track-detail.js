@@ -11,6 +11,7 @@ const { getBestCache, setBestCache } = require('../../services/storage');
 const storage = require('../../services/storage');
 const { uploadPhoto } = require('../../services/oss-upload');
 const { formatDuration, formatPace, formatPaceParts } = require('../../utils/format');
+const { getPaceScale } = require('../../utils/pace-scale');
 
 Page({
   data: {
@@ -100,12 +101,15 @@ Page({
           altRangeText,
           altRangeIsRange: hasAltRange,
         },
-        // 轨迹线着色：徒步/爬山且有海拔数据 → 按海拔；否则按配速（颜色越深配速越快）
+        // 轨迹线着色：徒步/爬山且有海拔数据 → 按海拔；否则按配速（绝对刻度，越快越偏黄）
         colorMode:
           ['hiking', 'mountaineering'].includes(activity.type) &&
           (activity.trackPoints || []).some((p) => p.altitude != null)
             ? 'altitude'
             : 'pace',
+        activityType: activity.type,
+        paceSlowText: (formatPaceParts(getPaceScale(activity.type).slow) || {}).value || '—',
+        paceFastText: (formatPaceParts(getPaceScale(activity.type).fast) || {}).value || '—',
         mapPoints: (activity.trackPoints || []).map((p) => ({
           lat: p.lat,
           lng: p.lng,
