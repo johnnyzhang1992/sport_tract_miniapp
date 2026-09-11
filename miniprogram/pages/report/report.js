@@ -197,9 +197,10 @@ Page({
   /** 打开海报预览弹窗并绘制 */
   async openPoster() {
     if (!this.data.summary || this.data.activeRange === 'all') return;
-    // 海报高度随分类汇总行数动态撑高（无分类数据则保持紧凑尺寸）
+    // 海报高度：内容自然高度，且不小于 3:4（宽 300 → 高 400）
     const rowsCount = (this.data.typeSummary || []).length;
-    const posterH = rowsCount > 0 ? 300 + rowsCount * 26 + 38 : 290;
+    const naturalH = rowsCount > 0 ? 300 + rowsCount * 26 + 38 : 260;
+    const posterH = Math.max(naturalH, 400);
     this.setData({
       posterVisible: true,
       posterPath: '',
@@ -300,11 +301,12 @@ Page({
       ctx.fillText(c.l, x + cardW / 2, cardY + 40);
     });
 
-    // 分类汇总表（按距离降序，全量行数，高度已在 openPoster 按行数撑高）
+    // 分类汇总表（按距离降序，全量行数）；海报不小于 3:4，多出空间的一半补在表格上方，保持版面均衡
     const rows = this.data.typeSummary || [];
     if (rows.length > 0) {
       const dotColors = ['#2B6CF6', '#34A853', '#FF9800', '#9C27B0', '#00A6C0', '#E34D59', '#13C2C2', '#722ED1'];
-      let y = 264;
+      const naturalH = 300 + rows.length * 26 + 38;
+      let y = 264 + Math.max(0, H - naturalH) / 2;
       ctx.textAlign = 'left';
       ctx.fillStyle = ink;
       ctx.font = 'bold 12px sans-serif';
