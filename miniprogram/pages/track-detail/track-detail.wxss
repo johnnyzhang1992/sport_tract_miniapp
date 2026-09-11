@@ -415,7 +415,7 @@
   background: linear-gradient(90deg, #2979ff, #00c753, #ffd500, #f44336);
 }
 .legend-bar-pace {
-  background: linear-gradient(90deg, #95de64, #237804, #fff566, #d4b106);
+  background: linear-gradient(90deg, #b7eb8f, #277b08, #9ed711, #fbe738, #d4b106);
 }
 .legend-note {
   margin-top: 6rpx;
