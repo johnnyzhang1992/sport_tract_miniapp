@@ -417,11 +417,10 @@
 .legend-bar-pace {
   background: linear-gradient(
     90deg,
-    #22c55e 0 20%,
-    #facc15 20% 40%,
-    #f97316 40% 60%,
-    #ef4444 60% 80%,
-    #111111 80% 100%
+    #22c55e 0 25%,
+    #facc15 25% 50%,
+    #f97316 50% 75%,
+    #ef4444 75% 100%
   );
 }
 .legend-note {

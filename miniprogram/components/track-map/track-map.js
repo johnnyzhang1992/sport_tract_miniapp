@@ -285,13 +285,13 @@ Component({
         return;
       }
       const scale = getPaceScale(this.data.activityType);
-      const lo = scale.fast; // 最快档 → 黑
-      const hi = scale.slow; // 最慢档 → 绿
-      const span = hi - lo || 1;
+      const fastPace = scale.fast; // 刻度快端（数值最小）→ 红
+      const slowPace = scale.slow; // 刻度慢端（数值最大）→ 绿
+      const span = slowPace - fastPace || 1;
       const N = PACE_COLORS.length;
-      // 按刻度等分 N 档取平色，不做渐变
+      // 慢→快 对应 绿→红：pace 越接近 slow 越绿（慢），越接近 fast 越红（快）；按刻度等分 N 档平色，不做渐变
       const colorOf = (pace) => {
-        const k = Math.min(1, Math.max(0, (pace - lo) / span));
+        const k = Math.min(1, Math.max(0, (slowPace - pace) / span));
         return PACE_COLORS[Math.min(N - 1, Math.floor(k * N))];
       };
 
@@ -905,5 +905,5 @@ const ALTITUDE_COLORS = (() => {
   return colors;
 })();
 
-/** 配速分档色：绿 → 黄 → 橙 → 红 → 黑（慢→快），平色分档不做渐变；index 0 = 最慢（绿） */
-const PACE_COLORS = ['#22c55e', '#facc15', '#f97316', '#ef4444', '#111111'];
+/** 配速分档色：绿 → 黄 → 橙 → 红（慢→快），4 档平色不做渐变；index 0 = 最慢（绿） */
+const PACE_COLORS = ['#22c55e', '#facc15', '#f97316', '#ef4444'];
