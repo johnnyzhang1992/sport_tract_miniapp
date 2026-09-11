@@ -30,7 +30,7 @@
     </view>
   </view>
 
-  <!-- 日期汇总：按当前维度切桶（周→按天 / 月→按星期 / 年→按月 / 全部→按半年） -->
+  <!-- 日期汇总：按当前维度切桶（周→按天 / 月→按自然周 / 年→按月 / 全部→按半年），后端聚合下发 -->
   <view class="card" wx:if="{{dateSummary.length > 0}}">
     <view class="section-title">日期汇总 · {{dateSummaryTitle}}</view>
     <view class="best-table">
