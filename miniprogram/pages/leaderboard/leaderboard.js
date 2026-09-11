@@ -76,7 +76,7 @@ function fmtBestValue(key, v) {
     const s = Math.round(v - m * 60);
     return `${m}'${String(s).padStart(2, '0')}"`;
   }
-  if (key === 'fastestAvg') return `${(3600 / v).toFixed(1)} km/h`; // 秒/公里 → km/h
+  if (key === 'fastestAvg') return `${v.toFixed(1)} km/h`; // 后端直接回均速 km/h
   if (key === 'maxClimb') return `${Math.round(v)} m`;
   return String(v);
 }

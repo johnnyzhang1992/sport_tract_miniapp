@@ -374,6 +374,9 @@ Page({
   },
 
   /** 单段明细：按每公里切分段（序号/时间/配速），最后不足 1km 记为余段 */
+  /** 每公里分段（与后端 calcFastestKm 同口径）
+   *  pauseGap 或相邻点间隔 >60s 视为断档：跳档距离/时间均不计入，段从该点重开；
+   *  完整段（≥1km）与余段分开标记（partial），最快段只在完整段中选 */
   computeKmSegments(points) {
     if (!points || points.length < 2) return [];
     const toRad = (d) => (d * Math.PI) / 180;
@@ -386,38 +389,44 @@ Page({
         Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
       return 2 * R * Math.asin(Math.sqrt(s));
     };
+    const GAP_SEC = 60;
     const segs = [];
-    let cur = { startTs: points[0].timestamp, acc: 0 };
-    for (let i = 1; i < points.length; i++) {
-      const d = distM(points[i - 1], points[i]);
-      cur.acc += d;
-      if (cur.acc >= 1000) {
-        const durationSec = Math.max(1, Math.round((points[i].timestamp - cur.startTs) / 1000));
-        const distKm = cur.acc / 1000;
-        segs.push({
-          idx: segs.length + 1,
-          distKm,
-          durationSec,
-          durationText: formatDuration(durationSec),
-          paceText: formatPace(durationSec / distKm),
-        });
-        cur = { startTs: points[i].timestamp, acc: 0 };
-      }
-    }
-    // 最后不足 1km 的余段（位移 >20m 才展示）
-    if (cur.acc > 20 && points.length >= 2) {
-      const last = points[points.length - 1];
-      const durationSec = Math.max(1, Math.round((last.timestamp - cur.startTs) / 1000));
-      const distKm = cur.acc / 1000;
+    let segStartTs = points[0].timestamp;
+    let acc = 0;
+    let prev = points[0];
+    const pushSeg = (endTs, partial) => {
+      const durationSec = Math.max(1, Math.round((endTs - segStartTs) / 1000));
+      const distKm = acc / 1000;
       segs.push({
         idx: segs.length + 1,
         distKm,
         durationSec,
         durationText: formatDuration(durationSec),
         paceText: formatPace(durationSec / distKm),
-        partial: true, // 余段（不足 1km）
+        ...(partial ? { partial: true } : {}),
       });
+    };
+    for (let i = 1; i < points.length; i++) {
+      const p = points[i];
+      const dt = (p.timestamp - prev.timestamp) / 1000;
+      // 断档：跨档距离/时间都不计入，段从当前点重开（前一段余段单独展示）
+      if (p.pauseGap || !Number.isFinite(dt) || dt < 0 || dt > GAP_SEC) {
+        if (acc > 20) pushSeg(prev.timestamp, true);
+        segStartTs = p.timestamp;
+        acc = 0;
+        prev = p;
+        continue;
+      }
+      acc += distM(prev, p);
+      if (acc >= 1000) {
+        pushSeg(p.timestamp, false);
+        segStartTs = p.timestamp;
+        acc = 0;
+      }
+      prev = p;
     }
+    // 最后不足 1km 的余段（位移 >20m 才展示）
+    if (acc > 20) pushSeg(prev.timestamp, true);
     return segs;
   },
 
