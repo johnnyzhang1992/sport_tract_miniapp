@@ -702,7 +702,8 @@ Component({
           (p) => Number.isFinite(p.lat) && Number.isFinite(p.lng),
         );
         if (raw.length < 2) return;
-        // 轨迹热度 = 命中热力网格的权重均值（高频路线 → 粗橙线）
+        // 轨迹热度 = 命中热力网格的权重均值；按频率四档着色：黑(低)→黄→橙→红(高)
+        // 粗细只做轻微递进（3→4，整数），频率差异主要靠颜色表达
         let sum = 0;
         let n = 0;
         raw.forEach((p) => {
@@ -715,14 +716,20 @@ Component({
           }
         });
         const trackHeat = n > 0 ? sum / n : 0;
-        const baseColor = t.color || '#2B6CF6';
-        let color = baseColor;
-        let width = 3;
-        if (trackHeat >= 0.5) {
-          color = '#FF9800'; // 高频：橙色粗线（热力强调）
-          width = 6;
+        let color;
+        let width;
+        if (trackHeat >= 0.6) {
+          color = '#E53935'; // 高频：红
+          width = 4;
+        } else if (trackHeat >= 0.4) {
+          color = '#FF9800'; // 中高频：橙
+          width = 4;
         } else if (trackHeat >= 0.2) {
-          width = 4; // 中频：类型色加粗
+          color = '#FFC107'; // 中低频：黄
+          width = 3;
+        } else {
+          color = '#1F2329'; // 低频：黑
+          width = 3;
         }
         // 按 pauseGap 切段（暂停间隙断开连线），同色同宽多段 polyline
         const segs = [];
