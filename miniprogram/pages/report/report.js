@@ -98,6 +98,7 @@ Page({
     periodOptions: [], // 弹窗选项 [{offset, label, selected}]
     pickerScrollInto: '', // 弹窗滚动定位到当前周期
     posterVisible: false, // 周期海报预览弹窗
+    posterCanvasH: 380, // 海报 canvas 高度（随分类汇总行数动态撑高）
     posterPath: '',
     saving: false,
   },
@@ -196,7 +197,13 @@ Page({
   /** 打开海报预览弹窗并绘制 */
   async openPoster() {
     if (!this.data.summary || this.data.activeRange === 'all') return;
-    this.setData({ posterVisible: true, posterPath: '' });
+    // 海报高度随分类汇总行数动态撑高（无分类数据则保持原尺寸）
+    const rowsCount = Math.min((this.data.typeSummary || []).length, 6);
+    this.setData({
+      posterVisible: true,
+      posterPath: '',
+      posterCanvasH: rowsCount > 0 ? 372 + rowsCount * 26 + 36 : 380,
+    });
     loading.show('生成海报…');
     try {
       await new Promise((r) => setTimeout(r, 150)); // 等弹窗渲染出 canvas
@@ -321,6 +328,57 @@ Page({
       ctx.font = '9px sans-serif';
       ctx.fillText(c.l, x + chipW / 2, chipY + 29);
     });
+
+    // 分类汇总表（按距离降序，最多 6 行）
+    const rowsAll = this.data.typeSummary || [];
+    if (rowsAll.length > 0) {
+      const rows = rowsAll.slice(0, 6);
+      const dotColors = ['#2B6CF6', '#34A853', '#FF9800', '#9C27B0', '#00A6C0', '#E34D59'];
+      let y = 336;
+      ctx.textAlign = 'left';
+      ctx.fillStyle = ink;
+      ctx.font = 'bold 12px sans-serif';
+      ctx.fillText('分类汇总', 24, y);
+      y += 14;
+      // 表头
+      ctx.fillStyle = cardBg;
+      roundRect(ctx, 24, y, W - 48, 22, 8);
+      ctx.fill();
+      ctx.fillStyle = muted;
+      ctx.font = '10px sans-serif';
+      ctx.fillText('类型', 40, y + 15);
+      ctx.textAlign = 'right';
+      ctx.fillText('次数', 150, y + 15);
+      ctx.fillText('距离(km)', 210, y + 15);
+      ctx.fillText('时长', 276, y + 15);
+      y += 22;
+      rows.forEach((r, i) => {
+        const rowH = 26;
+        const cy = y + rowH / 2;
+        ctx.textAlign = 'left';
+        ctx.fillStyle = dotColors[i % dotColors.length];
+        ctx.beginPath();
+        ctx.arc(32, cy - 4, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = ink;
+        ctx.font = '11px sans-serif';
+        const label = r.typeLabel.length > 6 ? `${r.typeLabel.slice(0, 6)}…` : r.typeLabel;
+        ctx.fillText(label, 40, cy);
+        ctx.textAlign = 'right';
+        ctx.fillText(String(r.count), 150, cy);
+        ctx.fillText(r.distanceKm, 210, cy);
+        ctx.fillText(r.durationText, 276, cy);
+        if (i < rows.length - 1) {
+          ctx.strokeStyle = 'rgba(31,35,41,0.08)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(28, y + rowH);
+          ctx.lineTo(W - 28, y + rowH);
+          ctx.stroke();
+        }
+        y += rowH;
+      });
+    }
 
     // 品牌行：左昵称 + 右 @小迹一下
     const u = getApp().globalData.userInfo;
