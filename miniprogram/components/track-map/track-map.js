@@ -903,11 +903,11 @@ const ALTITUDE_COLORS = (() => {
   return colors;
 })();
 
-/** 配速色带：浅黄（慢）→ 深红（快），12 档线性插值；index 0 最浅 = 最慢，末位最深 = 最快 */
+/** 配速色带：亮黄（慢）→ 深绿（快），12 档线性插值；index 0 最亮 = 最慢，末位最深 = 最快 */
 const PACE_COLORS = (() => {
   const N = 12;
-  const from = [255, 229, 143]; // 浅黄（慢）
-  const to = [130, 0, 20]; // 深红（快）
+  const from = [255, 214, 10]; // 亮黄（慢）
+  const to = [0, 135, 90]; // 深绿（快）
   const hex = (n) => n.toString(16).padStart(2, '0');
   const colors = [];
   for (let i = 0; i < N; i++) {
