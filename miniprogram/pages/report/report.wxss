@@ -354,6 +354,8 @@
   border-radius: 20rpx;
   padding: 24rpx;
   width: 340px;
+  max-height: 92vh;
+  overflow-y: auto;
 }
 .poster-head {
   display: flex;
