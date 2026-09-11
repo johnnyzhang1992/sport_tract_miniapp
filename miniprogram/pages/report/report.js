@@ -198,11 +198,12 @@ Page({
   async openPoster() {
     if (!this.data.summary || this.data.activeRange === 'all') return;
     // 海报高度随分类汇总行数动态撑高（无分类数据则保持原尺寸）
-    const rowsCount = Math.min((this.data.typeSummary || []).length, 6);
+    const rowsCount = (this.data.typeSummary || []).length;
+    const posterH = rowsCount > 0 ? 372 + rowsCount * 26 + 38 : 380;
     this.setData({
       posterVisible: true,
       posterPath: '',
-      posterCanvasH: rowsCount > 0 ? 372 + rowsCount * 26 + 36 : 380,
+      posterCanvasH: posterH,
     });
     loading.show('生成海报…');
     try {
@@ -215,13 +216,13 @@ Page({
           .exec((q) => (q && q[0] && q[0].node ? resolve(q[0]) : reject(new Error('canvas 不存在'))));
       });
       this._canvasNode = res.node;
-      const { width, height } = res;
       const ctx = res.node.getContext('2d');
       const dpr = (wx.getWindowInfo ? wx.getWindowInfo().pixelRatio : 2) || 2;
-      res.node.width = width * dpr;
-      res.node.height = height * dpr;
+      // 用计算好的 posterH 设置像素尺寸（不用 res.size：setData 后查询可能拿到旧高度导致表格被裁）
+      res.node.width = 300 * dpr;
+      res.node.height = posterH * dpr;
       ctx.scale(dpr, dpr);
-      this.drawPeriodPoster(ctx, width, height);
+      this.drawPeriodPoster(ctx, 300, posterH);
       const path = await new Promise((resolve, reject) => {
         wx.canvasToTempFilePath({ canvas: this._canvasNode, success: (r) => resolve(r.tempFilePath), fail: reject });
       });
@@ -329,11 +330,10 @@ Page({
       ctx.fillText(c.l, x + chipW / 2, chipY + 29);
     });
 
-    // 分类汇总表（按距离降序，最多 6 行）
-    const rowsAll = this.data.typeSummary || [];
-    if (rowsAll.length > 0) {
-      const rows = rowsAll.slice(0, 6);
-      const dotColors = ['#2B6CF6', '#34A853', '#FF9800', '#9C27B0', '#00A6C0', '#E34D59'];
+    // 分类汇总表（按距离降序，全量行数，高度已在 openPoster 按行数撑高）
+    const rows = this.data.typeSummary || [];
+    if (rows.length > 0) {
+      const dotColors = ['#2B6CF6', '#34A853', '#FF9800', '#9C27B0', '#00A6C0', '#E34D59', '#13C2C2', '#722ED1'];
       let y = 336;
       ctx.textAlign = 'left';
       ctx.fillStyle = ink;
