@@ -903,16 +903,31 @@ const ALTITUDE_COLORS = (() => {
   return colors;
 })();
 
-/** 配速色带：亮黄（慢）→ 深绿（快），12 档线性插值；index 0 最亮 = 最慢，末位最深 = 最快 */
+/** 配速色带：浅绿 → 深绿 → 浅黄 → 深黄（慢→快），12 档线性插值；index 0 = 最慢（浅绿） */
 const PACE_COLORS = (() => {
+  const stops = [
+    [0, [149, 222, 100]], // 浅绿（慢）
+    [0.33, [35, 120, 4]], // 深绿
+    [0.66, [255, 245, 102]], // 浅黄
+    [1, [212, 177, 6]], // 深黄（快）
+  ];
   const N = 12;
-  const from = [255, 214, 10]; // 亮黄（慢）
-  const to = [0, 135, 90]; // 深绿（快）
   const hex = (n) => n.toString(16).padStart(2, '0');
   const colors = [];
   for (let i = 0; i < N; i++) {
-    const k = i / (N - 1);
-    const rgb = from.map((c, idx) => Math.round(c + (to[idx] - c) * k));
+    const t = i / (N - 1);
+    let lo = stops[0];
+    let hi = stops[stops.length - 1];
+    for (let s = 0; s < stops.length - 1; s++) {
+      if (t >= stops[s][0] && t <= stops[s + 1][0]) {
+        lo = stops[s];
+        hi = stops[s + 1];
+        break;
+      }
+    }
+    const span = hi[0] - lo[0] || 1;
+    const k = (t - lo[0]) / span;
+    const rgb = lo[1].map((c, idx) => Math.round(c + (hi[1][idx] - c) * k));
     colors.push(`#${hex(rgb[0])}${hex(rgb[1])}${hex(rgb[2])}`);
   }
   return colors;
