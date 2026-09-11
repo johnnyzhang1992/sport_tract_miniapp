@@ -5,6 +5,7 @@
  */
 // 合集模式"密集区域"半径（km）：轨迹中心距核心在此范围内即视为同一密集簇
 const DENSE_REGION_KM = 50;
+const { getPaceScale } = require('../../utils/pace-scale.js');
 
 Component({
   properties: {
@@ -30,6 +31,8 @@ Component({
     heat: { type: Array, value: [] },
     /** 轨迹线着色模式：altitude=按海拔（蓝低→红高，徒步/爬山）；pace=按配速（越快越深，其余类型）；空=默认分段配色 */
     colorMode: { type: String, value: '' },
+    /** 运动类型（running/walking/...）：pace 着色时选取对应类型的绝对配速刻度 */
+    activityType: { type: String, value: '' },
     /** 起点/终点标记（起/终 文字标签） */
     showStartEnd: { type: Boolean, value: false },
     /** 显示高频路线图例（overview 合集模式） */
@@ -61,7 +64,7 @@ Component({
   },
 
   observers: {
-    'points, markers, currentLocation, kmMarkers, colorMode': function (points, markers, currentLocation) {
+    'points, markers, currentLocation, kmMarkers, colorMode, activityType': function (points, markers, currentLocation) {
       this.updateCenter();
       // overview 模式轨迹线由 buildOverview 管理，buildPolyline 会清空（points 为空）
       if (this.data.mode !== 'overview') {
@@ -236,10 +239,11 @@ Component({
     },
 
     /**
-     * 配速着色：轨迹线按配速分桶变色，颜色越深配速越快（浅黄慢 → 深红快）
+     * 配速着色：轨迹线按配速分桶变色，越快越偏黄（浅绿慢 → 深黄快）
      * - 逐点/逐步配速噪声极大（GPS 抖动会让颜色逐段乱跳），先做「滑动窗口平滑」：
      *   以每个点为终点，回溯累计近 WINDOW_SEC 秒内的距离/用时，得到该点的平滑配速，再决定这一步的颜色
-     * - 整条轨迹取平滑配速的 P10~P90 分位做色带范围（防个别异常值拉爆色阶）
+     * - 绝对刻度：按运动类型固定的配速区间（getPaceScale）映射颜色，同类型跨轨迹可比；
+     *   超出刻度截断（比 fast 更快 → 最深；比 slow 更慢 → 最浅）
      * - 暂停间隙断开不跨段；累计距离过小（原地）按最慢档处理
      */
     buildPacePolyline(pts) {
@@ -273,18 +277,16 @@ Component({
         return paces;
       });
 
-      // 平滑配速样本 → P10/P90 色带范围
-      const samples = [];
-      segPaces.forEach((paces) => paces.forEach((p) => { if (p != null) samples.push(p); }));
-      if (samples.length === 0) {
+      // 绝对刻度映射：按运动类型固定的配速区间（超出截断）
+      const hasAny = segPaces.some((paces) => paces.some((p) => p != null));
+      if (!hasAny) {
         // 无 timestamp 等异常情况：回退默认分段配色
         this.buildDefaultPolyline(pts);
         return;
       }
-      samples.sort((x, y) => x - y);
-      const pick = (q) => samples[Math.min(samples.length - 1, Math.max(0, Math.floor(q * (samples.length - 1))))];
-      const lo = pick(0.1); // P10：最慢档
-      const hi = pick(0.9); // P90：最快档
+      const scale = getPaceScale(this.data.activityType);
+      const lo = scale.fast; // 最快档 → 深黄
+      const hi = scale.slow; // 最慢档 → 浅绿
       const span = hi - lo || 1;
       const N = PACE_COLORS.length;
       // pace 越小（越快）→ k 越小 → 取数组末位（深色）
