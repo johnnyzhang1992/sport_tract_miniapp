@@ -6,7 +6,7 @@
  */
 const PACE_SCALE = {
   running: { fast: 180, slow: 600 }, // 跑步 3'00" ~ 10'00"
-  walking: { fast: 360, slow: 1500 }, // 散步 6'00" ~ 25'00"
+  walking: { fast: 180, slow: 600 }, // 散步：与跑步同刻度（用户指定）
   hiking: { fast: 420, slow: 1800 }, // 徒步 7'00" ~ 30'00"
   mountaineering: { fast: 480, slow: 2400 }, // 爬山 8'00" ~ 40'00"
   cycling: { fast: 90, slow: 480 }, // 骑行 40km/h ~ 7.5km/h
