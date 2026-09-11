@@ -517,7 +517,7 @@ Component({
       });
     },
 
-    /** 最高海拔标记：橙色药丸 + 白色「▲ xxxm」（离屏 canvas，按海拔值缓存图标与尺寸） */
+    /** 最高海拔标记：与公里标记同款圆点徽章（白底橙边，区别于公里标的蓝边），内绘 ▲ + 海拔米数，锚定在轨迹最高点上 */
     async buildPeakMarker(peak) {
       const MARKER_ICON_CACHE = (this._markerIconCache = this._markerIconCache || {});
       const key = `peak-${Math.round(peak.altitude)}`;
@@ -528,67 +528,43 @@ Component({
           latitude: peak.lat,
           longitude: peak.lng,
           iconPath: cached.iconPath,
-          width: cached.width,
-          height: cached.height,
-          anchor: { x: 0.5, y: 1 },
+          width: 22,
+          height: 22,
+          anchor: { x: 0.5, y: 0.5 },
         };
       }
-      let w = 0;
-      let h = 0;
-      const canvas = wx.createOffscreenCanvas({ type: '2d', width: 20, height: 20 });
-      let ctx = canvas.getContext('2d');
-      ctx.font = 'bold 24px sans-serif';
-      const text = `▲ ${Math.round(peak.altitude)}m`;
-      w = Math.ceil(ctx.measureText(text).width) + 44;
-      h = 56; // 药丸 40 + 三角指针 16（尖端即最高点坐标）
-      canvas.width = w;
-      canvas.height = h;
-      ctx = canvas.getContext('2d');
-      ctx.font = 'bold 24px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      // 尾部三角指针（尖端钉在最高点上）
+      const meters = Math.round(peak.altitude);
+      const canvas = wx.createOffscreenCanvas({ type: '2d', width: 48, height: 48 });
+      const ctx = canvas.getContext('2d');
+      // 白底圆 + 橙色边框（公里标是蓝边，颜色区分）
       ctx.beginPath();
-      ctx.moveTo(w / 2 - 11, 38);
-      ctx.lineTo(w / 2 + 11, 38);
-      ctx.lineTo(w / 2, h - 2);
-      ctx.closePath();
-      ctx.fillStyle = '#ff7a1a';
+      ctx.arc(24, 24, 22, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
       ctx.fill();
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 2.5;
-      ctx.stroke();
-      // 药丸主体
-      const r = 18;
-      ctx.beginPath();
-      ctx.moveTo(2 + r, 2);
-      ctx.arcTo(2 + w - 4, 2, 2 + w - 4, 42, r);
-      ctx.arcTo(2 + w - 4, 42, 2, 42, r);
-      ctx.arcTo(2, 42, 2, 2, r);
-      ctx.arcTo(2, 2, 2 + w - 4, 2, r);
-      ctx.closePath();
-      ctx.fillStyle = '#ff7a1a';
-      ctx.fill();
-      ctx.strokeStyle = '#ffffff';
+      ctx.strokeStyle = '#ff7a1a';
       ctx.lineWidth = 3;
       ctx.stroke();
-      ctx.fillStyle = '#ffffff';
-      ctx.fillText(text, w / 2, 22);
+      ctx.fillStyle = '#ff7a1a';
+      ctx.textAlign = 'center';
+      // 上行 ▲ 符号 + 下行海拔米数（位数多时自动缩小字号）
+      ctx.font = 'bold 13px sans-serif';
+      ctx.fillText('▲', 24, 19);
+      ctx.font = `bold ${meters >= 10000 ? 10 : meters >= 1000 ? 12 : 15}px sans-serif`;
+      ctx.fillText(String(meters), 24, 37);
       const iconPath = await new Promise((res) => {
-        wx.canvasToTempFilePath({ canvas, success: (r2) => res(r2.tempFilePath), fail: () => res('') });
+        wx.canvasToTempFilePath({ canvas, success: (r) => res(r.tempFilePath), fail: () => res('') });
       });
       if (!iconPath) return null;
-      const marker = {
+      MARKER_ICON_CACHE[key] = { iconPath };
+      return {
         id: 200001,
         latitude: peak.lat,
         longitude: peak.lng,
         iconPath,
-        width: Math.round(w * 0.6),
-        height: Math.round(h * 0.6),
-        anchor: { x: 0.5, y: 1 },
+        width: 22,
+        height: 22,
+        anchor: { x: 0.5, y: 0.5 },
       };
-      MARKER_ICON_CACHE[key] = { iconPath, width: marker.width, height: marker.height };
-      return marker;
     },
 
     /** 公里标记：白底蓝边圆 + 数字图标（离屏 canvas，按公里数缓存） */
