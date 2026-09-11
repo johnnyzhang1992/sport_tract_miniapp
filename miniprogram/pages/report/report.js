@@ -259,24 +259,24 @@ Page({
     ctx.font = 'bold 22px sans-serif';
     ctx.fillText(this.data.periodLabel, W / 2, 68);
 
-    // 主指标：总距离（数字 + 单位整体居中）
-    ctx.fillStyle = accent;
+    // 主指标：「总距离」标签 + 数字 + 单位同行，整体居中（标签在左侧）
     ctx.font = 'bold 42px sans-serif';
     const numW = ctx.measureText(`${s.distanceKm}`).width;
     ctx.font = '13px sans-serif';
+    const labelW = ctx.measureText('总距离').width;
     const unitW = ctx.measureText('公里').width;
-    const startX = W / 2 - (numW + 4 + unitW) / 2;
+    const gap = 8;
+    const startX = W / 2 - (labelW + gap + numW + 4 + unitW) / 2;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = muted;
+    ctx.fillText('总距离', startX, 142);
     ctx.fillStyle = accent;
     ctx.font = 'bold 42px sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText(`${s.distanceKm}`, startX, 142);
+    ctx.fillText(`${s.distanceKm}`, startX + labelW + gap, 142);
     ctx.fillStyle = muted;
     ctx.font = '13px sans-serif';
-    ctx.fillText('公里', startX + numW + 4, 142);
+    ctx.fillText('公里', startX + labelW + gap + numW + 4, 142);
     ctx.textAlign = 'center';
-    ctx.fillStyle = muted;
-    ctx.font = '11px sans-serif';
-    ctx.fillText('总距离', W / 2, 162);
 
     // 数据卡 × 4
     const cols = [
