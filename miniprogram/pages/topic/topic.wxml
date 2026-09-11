@@ -1,0 +1,17 @@
+<view class="container">
+  <view wx:if="{{loading}}" class="tip">加载中…</view>
+
+  <view wx:elif="{{failed}}" class="tip">
+    <view>专题不存在或已下线</view>
+    <button class="retry-btn" size="mini" bindtap="onRetry">重试</button>
+  </view>
+
+  <block wx:elif="{{topic}}">
+    <image wx:if="{{topic.coverUrl}}" class="cover" src="{{topic.coverUrl}}" mode="widthFix" />
+    <view class="title">{{topic.title}}</view>
+    <view class="date" wx:if="{{topic.dateText}}">{{topic.dateText}}</view>
+    <view class="content">
+      <rich-text nodes="{{topic.html}}"></rich-text>
+    </view>
+  </block>
+</view>

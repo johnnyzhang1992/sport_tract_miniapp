@@ -32,6 +32,7 @@ Page({
     loading: false,
     ongoingActivity: null, // 进行中（已暂停）运动入口
     lbSummary: null, // 运动榜摘要（卡片副标题）
+    topics: [], // 生效中的官方专题（首页入口）
   },
 
   onLoad() {
@@ -42,7 +43,24 @@ Page({
     this.applyDefaultType();
     this.loadOverview();
     this.loadLeaderboardSummary();
+    this.loadActiveTopics();
     this.checkOngoing();
+  },
+
+  /** 官方专题（生效中）：静默拉取，失败不打扰；游客也可看 */
+  async loadActiveTopics() {
+    try {
+      const topics = await api.get('/topics/active');
+      this.setData({ topics: topics || [] });
+    } catch (e) {
+      // 静默：专题入口不展示
+    }
+  },
+
+  /** 专题入口 → 专题详情 */
+  goTopic(e) {
+    const id = e.currentTarget.dataset.id;
+    if (id) wx.navigateTo({ url: `/pages/topic/topic?id=${id}` });
   },
 
   /** 版本更新检测：微信后台下载完新版本包后弹窗提醒，确认即应用并重启 */
