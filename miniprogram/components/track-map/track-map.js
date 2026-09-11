@@ -28,8 +28,8 @@ Component({
     overviewTracks: { type: Array, value: [] },
     /** 合集模式：热力网格 [{lat, lng, weight(0~1)}] → map circles */
     heat: { type: Array, value: [] },
-    /** 海拔着色（决策 F34：轨迹线按海拔分桶变色，蓝→绿→黄→红） */
-    altitudeColor: { type: Boolean, value: false },
+    /** 轨迹线着色模式：altitude=按海拔（蓝低→红高，徒步/爬山）；pace=按配速（越快越深，其余类型）；空=默认分段配色 */
+    colorMode: { type: String, value: '' },
     /** 起点/终点标记（起/终 文字标签） */
     showStartEnd: { type: Boolean, value: false },
     /** 显示高频路线图例（overview 合集模式） */
@@ -61,7 +61,7 @@ Component({
   },
 
   observers: {
-    'points, markers, currentLocation, kmMarkers': function (points, markers, currentLocation) {
+    'points, markers, currentLocation, kmMarkers, colorMode': function (points, markers, currentLocation) {
       this.updateCenter();
       // overview 模式轨迹线由 buildOverview 管理，buildPolyline 会清空（points 为空）
       if (this.data.mode !== 'overview') {
@@ -130,19 +130,30 @@ Component({
       if (this.data.mode === 'overview') return; // 合集模式由 buildOverview 管理轨迹线
       // 过滤非法坐标点（undefined/NaN），空点集时传空数组避免渲染异常
       const pts = this.data.points
-        .map((p) => ({ lat: p.lat, lng: p.lng, altitude: p.altitude ?? null, pauseGap: !!p.pauseGap }))
+        .map((p) => ({ lat: p.lat, lng: p.lng, altitude: p.altitude ?? null, timestamp: p.timestamp ?? null, pauseGap: !!p.pauseGap }))
         .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng));
       if (pts.length < 2) {
         this.setData({ polyline: [] });
         return;
       }
 
-      // 海拔着色：轨迹线按海拔分桶变色（蓝低→红高），打点分段色让位
-      if (this.data.altitudeColor && pts.some((p) => p.altitude != null)) {
+      // 数值着色（打点分段色让位）：
+      // - altitude：徒步/爬山按海拔分桶变色（蓝低→红高）
+      // - pace：其余类型按配速着色（越快越深）
+      if (this.data.colorMode === 'altitude' && pts.some((p) => p.altitude != null)) {
         this.buildAltitudePolyline(pts);
         return;
       }
+      if (this.data.colorMode === 'pace') {
+        this.buildPacePolyline(pts);
+        return;
+      }
 
+      this.buildDefaultPolyline(pts);
+    },
+
+    /** 默认配色：按打点 + pauseGap 分段轮换颜色 */
+    buildDefaultPolyline(pts) {
       // 按打点 + pauseGap 分段
       const segsWithGap = this.splitByPauseGaps(this.splitByMarkers(pts));
 
@@ -221,6 +232,79 @@ Component({
         }
       }
 
+      this.setData({ polyline: allPolylines });
+    },
+
+    /**
+     * 配速着色：轨迹线按配速分桶变色，颜色越深配速越快（浅黄慢 → 深红快）
+     * - 每步配速 = 步内用时 / 步内距离；整条轨迹取 P10~P90 分位做色带范围（防个别跳点拉爆色阶）
+     * - 原地漂移（距离≈0）无有效配速，按最慢档（最浅）处理；暂停间隙断开不跨段
+     */
+    buildPacePolyline(pts) {
+      const segs = this.splitByPauseGaps([pts]).filter((seg) => seg.length >= 2);
+      if (segs.length === 0) {
+        this.setData({ polyline: [] });
+        return;
+      }
+
+      // 每步配速（秒/公里）：无 timestamp 或距离≈0 → null
+      const stepPace = (a, b) => {
+        if (!a.timestamp || !b.timestamp) return null;
+        const dt = (b.timestamp - a.timestamp) / 1000;
+        if (!Number.isFinite(dt) || dt <= 0) return null;
+        const d = haversineKm(a, b) * 1000; // 米
+        if (d < 0.5) return null;
+        return dt / (d / 1000);
+      };
+
+      // 全轨迹有效配速样本 → P10/P90 色带范围
+      const samples = [];
+      for (const seg of segs) {
+        for (let i = 1; i < seg.length; i++) {
+          const pace = stepPace(seg[i - 1], seg[i]);
+          if (pace != null) samples.push(pace);
+        }
+      }
+      if (samples.length === 0) {
+        // 无 timestamp 等异常情况：回退默认分段配色
+        this.buildDefaultPolyline(pts);
+        return;
+      }
+      samples.sort((x, y) => x - y);
+      const pick = (q) => samples[Math.min(samples.length - 1, Math.max(0, Math.floor(q * (samples.length - 1))))];
+      const lo = pick(0.1); // P10：最慢档
+      const hi = pick(0.9); // P90：最快档
+      const span = hi - lo || 1;
+      const N = PACE_COLORS.length;
+      // pace 越小（越快）→ k 越小 → 取数组末位（深色）
+      const colorOf = (pace) => {
+        const k = Math.min(1, Math.max(0, (pace - lo) / span));
+        return PACE_COLORS[N - 1 - Math.round(k * (N - 1))];
+      };
+
+      const allPolylines = [];
+      for (const seg of segs) {
+        let cur = null;
+        for (let i = 1; i < seg.length; i++) {
+          const a = seg[i - 1];
+          const b = seg[i];
+          if (!Number.isFinite(a.lat) || !Number.isFinite(b.lat)) continue;
+          const pace = stepPace(a, b);
+          const color = pace != null ? colorOf(pace) : PACE_COLORS[0]; // 无有效配速按最慢档
+          const pt = { latitude: b.lat, longitude: b.lng };
+          if (cur && cur.color === color) {
+            cur.points.push(pt);
+          } else {
+            cur = {
+              color,
+              points: [{ latitude: a.lat, longitude: a.lng }, pt],
+              width: 4,
+              arrowLine: false,
+            };
+            allPolylines.push(cur);
+          }
+        }
+      }
       this.setData({ polyline: allPolylines });
     },
 
@@ -802,6 +886,21 @@ const ALTITUDE_COLORS = (() => {
     const rgb = lo[1].map((c, idx) => Math.round(c + (hi[1][idx] - c) * k));
     // map polyline 颜色只支持 #RRGGBB（hex），rgb() 字符串会导致整条轨迹不渲染
     const hex = (n) => n.toString(16).padStart(2, '0');
+    colors.push(`#${hex(rgb[0])}${hex(rgb[1])}${hex(rgb[2])}`);
+  }
+  return colors;
+})();
+
+/** 配速色带：浅黄（慢）→ 深红（快），12 档线性插值；index 0 最浅 = 最慢，末位最深 = 最快 */
+const PACE_COLORS = (() => {
+  const N = 12;
+  const from = [255, 229, 143]; // 浅黄（慢）
+  const to = [130, 0, 20]; // 深红（快）
+  const hex = (n) => n.toString(16).padStart(2, '0');
+  const colors = [];
+  for (let i = 0; i < N; i++) {
+    const k = i / (N - 1);
+    const rgb = from.map((c, idx) => Math.round(c + (to[idx] - c) * k));
     colors.push(`#${hex(rgb[0])}${hex(rgb[1])}${hex(rgb[2])}`);
   }
   return colors;
