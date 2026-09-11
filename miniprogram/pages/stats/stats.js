@@ -146,7 +146,7 @@ Page({
       });
     };
     put(b.maxDistanceByType, 'maxDistance', (r) => `${(r.distance / 1000).toFixed(1)}km`);
-    put(b.minPaceByType, 'minPace', (r) => formatPace(r.fastestKm ?? r.avgPace));
+    put(b.minPaceByType, 'minPace', (r) => formatPace(r.fastestKm));
     put(b.maxDurationByType, 'maxDuration', (r) => formatDuration(r.duration));
     put(b.maxElevationByType, 'maxElevation', (r) => `${r.elevationGain}m`);
     const bestTable = Object.keys(rowsMap).sort().map((t) => rowsMap[t]);

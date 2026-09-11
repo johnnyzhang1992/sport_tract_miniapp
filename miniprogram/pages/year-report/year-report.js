@@ -144,14 +144,14 @@ Page({
         };
       });
 
-    // 高光时刻（按年度数据计算，avgPace 配速类排除游泳/骑行）
+    // 高光时刻（按年度数据计算；最快配速取轨迹内最快 1km 分段 fastestKm，不足 1km 的轨迹已为 null）
     const withDate = (t) => {
       const d = new Date(t.startTime);
       return `${d.getMonth() + 1}-${d.getDate()}`;
     };
     const best = (arr, fn) => arr.reduce((a, b) => (fn(b) > fn(a) ? b : a), arr[0]);
     const bestPacePool = tracks.filter(
-      (t) => t.avgPace > 0 && !['swimming', 'cycling'].includes(t.type),
+      (t) => t.fastestKm > 0 && !['swimming', 'cycling'].includes(t.type),
     );
     const highlights = [];
     if (tracks.length) {
@@ -164,11 +164,11 @@ Page({
         id: bd.id,
       });
       if (bestPacePool.length) {
-        const bp = best(bestPacePool, (t) => -t.avgPace);
+        const bp = best(bestPacePool, (t) => -t.fastestKm);
         highlights.push({
           key: 'pace',
-          label: '最佳配速',
-          value: formatPaceShort(bp.avgPace),
+          label: '最快配速',
+          value: formatPaceShort(bp.fastestKm),
           sub: withDate(bp),
           id: bp.id,
         });
