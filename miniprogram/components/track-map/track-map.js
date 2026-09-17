@@ -637,14 +637,32 @@ Component({
 
     /** 地图区域变化：记忆用户手动缩放的 scale */
     onRegionChange(e) {
-      // 只在 scale 变化时更新（避免频繁 setData）
-      if (e.type === 'end' && e.causedBy === 'scale' && e.scale) {
-        this.setData({ mapScale: e.scale });
-        // 合集模式：缩放后按新层级自适应轨迹线宽（线宽档位变化才重建，避免频繁 setData）
-        if (this.data.mode === 'overview' && (this.data.overviewTracks || []).length) {
-          const key = `${this.overviewLineWidth(4)}-${this.overviewLineWidth(3)}`;
-          if (key !== this._ovWidthKey) this.buildOverview();
-        }
+      const d = e.detail || {};
+      const type = e.type || d.type;
+      if (type !== 'end') return; // 只在视野变化结束时处理
+      // 缩放级别字段各端不一致（e.scale / e.detail.scale，causedBy 真机常缺失），
+      // 优先取事件字段，取不到用 MapContext.getScale 兜底（end 后延时确保视野已稳定）
+      const raw = Number.isFinite(e.scale) ? e.scale : Number.isFinite(d.scale) ? d.scale : null;
+      if (raw) {
+        this.applyOverviewScale(raw);
+      } else {
+        const ctx = wx.createMapContext('trackMap', this);
+        setTimeout(() => {
+          ctx.getScale({
+            success: (res) => this.applyOverviewScale(res.scale),
+            fail: () => {},
+          });
+        }, 200);
+      }
+    },
+
+    /** 应用缩放级别：记忆 + 合集模式线宽自适应（档位变化才重建） */
+    applyOverviewScale(scale) {
+      if (!Number.isFinite(scale) || scale <= 0 || scale === this.data.mapScale) return;
+      this.setData({ mapScale: scale });
+      if (this.data.mode === 'overview' && (this.data.overviewTracks || []).length) {
+        const key = `${this.overviewLineWidth(4)}-${this.overviewLineWidth(3)}`;
+        if (key !== this._ovWidthKey) this.buildOverview();
       }
     },
 
