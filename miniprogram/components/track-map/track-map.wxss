@@ -71,7 +71,6 @@
   width: 28rpx;
   height: 28rpx;
   margin-right: 0; /* 纯图标无文案 */
-  margin-right: 6rpx;
 }
 
 /* 右下角贴右（无全屏按钮的页面，如 summary） */

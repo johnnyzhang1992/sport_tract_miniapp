@@ -102,9 +102,13 @@
 .map-ctrl-fs {
   right: 16rpx;
   bottom: 16rpx;
+  padding: 12rpx; /* 纯图标（全屏已去文案） */
+}
+.map-ctrl-fs .map-ctrl-icon {
+  margin-right: 0;
 }
 .map-ctrl-share {
-  right: 144rpx;
+  right: 82rpx; /* 全屏按钮变窄（约 50rpx），左移保持 16rpx 间距 */
   bottom: 16rpx;
 }
 .map-ctrl-hover {
