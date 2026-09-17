@@ -43,9 +43,23 @@ function rawRequest({ url, method = 'GET', data, header = {} }) {
           reject(err);
         }
       },
-      fail: () => {
-        const err = new Error('网络请求失败，请检查后端服务是否启动');
+      fail: (e) => {
+        const msg = (e && e.errMsg) || '';
+        // 细分失败原因（真机/开发者工具常见：域名未配置、超时、无网络、服务未启动/证书问题）
+        let text = '网络请求失败，请检查后端服务是否启动';
+        if (msg.includes('domain')) {
+          text = '请求域名未配置：请在开发设置里配置合法域名（工具可暂时勾选「不校验合法域名」）';
+        } else if (msg.includes('timeout')) {
+          text = '网络超时，请检查网络后重试';
+        } else if (msg.includes('abort')) {
+          text = '请求已取消';
+        } else if (msg.includes('ssl') || msg.includes('certificate')) {
+          text = 'HTTPS 证书校验失败，请检查服务器证书';
+        }
+        console.warn('[api] request fail:', msg, buildUrl(url));
+        const err = new Error(text);
         err.statusCode = 0;
+        err.errMsg = msg;
         reject(err);
       },
     });
