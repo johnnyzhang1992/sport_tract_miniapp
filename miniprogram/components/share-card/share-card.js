@@ -25,6 +25,18 @@ const ALTITUDE_COLORS = [
   '#8ecf25', '#d1d20f', '#fec805', '#fb9b15', '#f76f26', '#f44336',
 ];
 
+/** 两点间大圆距离（米），公里标定位用 */
+function distM(a, b) {
+  const toRad = (d) => (d * Math.PI) / 180;
+  const R = 6371000;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const s =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(s));
+}
+
 Component({
   lifetimes: {
     detached() {
@@ -42,7 +54,8 @@ Component({
     previewVisible: false,
     previewPath: '', // 海报临时文件（保存/分享用）
     saving: false,
-    showMiniCode: true, // 海报是否带小程序码（用户可关）
+    showMiniCode: false, // 海报是否带小程序码（功能暂时下线：开关已注释，保持 false）
+    showKmMarks: true, // 海报是否标注公里数（轨迹上的整公里圆点序号）
   },
 
   methods: {
@@ -132,6 +145,18 @@ Component({
               });
           });
       });
+    },
+
+    /** 切换公里数标注（重绘海报 + 刷新临时文件） */
+    async toggleKmMarks(e) {
+      this.setData({ showKmMarks: e.detail.value });
+      if (!this.data.previewVisible) return;
+      try {
+        await this.drawPoster();
+        this.setData({ previewPath: await this.toTempFile() });
+      } catch (err) {
+        console.error('[share-card] 重绘失败', err);
+      }
     },
 
     /** 切换小程序码展示（重绘海报 + 刷新临时文件） */
@@ -244,6 +269,7 @@ Component({
     drawTrack(ctx, width, height) {
       const pts = this.data.mapPoints || [];
       if (pts.length < 2) return;
+      const act = this.data.activity || {};
       // 轨迹区域：标题下到指标卡上方，尽量占满（压缩死区）
       const pad = 24;
       const top = 82; // 两行标题下
@@ -288,7 +314,7 @@ Component({
       ctx.lineCap = 'round';
       ctx.strokeStyle = '#808080';
       ctx.lineWidth = 1.5;
-      // 按 pauseGap 分段绘制，暂停间隙断开连线
+      // 按 pauseGap 分段绘制，暂停间隙断开连线；沿途累计真实移动距离用于公里标定位
       const segs = this.splitByPauseGaps(pts);
       for (const seg of segs) {
         if (seg.length < 2) continue;
@@ -298,6 +324,49 @@ Component({
           else ctx.lineTo(px(p), py(p));
         });
         ctx.stroke();
+      }
+
+      // 公里标：按官方总距离比例在整公里处画白底圆点+序号（简化点位累计有截弯误差，用比例定位）
+      if (this.data.showKmMarks) {
+        const totalKm = Number(act.distanceKm || 0);
+        const totalAcc = segs.reduce(
+          (sum, seg) => sum + seg.slice(1).reduce((a, p, i) => a + distM(seg[i], p), 0),
+          0,
+        );
+        if (totalKm >= 1 && totalAcc > 0) {
+          const step = Math.max(1, Math.ceil(totalKm / 12)); // 长轨迹隔段标注，最多约 12 个
+          const kmMarks = [];
+          for (let k = step; k < totalKm; k += step) kmMarks.push(k); // 终点距离已在标题展示，不画
+          const targetAcc = (k) => (k / totalKm) * totalAcc;
+          const markers = [];
+          let acc = 0;
+          let placed = 0;
+          outer: for (const seg of segs) {
+            for (let i = 1; i < seg.length; i++) {
+              acc += distM(seg[i - 1], seg[i]);
+              if (acc >= targetAcc(kmMarks[placed])) {
+                markers.push({ x: px(seg[i]), y: py(seg[i]), km: kmMarks[placed] });
+                placed += 1;
+                if (placed >= kmMarks.length) break outer;
+              }
+            }
+          }
+          markers.forEach((m) => {
+            ctx.beginPath();
+            ctx.arc(m.x, m.y, 6.5, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffffff';
+            ctx.fill();
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = '#b9c2cf';
+            ctx.stroke();
+            ctx.fillStyle = '#4e5969';
+            ctx.font = 'bold 7px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(m.km, m.x, m.y + 0.5);
+            ctx.textBaseline = 'alphabetic';
+          });
+        }
       }
     },
 

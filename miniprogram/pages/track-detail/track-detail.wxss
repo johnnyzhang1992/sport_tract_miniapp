@@ -9,7 +9,6 @@
 .layer-btn,
 .replay-btn {
   position: absolute;
-  top: 16rpx;
   background: rgba(255, 255, 255, 0.92);
   border-radius: 999rpx;
   padding: 10rpx 22rpx;
@@ -19,10 +18,12 @@
   align-items: center;
 }
 .layer-btn {
+  top: 16rpx;
   right: 24rpx; /* 右上角（真机指南针在左侧） */
 }
 .replay-btn {
-  left: 80rpx; /* 往右移约一半宽度，避开真机左侧指南针 */
+  bottom: 16rpx; /* 底部按钮行，左侧对齐（右侧为公里/标注/全屏） */
+  left: 24rpx;
 }
 .replay-btn-active {
   background: #2b6cf6;
@@ -44,11 +45,14 @@
   bottom: 16rpx;
   background: rgba(255, 255, 255, 0.92);
   border-radius: 999rpx;
-  padding: 10rpx 22rpx;
+  padding: 12rpx; /* 仅图标 */
   font-size: 24rpx;
   box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
   display: flex;
   align-items: center;
+}
+.fullscreen-icon {
+  margin-right: 0; /* 无文案时去掉图标右边距 */
 }
 /* 全屏地图弹窗 */
 .fullscreen-mask {
