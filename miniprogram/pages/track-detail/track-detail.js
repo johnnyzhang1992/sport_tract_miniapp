@@ -1,7 +1,7 @@
 /**
  * 轨迹详情页（M3）
  * - 地图：完整 polyline + 打点 markers + 图层切换 + 轨迹回放
- * - 指标卡片 + 打点时间线（点击打点可编辑/删除/补打点）
+ * - 指标卡片 + 打点时间线（点击打点可编辑/删除）
  * 后端接口：GET /activities/:id、PUT/DELETE /markers/:markerId、POST /markers
  */
 const api = require('../../services/api');
@@ -222,7 +222,7 @@ Page({
     wx.showToast({ title: '回放完成', icon: 'success' });
   },
 
-  // ==================== 打点编辑/删除/补点 ====================
+  // ==================== 打点编辑/删除 ====================
 
   onMarkerTap(e) {
     const markerId = e.detail; // track-map 返回数字 id，需映射回打点
@@ -250,11 +250,6 @@ Page({
       editMode: true,
       editMarker: marker,
     });
-  },
-
-  /** 新增打点（补打）——已结束的轨迹不允许新增，拦截并提示 */
-  addMarker() {
-    wx.showToast({ title: '已完成的轨迹不能再补打点', icon: 'none' });
   },
 
   async onMarkerConfirm(e) {
@@ -288,27 +283,10 @@ Page({
           note,
           photos: finalPhotos,
         });
-      } else {
-        // 补打点：坐标用最后一个轨迹点
-        const pts = (this.activity && this.activity.trackPoints) || [];
-        const last = pts[pts.length - 1];
-        const loc = last ? { lat: last.lat, lng: last.lng } : { lat: 0, lng: 0 };
-        await api.post(`/activities/${this.data.id}/markers`, {
-          id: `m_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
-          lat: loc.lat,
-          lng: loc.lng,
-          timestamp: Date.now(),
-          type,
-          icon: icon || '',
-          label: label || '',
-          note,
-          photoUrl: urls[0] || '',
-          photos: urls,
-        });
       }
 
       loading.hide();
-      wx.showToast({ title: markerId ? '已更新' : '已添加', icon: 'success' });
+      wx.showToast({ title: '已更新', icon: 'success' });
       this.setData({ markerFormVisible: false });
       await this.loadDetail();
     } catch (err) {
