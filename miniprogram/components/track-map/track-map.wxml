@@ -25,10 +25,9 @@
   <view class="map-fullscreen-close" wx:if="{{showFullscreenClose}}" bindtap="closeFullscreen">
     <image class="map-fullscreen-close-icon" src="/assets/icons/lucide-x.png" mode="aspectFit" />
   </view>
-  <!-- 全屏按钮（与标注同容器，右下角最右） -->
+  <!-- 全屏按钮（纯图标，与标注同容器，右下角最右） -->
   <view class="map-fullscreen-btn" wx:if="{{showFullscreen}}" bindtap="openFullscreen">
     <image class="map-fullscreen-icon" src="/assets/icons/lucide-maximize.png" mode="aspectFit" />
-    <text>全屏</text>
   </view>
   <!-- POI 标注切换按钮（纯图标：路牌 signpost；record 模式在右上角避开底部操作栏；其他模式放右下角全屏按钮左边） -->
   <view class="poi-btn {{mode === 'record' ? 'poi-btn-top' : ''}} {{mode === 'overview' ? 'poi-btn-overview' : ''}} {{poiTopRight ? 'poi-btn-top-right' : ''}} {{poiBottomRight ? 'poi-btn-bottom-right' : ''}} {{enablePoi ? 'poi-btn-active' : ''}}" bindtap="togglePoi">
