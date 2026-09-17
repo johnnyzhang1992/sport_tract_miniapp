@@ -385,7 +385,7 @@ Component({
       return segs.filter(s => s.length >= 2);
     },
 
-    /** 指标独立卡片：时长 / 配速 / 消耗（top 可调：带码时上移让出底部空间） */
+    /** 指标独立卡片：时长 / 配速 / 消耗（左贴左、中居中、右贴右；top 可调：带码时上移让出底部空间） */
     drawStatsCards(ctx, width, height, act, top = 304) {
       // 配速：去掉 /公里 单位（只显示数值，如 5'30"）；消耗单位移到 label
       const paceFull = act.paceText || (act.paceValue ? `${act.paceValue}${act.paceUnit || ''}` : '—');
@@ -395,13 +395,16 @@ Component({
         { label: '配速', value: paceText },
         { label: '消耗/千卡', value: `${act.calories || 0}` },
       ];
-      const gap = 10;
-      const cardW = (width - 24 * 2 - gap * 2) / 3;
+      // 锚点：左项贴左边距，中间绝对居中，右项贴右边距
+      const margin = 24;
+      const anchors = [
+        { x: margin, align: 'left' },
+        { x: width / 2, align: 'center' },
+        { x: width - margin, align: 'right' },
+      ];
       cards.forEach((c, i) => {
-        const x = 24 + i * (cardW + gap);
-        // 去掉卡片背景色（透明，直接用海报背景）
-
-        // 配速：数值大字 + /公里 单位小字（水平整体居中）
+        const { x, align } = anchors[i];
+        // 配速：数值大字 + /公里 单位小字（组合按锚点整体对齐）
         const match = c.label === '配速' ? /^(.*?)(\/.*)$/.exec(String(c.value)) : null;
         if (match) {
           const num = match[1];
@@ -410,7 +413,8 @@ Component({
           const numW = ctx.measureText(num).width;
           ctx.font = '11px sans-serif';
           const unitW = ctx.measureText(unit).width;
-          const startX = x + cardW / 2 - (numW + unitW) / 2;
+          const totalW = numW + unitW;
+          const startX = align === 'left' ? x : align === 'right' ? x - totalW : x - totalW / 2;
           ctx.fillStyle = 'rgba(31,35,41,0.7)';
           ctx.textAlign = 'left';
           ctx.textBaseline = 'middle';
@@ -418,20 +422,19 @@ Component({
           ctx.fillText(num, startX, top + 22);
           ctx.font = '11px sans-serif';
           ctx.fillText(unit, startX + numW, top + 22);
-          ctx.textAlign = 'center';
         } else {
           // 值
           ctx.fillStyle = 'rgba(31,35,41,0.7)';
           ctx.font = '15px sans-serif';
-          ctx.textAlign = 'center';
+          ctx.textAlign = align;
           ctx.textBaseline = 'middle';
-          ctx.fillText(c.value, x + cardW / 2, top + 22);
+          ctx.fillText(c.value, x, top + 22);
         }
-        // 标签（颜色与数值/底部一致）
+        // 标签（颜色与数值/底部一致，对齐方式随锚点）
         ctx.fillStyle = 'rgba(31,35,41,0.7)';
         ctx.font = '11px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(c.label, x + cardW / 2, top + 40);
+        ctx.textAlign = align;
+        ctx.fillText(c.label, x, top + 40);
         ctx.textBaseline = 'alphabetic';
       });
     },
