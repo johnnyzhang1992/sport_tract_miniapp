@@ -643,24 +643,43 @@ Component({
       // 缩放级别字段各端不一致（e.scale / e.detail.scale，causedBy 真机常缺失），
       // 优先取事件字段，取不到用 MapContext.getScale 兜底（end 后延时确保视野已稳定）
       const raw = Number.isFinite(e.scale) ? e.scale : Number.isFinite(d.scale) ? d.scale : null;
+      const center = e.centerLocation || d.centerLocation || null;
       if (raw) {
-        this.applyOverviewScale(raw);
+        this.applyOverviewScale(raw, center);
       } else {
         const ctx = wx.createMapContext('trackMap', this);
-        setTimeout(() => {
-          ctx.getScale({
-            success: (res) => this.applyOverviewScale(res.scale),
-            fail: () => {},
-          });
-        }, 200);
+        let scaleVal = null;
+        let centerVal = null;
+        const done = () => this.applyOverviewScale(scaleVal, centerVal);
+        ctx.getScale({ success: (r) => { scaleVal = r.scale; done(); }, fail: () => {} });
+        ctx.getCenterLocation({
+          success: (loc) => {
+            centerVal = loc && { latitude: loc.latitude, longitude: loc.longitude };
+            done();
+          },
+          fail: () => {},
+        });
       }
     },
 
-    /** 应用缩放级别：记忆 + 合集模式线宽自适应（档位变化才重建） */
-    applyOverviewScale(scale) {
-      if (!Number.isFinite(scale) || scale <= 0 || scale === this.data.mapScale) return;
-      this.setData({ mapScale: scale });
-      if (this.data.mode === 'overview' && (this.data.overviewTracks || []).length) {
+    /** 应用缩放/中心：记忆级别 + 合集模式线宽自适应（档位变化才重建）。
+     *  关键：scale 属性回写会连带重置到绑定的经纬度，必须同步当前视野中心，
+     *  否则每次缩放后视野都被拉回初始中心（起点） */
+    applyOverviewScale(scale, center) {
+      const patch = {};
+      if (Number.isFinite(scale) && scale > 0 && scale !== this.data.mapScale) patch.mapScale = scale;
+      if (center && Number.isFinite(center.latitude) && Number.isFinite(center.longitude)) {
+        if (
+          Math.abs(center.latitude - this.data.centerLat) > 1e-9 ||
+          Math.abs(center.longitude - this.data.centerLng) > 1e-9
+        ) {
+          patch.centerLat = center.latitude;
+          patch.centerLng = center.longitude;
+        }
+      }
+      if (!patch.mapScale && !patch.centerLat) return;
+      this.setData(patch);
+      if (patch.mapScale && this.data.mode === 'overview' && (this.data.overviewTracks || []).length) {
         const key = `${this.overviewLineWidth(4)}-${this.overviewLineWidth(3)}`;
         if (key !== this._ovWidthKey) this.buildOverview();
       }
