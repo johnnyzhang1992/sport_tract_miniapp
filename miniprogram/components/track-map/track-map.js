@@ -60,7 +60,6 @@ Component({
     centerLat: 31.2304,
     centerLng: 121.4737,
     enablePoi: false, // 是否展示 POI 标注（地名/道路名）——默认关闭
-    showKm: true, // 公里圆圈数字标记展示开关（默认开）
     mapScale: 15, // 地图缩放级别（用户调整后记忆）
     mapRotate: 0, // 地图旋转角度（heading 模式）
   },
@@ -567,9 +566,8 @@ Component({
       };
     },
 
-    /** 公里标记：白底蓝边圆 + 数字图标（离屏 canvas，按公里数缓存） */
+    /** 公里标记：白底蓝边圆 + 数字图标（离屏 canvas，按公里数缓存；常显，无开关） */
     async buildKmMarkerList() {
-      if (!this.data.showKm) return []; // 开关关闭时不生成
       const kms = this.data.kmMarkers || [];
       if (!kms.length) return [];
       const MARKER_ICON_CACHE = (this._markerIconCache = this._markerIconCache || {});
@@ -665,19 +663,6 @@ Component({
     /** 切换 POI 标注显示 */
     togglePoi() {
       this.setData({ enablePoi: !this.data.enablePoi });
-    },
-
-    /** 公里标记开关：关→从地图移除（id ≥ 300000），开→重新生成追加 */
-    toggleKm() {
-      const showKm = !this.data.showKm;
-      this.setData({ showKm });
-      if (!showKm) {
-        this.setData({ displayMarkers: this.data.displayMarkers.filter((m) => m.id < 300000) });
-      } else {
-        this.buildKmMarkerList().then((kmMarkers) => {
-          this.setData({ displayMarkers: this.data.displayMarkers.concat(kmMarkers) });
-        });
-      }
     },
 
 
