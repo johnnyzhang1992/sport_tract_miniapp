@@ -380,9 +380,9 @@ Page({
   },
 
   /** 单段明细：按每公里切分段（序号/时间/配速），最后不足 1km 记为余段 */
-  /** 每公里分段（与后端 calcFastestKm 同口径）
-   *  pauseGap 或相邻点间隔 >60s 视为断档：跨档距离/时间均不计入，段从该点重开；
-   *  断档处不足 1km 的累计不展示，仅轨迹末尾的剩余标为余段（partial），最快段只在完整段中选 */
+  /** 每公里分段
+   *  pauseGap 或相邻点间隔 >60s 视为断档：断档时间不计入段时长，距离累计保留跨档延续；
+   *  每凑满 1km 记一段（溢出滚入下一公里），仅轨迹末尾剩余标为余段（partial），最快段只在完整段中选 */
   computeKmSegments(points) {
     if (!points || points.length < 2) return [];
     const toRad = (d) => (d * Math.PI) / 180;
@@ -397,11 +397,11 @@ Page({
     };
     const GAP_SEC = 60;
     const segs = [];
-    let segStartTs = points[0].timestamp;
-    let acc = 0;
+    let acc = 0; // 当前公里已累计距离（跨暂停/断档延续，不清零）
+    let durMs = 0; // 当前公里已累计运动时长（暂停/断档不计）
     let prev = points[0];
-    const pushSeg = (endTs, partial) => {
-      const durationSec = Math.max(1, Math.round((endTs - segStartTs) / 1000));
+    const pushSeg = (partial) => {
+      const durationSec = Math.max(1, Math.round(durMs / 1000));
       const distKm = acc / 1000;
       segs.push({
         idx: segs.length + 1,
@@ -415,23 +415,22 @@ Page({
     for (let i = 1; i < points.length; i++) {
       const p = points[i];
       const dt = (p.timestamp - prev.timestamp) / 1000;
-      // 断档：跨档距离/时间都不计入，段从当前点重开；不足 1km 的零头不展示（只有末尾才有余段）
+      // 暂停/断档：时间不计入，距离零头保留，恢复后继续往 1km 累计
       if (p.pauseGap || !Number.isFinite(dt) || dt < 0 || dt > GAP_SEC) {
-        segStartTs = p.timestamp;
-        acc = 0;
         prev = p;
         continue;
       }
       acc += distM(prev, p);
+      durMs += p.timestamp - prev.timestamp;
       if (acc >= 1000) {
-        pushSeg(p.timestamp, false);
-        segStartTs = p.timestamp;
-        acc = 0;
+        pushSeg(false);
+        acc -= 1000; // 溢出部分滚入下一公里
+        durMs = 0;
       }
       prev = p;
     }
     // 最后不足 1km 的余段（位移 >20m 才展示）
-    if (acc > 20) pushSeg(prev.timestamp, true);
+    if (acc > 20) pushSeg(true);
     return segs;
   },
 
