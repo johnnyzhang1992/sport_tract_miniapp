@@ -127,7 +127,7 @@ Page({
         iconImg: meta.iconImg || '',
         label: meta.label || t.type,
         color: '#4A5568', // 轨迹颜色统一深灰蓝（与我的轨迹一致）
-        previewPoints: t.points || [], // 轨迹缩略图点
+        previewPoints: t.previewPoints || t.points || [], // 卡片缩略图：后端同口径预览点（旧接口兜底用地图点）
         timeText,
         distanceKm: (t.distance / 1000).toFixed(2).replace(/\.?0+$/, ''),
         durationText: (() => {
