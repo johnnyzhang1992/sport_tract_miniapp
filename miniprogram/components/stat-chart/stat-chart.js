@@ -135,14 +135,14 @@ Component({
         // 首尾 label 用边缘对齐防裁剪
         if (i === 0) {
           ctx.textAlign = 'left';
-          ctx.fillText(label, axis.padLeft, H - axis.padBottom + 16);
+          ctx.fillText(label, axis.padLeft, H - axis.padBottom + 8);
           ctx.textAlign = 'center';
         } else if (i === n - 1) {
           ctx.textAlign = 'right';
-          ctx.fillText(label, width - axis.padRight, H - axis.padBottom + 16);
+          ctx.fillText(label, width - axis.padRight, H - axis.padBottom + 8);
           ctx.textAlign = 'center';
         } else {
-          ctx.fillText(label, x, H - axis.padBottom + 16);
+          ctx.fillText(label, x, H - axis.padBottom + 8);
         }
       });
 
@@ -213,11 +213,11 @@ Component({
           const label = String(data[i].label);
           if (i === 0) {
             ctx.textAlign = 'left';
-            ctx.fillText(label, axis.padLeft, H - axis.padBottom + 16);
+            ctx.fillText(label, axis.padLeft, H - axis.padBottom + 8);
             ctx.textAlign = 'center';
           } else if (i === n - 1) {
             ctx.textAlign = 'right';
-            ctx.fillText(label, width - axis.padRight, H - axis.padBottom + 16);
+            ctx.fillText(label, width - axis.padRight, H - axis.padBottom + 8);
             ctx.textAlign = 'center';
           } else {
             ctx.fillText(label, X(i), H - axis.padBottom + 8);
