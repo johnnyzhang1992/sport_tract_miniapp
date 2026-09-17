@@ -26,16 +26,6 @@
     <view class="fullscreen-btn" bindtap="openFullscreen"><image class="btn-icon fullscreen-icon" src="/assets/icons/lucide-maximize.png" mode="aspectFit" /></view>
   </view>
 
-  <!-- 轨迹线颜色说明：徒步/爬山按海拔，其余按配速 -->
-  <view class="color-legend">
-    <view class="legend-row">
-      <text class="legend-text">{{colorMode === 'altitude' ? '海拔低' : paceSlowText}}</text>
-      <view class="legend-bar {{colorMode === 'altitude' ? 'legend-bar-altitude' : 'legend-bar-pace'}}"></view>
-      <text class="legend-text">{{colorMode === 'altitude' ? '海拔高' : paceFastText}}</text>
-    </view>
-    <view class="legend-note">{{colorMode === 'altitude' ? '轨迹颜色越深，代表海拔越高' : '颜色 绿→黄→橙→红，代表配速由慢到快'}}</view>
-  </view>
-
   <!-- 全屏地图弹窗（不拦截 touch：map 手势需要 touchmove 做缩放/拖动） -->
   <view class="fullscreen-mask" wx:if="{{fullscreen}}">
     <view class="fullscreen-layer" bindtap="fsSwitchLayer">
@@ -96,6 +86,12 @@
       <text>开始 {{activity.startTimeText}}</text>
       <text class="time-sep">·</text>
       <text>结束 {{activity.endTimeText}}</text>
+    </view>
+    <!-- 轨迹线颜色说明（徒步/爬山按海拔，其余按配速）：置于指标卡底部 -->
+    <view class="legend-row">
+      <text class="legend-text">{{colorMode === 'altitude' ? '海拔低' : paceSlowText}}</text>
+      <view class="legend-bar {{colorMode === 'altitude' ? 'legend-bar-altitude' : 'legend-bar-pace'}}"></view>
+      <text class="legend-text">{{colorMode === 'altitude' ? '海拔高' : paceFastText}}</text>
     </view>
   </view>
 

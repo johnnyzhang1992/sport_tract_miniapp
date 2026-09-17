@@ -397,13 +397,12 @@
 }
 
 /* 轨迹线颜色说明（海拔/配速着色图例） */
-.color-legend {
-  padding: 12rpx 32rpx 0;
-}
+/* 轨迹线颜色图例（指标卡底部） */
 .legend-row {
   display: flex;
   align-items: center;
   gap: 16rpx;
+  margin-top: 20rpx;
 }
 .legend-text {
   font-size: 20rpx;
@@ -426,10 +425,4 @@
     #f97316 50% 75%,
     #ef4444 75% 100%
   );
-}
-.legend-note {
-  margin-top: 6rpx;
-  font-size: 20rpx;
-  color: #86909c;
-  text-align: center;
 }
