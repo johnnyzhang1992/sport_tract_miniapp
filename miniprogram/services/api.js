@@ -125,6 +125,10 @@ async function request(opts) {
   } catch (err) {
     // 401 → 刷新 token 后重试一次
     if (!opts.skipAuth && err.statusCode === 401) {
+      const token = storage.getToken();
+      // 未登录（本地无 refreshToken）：不尝试刷新，直接抛出后端原始 401（未授权，请先登录），
+      // 避免多打一次无效的 /auth/refresh 并把提示覆盖成「未登录」
+      if (!token || !token.refreshToken) throw err;
       try {
         await refreshToken();
         return await rawRequest({
