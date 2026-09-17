@@ -22,8 +22,8 @@
   right: 24rpx; /* 右上角（真机指南针在左侧） */
 }
 .replay-btn {
-  bottom: 16rpx; /* 底部按钮行，左侧对齐（右侧为公里/标注/全屏） */
-  left: 24rpx;
+  bottom: 16rpx;
+  left: 16rpx; /* 与全屏按钮距右边缘等距，左右对称 */
 }
 .replay-btn-active {
   background: #2b6cf6;
@@ -41,7 +41,7 @@
 }
 .fullscreen-btn {
   position: absolute;
-  right: 24rpx;
+  right: 16rpx; /* 与动态轨迹按钮距左边缘等距，左右对称 */
   bottom: 16rpx;
   background: rgba(255, 255, 255, 0.92);
   border-radius: 999rpx;
