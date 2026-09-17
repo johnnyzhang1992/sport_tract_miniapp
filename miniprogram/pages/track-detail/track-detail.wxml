@@ -1,5 +1,5 @@
 <view class="container" wx:if="{{activity}}">
-  <!-- 轨迹图（view 模式自动 fitView）+ 图层切换 + 回放 + 全屏 -->
+  <!-- 轨迹图（view 模式自动 fitView）+ 图层切换 + 动态轨迹 + 全屏 -->
   <view class="map-wrap">
     <track-map
       id="detailMap"
@@ -20,10 +20,10 @@
       <text>{{mapType === 'standard' ? '卫星' : '标准'}}</text>
     </view>
     <view class="replay-btn {{replaying ? 'replay-btn-active' : ''}}" bindtap="startReplay">
-      <image class="btn-icon" src="{{replaying ? '/assets/icons/lucide-stop-white.png' : '/assets/icons/lucide-play.png'}}" mode="aspectFit" />
-      <text>{{replaying ? '停止' : '回放'}}</text>
+      <image class="btn-icon" src="{{replaying ? '/assets/icons/lucide-stop-white.png' : '/assets/icons/lucide-circle-play.png'}}" mode="aspectFit" />
+      <text>{{replaying ? '停止' : '动态轨迹'}}</text>
     </view>
-    <view class="fullscreen-btn" bindtap="openFullscreen"><image class="btn-icon" src="/assets/icons/lucide-maximize.png" mode="aspectFit" /><text>全屏</text></view>
+    <view class="fullscreen-btn" bindtap="openFullscreen"><image class="btn-icon fullscreen-icon" src="/assets/icons/lucide-maximize.png" mode="aspectFit" /></view>
   </view>
 
   <!-- 轨迹线颜色说明：徒步/爬山按海拔，其余按配速 -->

@@ -12,9 +12,16 @@
         class="poster-canvas"
         style="width: 300px; height: 400px;"
       ></canvas>
+      <!-- 小程序码开关：功能暂时下线，保留代码便于恢复 -->
+      <!--
       <view class="mini-toggle">
         <text class="mini-toggle-label">小程序码</text>
         <switch class="mini-switch" checked="{{showMiniCode}}" bindchange="toggleMiniCode" color="#2b6cf6" />
+      </view>
+      -->
+      <view class="mini-toggle">
+        <text class="mini-toggle-label">公里数标注</text>
+        <switch class="mini-switch" checked="{{showKmMarks}}" bindchange="toggleKmMarks" color="#2b6cf6" />
       </view>
       <view class="preview-actions">
         <button class="preview-btn preview-save" loading="{{saving}}" bindtap="save">保存</button>

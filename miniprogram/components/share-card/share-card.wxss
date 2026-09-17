@@ -86,11 +86,12 @@
   margin-top: 14rpx;
 }
 
-/* 小程序码展示开关 */
+/* 海报开关（公里数标注；文案+开关成组水平居右） */
 .mini-toggle {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
+  gap: 8rpx;
   width: 300px;
   padding: 0 4rpx;
   margin-top: 16rpx;
