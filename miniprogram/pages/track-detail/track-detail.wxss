@@ -438,6 +438,8 @@
   flex-direction: column;
   align-items: center;
   margin-top: -72rpx; /* 头像上浮压住卡片顶边 */
+  position: relative;
+  z-index: 2; /* 盖过上方 position:relative 的 map-wrap，否则头像顶部会被地图遮住 */
 }
 .hero-avatar {
   width: 104rpx;
