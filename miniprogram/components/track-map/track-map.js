@@ -628,6 +628,7 @@ Component({
         longitude: p.lng,
       }));
       if (pts.length === 0) return;
+      this._progCamUntil = Date.now() + 900; // 程序化视野调整窗口：期间忽略 regionchange
       const mapCtx = wx.createMapContext('trackMap', this);
       mapCtx.includePoints({
         points: pts,
@@ -640,6 +641,7 @@ Component({
       const d = e.detail || {};
       const type = e.type || d.type;
       if (type !== 'end') return; // 只在视野变化结束时处理
+      if (Date.now() < (this._progCamUntil || 0)) return; // 程序化视野调整中（fitView/回放），忽略以免打断动画
       // 缩放级别字段各端不一致（e.scale / e.detail.scale，causedBy 真机常缺失），
       // 优先取事件字段，取不到用 MapContext.getScale 兜底（end 后延时确保视野已稳定）
       const raw = Number.isFinite(e.scale) ? e.scale : Number.isFinite(d.scale) ? d.scale : null;
@@ -668,7 +670,8 @@ Component({
     applyOverviewScale(scale, center) {
       const patch = {};
       if (Number.isFinite(scale) && scale > 0 && scale !== this.data.mapScale) patch.mapScale = scale;
-      if (center && Number.isFinite(center.latitude) && Number.isFinite(center.longitude)) {
+      // 仅在缩放确实变化时同步中心：属性回写会重置相机，无缩放变化时不写（避免打断手势/无谓抖动）
+      if (patch.mapScale && center && Number.isFinite(center.latitude) && Number.isFinite(center.longitude)) {
         if (
           Math.abs(center.latitude - this.data.centerLat) > 1e-9 ||
           Math.abs(center.longitude - this.data.centerLng) > 1e-9
@@ -851,6 +854,7 @@ Component({
       if (!viewPts.length) viewPts = entries.reduce((acc, e) => acc.concat(e.pts), []);
 
       const mapCtx = wx.createMapContext('trackMap', this);
+      this._progCamUntil = Date.now() + 900; // 程序化视野调整窗口：期间忽略 regionchange
       mapCtx.includePoints({ points: viewPts, padding: [60, 40, 60, 40] });
     },
 
@@ -876,6 +880,7 @@ Component({
 
       const mapCtx = wx.createMapContext('trackMap', this);
       // 视野包含整条轨迹
+      this._progCamUntil = Date.now() + 900; // 程序化视野调整窗口：回放时忽略 regionchange
       mapCtx.includePoints({
         points: pts.map((p) => ({ latitude: p.lat, longitude: p.lng })),
         padding: [80, 40, 80, 40],
