@@ -3,7 +3,7 @@
   height: 620rpx;
   border-radius: 16rpx;
   overflow: hidden;
-  margin-bottom: 24rpx;
+  margin-bottom: 56rpx; /* 头像上浮 48rpx 悬浮其中，避免与地图底部按钮重叠 */
   background: #eef1f5;
 }
 .layer-btn,
