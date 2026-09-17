@@ -36,7 +36,6 @@
         </view>
         <view class="map-ctrl-pill map-ctrl-fs" hover-class="map-ctrl-hover" catchtap="openMapFullscreen">
           <image class="map-ctrl-icon" src="/assets/icons/lucide-maximize.png" mode="aspectFit" />
-          <text>全屏</text>
         </view>
         <view class="map-reset" wx:if="{{mapScaled}}" catchtap="resetMapView">重置地图</view>
       </view>
