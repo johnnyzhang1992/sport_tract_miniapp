@@ -640,6 +640,11 @@ Component({
       // 只在 scale 变化时更新（避免频繁 setData）
       if (e.type === 'end' && e.causedBy === 'scale' && e.scale) {
         this.setData({ mapScale: e.scale });
+        // 合集模式：缩放后按新层级自适应轨迹线宽（线宽档位变化才重建，避免频繁 setData）
+        if (this.data.mode === 'overview' && (this.data.overviewTracks || []).length) {
+          const key = `${this.overviewLineWidth(4)}-${this.overviewLineWidth(3)}`;
+          if (key !== this._ovWidthKey) this.buildOverview();
+        }
       }
     },
 
@@ -667,10 +672,19 @@ Component({
 
 
 
+    /** 合集模式线宽自适应：缩放越小线越细（base 为默认层级宽度，最低 1px） */
+    overviewLineWidth(base) {
+      const s = this.data.mapScale || 15;
+      if (s >= 15) return base;
+      return Math.max(1, Math.round((base * (s - 8)) / 7));
+    },
+
     /** 合集模式：多轨迹 polyline（按类型配色 + 高频路线加粗高亮） */
     buildOverview() {
       const tracks = this.data.overviewTracks || [];
       const heat = this.data.heat || [];
+      // 记录当前线宽档位（缩放后对比是否需要重建）
+      this._ovWidthKey = `${this.overviewLineWidth(4)}-${this.overviewLineWidth(3)}`;
       console.log('[track-map] buildOverview tracks=', tracks.length, 'heat=', heat.length);
       // 热力网格索引（与后端 gridHeat 同算法：150m）
       const cellLat = 150 / 111320;
@@ -705,16 +719,16 @@ Component({
         let width;
         if (trackHeat >= 0.6) {
           color = '#E53935'; // 高频：红
-          width = 4;
+          width = this.overviewLineWidth(4);
         } else if (trackHeat >= 0.4) {
           color = '#FF9800'; // 中高频：橙
-          width = 4;
+          width = this.overviewLineWidth(4);
         } else if (trackHeat >= 0.2) {
           color = '#FFC107'; // 中低频：黄
-          width = 3;
+          width = this.overviewLineWidth(3);
         } else {
           color = '#1F2329'; // 低频：黑
-          width = 3;
+          width = this.overviewLineWidth(3);
         }
         // 按 pauseGap 切段（暂停间隙断开连线），同色同宽多段 polyline
         const segs = [];
