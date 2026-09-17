@@ -367,6 +367,29 @@ Component({
             ctx.textBaseline = 'alphabetic';
           });
         }
+
+        // 起终点标注：绿点=起点、红点=终点（白字，与公里标同风格）
+        const first = segs[0][0];
+        const lastSeg = segs[segs.length - 1];
+        const last = lastSeg[lastSeg.length - 1];
+        [
+          ['起', '#00b578', px(first), py(first)],
+          ['终', '#f53f3f', px(last), py(last)],
+        ].forEach(([ch, color, x, y]) => {
+          ctx.beginPath();
+          ctx.arc(x, y, 7, 0, Math.PI * 2);
+          ctx.fillStyle = color;
+          ctx.fill();
+          ctx.lineWidth = 1.5;
+          ctx.strokeStyle = '#ffffff';
+          ctx.stroke();
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 7px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(ch, x, y + 0.5);
+          ctx.textBaseline = 'alphabetic';
+        });
       }
     },
 
