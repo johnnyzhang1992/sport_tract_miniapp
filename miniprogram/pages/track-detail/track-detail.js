@@ -98,7 +98,12 @@ Page({
           }
         }
       }
+      // 指标卡右上：当前用户头像与昵称（头像优先 OSS，其次预置头像）
+      const me = getApp().globalData.userInfo || {};
+      const meAvatar = me.avatarUrl || (me.avatarPreset ? `/assets/avatars/${me.avatarPreset}.png` : '');
       this.setData({
+        userAvatar: meAvatar,
+        userNickname: me.nickname || '运动用户',
         activity: {
           ...activity,
           icon: meta.icon || '🏃',

@@ -397,12 +397,71 @@
 }
 
 /* 轨迹线颜色说明（海拔/配速着色图例） */
-/* 轨迹线颜色图例（指标卡底部） */
+/* 轨迹线颜色图例 */
 .legend-row {
   display: flex;
   align-items: center;
   gap: 16rpx;
-  margin-top: 20rpx;
+  margin-top: 24rpx;
+}
+/* 指标卡头部：大数字距离（左） + 用户头像昵称（右，头像悬浮压卡片顶边） */
+.hero-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.hero-title {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  font-size: 24rpx;
+  color: #86909c;
+}
+.hero-dist {
+  display: flex;
+  align-items: baseline;
+  gap: 10rpx;
+  margin-top: 12rpx;
+}
+.hero-num {
+  font-size: 72rpx;
+  font-weight: 700;
+  line-height: 1;
+  color: #1d2129;
+}
+.hero-unit {
+  font-size: 26rpx;
+  color: #4e5969;
+}
+.hero-user {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: -72rpx; /* 头像上浮压住卡片顶边 */
+}
+.hero-avatar {
+  width: 104rpx;
+  height: 104rpx;
+  border-radius: 50%;
+  border: 6rpx solid #fff;
+  background: #f2f3f5;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.1);
+}
+.hero-nickname {
+  margin-top: 8rpx;
+  max-width: 220rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #1d2129;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hero-date {
+  margin-top: 4rpx;
+  font-size: 20rpx;
+  color: #86909c;
+  white-space: nowrap;
 }
 .legend-text {
   font-size: 20rpx;

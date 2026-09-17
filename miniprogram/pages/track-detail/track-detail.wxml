@@ -52,23 +52,42 @@
 
   <!-- 指标 -->
   <view class="card">
-    <view class="detail-title"><image class="title-icon" src="{{activity.iconImg}}" mode="aspectFit"></image> {{activity.label}} <text class="edit-btn" wx:if="{{activity.isOwner}}" bindtap="openEdit">✏️ 编辑</text></view>
+    <view class="hero-row">
+      <view class="hero-left">
+        <view class="hero-title">
+          <image class="title-icon" src="{{activity.iconImg}}" mode="aspectFit" />
+          <text>{{activity.label}}</text>
+          <text class="edit-btn" wx:if="{{activity.isOwner}}" bindtap="openEdit">✏️ 编辑</text>
+        </view>
+        <view class="hero-dist">
+          <text class="hero-num">{{activity.distanceKm}}</text>
+          <text class="hero-unit">公里</text>
+        </view>
+      </view>
+      <view class="hero-user">
+        <image class="hero-avatar" src="{{userAvatar}}" mode="aspectFill" />
+        <text class="hero-nickname">{{userNickname}}</text>
+        <view class="hero-date">{{activity.startTimeText}}</view>
+      </view>
+    </view>
     <view class="best-badges" wx:if="{{bestBadges.length}}">
       <view class="best-badge" wx:for="{{bestBadges}}" wx:key="*this">🏆 {{item}}</view>
     </view>
     <view class="note-text" wx:if="{{activity.note}}">{{activity.note}}</view>
+    <!-- 轨迹线颜色说明（徒步/爬山按海拔，其余按配速） -->
+    <view class="legend-row">
+      <text class="legend-text">{{colorMode === 'altitude' ? '海拔低' : '慢 ' + paceSlowText}}</text>
+      <view class="legend-bar {{colorMode === 'altitude' ? 'legend-bar-altitude' : 'legend-bar-pace'}}"></view>
+      <text class="legend-text">{{colorMode === 'altitude' ? '海拔高' : paceFastText + ' 快'}}</text>
+    </view>
     <view class="track-metrics">
-      <view class="metric">
-        <view class="metric-num">{{activity.distanceKm}}</view>
-        <view class="metric-label">公里</view>
-      </view>
       <view class="metric">
         <view class="metric-num">{{activity.durationText}}</view>
         <view class="metric-label">时长</view>
       </view>
       <view class="metric">
         <view class="metric-num">{{activity.paceValue}}</view>
-        <view class="metric-label">配速 {{activity.paceUnit}}</view>
+        <view class="metric-label">平均配速 {{activity.paceUnit}}</view>
       </view>
       <view class="metric" wx:if="{{activity.fastestKmValue}}">
         <view class="metric-num">{{activity.fastestKmValue}}</view>
@@ -86,12 +105,6 @@
       <text>开始 {{activity.startTimeText}}</text>
       <text class="time-sep">·</text>
       <text>结束 {{activity.endTimeText}}</text>
-    </view>
-    <!-- 轨迹线颜色说明（徒步/爬山按海拔，其余按配速）：置于指标卡底部 -->
-    <view class="legend-row">
-      <text class="legend-text">{{colorMode === 'altitude' ? '海拔低' : paceSlowText}}</text>
-      <view class="legend-bar {{colorMode === 'altitude' ? 'legend-bar-altitude' : 'legend-bar-pace'}}"></view>
-      <text class="legend-text">{{colorMode === 'altitude' ? '海拔高' : paceFastText}}</text>
     </view>
   </view>
 
