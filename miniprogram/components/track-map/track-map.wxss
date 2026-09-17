@@ -111,7 +111,7 @@
   background: rgba(255, 255, 255, 0.92);
   border-radius: 999rpx;
   padding: 10rpx 22rpx;
-  font-size: 24rpx; /* 与 POI 按钮字号一致 */
+  font-size: 20rpx; /* 低频→高频 文案（缩小一号） */
   color: #4e5969;
   box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
 }
