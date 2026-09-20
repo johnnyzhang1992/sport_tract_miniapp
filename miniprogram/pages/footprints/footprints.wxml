@@ -9,11 +9,52 @@
     <view wx:elif="{{error}}" class="center-tip">{{error}} <text class="retry" bindtap="loadAll">重试</text></view>
     <block wx:else>
       <view wx:if="{{records.length === 0 && mode === 'map'}}" class="center-tip empty">还没有足迹，点右下角 ＋ 记录第一个去过的地方</view>
-      <view wx:if="{{mode === 'map'}}" class="map-wrap"><!-- Task 5 挂 <map> --></view>
+      <view wx:if="{{mode === 'map'}}" class="map-wrap">
+        <!-- 官方 map 无声明式 clusters 属性/聚合事件，include-points 也不支持 padding（查证见 docs/11 §4.2）：
+             聚合按 zoom 由页面网格计算，簇与点都走 markers + bindmarkertap，视野由 center/scale 自行 fitBounds -->
+        <map
+          id="footprintMap"
+          class="fp-map"
+          longitude="{{center.longitude}}" latitude="{{center.latitude}}" scale="{{scale}}"
+          markers="{{markers}}"
+          show-location
+          bindmarkertap="onMarkerTap"
+          bindregionchange="onRegionChange"
+          bindpoitap="onPoiTap"
+        />
+      </view>
       <view wx:if="{{mode === 'list'}}" class="list-wrap"><!-- Task 6 列表 --></view>
     </block>
   </view>
 
-  <!-- 详情弹窗 Task 5 -->
+  <!-- 足迹详情弹窗（marker/列表卡共用；map 同层渲染后普通 view 可盖住地图） -->
+  <view wx:if="{{popup.visible}}" class="mask" bindtap="closePopup">
+    <view class="sheet" catchtap="noop">
+      <view class="sheet-head">
+        <view class="sheet-title">{{popup.record.title}}</view>
+        <view class="sheet-close" catchtap="closePopup">✕</view>
+      </view>
+      <view class="sheet-meta">{{popup.record.metaText}}</view>
+      <view wx:if="{{popup.record.peopleText}}" class="sheet-people">同行：{{popup.record.peopleText}}</view>
+      <view wx:if="{{popup.record.description}}" class="sheet-desc">{{popup.record.description}}</view>
+      <scroll-view wx:if="{{popup.record.photos.length}}" scroll-x class="sheet-photos">
+        <image
+          wx:for="{{popup.record.photos}}"
+          wx:key="*this"
+          src="{{item}}"
+          mode="aspectFill"
+          class="sheet-photo"
+          data-urls="{{popup.record.photos}}"
+          data-idx="{{index}}"
+          bindtap="previewPhoto"
+        />
+      </scroll-view>
+      <view class="sheet-actions">
+        <button class="act-btn" size="mini" bindtap="editRecord">编辑</button>
+        <button class="act-btn danger" size="mini" bindtap="removeRecord">删除</button>
+      </view>
+    </view>
+  </view>
+
   <view class="fab" bindtap="openAdd">＋</view>
 </view>
