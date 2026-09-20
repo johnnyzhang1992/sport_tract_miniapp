@@ -1,83 +1,12 @@
-// 足迹 tab 主页：地图（marker + 聚合 + 详情弹窗）/ 列表（Task 6）切换 + 数据加载
+// 足迹 tab 主页：地图（原生 marker 聚合 + 详情弹窗）/ 列表（Task 6）切换 + 数据加载
 const api = require('../../services/api');
+const geo = require('../../utils/footprint-geo');
 
 const MAP_ID = 'footprintMap';
-/** marker id 分段（微信 map 的 markerId 是数字）：1..N = records 下标 + 1；≥ 基准则为自绘聚合簇 */
-const CLUSTER_ID_BASE = 100000;
-/** 聚合格子屏幕边长（px）。越大越容易并成簇 */
-const GRID_PX = 56;
-/** 可再展开的缩放层级步长 / map scale 取值区间（文档 scale: 3~20） */
-const EXPAND_ZOOM_STEP = 2;
+/** map scale 上限（文档 scale: 3~20）：原生聚合到顶仍并在一起的簇（同坐标点）走成员列表兜底 */
 const MAX_SCALE = 20;
-const MIN_SCALE = 3;
-/** fitBounds 上限：多点也不顶到 20（顶满后密集区会糊成一团）；单点固定层级 */
-const FIT_MAX_SCALE = 15;
-const FIT_SINGLE_SCALE = 12;
-/** 视野内边距（CSS px）：底部留出 FAB 与弹窗空间 */
-const FIT_PAD_X = 40;
-const FIT_PAD_TOP = 50;
-const FIT_PAD_BOTTOM = 120;
-/** 视野由程序改动后的静默窗口：期间忽略 regionchange，避免和聚合重建互相触发 */
+/** 视野由程序改动后的静默窗口：期间忽略 regionchange 回读，避免自激 */
 const PROGRAMMATIC_CAMERA_MS = 900;
-/** 聚合簇数字气泡缓存（同 track-map 公里标做法：离屏 canvas 画好 → tempFilePath 缓存） */
-const CLUSTER_ICON_CACHE = {};
-
-/** 墨卡托世界像素（zoom 0，256px 基准）；某 zoom 下的像素 = 世界像素 * 2^zoom */
-function lngToWorldX(lng) {
-  return (256 * (lng + 180)) / 360;
-}
-function latToWorldY(lat) {
-  const s = Math.sin((Math.max(-85.05112, Math.min(85.05112, lat)) * Math.PI) / 180);
-  return 256 * (0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI));
-}
-function worldYToLat(y) {
-  const t = Math.tanh(Math.PI * (1 - (2 * y) / 256));
-  return (Math.asin(Math.max(-1, Math.min(1, t))) * 180) / Math.PI;
-}
-
-/** 墨卡托投影：经纬度 → 该 zoom 下的世界像素坐标（zoom 直接用 map 的 scale 值） */
-function projectLng(lng, zoom) {
-  return lngToWorldX(lng) * Math.pow(2, zoom);
-}
-function projectLat(lat, zoom) {
-  return latToWorldY(lat) * Math.pow(2, zoom);
-}
-
-/**
- * 手动 fitBounds 算视野。
- * 不用 include-points 的原因（官方文档查证，见 docs/11 §4.2）：
- * include-points 形状是 Array<{latitude,longitude}>，没有 padding 可用（点会贴边被裁一半），
- * 且单点包围盒零面积会把 scale 顶到 20 —— track-map 里已踩过同一个坑。
- */
-function fitBounds(points) {
-  let minLat = 90;
-  let maxLat = -90;
-  let minLng = 180;
-  let maxLng = -180;
-  points.forEach((p) => {
-    minLat = Math.min(minLat, p.latitude);
-    maxLat = Math.max(maxLat, p.latitude);
-    minLng = Math.min(minLng, p.longitude);
-    maxLng = Math.max(maxLng, p.longitude);
-  });
-  // 单点/零面积包围盒：固定层级直接定位到点（顶满 scale 的老坑）
-  if (points.length === 1 || (minLat === maxLat && minLng === maxLng)) {
-    return { center: { latitude: points[0].latitude, longitude: points[0].longitude }, scale: FIT_SINGLE_SCALE };
-  }
-  const view = mapViewport();
-  const usableW = Math.max(80, view.width - FIT_PAD_X * 2);
-  const usableH = Math.max(80, view.height - FIT_PAD_TOP - FIT_PAD_BOTTOM);
-  const center = {
-    latitude: worldYToLat((latToWorldY(minLat) + latToWorldY(maxLat)) / 2),
-    longitude: (minLng + maxLng) / 2,
-  };
-  const spanX = lngToWorldX(maxLng) - lngToWorldX(minLng);
-  const spanY = latToWorldY(minLat) - latToWorldY(maxLat);
-  const z = Math.min(Math.log2(usableW / spanX), Math.log2(usableH / spanY));
-  let scale = Number.isFinite(z) ? Math.floor(z) : FIT_MAX_SCALE;
-  scale = Math.max(MIN_SCALE, Math.min(FIT_MAX_SCALE, scale));
-  return { center, scale };
-}
 
 /** 地图可视区（CSS px）：.body 高 = 视口高 - 分段条 112rpx；tabBar 不占 windowHeight */
 function mapViewport() {
@@ -87,86 +16,17 @@ function mapViewport() {
   return { width, height: Math.max(200, height - (112 * width) / 750) };
 }
 
-/** 网格聚合：同一格（GRID_PX 见方）内的点并成一簇，簇心取成员均值 */
-function gridCluster(points, zoom) {
-  const cells = {};
-  const order = [];
-  points.forEach((p) => {
-    const gx = Math.floor(projectLng(p.longitude, zoom) / GRID_PX);
-    const gy = Math.floor(projectLat(p.latitude, zoom) / GRID_PX);
-    const key = gx + ':' + gy;
-    if (!cells[key]) {
-      cells[key] = [];
-      order.push(key);
-    }
-    cells[key].push(p);
-  });
-  return order.map((key) => {
-    const members = cells[key];
-    let lat = 0;
-    let lng = 0;
-    members.forEach((m) => {
-      lat += m.latitude;
-      lng += m.longitude;
-    });
-    return {
-      count: members.length,
-      latitude: lat / members.length,
-      longitude: lng / members.length,
-      // 单点簇保留 records 下标，弹窗按它取数据
-      recordIndex: members.length === 1 ? members[0].index : -1,
-      // 簇内第一个点（/geo 按 visitDate 倒序 → 最新一条），封顶缩放后直接展开它
-      firstIndex: members[0].index,
-    };
-  });
-}
-
-/** 画聚合簇气泡（蓝底白字圆 + 白色描边）；不支持离屏 canvas 时返回 ''，调用方退化为 callout 文字 */
-function buildClusterIcon(count) {
-  const key = 'fp-cluster-' + count;
-  if (CLUSTER_ICON_CACHE[key]) return Promise.resolve(CLUSTER_ICON_CACHE[key]);
-  return new Promise((resolve) => {
-    try {
-      const canvas = wx.createOffscreenCanvas({ type: '2d', width: 48, height: 48 });
-      const ctx = canvas.getContext('2d');
-      ctx.beginPath();
-      ctx.arc(24, 24, 21, 0, Math.PI * 2);
-      ctx.fillStyle = '#2b6cf6';
-      ctx.fill();
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = '#ffffff';
-      ctx.stroke();
-      ctx.fillStyle = '#ffffff';
-      const digits = String(count).length;
-      ctx.font = 'bold ' + (digits >= 4 ? 11 : digits === 3 ? 13 : digits === 2 ? 16 : 19) + 'px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(String(count), 24, 25);
-      wx.canvasToTempFilePath({
-        canvas,
-        success: (r) => resolve(r.tempFilePath),
-        fail: () => resolve(''),
-      });
-    } catch (e) {
-      resolve('');
-    }
-  }).then((path) => {
-    if (path) CLUSTER_ICON_CACHE[key] = path;
-    return path;
-  });
-}
-
 Page({
   data: {
     mode: 'map', // map | list
     loading: true,
     error: '',
     records: [], // /geo 轻量点缓存 {id,title,visitDate,latitude,longitude,coverPhoto}
-    markers: [],
     center: { latitude: 30.5, longitude: 114.3 }, // 视野由 fitBounds 覆盖，这里只是无数据时的兜底
     scale: 12,
     items: [], page: 1, pageSize: 20, total: 0, hasMore: true, loadingList: false,
     popup: { visible: false, record: null },
+    clusterSheet: { visible: false, records: [] }, // 最大缩放兜底：同处多条足迹的成员列表
   },
   onLoad() { this.loadAll(); },
   onShow() {
@@ -187,7 +47,8 @@ Page({
       await Promise.all([this.loadGeo(seq), this.reloadList(seq)]);
       // 守卫同上：刷新期间的旧请求回来不能把 loadingList 复位成失败态之外的值
       if (seq !== this._seq) return;
-      this.setData({ loading: false });
+      // setData 回调里 map 节点已渲染：补投挂起的原生聚合 marker（实测 map 的 bindload 在本模拟器不触发）
+      this.setData({ loading: false }, () => this.syncNativeMarkers());
     } catch (e) {
       if (seq !== this._seq) return;
       // 复位 loadingList，否则 Task 6 触底闸门会卡死或重复发请求
@@ -232,14 +93,22 @@ Page({
   },
 
   /**
-   * 由 records 生成 markers。
-   * fit=false（用户缩放后重建聚合）只换 marker，不动视野，避免和 regionchange 互相打断。
-   * 聚合说明：官方 map 没有声明式 clusters 属性/聚合事件（见 docs/11 §4.2 查证结论），
-   * 故按当前 zoom 做组件内网格聚合并自绘数字气泡；对外接口（markerId↔records 下标、openPopup）不变。
+   * 由 records 生成 marker 并注入原生聚合（官方 map「marker 聚合」：initMarkerCluster + addMarkers，基础库 ≥2.8.0）。
+   * 修复轮模拟器实测（证据见 task-5-report Fix round 1）：自带蓝底数字气泡正常渲染、
+   * 稀疏孤点走普通 marker（iconPath + bindmarkertap），契约不变：markerId = records 下标 + 1、openPopup(record)。
+   * 要点（按官方文档与社区坑）：
+   * - 原生聚合要求 marker 由 MapContext.addMarkers 命令式注入（声明式 markers 属性不参与聚合），
+   *   故 wxml 的 map 不绑 markers 属性
+   * - enableDefaultStyle:true —— 地图自带聚合簇气泡（需求原话「地图自带的聚合簇」）；
+   *   社区坑：false 时簇点击事件在部分端不派发，且簇图标要自备
+   * - zoomOnClick:true —— 点簇原生放大展开；展开后的叶 marker 点击走 bindmarkertap → openPopup
+   * - 实测模拟器里带 joinCluster 的孤点也会被画成「1」字气泡，与「稀疏区域直接展示点」不符：
+   *   joinCluster 只给本地网格（geo.gridCluster）判定为多点同处的点
+   * fit=false（保留 Task 4 语义）只重投 marker，不动视野。
    */
   buildMarkers(opts) {
     const fit = !opts || opts.fit !== false;
-    // 簇图标是离屏 canvas 异步产出的：同样要防竞态，旧一次构建不能覆盖新一批 markers
+    // 簇图标注入是异步的：同样要防竞态，旧一次构建不能覆盖新一批 marker
     const seq = this._seq;
     const records = this.data.records;
     const points = [];
@@ -249,57 +118,81 @@ Page({
       if (Number.isFinite(latitude) && Number.isFinite(longitude)) points.push({ index: i, latitude, longitude });
     });
 
-    // 先定视野再聚合：聚合格子是按屏幕像素算的，zoom 必须和最终视野一致，否则簇的疏密对不上
+    // 先定视野再分桶：joinCluster 判定按最终视野的 zoom 做，否则簇的疏密对不上
     const patch = {};
     if (points.length && fit) {
-      const fitted = fitBounds(points);
+      const fitted = geo.fitBounds(points, mapViewport());
       patch.center = fitted.center;
       patch.scale = fitted.scale;
       this._gridZoom = fitted.scale;
       this._progCamUntil = Date.now() + PROGRAMMATIC_CAMERA_MS;
     }
     const zoom = this._gridZoom || this.data.scale;
-    const clusters = gridCluster(points, zoom);
-    this._clusters = clusters;
-
-    return Promise.all(
-      clusters.map((c) => (c.count > 1 ? buildClusterIcon(c.count) : Promise.resolve(''))),
-    ).then((icons) => {
-      const markers = clusters.map((c, ci) => {
-        if (c.count === 1) {
-          return {
-            id: c.recordIndex + 1, // 契约：marker id = records 下标 + 1
-            latitude: c.latitude,
-            longitude: c.longitude,
-            iconPath: '/assets/icons/marker-dot.png',
-            width: 18,
-            height: 18,
-            anchor: { x: 0.5, y: 0.5 },
-          };
-        }
-        const marker = {
-          id: CLUSTER_ID_BASE + ci,
-          latitude: c.latitude,
-          longitude: c.longitude,
-          width: 26,
-          height: 26,
-          anchor: { x: 0.5, y: 0.5 },
-        };
-        if (icons[ci]) {
-          marker.iconPath = icons[ci];
-        } else {
-          // 离屏 canvas 不可用：退回默认点 + 常显数字气泡，聚合仍可读
-          marker.iconPath = '/assets/icons/marker-dot.png';
-          marker.callout = { content: String(c.count), color: '#ffffff', fontSize: 12, bgColor: '#2b6cf6', borderRadius: 10, padding: 6, display: 'ALWAYS', textAlign: 'center' };
-        }
-        return marker;
-      });
+    const clusters = geo.gridCluster(points, zoom);
+    const inCluster = {};
+    clusters.forEach((c) => {
+      if (c.count > 1) c.members.forEach((i) => { inCluster[i] = true; });
+    });
+    const markers = points.map((p) => ({
+      id: p.index + 1, // 契约：marker id = records 下标 + 1
+      latitude: p.latitude,
+      longitude: p.longitude,
+      joinCluster: !!inCluster[p.index],
+      iconPath: '/assets/icons/marker-dot.png',
+      width: 18,
+      height: 18,
+      anchor: { x: 0.5, y: 0.5 },
+    }));
+    this._pendingNative = { markers, clusters };
+    return Promise.resolve(this.syncNativeMarkers()).then(() => {
       if (seq !== this._seq) return;
-      this.setData(Object.assign({ markers }, patch));
+      this._clusters = clusters; // 防竞态通过后再提交，旧一次构建不覆盖簇数据
+      this.setData(patch);
     });
   },
 
-  /** 视野变化结束时按当前缩放重建聚合分级（跨端字段不一致，取不到用 getScale 兜底） */
+  /** 把待注入的原生 marker 交给 map（map 节点渲染后调用：setData 回调 / bindload） */
+  syncNativeMarkers() {
+    if (!this._pendingNative) return Promise.resolve();
+    const pending = this._pendingNative;
+    this._pendingNative = null;
+    this._lastNativeMarkers = pending.markers; // 模式切换重建 map 节点后重投用
+    const ctx = wx.createMapContext(MAP_ID, this);
+    // map 节点可能被 wx:if 重建（loading 切换 / 模式切换），聚合初始化按当前节点重做一次；
+    // 事件回调副作用（回灌成员表 / 开成员列表）幂等，重复绑定不影响
+    this._clusterMembers = {}; // clusterId → markerIds：markerClusterCreate 事件回灌，成员列表兜底用
+    ctx.initMarkerCluster({
+      enableDefaultStyle: true,
+      zoomOnClick: true,
+      gridSize: 60,
+      minClusterSize: 2, // 默认 3；足迹两点即并簇更贴近密度需求
+      fail: (e) => console.error('[footprints] initMarkerCluster fail', e),
+    });
+    ctx.on('markerClusterCreate', (e) => {
+      const cs = (e && e.detail && e.detail.clusters) || [];
+      cs.forEach((c) => {
+        if (c && c.clusterId != null) this._clusterMembers[c.clusterId] = c.markerIds || [];
+      });
+    });
+    ctx.on('markerClusterClick', (e) => this.onNativeClusterClick(e));
+    // 实测模拟器只回 success、不回 onComplete：两个都挂，谁先到算谁
+    return new Promise((resolve) => {
+      let done = false;
+      const finish = (err) => {
+        if (done) return;
+        done = true;
+        if (err) console.error('[footprints] addMarkers fail', err);
+        resolve();
+      };
+      ctx.addMarkers({ markers: pending.markers, clear: true, onComplete: () => finish(), success: () => finish(), fail: finish });
+    });
+  },
+  /** map 渲染完成（部分端支持）：补投挂起的 marker；不支持时由 setData 回调兜底 */
+  onMapLoad() {
+    this.syncNativeMarkers();
+  },
+
+  /** 视野变化结束时记录当前缩放（原生自管聚合，无需重建；跨端字段不一致，取不到用 getScale 兜底） */
   onRegionChange(e) {
     const d = (e && e.detail) || {};
     const type = (e && e.type) || d.type;
@@ -308,9 +201,7 @@ Page({
     const apply = (raw) => {
       const s = Number(raw);
       if (!Number.isFinite(s)) return;
-      if (Math.abs(s - (this._gridZoom || this.data.scale)) < 0.5) return;
-      this._gridZoom = s;
-      this.buildMarkers({ fit: false });
+      this._gridZoom = s; // 最大缩放簇兜底判断用
     };
     const raw = Number.isFinite(e.scale) ? e.scale : Number.isFinite(d.scale) ? d.scale : null;
     if (raw != null) return apply(raw);
@@ -322,30 +213,39 @@ Page({
     const d = (e && e.detail) || {};
     const id = Number(d.markerId);
     if (!Number.isFinite(id)) return;
-    if (id >= CLUSTER_ID_BASE) {
-      this.expandCluster(id - CLUSTER_ID_BASE);
-      return;
-    }
     const r = this.data.records[id - 1];
     if (r) this.openPopup(r);
   },
-  /** 点聚合簇：放大视野（同原生 zoomOnClick 行为），到顶格后直接展开该处最新一条 */
-  expandCluster(idx) {
-    const c = (this._clusters || [])[idx];
-    if (!c) return;
-    const base = Math.max(this._gridZoom || 0, this.data.scale);
-    if (base >= MAX_SCALE - 0.5) {
-      const r = this.data.records[c.firstIndex];
-      if (r) this.openPopup(r);
+  /**
+   * 原生聚合：点自带簇气泡（enableDefaultStyle 下簇点击不走 bindmarkertap，走 markerClusterClick）。
+   * 单成员簇 = 点 marker 语义 → 详情弹窗；多成员未到顶 → 放大展开由原生 zoomOnClick 负责；
+   * 最大缩放仍并在一起（同坐标点原生拆不开）→ 成员列表兜底。
+   * 成员优先取 markerClusterCreate 回灌的 markerIds，取不到用本地网格桶按簇心匹配。
+   * 注：本模拟器未派发过 markerClusterCreate/markerClusterClick（已留档），该链路以真机回归为准（docs/11 §6）。
+   */
+  onNativeClusterClick(e) {
+    const d = (e && e.detail) || {};
+    const ids = (this._clusterMembers && this._clusterMembers[d.clusterId]) || [];
+    let recs = ids.map((id) => this.data.records[id - 1]).filter(Boolean);
+    if (!recs.length) {
+      const center = d.center || {};
+      const c = (this._clusters || []).find(
+        (x) =>
+          Number.isFinite(center.latitude) &&
+          Math.abs(x.latitude - center.latitude) < 0.01 &&
+          Math.abs(x.longitude - center.longitude) < 0.01,
+      );
+      if (c) recs = c.members.map((i) => this.data.records[i]).filter(Boolean);
+    }
+    if (recs.length === 1) {
+      this.openPopup(recs[0]);
       return;
     }
-    const next = Math.min(MAX_SCALE, base + EXPAND_ZOOM_STEP);
-    this._gridZoom = next;
-    this._progCamUntil = Date.now() + PROGRAMMATIC_CAMERA_MS;
-    this.setData({ center: { latitude: c.latitude, longitude: c.longitude }, scale: next });
-    this.buildMarkers({ fit: false });
+    if (recs.length > 1 && (this._gridZoom || this.data.scale) >= MAX_SCALE - 0.5) {
+      this.showClusterMembers(recs);
+    }
   },
-  /** POI 点击兜底：map 开启 enable-poi 时点到附近标注，按坐标回落到同坐标足迹 */
+  /** POI 点击兜底：点到底图同坐标标注时，按坐标回落到该足迹 */
   onPoiTap(e) {
     const d = (e && e.detail) || {};
     if (!Number.isFinite(d.latitude) || !Number.isFinite(d.longitude)) return;
@@ -355,10 +255,14 @@ Page({
 
   /** 详情弹窗：geo/列表轻量数据缺描述与人物时补拉详情（GET /footprint-records/:id，photos 已签名） */
   openPopup(record) {
+    // 连点两个 marker 时旧详情响应不能覆盖新弹窗（seq 守卫，同 loadAll 做法）
+    const seq = (this._popupSeq = (this._popupSeq || 0) + 1);
     const need = !record.location || record.description === undefined || record.people === undefined || record.photos === undefined;
     const fill = need ? api.get('/footprint-records/' + record.id) : Promise.resolve(record);
     fill
-      .then((full) => this.showPopup(full))
+      .then((full) => {
+        if (seq === this._popupSeq) this.showPopup(full);
+      })
       .catch((e) => wx.showToast({ title: (e && e.message) || '加载失败', icon: 'none' }));
   },
   /** 弹窗渲染前把数组/展示字段算好：WXML 不支持调用 join()，也不能直接渲染数组 */
@@ -376,6 +280,20 @@ Page({
     this.setData({ popup: { visible: true, record } });
   },
   closePopup() { this.setData({ 'popup.visible': false }); },
+
+  /** 最大缩放仍并簇的兜底：成员列表半屏（标题+日期，点行 → 详情弹窗） */
+  showClusterMembers(recs) {
+    const records = recs.map((r) => ({ id: r.id, title: r.title, visitDate: r.visitDate }));
+    this.setData({ clusterSheet: { visible: true, records } });
+  },
+  closeClusterSheet() { this.setData({ 'clusterSheet.visible': false }); },
+  pickClusterMember(e) {
+    const idx = Number(e.currentTarget.dataset.idx);
+    const r = (this.data.clusterSheet.records || [])[idx];
+    this.setData({ 'clusterSheet.visible': false });
+    if (r) this.openPopup(r);
+  },
+
   editRecord() {
     const rec = this.data.popup.record;
     if (!rec) return;
@@ -409,7 +327,15 @@ Page({
     wx.previewImage({ urls, current: urls[Number(ds.idx) || 0] });
   },
 
-  switchMode(e) { this.setData({ mode: e.currentTarget.dataset.mode }); },
+  switchMode(e) {
+    this.setData({ mode: e.currentTarget.dataset.mode }, () => {
+      // 切回地图时 wx:if 重建了 map 节点：重投原生聚合 marker
+      if (this.data.mode === 'map' && !this._pendingNative && this._lastNativeMarkers) {
+        this._pendingNative = { markers: this._lastNativeMarkers };
+        this.syncNativeMarkers();
+      }
+    });
+  },
   openAdd() { wx.navigateTo({ url: '/packageFootRecords/pages/record-edit/record-edit' }); },
   noop() {},
 });
