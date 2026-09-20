@@ -10,14 +10,15 @@
     <block wx:else>
       <view wx:if="{{records.length === 0 && mode === 'map'}}" class="center-tip empty">还没有足迹，点右下角 ＋ 记录第一个去过的地方</view>
       <view wx:if="{{mode === 'map'}}" class="map-wrap">
-        <!-- 官方 map 无声明式 clusters 属性/聚合事件，include-points 也不支持 padding（查证见 docs/11 §4.2）：
-             聚合按 zoom 由页面网格计算，簇与点都走 markers + bindmarkertap，视野由 center/scale 自行 fitBounds -->
+        <!-- 原生 marker 聚合（initMarkerCluster + addMarkers，模拟器实测自带簇气泡可渲染，见 docs/11 §4.2）：
+             marker 由 MapContext.addMarkers 命令式注入，不绑 markers 属性（声明式不参与聚合）；
+             点簇放大展开走自带 zoomOnClick，展开后的叶 marker 与稀疏孤点走 bindmarkertap -->
         <map
           id="footprintMap"
           class="fp-map"
           longitude="{{center.longitude}}" latitude="{{center.latitude}}" scale="{{scale}}"
-          markers="{{markers}}"
           show-location
+          bindload="onMapLoad"
           bindmarkertap="onMarkerTap"
           bindregionchange="onRegionChange"
           bindpoitap="onPoiTap"
@@ -52,6 +53,26 @@
       <view class="sheet-actions">
         <button class="act-btn" size="mini" bindtap="editRecord">编辑</button>
         <button class="act-btn danger" size="mini" bindtap="removeRecord">删除</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 最大缩放簇仍并在一起的兜底：成员列表半屏（标题+日期，点行 → 详情弹窗） -->
+  <view wx:if="{{clusterSheet.visible}}" class="mask" bindtap="closeClusterSheet">
+    <view class="sheet" catchtap="noop">
+      <view class="sheet-head">
+        <view class="sheet-title">此处共 {{clusterSheet.records.length}} 条足迹</view>
+        <view class="sheet-close" catchtap="closeClusterSheet">✕</view>
+      </view>
+      <view
+        class="member-row"
+        wx:for="{{clusterSheet.records}}"
+        wx:key="id"
+        data-idx="{{index}}"
+        catchtap="pickClusterMember"
+      >
+        <view class="member-title">{{item.title}}</view>
+        <view class="member-date">{{item.visitDate}}</view>
       </view>
     </view>
   </view>

@@ -167,6 +167,29 @@
   background: #fdecec;
 }
 
+/* 成员列表半屏（最大缩放仍并簇的兜底） */
+.member-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24rpx;
+  padding: 24rpx 4rpx;
+  border-bottom: 1rpx solid #f2f3f5;
+}
+.member-title {
+  flex: 1;
+  font-size: 28rpx;
+  color: #1f2329;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.member-date {
+  flex: none;
+  font-size: 24rpx;
+  color: #8a9099;
+}
+
 /* 新增足迹 FAB */
 .fab {
   position: fixed;
