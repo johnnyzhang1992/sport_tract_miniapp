@@ -1,1 +1,180 @@
-/* Task 7 填充 */
+/* 足迹编辑页：表单卡片风格对齐 pages/profile + pages/settings（复用全局 .container / .card / .btn-primary / .text-muted） */
+.container {
+  padding-bottom: calc(40rpx + env(safe-area-inset-bottom));
+}
+
+/* 通用字段标签 / 输入（同 profile） */
+.field-label {
+  font-size: 28rpx;
+  color: #666;
+  margin-bottom: 16rpx;
+}
+.field-input {
+  font-size: 32rpx;
+  padding: 12rpx 0;
+  border-bottom: 2rpx solid #eee;
+}
+.field-tip {
+  margin-top: 12rpx;
+  font-size: 22rpx;
+}
+
+/* 地点 */
+.loc-picked {
+  background: #eef4ff;
+  border-radius: 12rpx;
+  padding: 20rpx 24rpx;
+  margin-bottom: 20rpx;
+}
+.loc-name {
+  font-size: 30rpx;
+  color: #1f2329;
+  font-weight: 500;
+}
+.loc-address {
+  margin-top: 6rpx;
+}
+.loc-empty-tip {
+  margin-bottom: 16rpx;
+}
+.loc-actions {
+  display: flex;
+}
+.loc-btn {
+  flex: 1;
+  text-align: center;
+  padding: 20rpx 0;
+  border-radius: 12rpx;
+  background: #f7f8fa;
+  color: #2b6cf6;
+  font-size: 28rpx;
+  margin-right: 16rpx;
+}
+.loc-btn:last-child {
+  margin-right: 0;
+}
+.loc-btn-hover {
+  background: #eef4ff;
+}
+
+/* 日期 picker */
+.picker-value {
+  font-size: 32rpx;
+  padding: 12rpx 0;
+  border-bottom: 2rpx solid #eee;
+  color: #1f2329;
+}
+
+/* 同行的人 */
+.people-row {
+  display: flex;
+  align-items: center;
+}
+.people-input {
+  flex: 1;
+  margin-right: 20rpx;
+}
+.people-add {
+  padding: 12rpx 32rpx;
+  border-radius: 999rpx;
+  background: #eef4ff;
+  color: #2b6cf6;
+  font-size: 28rpx;
+}
+.people-add-hover {
+  background: #dce7fd;
+}
+.people-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  margin-top: 20rpx;
+}
+.people-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 10rpx 20rpx;
+  border-radius: 999rpx;
+  background: #f2f3f5;
+  color: #4e5969;
+  font-size: 26rpx;
+}
+.tag-x {
+  margin-left: 10rpx;
+  color: #999;
+  font-size: 30rpx;
+}
+
+/* 描述 */
+.desc-input {
+  width: 100%;
+  height: 160rpx;
+  background: #f7f8fa;
+  border-radius: 12rpx;
+  padding: 16rpx 20rpx;
+  box-sizing: border-box;
+  font-size: 28rpx;
+}
+
+/* 图片九宫格（度量对齐 components/marker-form） */
+.photo-grid {
+  display: flex;
+  flex-wrap: wrap;
+}
+.photo-item {
+  position: relative;
+  width: 160rpx;
+  height: 160rpx;
+  margin: 0 16rpx 16rpx 0;
+}
+.photo-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 12rpx;
+}
+.photo-remove {
+  position: absolute;
+  top: -12rpx;
+  right: -12rpx;
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 32rpx;
+  line-height: 44rpx;
+  text-align: center;
+}
+.photo-add {
+  width: 160rpx;
+  height: 160rpx;
+  border: 2rpx dashed #ccc;
+  border-radius: 12rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  font-size: 56rpx;
+  box-sizing: border-box;
+}
+.photo-add-hover {
+  background: #f7f8fa;
+  color: #2b6cf6;
+}
+
+/* 提交按钮 */
+.submit-btn {
+  width: 100%;
+  height: 88rpx;
+  line-height: 88rpx;
+  font-size: 32rpx;
+  margin-top: 8rpx;
+}
+.submit-btn[disabled] {
+  background: #cdd8f0;
+  color: #fff;
+}
+.submit-tip {
+  text-align: center;
+  margin-top: 16rpx;
+}
