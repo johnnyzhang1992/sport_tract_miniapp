@@ -38,6 +38,10 @@ Page({
         // 清 id 后保存走新增；location 置 null 使 canSubmit 为 false，逼用户重新选点。
         wx.showToast({ title: e.message || '加载足迹失败', icon: 'none' });
         this.setData({ id: '', location: null });
+        // 慢 GET 窄竞态：详情还在飞时用户已自行选点/填标题（refreshCanSubmit 已把按钮打开），
+        // 本次 catch 把 location 清空却不会自动关掉按钮 → 提交仍可用而地点为空，submit 读
+        // this.data.location.name 直接抛错。置空后必须同步重算一次。
+        this.refreshCanSubmit();
       });
     }
   },

@@ -110,10 +110,15 @@ Page({
   },
   confirm() {
     if (!this.data.picked) return wx.showToast({ title: '请先选择地点', icon: 'none' });
-    // 兜底清洗：逆地理被守卫拦下/尚未回包就确认时，占位文案不能进入保存的记录
+    // 兜底清洗：逆地理被迟到守卫拦下/尚未回包就确认时，占位文案不能进入保存的记录。
+    // 统一归一为 name:'地图选点' / address:''：
+    // 只替 address 会让编辑页主行（name || address）与次行（address）双份渲染同一文案，
+    // 且 name 留空会被原样存进库（列表/弹窗标题处只剩兜底字）。
     const pick = Object.assign({}, this.data.picked);
-    if (pick.name === PARSING) pick.name = FALLBACK_NAME;
-    if (pick.address === PARSING) pick.address = FALLBACK_NAME;
+    if (pick.name === PARSING || pick.address === PARSING) {
+      pick.name = FALLBACK_NAME;
+      pick.address = '';
+    }
     this.getOpenerEventChannel().emit('acceptPick', pick);
     wx.navigateBack();
   },

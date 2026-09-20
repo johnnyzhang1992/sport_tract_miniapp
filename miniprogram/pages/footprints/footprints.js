@@ -252,6 +252,11 @@ Page({
         fail: (e) => console.error('[footprints] initMarkerCluster fail', e),
       });
     }
+    // 每次重投 marker 前清簇成员缓存：addMarkers({clear:true}) 后旧的 clusterId → markerIds
+    // 映射随之失效（真机上原生簇 id 会被复用），留着会让 onNativeClusterClick 按陈旧成员
+    // 开错记录。节点未重建时 trackMapNode 不会复位，故在这里自行清空，等新的
+    // markerClusterCreate 回灌。
+    this._clusterMembers = {};
     // 实测模拟器只回 success、不回 onComplete：两个都挂，谁先到算谁
     return new Promise((resolve) => {
       let done = false;
