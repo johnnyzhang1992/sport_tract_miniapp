@@ -42,12 +42,13 @@ Page({
     const seq = (this._seq = (this._seq || 0) + 1);
     // 仅首屏（records/items 都还没内容）才进 loading 态；下拉/footprintsDirty 刷新保留已渲染内容，防闪屏
     const firstLoad = this.data.records.length === 0 && this.data.items.length === 0;
-    this.setData(firstLoad ? { loading: true, error: '' } : { error: '' });
+    this.setData(firstLoad ? { loading: true, error: '' } : { error: '' }, () => this.trackMapNode());
     try {
       await Promise.all([this.loadGeo(seq), this.reloadList(seq)]);
       // 守卫同上：刷新期间的旧请求回来不能把 loadingList 复位成失败态之外的值
       if (seq !== this._seq) return;
-      // setData 回调里 map 节点已渲染：补投挂起的原生聚合 marker（实测 map 的 bindload 在本模拟器不触发）
+      // setData 回调里 map 节点已渲染：消费挂起的原生聚合 marker（冷启动首屏唯一注入路径；
+      // 实测 map 的 bindload 在本模拟器不触发，故不能只靠 onMapLoad）
       this.setData({ loading: false }, () => this.syncNativeMarkers());
     } catch (e) {
       if (seq !== this._seq) return;
@@ -55,10 +56,10 @@ Page({
       this.setData({ loading: false, loadingList: false });
       if (firstLoad) {
         // 首屏失败没有可展示的内容 → 整页错误态
-        this.setData({ error: e.message || '加载失败' });
+        this.setData({ error: e.message || '加载失败' }, () => this.trackMapNode());
       } else {
         // 刷新失败：已渲染内容仍然可用，只提示不打断（整页错误态留给首屏）
-        this.setData({ error: '' });
+        this.setData({ error: '' }, () => this.trackMapNode());
         wx.showToast({ title: e.message || '刷新失败', icon: 'none' });
       }
     }
@@ -104,6 +105,10 @@ Page({
    * - zoomOnClick:true —— 点簇原生放大展开；展开后的叶 marker 点击走 bindmarkertap → openPopup
    * - 实测模拟器里带 joinCluster 的孤点也会被画成「1」字气泡，与「稀疏区域直接展示点」不符：
    *   joinCluster 只给本地网格（geo.gridCluster）判定为多点同处的点
+   * - 注入时机：marker 只能投给「已存在的 map 节点」。wxml 的 loading / error 闸门会把整块
+   *   （含 map）挡在节点树外，冷启动首屏必然处于该状态，所以 buildMarkers 里不直接消费，
+   *   payload 留在 _pendingNative，由渲染驱动的钩子（setData({loading:false}) 回调 / bindload /
+   *   switchMode 回调）注入；节点已挂载（下拉刷新、dirty 刷新）时同一条路径就地注入
    * fit=false（保留 Task 4 语义）只重投 marker，不动视野。
    */
   buildMarkers(opts) {
@@ -143,38 +148,67 @@ Page({
       height: 18,
       anchor: { x: 0.5, y: 0.5 },
     }));
-    this._pendingNative = { markers, clusters };
-    return Promise.resolve(this.syncNativeMarkers()).then(() => {
+    // 顺序很重要：先过 seq 守卫，再挂 marker 载荷 —— 被后续批次取代的构建既不注入，
+    // 也不占用 _pendingNative（否则会把过期 payload 留给渲染钩子，甚至覆盖更新的一批）
+    return Promise.resolve().then(() => {
       if (seq !== this._seq) return;
+      this._pendingNative = { markers, clusters };
       this._clusters = clusters; // 防竞态通过后再提交，旧一次构建不覆盖簇数据
       this.setData(patch);
+      // 已挂载 → 立即注入；未挂载（loading / 错误态 / 列表模式）→ 载荷留在 _pendingNative，
+      // 由渲染驱动的钩子（setData({loading:false}) 回调 / onMapLoad / switchMode 回调）消费
+      return this.syncNativeMarkers();
     });
   },
 
-  /** 把待注入的原生 marker 交给 map（map 节点渲染后调用：setData 回调 / bindload） */
+  /**
+   * map 节点存在性判定 + 生命周期记账。
+   * 存在条件与 wxml 闸门严格一致：loading / error 期间整块 <block wx:else>（含 map）不存在，
+   * 列表模式下 map 也被 wx:if 销毁 —— 此时 createMapContext / addMarkers 打到的是空节点。
+   * 由「不可见 → 可见」的跃迁说明节点是新建的，聚合初始化与事件绑定必须重做一次。
+   */
+  trackMapNode() {
+    const mounted = !this.data.loading && !this.data.error && this.data.mode === 'map';
+    if (mounted && !this._mapMounted) {
+      this._nativeInited = false; // 节点重建：initMarkerCluster / ctx.on 重新来一次
+      this._handlersBound = false;
+      this._clusterMembers = {}; // clusterId → markerIds：markerClusterCreate 事件回灌，成员列表兜底用
+    }
+    this._mapMounted = mounted;
+    return mounted;
+  },
+
+  /** 把待注入的原生 marker 交给 map：map 节点存在时立即消费，否则保留 payload 等渲染钩子再调 */
   syncNativeMarkers() {
+    const mounted = this.trackMapNode();
     if (!this._pendingNative) return Promise.resolve();
+    if (!mounted) return Promise.resolve(); // 节点不存在：pending 原样留着，不能空转消费掉
     const pending = this._pendingNative;
     this._pendingNative = null;
     this._lastNativeMarkers = pending.markers; // 模式切换重建 map 节点后重投用
     const ctx = wx.createMapContext(MAP_ID, this);
-    // map 节点可能被 wx:if 重建（loading 切换 / 模式切换），聚合初始化按当前节点重做一次；
-    // 事件回调副作用（回灌成员表 / 开成员列表）幂等，重复绑定不影响
-    this._clusterMembers = {}; // clusterId → markerIds：markerClusterCreate 事件回灌，成员列表兜底用
-    ctx.initMarkerCluster({
-      enableDefaultStyle: true,
-      zoomOnClick: true,
-      gridSize: 60,
-      minClusterSize: 2, // 默认 3；足迹两点即并簇更贴近密度需求
-      fail: (e) => console.error('[footprints] initMarkerCluster fail', e),
-    });
-    ctx.on('markerClusterCreate', (e) => {
-      const cs = (e && e.detail && e.detail.clusters) || [];
-      cs.forEach((c) => {
-        if (c && c.clusterId != null) this._clusterMembers[c.clusterId] = c.markerIds || [];
+    // 一个节点生命周期内只绑一次事件：否则每次刷新都会重复注册，同一事件回调被调用多遍
+    if (!this._handlersBound) {
+      this._handlersBound = true;
+      ctx.on('markerClusterCreate', (e) => {
+        const cs = (e && e.detail && e.detail.clusters) || [];
+        cs.forEach((c) => {
+          if (c && c.clusterId != null) this._clusterMembers[c.clusterId] = c.markerIds || [];
+        });
       });
-    });
-    ctx.on('markerClusterClick', (e) => this.onNativeClusterClick(e));
+      ctx.on('markerClusterClick', (e) => this.onNativeClusterClick(e));
+    }
+    // 聚合初始化同样一次一节点：后续刷新只 addMarkers({clear:true}) 换点
+    if (!this._nativeInited) {
+      this._nativeInited = true;
+      ctx.initMarkerCluster({
+        enableDefaultStyle: true,
+        zoomOnClick: true,
+        gridSize: 60,
+        minClusterSize: 2, // 默认 3；足迹两点即并簇更贴近密度需求
+        fail: (e) => console.error('[footprints] initMarkerCluster fail', e),
+      });
+    }
     // 实测模拟器只回 success、不回 onComplete：两个都挂，谁先到算谁
     return new Promise((resolve) => {
       let done = false;
@@ -187,7 +221,7 @@ Page({
       ctx.addMarkers({ markers: pending.markers, clear: true, onComplete: () => finish(), success: () => finish(), fail: finish });
     });
   },
-  /** map 渲染完成（部分端支持）：补投挂起的 marker；不支持时由 setData 回调兜底 */
+  /** map 渲染完成（部分端支持）：消费挂起的 marker；不支持时由 setData 回调兜底 */
   onMapLoad() {
     this.syncNativeMarkers();
   },
@@ -329,11 +363,13 @@ Page({
 
   switchMode(e) {
     this.setData({ mode: e.currentTarget.dataset.mode }, () => {
-      // 切回地图时 wx:if 重建了 map 节点：重投原生聚合 marker
+      // 切回地图时 wx:if 重建了 map 节点：把上一批 marker 重新挂成 pending，
+      // 由 syncNativeMarkers 统一消费（trackMapNode 检出节点重建 → 重做一次 init + 绑一次事件）；
+      // 切到列表时同样调一次，仅为让 trackMapNode 记录「节点已销毁」
       if (this.data.mode === 'map' && !this._pendingNative && this._lastNativeMarkers) {
         this._pendingNative = { markers: this._lastNativeMarkers };
-        this.syncNativeMarkers();
       }
+      this.syncNativeMarkers();
     });
   },
   openAdd() { wx.navigateTo({ url: '/packageFootRecords/pages/record-edit/record-edit' }); },
