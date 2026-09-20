@@ -87,8 +87,9 @@ Page({
       .then((data) => {
         if (!this.isStillPicked(tok, latitude, longitude)) return; // 迟到响应：期间已另选他点
         const addr = (data && data.address) || '';
-        // 上游额度耗尽/降级时 address 为空：显示"地图选点"，坐标兜底不阻塞确认
-        this.setData({ 'picked.address': addr, 'picked.name': addr || FALLBACK_NAME });
+        // 逆地理文案只作显示名：address 留空，否则编辑页主行（name || address）与次行会双份渲染同一句；
+        // 上游额度耗尽/降级时 addr 为空即显示"地图选点"，坐标兜底不阻塞确认
+        this.setData({ 'picked.name': addr || FALLBACK_NAME, 'picked.address': '' });
       })
       .catch(() => {
         if (!this.isStillPicked(tok, latitude, longitude)) return;

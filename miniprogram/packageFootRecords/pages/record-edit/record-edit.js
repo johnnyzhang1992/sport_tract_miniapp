@@ -132,6 +132,8 @@ Page({
       wx.compressImage({ src: path, quality: 80, success: (r) => resolve(r.tempFilePath), fail: () => resolve(path) });
     });
   },
+  // 中途失败重试会把已上传的对象留在 OSS（孤儿文件）：不回填 url 就不进库，
+  // 换来的是"失败不丢已传图"，属既定取舍（后端删除足迹时按库内 URL 清理）
   async uploadPending() {
     const out = [];
     for (const p of this.data.photos) {
