@@ -145,7 +145,10 @@
 .confirm-btn {
   margin-top: 24rpx;
   height: 88rpx;
-  line-height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
   border-radius: 12rpx;
   background: #2b6cf6;
   color: #fff;
