@@ -25,13 +25,19 @@ Page({
       api.get(`/footprint-records/${q.id}`).then((r) => {
         this.setData({
           visitDate: r.visitDate,
-          title: r.title,
-          people: r.people,
-          description: r.description,
+          title: r.title || '',
+          people: r.people || [],
+          description: r.description || '',
           location: r.location,
           photos: (r.photos || []).map((url) => ({ url, localPath: null })),
         });
         this.refreshCanSubmit();
+      }).catch((e) => {
+        // 加载失败必须清 id：否则表单半成品 + 用户重填保存会走 PUT，
+        // photos 为空会被服务端差集当成「删图」，误删该记录已有 OSS 照片。
+        // 清 id 后保存走新增；location 置 null 使 canSubmit 为 false，逼用户重新选点。
+        wx.showToast({ title: e.message || '加载足迹失败', icon: 'none' });
+        this.setData({ id: '', location: null });
       });
     }
   },
