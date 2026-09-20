@@ -120,12 +120,15 @@ Page({
   /** 列表触底翻页：不提前清空 items，追加由 fetchPage 的 page > 1 分支负责 */
   onListReachBottom() {
     if (!this.data.hasMore || this.data.loadingList) return;
+    const seq = this._seq; // 发请求前先记下当前序号，回退时据此判断这次翻页是否已被新请求接管
     const next = this.data.page + 1;
     this.setData({ page: next });
-    this.fetchPage(this._seq).catch(() => {
-      // 翻页失败要退回上一页码（loadingList 已在 fetchPage 里复位），否则这次触底白翻一页、数据留空洞；
-      // 期间已被 loadAll 接管（seq 守卫）时不回退，页码已由 reloadList 归 1
-      if (this.data.page === next) this.setData({ page: next - 1 });
+    this.fetchPage(seq).catch(() => {
+      // 翻页失败要退回上一页码，否则这次触底白翻一页、数据留空洞；
+      // 三个条件缺一不可：seq 变了说明已被 loadAll/reloadList 接管（页码已归 1，回退会写出错误页码），
+      // loadingList 为 true 说明有更新的一页在飞（此时 this.data.page 属于那次请求，不能按 next 回退），
+      // page !== next 说明页码已被别处改动
+      if (seq === this._seq && !this.data.loadingList && this.data.page === next) this.setData({ page: next - 1 });
     });
   },
   onCardTap(e) {
