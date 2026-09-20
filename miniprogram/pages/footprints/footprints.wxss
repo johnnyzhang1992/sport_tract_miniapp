@@ -52,6 +52,13 @@
   text-align: center;
 }
 .center-tip.empty {
+  /* 空态盖在地图区之上（.body 已 position:relative）：
+     两个 height:100% 兄弟节点会叠成 200% 高，改绝对定位后地图仍可挂载在下方 */
+  position: absolute;
+  inset: 0;
+  height: auto;
+  z-index: 1;
+  pointer-events: none; /* 不拦截地图拖拽/缩放，也不挡 FAB（FAB z-index 更高） */
   padding: 0 64rpx;
   color: #bbb;
 }

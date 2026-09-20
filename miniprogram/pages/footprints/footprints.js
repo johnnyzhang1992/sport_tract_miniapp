@@ -21,14 +21,18 @@ Page({
   },
   onPullDownRefresh() { this.loadAll().finally(() => wx.stopPullDownRefresh()); },
   async loadAll() {
-    this.setData({ loading: true, error: '' });
-    const seq = (this._seq = (this._seq || 0) + 1); // 请求序号守卫：只应用最后一次结果，防闪屏/竞态
+    // 请求序号守卫：只应用最后一次结果，防竞态
+    const seq = (this._seq = (this._seq || 0) + 1);
+    // 仅首屏（records/items 都还没内容）才进 loading 态；下拉/footprintsDirty 刷新保留已渲染内容，防闪屏
+    const firstLoad = this.data.records.length === 0 && this.data.items.length === 0;
+    this.setData(firstLoad ? { loading: true, error: '' } : { error: '' });
     try {
       await Promise.all([this.loadGeo(seq), this.reloadList(seq)]);
       this.setData({ loading: false });
     } catch (e) {
       if (seq !== this._seq) return;
-      this.setData({ loading: false, error: e.message || '加载失败' });
+      // 最新一次请求失败也要复位 loadingList，否则 Task 6 触底闸门会卡死或重复发请求
+      this.setData({ loading: false, loadingList: false, error: e.message || '加载失败' });
     }
   },
   loadGeo(seq) {
@@ -39,19 +43,25 @@ Page({
     });
   },
   reloadList(seq) {
-    this.setData({ items: [], page: 1, hasMore: true });
+    // 不提前清空 items：第一页响应到达后再整体替换（见 fetchPage），刷新时列表不留空窗
+    this.setData({ page: 1, hasMore: true });
     return this.fetchPage(seq || this._seq);
   },
   fetchPage(seq) {
     this.setData({ loadingList: true });
+    const page = this.data.page;
     return api
-      .get('/footprint-records', { page: this.data.page, pageSize: this.data.pageSize })
+      .get('/footprint-records', { page, pageSize: this.data.pageSize })
       .then((data) => {
         if (seq !== this._seq) return;
-        const items = this.data.items.concat(data.items);
+        // page 1（首屏/刷新）替换整页；page > 1（Task 6 触底）追加
+        const items = page === 1 ? data.items : this.data.items.concat(data.items);
         this.setData({ items, total: data.total, hasMore: items.length < data.total, loadingList: false });
       })
-      .catch((e) => { this.setData({ loadingList: false }); throw e; });
+      .catch((e) => {
+        if (seq === this._seq) this.setData({ loadingList: false });
+        throw e;
+      });
   },
   buildMarkers() { /* Task 5 实现 */ },
   switchMode(e) { this.setData({ mode: e.currentTarget.dataset.mode }); },
