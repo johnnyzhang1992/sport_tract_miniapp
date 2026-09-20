@@ -1,2 +1,55 @@
-<!-- Task 8 填充 -->
-<view class="placeholder">选择位置（建设中）</view>
+<!-- 全屏地图打底，搜索框/结果列表/底部选点浮层叠在其上 -->
+<view class="page">
+  <map
+    class="map"
+    latitude="{{center.latitude}}"
+    longitude="{{center.longitude}}"
+    scale="{{scale}}"
+    show-location
+    markers="{{markers}}"
+    bindtap="onMapTap"
+  ></map>
+
+  <!-- 顶部搜索（防抖 500ms → /geo/search） -->
+  <view class="search-bar">
+    <input
+      class="search-input"
+      value="{{keyword}}"
+      placeholder="搜索地点名称/地址"
+      placeholder-class="search-ph"
+      confirm-type="search"
+      bindinput="onKeyword"
+    />
+    <view wx:if="{{searching}}" class="search-spin">搜索中…</view>
+  </view>
+
+  <!-- 搜索失败横幅：内嵌提示，不打断点选 -->
+  <view wx:if="{{searchError}}" class="search-error">{{searchError}}</view>
+
+  <!-- 结果下拉列表：悬浮于地图之上（name 主行 / address 次行）；scroll-y 需显式高度，见 listHeight -->
+  <scroll-view wx:if="{{places.length}}" class="results" scroll-y style="height: {{listHeight}}">
+    <view
+      wx:for="{{places}}"
+      wx:key="index"
+      class="result-item"
+      hover-class="result-hover"
+      data-idx="{{index}}"
+      bindtap="pickResult"
+    >
+      <view class="result-name">{{item.name}}</view>
+      <view class="result-address">{{item.address || '暂无地址'}}</view>
+    </view>
+  </scroll-view>
+  <view wx:if="{{searching && !places.length}}" class="results-empty">搜索中…</view>
+
+  <!-- 底部浮层：picked 摘要 + 确认选点 -->
+  <view class="sheet">
+    <block wx:if="{{picked}}">
+      <view class="picked-name">{{picked.name || '地图选点'}}</view>
+      <view wx:if="{{picked.address}}" class="picked-address">{{picked.address}}</view>
+      <view class="picked-coords">{{picked.latitude}}, {{picked.longitude}}</view>
+    </block>
+    <view wx:else class="picked-empty">点击地图选点，或顶部搜索地点</view>
+    <button class="confirm-btn" bindtap="confirm" hover-class="confirm-btn-hover">确认选点</button>
+  </view>
+</view>
