@@ -78,6 +78,84 @@
   height: 100%;
 }
 
+/* ===== 列表形态（Task 6）=====
+   卡片度量对齐 pages/tracks/tracks.wxss：.track-card 白卡（圆角 16rpx + box-shadow 0 2rpx 12rpx rgba(0,0,0,.04)）、
+   .list-row 内边距 24rpx 28rpx、缩略图 156rpx（= .track-thumb 高）、次要文字 #8a93a6、hover 0.7 */
+.list-scroll {
+  height: 100%;
+  box-sizing: border-box;
+  padding: 0 24rpx; /* 卡片左右留白同 tracks 页 .container（app.wxss）的 24rpx */
+}
+.fp-card {
+  display: flex;
+  align-items: center;
+  padding: 24rpx 28rpx;
+  margin-bottom: 16rpx;
+  background: #fff;
+  border-radius: 16rpx;
+  overflow: hidden;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+}
+.fp-card-hover {
+  opacity: 0.7;
+}
+.fp-thumb {
+  flex: none;
+  width: 156rpx;
+  height: 156rpx;
+  margin-right: 24rpx;
+  border-radius: 16rpx;
+  background: #f2f3f5;
+}
+.fp-thumb.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26rpx;
+  color: #bbb;
+}
+.fp-card-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6rpx;
+}
+.fp-card-title {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #1f2329;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fp-card-sub {
+  font-size: 24rpx;
+  color: #8a93a6;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fp-card-people {
+  font-size: 22rpx;
+  color: #8a93a6;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 列表尾提示：对齐 tracks 的 .loading-tip（text-align center + padding 24rpx 0）与 .text-muted */
+.list-tip {
+  padding: 24rpx 0;
+  font-size: 24rpx;
+  color: #999;
+  text-align: center;
+}
+/* 末条卡片不被 FAB（bottom 80rpx + 104rpx）压住 */
+.list-pad {
+  height: 184rpx;
+}
+
 /* 详情弹窗：底部白色圆角浮层，观感对齐 pages/report 的周期选择弹窗（.picker-mask/.picker-sheet） */
 .mask {
   position: fixed;

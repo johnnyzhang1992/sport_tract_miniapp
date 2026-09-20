@@ -8,6 +8,22 @@ const MAX_SCALE = 20;
 /** 视野由程序改动后的静默窗口：期间忽略 regionchange 回读，避免自激 */
 const PROGRAMMATIC_CAMERA_MS = 900;
 
+/**
+ * 列表卡展示字段在 JS 侧一次算好：
+ * WXML 不能对 people 数组做 join（直接渲染会变成 [object]），也不能给缺失的 location 兜底，
+ * 故卡片额外挂 peopleText / subText / cover（openPopup 收的是原 DTO 字段，附加字段不影响快路径）。
+ */
+function toCard(r) {
+  const people = Array.isArray(r.people) ? r.people.filter(Boolean) : [];
+  const photos = Array.isArray(r.photos) ? r.photos.filter(Boolean) : [];
+  const loc = r.location || {};
+  return Object.assign({}, r, {
+    peopleText: people.join('、'),
+    subText: [r.visitDate, loc.city || loc.address || loc.name || '未知地点'].filter(Boolean).join(' · '),
+    cover: photos[0] || '',
+  });
+}
+
 /** 地图可视区（CSS px）：.body 高 = 视口高 - 分段条 112rpx；tabBar 不占 windowHeight */
 function mapViewport() {
   const info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
@@ -84,13 +100,37 @@ Page({
       .then((data) => {
         if (seq !== this._seq) return;
         // page 1（首屏/刷新）替换整页；page > 1（Task 6 触底）追加
-        const items = page === 1 ? data.items : this.data.items.concat(data.items);
-        this.setData({ items, total: data.total, hasMore: items.length < data.total, loadingList: false });
+        const fresh = (data.items || []).map(toCard);
+        const items = page === 1 ? fresh : this.data.items.concat(fresh);
+        // 触底闸门（Task 4 review 硬约束）：只看 hasMore + loadingList，不算页码。
+        // fresh 为空也要落下 hasMore，否则后端 total 与实际条数不一致时会一直重试同一页
+        this.setData({
+          items,
+          total: data.total,
+          hasMore: fresh.length > 0 && items.length < data.total,
+          loadingList: false,
+        });
       })
       .catch((e) => {
         if (seq === this._seq) this.setData({ loadingList: false });
         throw e;
       });
+  },
+
+  /** 列表触底翻页：不提前清空 items，追加由 fetchPage 的 page > 1 分支负责 */
+  onListReachBottom() {
+    if (!this.data.hasMore || this.data.loadingList) return;
+    const next = this.data.page + 1;
+    this.setData({ page: next });
+    this.fetchPage(this._seq).catch(() => {
+      // 翻页失败要退回上一页码（loadingList 已在 fetchPage 里复位），否则这次触底白翻一页、数据留空洞；
+      // 期间已被 loadAll 接管（seq 守卫）时不回退，页码已由 reloadList 归 1
+      if (this.data.page === next) this.setData({ page: next - 1 });
+    });
+  },
+  onCardTap(e) {
+    const r = this.data.items[Number(e.currentTarget.dataset.idx)];
+    if (r) this.openPopup(r); // items 是完整 DTO：弹窗不再二次请求（openPopup 快路径）
   },
 
   /**

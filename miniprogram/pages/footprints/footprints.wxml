@@ -8,7 +8,12 @@
     <view wx:if="{{loading}}" class="center-tip">加载中…</view>
     <view wx:elif="{{error}}" class="center-tip">{{error}} <text class="retry" bindtap="loadAll">重试</text></view>
     <block wx:else>
-      <view wx:if="{{records.length === 0 && mode === 'map'}}" class="center-tip empty">还没有足迹，点右下角 ＋ 记录第一个去过的地方</view>
+      <!-- 空态浮层：地图/列表两种形态共用（.center-tip.empty 绝对定位 + pointer-events:none，
+           列表模式下不挡滚动），故不放进 .list-scroll 内部 -->
+      <view
+        wx:if="{{(mode === 'map' && records.length === 0) || (mode === 'list' && items.length === 0)}}"
+        class="center-tip empty"
+      >还没有足迹，点右下角 ＋ 记录第一个去过的地方</view>
       <view wx:if="{{mode === 'map'}}" class="map-wrap">
         <!-- 原生 marker 聚合（initMarkerCluster + addMarkers，模拟器实测自带簇气泡可渲染，见 docs/11 §4.2）：
              marker 由 MapContext.addMarkers 命令式注入，不绑 markers 属性（声明式不参与聚合）；
@@ -24,7 +29,36 @@
           bindpoitap="onPoiTap"
         />
       </view>
-      <view wx:if="{{mode === 'list'}}" class="list-wrap"><!-- Task 6 列表 --></view>
+      <view wx:if="{{mode === 'list'}}" class="list-wrap">
+        <!-- 分页列表：触底翻页闸门在 JS 侧（hasMore && loadingList），卡片字段见 toCard() -->
+        <scroll-view
+          scroll-y
+          lower-threshold="80"
+          class="list-scroll"
+          bindscrolltolower="onListReachBottom"
+        >
+          <view
+            wx:for="{{items}}"
+            wx:key="id"
+            class="fp-card"
+            hover-class="fp-card-hover"
+            hover-stay-time="80"
+            data-idx="{{index}}"
+            bindtap="onCardTap"
+          >
+            <image wx:if="{{item.cover}}" src="{{item.cover}}" mode="aspectFill" lazy-load class="fp-thumb"/>
+            <view wx:else class="fp-thumb placeholder">图</view>
+            <view class="fp-card-main">
+              <view class="fp-card-title">{{item.title}}</view>
+              <view class="fp-card-sub">{{item.subText}}</view>
+              <view wx:if="{{item.peopleText}}" class="fp-card-people">同行：{{item.peopleText}}</view>
+            </view>
+          </view>
+          <view wx:if="{{loadingList}}" class="list-tip">加载中…</view>
+          <view wx:elif="{{!hasMore && items.length}}" class="list-tip">没有更多了</view>
+          <view class="list-pad"></view>
+        </scroll-view>
+      </view>
     </block>
   </view>
 
