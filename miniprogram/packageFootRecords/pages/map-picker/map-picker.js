@@ -7,6 +7,8 @@ const api = require('../../../services/api');
 
 const DEFAULT_CENTER = { latitude: 30.5, longitude: 114.3 };
 const PIN_ICON = '/assets/icons/lucide-pin.png';
+const PARSING = '解析中…'; // 逆地理未完成时的占位，绝不能流出到保存的记录
+const FALLBACK_NAME = '地图选点';
 
 Page({
   data: {
@@ -21,6 +23,8 @@ Page({
     searchError: '',
   },
   onLoad() {
+    this._revTok = 0; // 逆地理请求序号：只认最后一次点选的回包
+    this._searchId = 0; // 搜索请求序号：只认最后一次发起的搜索的回包
     // 以当前位置为初始视野（拒绝授权则用默认中心，不阻塞）
     wx.getLocation({
       type: 'gcj02',
@@ -31,10 +35,16 @@ Page({
     clearTimeout(this._t); // 离开页面时防抖定时器未触发：清理，避免卸载后 setData
   },
   onKeyword(e) {
-    this.setData({ keyword: e.detail.value });
+    const value = e.detail.value;
+    this.setData({ keyword: value });
     clearTimeout(this._t);
-    const kw = e.detail.value.trim();
-    if (!kw) return this.showResults([]);
+    const kw = value.trim();
+    if (!kw) {
+      // 输入清空：作废在途搜索（否则会回填已被删掉的关键字），并收起错误横幅/加载中
+      this._searchId += 1;
+      this.setData({ searching: false, searchError: '' });
+      return this.showResults([]);
+    }
     this._t = setTimeout(() => this.doSearch(kw), 500); // 防抖 500ms 省额度
   },
   /** 结果列表渲染统一入口：高度 = min(条数, 6) × 单条约高 */
@@ -43,14 +53,18 @@ Page({
     this.setData({ places: items, listHeight: n ? n * 118 + 'rpx' : '0rpx' });
   },
   async doSearch(kw) {
+    const id = ++this._searchId;
     this.setData({ searching: true, searchError: '' });
     try {
       const { latitude, longitude } = this.data.center;
       const items = await api.get('/geo/search', { keyword: kw, latitude, longitude });
+      if (id !== this._searchId) return; // 迟到响应：期间已发出更新的搜索/已清空输入
       this.showResults(Array.isArray(items) ? items : []);
       this.setData({ searching: false });
     } catch (e) {
-      // 限流/上游失败不阻塞点选主路径
+      if (id !== this._searchId) return;
+      // 限流/上游失败不阻塞点选主路径：旧列表必须清掉（否则点下去会选到上一次关键字的点）
+      this.showResults([]);
       this.setData({ searching: false, searchError: (e && e.message) || '搜索失败，可直接点选地图' });
     }
   },
@@ -67,14 +81,24 @@ Page({
     const latitude = Number(d.latitude);
     const longitude = Number(d.longitude);
     if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
-    this.setPicked({ latitude, longitude, name: '', address: '解析中…' }, false);
+    const tok = ++this._revTok;
+    this.setPicked({ latitude, longitude, name: '', address: PARSING }, false);
     api.get('/geo/reverse', { lat: latitude, lng: longitude })
       .then((data) => {
+        if (!this.isStillPicked(tok, latitude, longitude)) return; // 迟到响应：期间已另选他点
         const addr = (data && data.address) || '';
         // 上游额度耗尽/降级时 address 为空：显示"地图选点"，坐标兜底不阻塞确认
-        this.setData({ 'picked.address': addr, 'picked.name': addr || '地图选点' });
+        this.setData({ 'picked.address': addr, 'picked.name': addr || FALLBACK_NAME });
       })
-      .catch(() => this.setData({ 'picked.address': '', 'picked.name': '地图选点' }));
+      .catch(() => {
+        if (!this.isStillPicked(tok, latitude, longitude)) return;
+        this.setData({ 'picked.address': '', 'picked.name': FALLBACK_NAME });
+      });
+  },
+  /** 迟到响应守卫：序号仍是最新，且当前 picked 仍是发起该请求时的那组坐标 */
+  isStillPicked(tok, latitude, longitude) {
+    const p = this.data.picked;
+    return tok === this._revTok && !!p && p.latitude === latitude && p.longitude === longitude;
   },
   setPicked(p, recenter) {
     const patch = {
@@ -86,7 +110,11 @@ Page({
   },
   confirm() {
     if (!this.data.picked) return wx.showToast({ title: '请先选择地点', icon: 'none' });
-    this.getOpenerEventChannel().emit('acceptPick', this.data.picked);
+    // 兜底清洗：逆地理被守卫拦下/尚未回包就确认时，占位文案不能进入保存的记录
+    const pick = Object.assign({}, this.data.picked);
+    if (pick.name === PARSING) pick.name = FALLBACK_NAME;
+    if (pick.address === PARSING) pick.address = FALLBACK_NAME;
+    this.getOpenerEventChannel().emit('acceptPick', pick);
     wx.navigateBack();
   },
 });
