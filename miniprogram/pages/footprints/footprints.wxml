@@ -1,0 +1,19 @@
+<view class="page">
+  <view class="seg">
+    <view class="seg-item {{mode === 'map' ? 'active' : ''}}" data-mode="map" bindtap="switchMode">地图</view>
+    <view class="seg-item {{mode === 'list' ? 'active' : ''}}" data-mode="list" bindtap="switchMode">列表</view>
+  </view>
+
+  <view class="body">
+    <view wx:if="{{loading}}" class="center-tip">加载中…</view>
+    <view wx:elif="{{error}}" class="center-tip">{{error}} <text class="retry" bindtap="loadAll">重试</text></view>
+    <block wx:else>
+      <view wx:if="{{records.length === 0 && mode === 'map'}}" class="center-tip empty">还没有足迹，点右下角 ＋ 记录第一个去过的地方</view>
+      <view wx:if="{{mode === 'map'}}" class="map-wrap"><!-- Task 5 挂 <map> --></view>
+      <view wx:if="{{mode === 'list'}}" class="list-wrap"><!-- Task 6 列表 --></view>
+    </block>
+  </view>
+
+  <!-- 详情弹窗 Task 5 -->
+  <view class="fab" bindtap="openAdd">＋</view>
+</view>

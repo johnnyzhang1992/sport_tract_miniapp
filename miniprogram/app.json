@@ -16,7 +16,8 @@
     "pages/weight-trend/weight-trend",
     "pages/report/report",
     "pages/topic/topic",
-    "pages/year-report/year-report"
+    "pages/year-report/year-report",
+    "pages/footprints/footprints"
   ],
   "window": {
     "navigationBarBackgroundColor": "#ffffff",
@@ -47,6 +48,12 @@
         "text": "我的",
         "iconPath": "assets/icons/tab-my-gray.png",
         "selectedIconPath": "assets/icons/tab-my-blue.png"
+      },
+      {
+        "pagePath": "pages/footprints/footprints",
+        "text": "足迹",
+        "iconPath": "assets/icons/tab-footprint-gray.png",
+        "selectedIconPath": "assets/icons/tab-footprint-blue.png"
       }
     ]
   },
@@ -59,7 +66,8 @@
     "getLocation",
     "startLocationUpdate",
     "startLocationUpdateBackground",
-    "onLocationChange"
+    "onLocationChange",
+    "chooseLocation"
   ],
   "style": "v2",
   "sitemapLocation": "sitemap.json",
@@ -69,6 +77,13 @@
       "root": "packageFootprint",
       "pages": [
         "pages/footprint/footprint"
+      ]
+    },
+    {
+      "root": "packageFootRecords",
+      "pages": [
+        "pages/record-edit/record-edit",
+        "pages/map-picker/map-picker"
       ]
     }
   ],
