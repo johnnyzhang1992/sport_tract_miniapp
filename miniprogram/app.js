@@ -8,6 +8,7 @@ App({
     loggedIn: false,
     loginPromise: null,
     profileGuideAsked: false, // 完善资料引导本次会话是否已弹过
+    footprintsDirty: false, // 足迹编辑页保存后置 true，tab onShow 重拉列表/地图
     api, // 网络层挂全局（分包页面无法 require 主包 JS，经 getApp() 访问）
   },
 
