@@ -44,16 +44,16 @@
         "selectedIconPath": "assets/icons/tab-tracks-blue.png"
       },
       {
-        "pagePath": "pages/my/my",
-        "text": "我的",
-        "iconPath": "assets/icons/tab-my-gray.png",
-        "selectedIconPath": "assets/icons/tab-my-blue.png"
-      },
-      {
         "pagePath": "pages/footprints/footprints",
         "text": "足迹",
         "iconPath": "assets/icons/tab-footprint-gray.png",
         "selectedIconPath": "assets/icons/tab-footprint-blue.png"
+      },
+      {
+        "pagePath": "pages/my/my",
+        "text": "我的",
+        "iconPath": "assets/icons/tab-my-gray.png",
+        "selectedIconPath": "assets/icons/tab-my-blue.png"
       }
     ]
   },
