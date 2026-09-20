@@ -62,7 +62,7 @@ App({
     this.checkPendingSummary();
   },
 
-  /** 有未保存运动 → 提示跳 summary 继续保存 */
+  /** 有未保存运动 → 提示跳 summary 继续保存；「忽略」= 作废该次运动并清现场，不再重复弹 */
   checkPendingSummary() {
     const pending = wx.getStorageSync('pending_summary');
     if (!pending || this._summaryPrompted) return;
@@ -72,10 +72,23 @@ App({
       content: '上次运动尚未保存，是否现在保存？',
       confirmText: '去保存',
       cancelText: '忽略',
-      success: (res) => {
+      success: async (res) => {
         if (res.confirm) {
           wx.navigateTo({ url: '/pages/summary/summary' });
+          return;
         }
+        // 忽略：与 summary 页「放弃」同口径 —— 取消服务端活动 + 清三个暂存键
+        const activityId = wx.getStorageSync('pending_sync_activity');
+        if (activityId) {
+          try {
+            await api.put(`/activities/${activityId}/cancel`, {});
+          } catch {
+            // 静默（未登录/网络失败不阻塞清理，服务端 24h 超时清理兜底）
+          }
+        }
+        wx.removeStorageSync('pending_summary');
+        wx.removeStorageSync('pending_sync_activity');
+        wx.removeStorageSync('ongoingActivity');
       },
       complete: () => {
         // 短时间内避免重复弹窗
