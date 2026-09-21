@@ -1,5 +1,5 @@
 <!-- 新增/编辑半屏表单：遮罩点击关闭；弹层高度/位置由 sheetStyle 控制（键盘弹起时抬高并缩高） -->
-<view class="fp-mask" wx:if="{{visible}}" bindtap="onMaskTap">
+<view class="fp-mask" wx:if="{{visible}}" catchtouchmove="noop" bindtap="onMaskTap">
   <view class="fp-sheet" style="{{sheetStyle}}" catchtap="noop">
     <view class="fp-head">
       <view class="fp-title">{{isEdit ? '编辑足迹' : '新增足迹'}}</view>

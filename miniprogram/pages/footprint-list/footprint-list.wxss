@@ -110,7 +110,7 @@
   flex: 1;
   min-width: 0;
   height: 64rpx;
-  padding: 0 16rpx 0 60rpx;
+  padding: 0 56rpx 0 60rpx; /* 左侧避让搜索图标，右侧避让清空按钮 */
   background: #f2f3f5;
   border-radius: 12rpx;
   font-size: 26rpx;
@@ -120,13 +120,18 @@
   color: #b8bfcc;
 }
 .search-clear {
-  flex: none;
-  width: 44rpx;
-  height: 64rpx;
-  line-height: 64rpx;
+  position: absolute;
+  right: 14rpx;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34rpx;
+  height: 34rpx;
+  line-height: 34rpx;
+  border-radius: 50%;
   text-align: center;
-  font-size: 26rpx;
-  color: #b8bfcc;
+  font-size: 20rpx;
+  color: #fff;
+  background: #c6ccd4;
 }
 .search-btn {
   flex: none;

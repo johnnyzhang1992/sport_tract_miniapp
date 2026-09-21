@@ -84,6 +84,7 @@
     visible="{{formVisible}}"
     record="{{formRecord}}"
     safe-bottom="{{false}}"
+    on-tab="{{true}}"
     bind:saved="onFormSaved"
     bind:close="closeForm"
   />
