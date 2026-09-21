@@ -133,6 +133,9 @@ ec-canvas {
   align-items: center;
   justify-content: center;
 }
+.fullscreen-btn:first-child {
+  border-right: 1rpx solid #e5e6eb; /* 分享/全屏两格之间的中缝 */
+}
 .btn-icon {
   width: 28rpx;
   height: 28rpx;
