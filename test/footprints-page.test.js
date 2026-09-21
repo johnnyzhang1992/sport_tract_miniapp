@@ -4,6 +4,7 @@
  * fix 轮 1 的三条交互回归补为 P0/P5/P6（外加 P7 覆盖 loadGeo 的 loading 与 markers 同帧），
  * P5 在 fix 轮 2 追加「scale 回写必须配套回写当前中心」的断言，
  * P8（polish 轮）覆盖相机写序令牌（过期异步回读不得写回）与「问不到中心 → 无相机降级」。
+ * P4/P9 在「地图全屏 + 列表/统计独立页」改造后改测详情半屏组件接线与浮层入口跳转（旧 popup/列表形态已下线）。
  * 运行：npm test（node --test 自动发现）；依赖：仅 node 内置模块。
  * 桩：wx / Page / getApp 就地 stub；services/api 用 require.cache 注入假实现（绕开 config/storage 的真实
  *     wx 依赖）；utils/footprint-geo 走真实纯函数。createMapContext 的 initMarkerCluster/addMarkers 被
@@ -292,16 +293,16 @@ test('P3 封顶（scale 20）点同坐标「3」字簇 → 成员半屏列出桶
   assert.equal(page.data.clusterSheet.visible, false, '选行即关表');
 });
 
-test('P4 叶 marker 点击 → openPopup 快路径（完整 DTO 不二次请求）', async () => {
+test('P4 叶 marker 点击 → 详情半屏快路径（轻量 DTO 直接交给组件，页面不二次请求）', async () => {
   const fullLeaf = Object.assign({}, seventyRecords()[65], { location: { city: '北京' }, description: 'd', people: [], photos: [] });
   const page = makePage();
   page.setData({ records: [fullLeaf] });
   apiCalls.length = 0;
   page.onMarkerTap({ detail: { markerId: 1 } });
   await tick();
-  assert.equal(page.data.popup.visible, true);
-  assert.equal(page.data.popup.record.id, 's0');
-  assert.equal(apiCalls.filter((u) => /^\/footprint-records\/./.test(u)).length, 0, '快路径不补拉详情');
+  assert.equal(page.data.detailVisible, true);
+  assert.equal(page.data.detailRecord.id, 's0');
+  assert.equal(apiCalls.filter((u) => /^\/footprint-records\/./.test(u)).length, 0, '快路径不补拉详情（补拉由详情组件内部负责）');
 });
 
 test('P5 手势缩放配套回写 scale+当前中心：封顶后双指缩小再点簇仍是放大展开，不误弹成员表', async () => {
@@ -492,20 +493,21 @@ test('P8 相机回写：过期异步回读被写序令牌挡掉 / 静默窗口�
 });
 
 /**
- * P9 表单接线（新增/编辑改半屏组件后，页面侧的契约）：
- * openAdd 开新增态；详情「编辑」先关详情、带完整 DTO 开编辑态；保存成功后关弹层并整页重拉。
+ * P9 接线（地图全屏 + 列表/统计独立页改造后，页面侧的契约）：
+ * 详情半屏是地图页唯一的记录详情入口（列表/统计各自成页），点「编辑」要关详情、带 DTO 开表单；
+ * 保存/删除成功后关弹层并重拉地图数据；左上浮层两个入口分别 navigateTo 列表页与分包统计页。
  */
-test('P9 表单接线：openAdd 开新增态 / 编辑关详情开编辑态 / 保存后关弹层并 loadAll', () => {
+test('P9 接线：详情编辑转表单 / 保存与删除后重拉 / 新增态 / 列表+统计入口跳转', () => {
   resetCanvasQueue();
   const page = makePage();
+  const nav = [];
+  const origNavigateTo = global.wx.navigateTo;
+  global.wx.navigateTo = (o) => nav.push(o.url);
 
-  page.openAdd();
-  assert.equal(page.data.formVisible, true);
-  assert.equal(page.data.formRecord, null);
-
-  page.setData({ popup: { visible: true, record: { id: 'r1', title: '西湖' } } });
-  page.editRecord();
-  assert.equal(page.data.popup.visible, false, '开表单前先关详情弹窗');
+  page.setData({ detailVisible: true, detailRecord: { id: 'r1', title: '西湖' } });
+  page.onDetailEdit({ detail: { id: 'r1', title: '西湖', description: 'd' } });
+  assert.equal(page.data.detailVisible, false, '开表单前先关详情');
+  assert.equal(page.data.detailRecord, null);
   assert.equal(page.data.formVisible, true);
   assert.equal(page.data.formRecord.id, 'r1');
 
@@ -515,7 +517,21 @@ test('P9 表单接线：openAdd 开新增态 / 编辑关详情开编辑态 / 保
   assert.equal(page.data.formRecord, null);
   assert.ok(page._seq > before, 'onFormSaved 应触发 loadAll（请求序号自增）');
 
+  page.setData({ detailVisible: true, detailRecord: { id: 'r1' } });
+  const beforeDel = page._seq;
+  page.onDetailDeleted();
+  assert.equal(page.data.detailVisible, false, '删除成功后关详情');
+  assert.equal(page.data.detailRecord, null);
+  assert.ok(page._seq > beforeDel, '删除成功后应重拉地图数据');
+
   page.openAdd();
+  assert.equal(page.data.formVisible, true, '地图页 FAB 仍是唯一的新增入口');
+  assert.equal(page.data.formRecord, null);
   page.closeForm();
   assert.equal(page.data.formVisible, false);
+
+  page.goList();
+  page.goStats();
+  assert.deepEqual(nav, ['/pages/footprint-list/footprint-list', '/packageFootprint/pages/footprint-stats/footprint-stats']);
+  global.wx.navigateTo = origNavigateTo;
 });

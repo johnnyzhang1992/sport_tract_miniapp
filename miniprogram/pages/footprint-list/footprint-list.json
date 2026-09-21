@@ -1,0 +1,9 @@
+{
+  "navigationBarTitleText": "我的足迹",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark",
+  "usingComponents": {
+    "footprint-detail": "/components/footprint-detail/footprint-detail",
+    "footprint-form": "/components/footprint-form/footprint-form"
+  }
+}

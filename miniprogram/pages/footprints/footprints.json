@@ -1,6 +1,7 @@
 {
   "navigationBarTitleText": "足迹",
   "usingComponents": {
-    "footprint-form": "/components/footprint-form/footprint-form"
+    "footprint-form": "/components/footprint-form/footprint-form",
+    "footprint-detail": "/components/footprint-detail/footprint-detail"
   }
 }

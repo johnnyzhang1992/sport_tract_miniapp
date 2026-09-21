@@ -1,0 +1,45 @@
+<view class="container">
+  <view wx:if="{{loading}}" class="list-state">加载中…</view>
+  <view wx:elif="{{error}}" class="list-state">{{error}} <text class="retry" bindtap="loadAll">重试</text></view>
+  <block wx:else>
+    <view wx:if="{{items.length === 0}}" class="empty">还没有足迹，去地图页点右下角 ＋ 记录第一个去过的地方</view>
+    <!-- 分页列表：触底翻页闸门在 JS 侧（hasMore && loadingList），卡片字段见 toCard() -->
+    <view
+      wx:for="{{items}}"
+      wx:key="id"
+      class="fp-card"
+      hover-class="fp-card-hover"
+      hover-stay-time="80"
+      data-idx="{{index}}"
+      bindtap="onCardTap"
+    >
+      <image wx:if="{{item.cover}}" src="{{item.cover}}" mode="aspectFill" lazy-load class="fp-thumb"/>
+      <view wx:else class="fp-thumb placeholder">图</view>
+      <view class="fp-card-main">
+        <view class="fp-card-title">{{item.title}}</view>
+        <view class="fp-card-sub">{{item.subText}}</view>
+        <view wx:if="{{item.peopleText}}" class="fp-card-people">同行：{{item.peopleText}}</view>
+      </view>
+    </view>
+    <!-- 尾提示：下拉刷新（page 仍为 1）不在底部重复报加载 -->
+    <view wx:if="{{loadingList && page > 1}}" class="list-tip">加载中…</view>
+    <view wx:elif="{{!hasMore && items.length}}" class="list-tip">没有更多了</view>
+  </block>
+
+  <!-- 详情半屏（列表卡点开走完整 DTO 快路径；「编辑」转表单、删除后刷新列表） -->
+  <footprint-detail
+    visible="{{detailVisible}}"
+    record="{{detailRecord}}"
+    bind:close="closeDetail"
+    bind:edit="onDetailEdit"
+    bind:deleted="onDetailDeleted"
+  />
+
+  <!-- 半屏表单（仅编辑态：记录由详情带出，保存后刷新列表） -->
+  <footprint-form
+    visible="{{formVisible}}"
+    record="{{formRecord}}"
+    bind:saved="onFormSaved"
+    bind:close="closeForm"
+  />
+</view>
