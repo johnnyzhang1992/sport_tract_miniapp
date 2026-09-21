@@ -1,6 +1,7 @@
 const echarts = require('../../components/ec-canvas/echarts');
 const loading = require('../../../utils/loading');
 const mapImage = require('../../utils/map-image.js');
+const mapZoom = require('../../utils/map-zoom.js');
 
 // 省份名称 → 行政区划代码（与 web 后台 FootprintMap 一致）
 const PROVINCE_TO_CODE = {
@@ -161,22 +162,17 @@ Page({
     this.fetch();
   },
 
-  /** 缩放：+ 放大 / - 缩小（setOption 更新 map zoom，方向可靠） */
+  /** 缩放：+ 放大 / - 缩小（全屏时作用于全屏图） */
   zoomIn() {
-    this.zoomMap(1.3);
+    this.zoomMap(mapZoom.ZOOM_FACTOR);
   },
 
   zoomOut() {
-    this.zoomMap(1 / 1.3);
+    this.zoomMap(1 / mapZoom.ZOOM_FACTOR);
   },
 
   zoomMap(factor) {
-    const chart = this.data.fullscreen ? this.fsChart : this.chart;
-    if (!chart || typeof chart.setOption !== 'function') return;
-    const opt = chart.getOption();
-    const cur = (opt.series && opt.series[0] && opt.series[0].zoom) || 1;
-    const next = Math.max(0.5, Math.min(8, cur * factor));
-    chart.setOption({ series: [{ zoom: next }] });
+    mapZoom.zoomChart(this.data.fullscreen ? this.fsChart : this.chart, factor);
   },
 
   /** 全屏展示地图 */
@@ -273,6 +269,11 @@ Page({
 
   /** 分享：生成当前地图图片 → 预览弹窗（支持保存到相册） */
   openSharePreview() {
+    // 首次响应落地前导出会是「0 省 0 轨迹」的空白图：挡在门外（口径对齐统计页 loaded 守卫）
+    if (!this._mapData) {
+      wx.showToast({ title: '还没有数据可分享', icon: 'none' });
+      return;
+    }
     const comp = this.data.fullscreen ? this._fsComp : this._mapComp;
     const statsText = `点亮省份 ${this.data.provinceCount || 0} 个 · 轨迹 ${this._trackCount || 0} 条`;
     this.exportMapImage(comp, {

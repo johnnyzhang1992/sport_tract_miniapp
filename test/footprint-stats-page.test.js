@@ -2,7 +2,8 @@
  * 足迹统计页（packageFootprint/pages/footprint-stats/footprint-stats.js）页级回归：
  * 本页是「足迹记录」口径的统计（/footprint-records/stats），与点亮地图页的运动轨迹口径（/stats/footprint）独立。
  * 覆盖：周期区间换算（visitDate 是 YYYY-MM-DD 字符串，客户端算 [from, to) 日期串）、tab 切换重置偏移、
- * 翻页边界、抽屉选项数、'all' 不带区间、seq 守卫、错误分档、省界地图只拉一次、地图初始化晚于数据到达。
+ * 翻页边界、抽屉选项数、'all' 不带区间、seq 守卫、错误分档、省界地图只拉一次、地图初始化晚于数据到达、
+ * 缩放按钮（+/− 乘系数、上下限夹取）、全屏（另起一张图 + 关闭销毁 + 全屏内缩放作用对象）。
  * 运行：npm test（node --test 自动发现）；依赖：仅 node 内置模块。
  * 桩：wx / Page / getApp / echarts（自定义构建 1MB+，用 require.cache 换成假实现）就地 stub；
  *     api 走 getApp().globalData.api（分包页取 api 的既有方式）。
@@ -32,14 +33,29 @@ const fakeApi = {
   },
 };
 
-// echarts 自定义构建（1MB+ UMD）在 node 下没必要真跑：registerMap/init 换成可断言的假实现
+// echarts 自定义构建（1MB+ UMD）在 node 下没必要真跑：registerMap/init 换成可断言的假实现。
+// 每次 init 落一个独立实例（卡片图 / 全屏图各一个），setOption 里回写 zoom，
+// 模拟 getOption → setOption 的缩放往返（缩放按钮的读写口径）。
 const registered = [];
 const chartOptions = [];
-const fakeChart = { setOption: (o) => chartOptions.push(o), on() {} };
+const charts = [];
+function makeChart() {
+  const c = {
+    zoom: 1,
+    setOption(o) {
+      chartOptions.push(o);
+      if (o && o.series && o.series[0] && typeof o.series[0].zoom === 'number') this.zoom = o.series[0].zoom;
+    },
+    getOption() { return { series: [{ zoom: this.zoom }] }; },
+    on() {},
+  };
+  charts.push(c);
+  return c;
+}
 const echartsPath = require.resolve(path.join(ROOT, 'miniprogram/packageFootprint/components/ec-canvas/echarts.js'));
 const fakeEcharts = {
   registerMap: (name, data) => registered.push({ name, data }),
-  init: () => fakeChart,
+  init: () => makeChart(),
 };
 require.cache[echartsPath] = { id: echartsPath, filename: echartsPath, loaded: true, exports: fakeEcharts, children: [], paths: [] };
 
@@ -117,7 +133,11 @@ function makePage(withMap) {
     Object.keys(patch).forEach((k) => applyPath(p.data, k, patch[k]));
     if (cb) cb();
   };
-  p.selectComponent = () => (withMap ? (p._mapComp = makeMapComp()) : null);
+  p.selectComponent = (sel) => {
+    if (!withMap) return null;
+    if (sel === '#fsMap') return (p._fsComp = makeMapComp());
+    return (p._mapComp = makeMapComp());
+  };
   return p;
 }
 
@@ -138,6 +158,7 @@ function resetEnv() {
   apiCalls.length = 0;
   statsResponses.length = 0;
   chartOptions.length = 0;
+  charts.length = 0;
   registered.length = 0;
   geoMapCalls = 0;
   geoMapShouldFail = false;
@@ -430,4 +451,60 @@ test('S9 转发与保存相册：标题带统计、封面用分享图；权限�
   page.saveShareImage();
   assert.equal(modalCalls.length, 1, '非权限失败不弹设置引导');
   assert.equal(toasts[toasts.length - 1], '保存失败');
+});
+
+test('S10 缩放按钮：+/− 按当前 zoom 乘 1.3，夹在 0.5–8；chart 未就绪时点按钮不炸', () => {
+  resetEnv();
+  const page = makePage(true);
+  page.onReady();
+  const cardChart = page.chart;
+  assert.ok(cardChart, 'onReady 后卡片图就绪');
+
+  page.zoomIn();
+  assert.equal(cardChart.zoom, 1.3, '+ 从 1 放大到 1.3');
+  assert.equal(chartOptions[chartOptions.length - 1].series[0].zoom, 1.3, '经 setOption 更新 series.zoom');
+  page.zoomOut();
+  assert.equal(cardChart.zoom, 1, '− 从 1.3 缩回 1（基于当前值，不是回到默认 1）');
+
+  for (let i = 0; i < 20; i++) page.zoomIn();
+  assert.equal(cardChart.zoom, 8, '放大夹在上限 8');
+  for (let i = 0; i < 40; i++) page.zoomOut();
+  assert.equal(cardChart.zoom, 0.5, '缩小夹在下限 0.5');
+
+  const fresh = makePage(false); // onReady 前（组件未就绪）点按钮
+  fresh.zoomIn();
+  fresh.zoomOut();
+  assert.equal(fresh.chart, undefined);
+});
+
+test('S11 全屏：另起一张图并按当前周期数据绘制，关闭销毁；全屏内缩放只作用于全屏图', async () => {
+  resetEnv();
+  statsResponses.push(stats(5, 2, 3, [{ name: '浙江省', count: 5 }]));
+  const page = makePage(true);
+  page.onLoad();
+  await flush(); // 数据先落地
+  page.onReady(); // 卡片图用缓存省数据出图
+  assert.equal(chartOptions.length, 1, '卡片图已出图');
+
+  page.openFullscreen();
+  assert.equal(page.data.fullscreen, true, '全屏层打开');
+  assert.equal(chartOptions.length, 2, '全屏图进入即出图（不等下一次请求）');
+  assert.deepEqual(chartOptions[1].series[0].data, [{ name: '浙江省', value: 5 }], '用的是当前周期点亮数据');
+  const cardChart = page.chart;
+  const fsChart = page.fsChart;
+  assert.ok(fsChart && fsChart !== cardChart, '全屏是独立 chart 实例');
+
+  const cardZoom = cardChart.zoom;
+  page.zoomIn();
+  assert.equal(fsChart.zoom, 1.3, '全屏时缩放作用于全屏图');
+  assert.equal(cardChart.zoom, cardZoom, '不串到卡片图');
+
+  // 全屏期间在途请求落地：两张图都要刷新（否则全屏停在旧数据）
+  statsResponses.push(stats(1, 1, 1, [{ name: '上海市', count: 1 }]));
+  await page.fetch();
+  assert.deepEqual(chartOptions[chartOptions.length - 1].series[0].data, [{ name: '上海市', value: 1 }]);
+
+  page.closeFullscreen();
+  assert.equal(page.data.fullscreen, false, '全屏层关闭');
+  assert.equal(page.fsChart, null, '销毁 chart 引用，下次打开重新初始化');
 });

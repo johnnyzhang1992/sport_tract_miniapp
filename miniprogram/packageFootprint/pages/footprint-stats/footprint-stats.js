@@ -3,10 +3,11 @@
 const echarts = require('../../components/ec-canvas/echarts');
 const loading = require('../../../utils/loading');
 const mapImage = require('../../utils/map-image.js');
+const mapZoom = require('../../utils/map-zoom.js');
 // 周期换算与列表页共用（utils 在主包，分包页可 require 主包资源）
 const { RANGES, PICKER_COUNT, periodRange, periodLabelOf } = require('../../../utils/footprint-period.js');
 
-/** 地图配置：点亮省高亮（visualMap 按 count 深浅），未点亮灰（对齐点亮地图页，仅去掉分享/全屏/下钻） */
+/** 地图配置：点亮省高亮（visualMap 按 count 深浅），未点亮灰（对齐点亮地图页，仅去掉下钻） */
 function getMapOption(data) {
   const maxVal = Math.max(...data.map((d) => Number(d.value) || 0), 1);
   return {
@@ -59,6 +60,8 @@ Page({
     loading: true,
     error: '',
     ec: {},
+    fullscreen: false,
+    fsEc: {},
     showPeriodPicker: false,
     periodOptions: [], // [{offset, label, compact, selected}]
     pickerScrollInto: '',
@@ -152,6 +155,47 @@ Page({
   },
   /** 阻止弹窗内容点击冒泡到遮罩 */
   noop() {},
+
+  /* ------------------------------ 地图缩放 / 全屏 ------------------------------ */
+
+  /** 缩放：+ 放大 / - 缩小（全屏时作用于全屏图） */
+  zoomIn() {
+    this.zoomMap(mapZoom.ZOOM_FACTOR);
+  },
+
+  zoomOut() {
+    this.zoomMap(1 / mapZoom.ZOOM_FACTOR);
+  },
+
+  zoomMap(factor) {
+    mapZoom.zoomChart(this.data.fullscreen ? this.fsChart : this.chart, factor);
+  },
+
+  /** 全屏展示地图（与足迹页同款：另起一个 ec-canvas，关闭即销毁重建） */
+  openFullscreen() {
+    this.setData({ fullscreen: true }, () => {
+      // setData 是异步的：回调时遮罩+fsMap 组件已渲染完成，此时才能取到组件并初始化
+      const comp = this.selectComponent('#fsMap');
+      this._fsComp = comp;
+      if (comp && comp.init) {
+        comp.init((canvas, width, height, dpr) => {
+          const chart = echarts.init(canvas, null, { width, height, devicePixelRatio: dpr });
+          canvas.setChart(chart);
+          if (this._chinaMap) {
+            echarts.registerMap('china', this._chinaMap);
+            chart.setOption(getMapOption(this._provinceData || []));
+          }
+          this.fsChart = chart;
+          return chart; // ec-canvas 内部 this.chart = callback(...)，必须返回 chart 才能转发触摸事件
+        });
+      }
+    });
+  },
+
+  closeFullscreen() {
+    this.setData({ fullscreen: false });
+    this.fsChart = null; // 组件（wx:if）销毁重建，下次打开需重新初始化
+  },
 
   /* ------------------------------ 分享导出图片 ------------------------------ */
 
@@ -273,6 +317,8 @@ Page({
         error: '',
       });
       if (this.chart) this.chart.setOption(getMapOption(provinceData));
+      // 全屏图也同步刷新（进全屏后仍有在途请求落地时，不至于停在旧数据）
+      if (this.fsChart) this.fsChart.setOption(getMapOption(provinceData));
     } catch (e) {
       if (seq !== this._fetchSeq) return;
       console.error('加载足迹统计失败', e);
