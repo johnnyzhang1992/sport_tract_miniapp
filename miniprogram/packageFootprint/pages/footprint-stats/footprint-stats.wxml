@@ -1,22 +1,4 @@
 <view class="container">
-  <!-- 数据概况（顶部）：当前周期内的足迹数 + 点亮省份/城市数 -->
-  <view class="stats-card">
-    <view class="stat-block">
-      <view class="stat-value">{{loaded ? total : '—'}}</view>
-      <view class="stat-label">总足迹</view>
-    </view>
-    <view class="stat-divider"></view>
-    <view class="stat-block">
-      <view class="stat-value">{{loaded ? provinceCount : '—'}}</view>
-      <view class="stat-label">省份</view>
-    </view>
-    <view class="stat-divider"></view>
-    <view class="stat-block">
-      <view class="stat-value">{{loaded ? cityCount : '—'}}</view>
-      <view class="stat-label">城市</view>
-    </view>
-  </view>
-
   <!-- 周期筛选（月/年/全部 + 翻页；点中间标签弹抽屉选最近 12 个月 / 5 年） -->
   <view class="card filter-card">
     <view class="range-row">
@@ -44,10 +26,11 @@
 
   <!-- 点亮地图（只保留地图本身：分享/全屏/省份下钻/城市列表都不在本页）
        canvas 是独立合成层，会盖住普通 view（既有点亮地图页的省份弹窗同样如此）：
-       抽屉打开期间用 display:none 藏起画布（visibility 实测无效，且不销毁 canvas 省去重挂重绘） -->
+       抽屉/分享预览打开期间把画布 display:none 藏起来（visibility 实测无效，且不销毁 canvas 省去重挂重绘）。
+       藏的是内层 ec-canvas 而非 .map-canvas：容器高度保留，弹层打开时下方内容不会跳动 -->
   <view class="card map-card">
-    <view class="map-canvas {{showPeriodPicker ? 'map-canvas-hidden' : ''}}">
-      <ec-canvas id="litMap" canvas-id="litMap" ec="{{ ec }}"></ec-canvas>
+    <view class="map-canvas">
+      <ec-canvas id="litMap" canvas-id="litMap" class="{{showPeriodPicker || sharePreview ? 'map-hidden' : ''}}" ec="{{ ec }}"></ec-canvas>
     </view>
   </view>
 
@@ -55,6 +38,24 @@
   <view wx:if="{{error}}" class="tip">{{error}} <text class="retry" bindtap="fetch">重试</text></view>
   <view wx:elif="{{loading}}" class="tip">统计中…</view>
   <view wx:elif="{{loaded && total === 0}}" class="tip">该时间段还没有足迹，去地图页记录一个吧</view>
+
+  <!-- 数据概况（地图下方）：当前周期内的足迹数 + 点亮省份/城市数 -->
+  <view class="stats-card">
+    <view class="stat-block">
+      <view class="stat-value">{{loaded ? total : '—'}}</view>
+      <view class="stat-label">总足迹</view>
+    </view>
+    <view class="stat-divider"></view>
+    <view class="stat-block">
+      <view class="stat-value">{{loaded ? provinceCount : '—'}}</view>
+      <view class="stat-label">省份</view>
+    </view>
+    <view class="stat-divider"></view>
+    <view class="stat-block">
+      <view class="stat-value">{{loaded ? cityCount : '—'}}</view>
+      <view class="stat-label">城市</view>
+    </view>
+  </view>
 </view>
 
 <!-- 周期选择弹窗（底部抽屉，对齐运动报告页） -->
@@ -76,5 +77,27 @@
         >{{item.label}}</view>
       </view>
     </scroll-view>
+  </view>
+</view>
+
+<!-- 底部固定操作栏（分享图出口）：z-index 低于周期抽屉遮罩，抽屉打开时点不到 -->
+<view class="act-bar">
+  <view class="act-btn" hover-class="act-btn-hover" bindtap="openSharePreview">分享图片</view>
+</view>
+
+<!-- 分享预览弹窗（图片 + 保存到相册 / 分享给朋友） -->
+<view class="share-mask" wx:if="{{sharePreview}}" catchtouchmove="noop">
+  <view class="share-dialog">
+    <view class="share-header">
+      <text class="share-title">分享预览</text>
+      <view class="share-close" bindtap="closeSharePreview"><image class="share-close-icon" src="/assets/icons/lucide-x.png" mode="aspectFit" /></view>
+    </view>
+    <view class="share-img-wrap">
+      <image class="share-img" src="{{shareImageSrc}}" mode="widthFix" />
+    </view>
+    <view class="share-footer">
+      <view class="share-save-btn" hover-class="share-save-btn-hover" bindtap="saveShareImage">保存到相册</view>
+      <button class="share-send-btn" open-type="share">分享给朋友</button>
+    </view>
   </view>
 </view>

@@ -12,9 +12,12 @@
     </view>
   </view>
 
-  <!-- 真实中国地图（echarts） -->
+  <!-- 真实中国地图（echarts）。分享预览打开期间藏画布：canvas 同层合成会盖在弹窗上（模拟器实测重影）；
+       藏内层组件、外层容器高度保留 → 卡片不塌陷、页面不跳动 -->
   <view class="card map-card">
-    <ec-canvas id="footprintMap" canvas-id="footprintMap" ec="{{ ec }}"></ec-canvas>
+    <view class="map-canvas">
+      <ec-canvas id="footprintMap" canvas-id="footprintMap" class="{{sharePreview ? 'map-hidden' : ''}}" ec="{{ ec }}"></ec-canvas>
+    </view>
     <view class="zoom-controls">
       <view class="zoom-btn" bindtap="zoomIn">+</view>
       <view class="zoom-btn" bindtap="zoomOut">−</view>
@@ -26,7 +29,7 @@
   <!-- 全屏地图弹窗 -->
   <view class="fullscreen-mask" wx:if="{{fullscreen}}">
     <view class="fullscreen-close" bindtap="closeFullscreen"><image class="close-icon" src="/assets/icons/lucide-x.png" mode="aspectFit" /></view>
-    <ec-canvas id="fsMap" canvas-id="fsMap" ec="{{ fsEc }}"></ec-canvas>
+    <ec-canvas id="fsMap" canvas-id="fsMap" class="{{sharePreview ? 'map-hidden' : ''}}" ec="{{ fsEc }}"></ec-canvas>
     <view class="zoom-controls fs-zoom">
       <view class="zoom-btn" bindtap="zoomIn">+</view>
       <view class="zoom-btn" bindtap="zoomOut">−</view>
