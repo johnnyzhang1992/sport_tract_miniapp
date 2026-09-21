@@ -45,7 +45,7 @@
   padding: 16rpx 32rpx calc(24rpx + env(safe-area-inset-bottom));
 }
 
-/* —— 以下表单样式与 components/marker-form、原 record-edit 对齐 —— */
+/* —— 以下表单样式与 components/marker-form、app.wxss 既有表单卡片风格对齐 —— */
 .field-label {
   font-size: 28rpx;
   color: #666;
