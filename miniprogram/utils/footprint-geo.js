@@ -4,8 +4,8 @@
  * - fitBounds：由点集算 center+scale。不用 include-points 的原因（官方文档查证，见 docs/11 §4.2）：
  *   include-points 形状是 Array<{latitude,longitude}>，没有 padding 可用（点会贴边被裁一半），
  *   且单点包围盒零面积会把 scale 顶到 20 —— components/track-map 里已踩过同一个坑
- * - gridCluster：按当前 zoom 切屏幕格子给点分桶。原生聚合（initMarkerCluster）下用于
- *   判定哪些点 joinCluster、以及最大缩放簇拆不开时的成员列表兜底
+ * - gridCluster：按当前 zoom 切屏幕格子给点分桶。足迹页自绘小圆簇（原生聚合簇尺寸/配色实测
+ *   不可控，已废弃）用它做本地聚合，members 亦供最大缩放簇拆不开时的成员列表兜底
  */
 
 /** 聚合格子屏幕边长（px）。越大越容易并成簇 */

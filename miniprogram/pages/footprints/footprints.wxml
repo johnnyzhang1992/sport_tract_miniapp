@@ -15,13 +15,14 @@
         class="center-tip empty"
       >还没有足迹，点右下角 ＋ 记录第一个去过的地方</view>
       <view wx:if="{{mode === 'map'}}" class="map-wrap">
-        <!-- 原生 marker 聚合（initMarkerCluster + addMarkers，模拟器实测自带簇气泡可渲染，见 docs/11 §4.2）：
-             marker 由 MapContext.addMarkers 命令式注入，不绑 markers 属性（声明式不参与聚合）；
-             点簇放大展开走自带 zoomOnClick，展开后的叶 marker 与稀疏孤点走 bindmarkertap -->
+        <!-- 本地网格聚合 + 自绘小圆气泡（原生默认簇尺寸/配色不可改，3104c7c 实测参数被忽略，见 docs/11 §4.2）：
+             markers 由 buildMarkers 生成后声明式绑定，节点重建（loading 闸门/模式切换）时自动重挂；
+             点簇 → onMarkerTap 按 id 分段：叶 marker 开详情，簇气泡放大展开，封顶后走成员半屏 -->
         <map
           id="footprintMap"
           class="fp-map"
           longitude="{{center.longitude}}" latitude="{{center.latitude}}" scale="{{scale}}"
+          markers="{{markers}}"
           show-location
           bindload="onMapLoad"
           bindmarkertap="onMarkerTap"
