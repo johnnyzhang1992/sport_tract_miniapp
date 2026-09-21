@@ -57,7 +57,7 @@
         <view class="hero-title">
           <image class="title-icon" src="{{activity.iconImg}}" mode="aspectFit" />
           <text>{{activity.label}}</text>
-          <text class="edit-btn" wx:if="{{activity.isOwner}}" bindtap="openEdit">✏️ 编辑</text>
+          <text class="edit-btn" wx:if="{{activity.isOwner}}" bindtap="openEdit">编辑</text>
         </view>
         <view class="hero-dist">
           <text class="hero-num">{{activity.distanceKm}}</text>
