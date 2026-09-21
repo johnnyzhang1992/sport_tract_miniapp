@@ -1,0 +1,75 @@
+<view class="container">
+  <!-- 数据概况（顶部）：当前周期内的足迹数 + 点亮省份/城市数 -->
+  <view class="stats-card">
+    <view class="stat-block">
+      <view class="stat-value">{{loaded ? total : '—'}}</view>
+      <view class="stat-label">总足迹</view>
+    </view>
+    <view class="stat-divider"></view>
+    <view class="stat-block">
+      <view class="stat-value">{{loaded ? provinceCount : '—'}}</view>
+      <view class="stat-label">省份</view>
+    </view>
+    <view class="stat-divider"></view>
+    <view class="stat-block">
+      <view class="stat-value">{{loaded ? cityCount : '—'}}</view>
+      <view class="stat-label">城市</view>
+    </view>
+  </view>
+
+  <!-- 周期筛选（月/年/全部 + 翻页；点中间标签弹抽屉选最近 12 个月 / 5 年） -->
+  <view class="card filter-card">
+    <view class="range-row">
+      <view
+        wx:for="{{ranges}}"
+        wx:key="value"
+        class="range-btn {{activeRange === item.value ? 'range-btn-active' : ''}}"
+        data-value="{{item.value}}"
+        bindtap="onRangeChange"
+      >{{item.label}}</view>
+    </view>
+    <view class="period-nav" wx:if="{{activeRange !== 'all'}}">
+      <view class="period-arrow" hover-class="period-arrow-hover" bindtap="onPrevPeriod">‹</view>
+      <view class="period-label" hover-class="period-label-hover" bindtap="onTapPeriodLabel">
+        <text>{{periodLabel}}</text>
+        <image class="period-label-caret" src="/assets/icons/lucide-chevron-down.svg" mode="aspectFit" />
+      </view>
+      <view
+        class="period-arrow {{canGoNext ? '' : 'period-arrow-disabled'}}"
+        hover-class="{{canGoNext ? 'period-arrow-hover' : ''}}"
+        bindtap="onNextPeriod"
+      >›</view>
+    </view>
+  </view>
+
+  <!-- 点亮地图（只保留地图本身：分享/全屏/省份下钻/城市列表都不在本页） -->
+  <view class="card map-card">
+    <ec-canvas id="litMap" canvas-id="litMap" ec="{{ ec }}"></ec-canvas>
+    <view wx:if="{{loading}}" class="map-veil">统计中…</view>
+  </view>
+
+  <view wx:if="{{error}}" class="tip">{{error}} <text class="retry" bindtap="fetch">重试</text></view>
+  <view wx:elif="{{loaded && total === 0}}" class="tip">该时间段还没有足迹，去地图页记录一个吧</view>
+</view>
+
+<!-- 周期选择弹窗（底部抽屉，对齐运动报告页） -->
+<view class="picker-mask" wx:if="{{showPeriodPicker}}" bindtap="onClosePeriodPicker">
+  <view class="picker-sheet" catchtap="noop">
+    <view class="picker-head">
+      <text>选择周期</text>
+      <text class="picker-close" catchtap="onClosePeriodPicker">✕</text>
+    </view>
+    <scroll-view class="picker-list" scroll-y scroll-into-view="{{pickerScrollInto}}">
+      <view class="picker-grid">
+        <view
+          wx:for="{{periodOptions}}"
+          wx:key="offset"
+          id="period-{{item.offset}}"
+          class="picker-card {{item.selected ? 'picker-card-active' : ''}} {{item.compact ? 'picker-card-compact' : ''}}"
+          data-offset="{{item.offset}}"
+          bindtap="onSelectPeriod"
+        >{{item.label}}</view>
+      </view>
+    </scroll-view>
+  </view>
+</view>

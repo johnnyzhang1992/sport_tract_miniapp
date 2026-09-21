@@ -1,0 +1,195 @@
+/* 足迹统计页：数据概况（三格）+ 周期筛选 + 点亮地图
+   度量对齐 packageFootprint/pages/footprint/footprint.wxss（stats-card）与 pages/report/report.wxss（range-card/period-nav/picker） */
+.stats-card {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 32rpx 0;
+  margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+}
+.stat-block {
+  flex: 1;
+  text-align: center;
+}
+.stat-value {
+  font-size: 48rpx;
+  font-weight: 700;
+  color: #2b6cf6;
+}
+.stat-label {
+  font-size: 24rpx;
+  color: #8a93a6;
+  margin-top: 6rpx;
+}
+.stat-divider {
+  width: 1rpx;
+  height: 60rpx;
+  background: #e5e6eb;
+}
+
+/* 周期筛选 */
+.filter-card {
+  padding: 14rpx 16rpx;
+}
+.range-row {
+  display: flex;
+  gap: 12rpx;
+}
+.range-btn {
+  flex: 1;
+  text-align: center;
+  padding: 12rpx 0;
+  border-radius: 12rpx;
+  background: #f2f3f5;
+  font-size: 26rpx;
+  color: #666;
+}
+.range-btn-active {
+  background: #eef4ff;
+  color: #2b6cf6;
+  border: 2rpx solid #2b6cf6;
+}
+.period-nav {
+  display: flex;
+  align-items: center;
+  margin-top: 14rpx;
+}
+.period-arrow {
+  width: 56rpx;
+  height: 56rpx;
+  line-height: 54rpx;
+  text-align: center;
+  font-size: 36rpx;
+  color: #2b6cf6;
+  border-radius: 50%;
+  background: #f2f3f5;
+}
+.period-arrow-hover {
+  background: #e2e6eb;
+}
+.period-arrow-disabled {
+  color: #c0c4cc;
+}
+.period-label {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #333;
+}
+.period-label-hover {
+  opacity: 0.7;
+}
+.period-label-caret {
+  margin-left: 10rpx;
+  width: 32rpx;
+  height: 32rpx;
+  flex-shrink: 0;
+}
+
+/* 点亮地图卡 */
+.map-card {
+  position: relative;
+  padding: 12rpx;
+}
+ec-canvas {
+  width: 100%;
+  height: 780rpx;
+  display: block;
+  background: #f4f6fa; /* 浅背景色 */
+}
+/* 周期切换时的统计遮罩：旧图保留在下面，不闪空 */
+.map-veil {
+  position: absolute;
+  top: 12rpx;
+  left: 12rpx;
+  right: 12rpx;
+  bottom: 12rpx;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12rpx;
+  background: rgba(255, 255, 255, 0.6);
+  font-size: 26rpx;
+  color: #8a93a6;
+}
+.tip {
+  padding: 24rpx 0;
+  text-align: center;
+  font-size: 24rpx;
+  color: #999;
+}
+.retry {
+  margin-left: 8rpx;
+  color: #2b6cf6;
+  font-weight: 600;
+}
+
+/* 周期选择弹窗（底部抽屉） */
+.picker-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+}
+.picker-sheet {
+  width: 100%;
+  background: #fff;
+  border-radius: 24rpx 24rpx 0 0;
+  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
+}
+.picker-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 28rpx 32rpx 12rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+.picker-close {
+  font-size: 32rpx;
+  color: #999;
+  padding: 8rpx 8rpx 8rpx 24rpx;
+}
+.picker-list {
+  max-height: 60vh;
+}
+.picker-grid {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 16rpx 24rpx 24rpx;
+}
+.picker-card {
+  width: calc(50% - 24rpx);
+  box-sizing: border-box;
+  margin: 12rpx;
+  padding: 26rpx 8rpx;
+  text-align: center;
+  font-size: 24rpx;
+  color: #333;
+  background: #f7f8fa;
+  border: 2rpx solid transparent;
+  border-radius: 24rpx;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.picker-card-active {
+  background: #eef4ff;
+  border-color: #2b6cf6;
+  color: #2b6cf6;
+  font-weight: 600;
+}
+.picker-card-compact {
+  font-size: 20rpx;
+}

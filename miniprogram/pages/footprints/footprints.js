@@ -1,4 +1,5 @@
-// 足迹 tab 主页：地图（本地网格聚合 + 自绘小圆气泡 marker / 详情弹窗）/ 列表（Task 6）切换 + 数据加载
+// 足迹 tab 主页：全屏地图（本地网格聚合 + 自绘小圆气泡 marker）+ 详情/表单半屏；
+// 列表与统计为独立页面（浮层入口进），本页只负责地图与聚合。
 const api = require('../../services/api');
 const geo = require('../../utils/footprint-geo');
 
@@ -22,28 +23,12 @@ const CLUSTER_BORDER_WIDTH = 2; // 白描边（CSS px，画布上 ×2）
 /** 聚合簇数字气泡缓存（同 track-map 公里标做法：离屏 canvas 画好 → tempFilePath 按 count 缓存） */
 const CLUSTER_ICON_CACHE = {};
 
-/**
- * 列表卡展示字段在 JS 侧一次算好：
- * WXML 不能对 people 数组做 join（直接渲染会变成 [object]），也不能给缺失的 location 兜底，
- * 故卡片额外挂 peopleText / subText / cover（openPopup 收的是原 DTO 字段，附加字段不影响快路径）。
- */
-function toCard(r) {
-  const people = Array.isArray(r.people) ? r.people.filter(Boolean) : [];
-  const photos = Array.isArray(r.photos) ? r.photos.filter(Boolean) : [];
-  const loc = r.location || {};
-  return Object.assign({}, r, {
-    peopleText: people.join('、'),
-    subText: [r.visitDate, loc.city || loc.address || loc.name || '未知地点'].filter(Boolean).join(' · '),
-    cover: photos[0] || '',
-  });
-}
-
-/** 地图可视区（CSS px）：.body 高 = 视口高 - 分段条 112rpx；tabBar 不占 windowHeight */
+/** 地图可视区（CSS px）：整页即地图（全屏），tabBar 不占 windowHeight */
 function mapViewport() {
   const info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
   const width = (info && info.windowWidth) || 375;
   const height = (info && info.windowHeight) || 600;
-  return { width, height: Math.max(200, height - (112 * width) / 750) };
+  return { width, height: Math.max(200, height) };
 }
 
 /** 画聚合簇小圆气泡（蓝底白字 + 白描边，2x 出图）；>2 位数字逐级缩字号防溢出。
@@ -86,36 +71,33 @@ function buildClusterIcon(count) {
 
 Page({
   data: {
-    mode: 'map', // map | list
     loading: true,
     error: '',
     records: [], // /geo 轻量点缓存 {id,title,visitDate,latitude,longitude,coverPhoto}
     markers: [], // 本地网格聚合产物：叶 marker + 自绘簇气泡 marker，声明式绑给 <map>
     center: { latitude: 30.5, longitude: 114.3 }, // 视野由 fitBounds 覆盖，这里只是无数据时的兜底
     scale: 12,
-    items: [], page: 1, pageSize: 20, total: 0, hasMore: true, loadingList: false,
-    popup: { visible: false, record: null },
+    detailVisible: false, // 详情半屏（components/footprint-detail）
+    detailRecord: null, // 轻量 DTO 即可，缺字段由组件补拉
     clusterSheet: { visible: false, records: [] }, // 最大缩放兜底：同处多条足迹的成员列表
     formVisible: false, // 新增/编辑半屏表单（components/footprint-form）
-    formRecord: null, // 传入记录即为编辑态（详情弹窗的完整 DTO 直接回填）
+    formRecord: null, // 传入记录即为编辑态
   },
   onLoad() { this.loadAll(); },
 
   async loadAll() {
     // 请求序号守卫：只应用最后一次结果，防竞态
     const seq = (this._seq = (this._seq || 0) + 1);
-    // 仅首屏（records/items 都还没内容）才进 loading 态；刷新保留已渲染内容，防闪屏
-    const firstLoad = this.data.records.length === 0 && this.data.items.length === 0;
+    // 仅首屏才进 loading 态；刷新保留已渲染内容，防闪屏
+    const firstLoad = this.data.records.length === 0;
     this.setData(firstLoad ? { loading: true, error: '' } : { error: '' });
     try {
-      await Promise.all([this.loadGeo(seq), this.reloadList(seq)]);
-      // 守卫同上：刷新期间的旧请求回来不能把 loadingList 复位成失败态之外的值
+      await this.loadGeo(seq);
       if (seq !== this._seq) return;
       this.setData({ loading: false });
     } catch (e) {
       if (seq !== this._seq) return;
-      // 复位 loadingList，否则 Task 6 触底闸门会卡死或重复发请求
-      this.setData({ loading: false, loadingList: false });
+      this.setData({ loading: false });
       if (firstLoad) {
         // 首屏失败没有可展示的内容 → 整页错误态
         this.setData({ error: e.message || '加载失败' });
@@ -133,54 +115,6 @@ Page({
       // return 出去：markers 与 loading:false 落在同一帧（否则首屏会先闪一帧无 marker 的空图）
       return this.buildMarkers();
     });
-  },
-  reloadList(seq) {
-    // 不提前清空 items：第一页响应到达后再整体替换（见 fetchPage），刷新时列表不留空窗
-    this.setData({ page: 1, hasMore: true });
-    return this.fetchPage(seq || this._seq);
-  },
-  fetchPage(seq) {
-    this.setData({ loadingList: true });
-    const page = this.data.page;
-    return api
-      .get('/footprint-records', { page, pageSize: this.data.pageSize })
-      .then((data) => {
-        if (seq !== this._seq) return;
-        // page 1（首屏/刷新）替换整页；page > 1（Task 6 触底）追加
-        const fresh = (data.items || []).map(toCard);
-        const items = page === 1 ? fresh : this.data.items.concat(fresh);
-        // 触底闸门（Task 4 review 硬约束）：只看 hasMore + loadingList，不算页码。
-        // fresh 为空也要落下 hasMore，否则后端 total 与实际条数不一致时会一直重试同一页
-        this.setData({
-          items,
-          total: data.total,
-          hasMore: fresh.length > 0 && items.length < data.total,
-          loadingList: false,
-        });
-      })
-      .catch((e) => {
-        if (seq === this._seq) this.setData({ loadingList: false });
-        throw e;
-      });
-  },
-
-  /** 列表触底翻页：不提前清空 items，追加由 fetchPage 的 page > 1 分支负责 */
-  onListReachBottom() {
-    if (!this.data.hasMore || this.data.loadingList) return;
-    const seq = this._seq; // 发请求前先记下当前序号，回退时据此判断这次翻页是否已被新请求接管
-    const next = this.data.page + 1;
-    this.setData({ page: next });
-    this.fetchPage(seq).catch(() => {
-      // 翻页失败要退回上一页码，否则这次触底白翻一页、数据留空洞；
-      // 三个条件缺一不可：seq 变了说明已被 loadAll/reloadList 接管（页码已归 1，回退会写出错误页码），
-      // loadingList 为 true 说明有更新的一页在飞（此时 this.data.page 属于那次请求，不能按 next 回退），
-      // page !== next 说明页码已被别处改动
-      if (seq === this._seq && !this.data.loadingList && this.data.page === next) this.setData({ page: next - 1 });
-    });
-  },
-  onCardTap(e) {
-    const r = this.data.items[Number(e.currentTarget.dataset.idx)];
-    if (r) this.openPopup(r); // items 是完整 DTO：弹窗不再二次请求（openPopup 快路径）
   },
 
   /**
@@ -350,7 +284,7 @@ Page({
       return;
     }
     const r = this.data.records[id - 1];
-    if (r) this.openPopup(r);
+    if (r) this.openDetail(r);
   },
   /**
    * 点簇气泡：向簇心放大 EXPAND_ZOOM_STEP 级（等效原生 zoomOnClick 的展开语义）。
@@ -379,36 +313,24 @@ Page({
     const d = (e && e.detail) || {};
     if (!Number.isFinite(d.latitude) || !Number.isFinite(d.longitude)) return;
     const r = this.data.records.find((x) => Number(x.latitude) === d.latitude && Number(x.longitude) === d.longitude);
-    if (r) this.openPopup(r);
+    if (r) this.openDetail(r);
   },
 
-  /** 详情弹窗：geo/列表轻量数据缺描述与人物时补拉详情（GET /footprint-records/:id，photos 已签名） */
-  openPopup(record) {
-    // 连点两个 marker 时旧详情响应不能覆盖新弹窗（seq 守卫，同 loadAll 做法）
-    const seq = (this._popupSeq = (this._popupSeq || 0) + 1);
-    const need = !record.location || record.description === undefined || record.people === undefined || record.photos === undefined;
-    const fill = need ? api.get('/footprint-records/' + record.id) : Promise.resolve(record);
-    fill
-      .then((full) => {
-        if (seq === this._popupSeq) this.showPopup(full);
-      })
-      .catch((e) => wx.showToast({ title: (e && e.message) || '加载失败', icon: 'none' }));
+  /** 详情半屏：轻量 DTO 直接交给组件（缺字段由组件补拉 GET /:id，seq 守卫在组件内） */
+  openDetail(record) {
+    if (!record) return;
+    this.setData({ detailVisible: true, detailRecord: record });
   },
-  /** 弹窗渲染前把数组/展示字段算好：WXML 不支持调用 join()，也不能直接渲染数组 */
-  showPopup(full) {
-    const loc = full.location || {};
-    const people = Array.isArray(full.people) ? full.people.filter(Boolean) : [];
-    const photos = Array.isArray(full.photos) ? full.photos.filter(Boolean) : [];
-    const place = loc.city || loc.address || loc.name || '';
-    const record = Object.assign({}, full, {
-      people,
-      peopleText: people.join('、'),
-      photos,
-      metaText: [full.visitDate, place].filter(Boolean).join(' · '),
-    });
-    this.setData({ popup: { visible: true, record } });
+  closeDetail() { this.setData({ detailVisible: false, detailRecord: null }); },
+  /** 详情里点「编辑」：关详情、带完整记录就地开表单 */
+  onDetailEdit(e) {
+    this.setData({ detailVisible: false, detailRecord: null, formVisible: true, formRecord: e.detail });
   },
-  closePopup() { this.setData({ 'popup.visible': false }); },
+  /** 详情里删除成功：关详情并整页刷新 */
+  onDetailDeleted() {
+    this.setData({ detailVisible: false, detailRecord: null });
+    this.loadAll();
+  },
 
   /** 最大缩放仍并簇的兜底：成员列表半屏（标题+日期，点行 → 详情弹窗） */
   showClusterMembers(recs) {
@@ -420,47 +342,15 @@ Page({
     const idx = Number(e.currentTarget.dataset.idx);
     const r = (this.data.clusterSheet.records || [])[idx];
     this.setData({ 'clusterSheet.visible': false });
-    if (r) this.openPopup(r);
+    if (r) this.openDetail(r);
   },
 
-  /** 详情弹窗的编辑：关详情、就地开半屏表单（完整 DTO 直接回填，不再二次请求） */
-  editRecord() {
-    const rec = this.data.popup.record;
-    if (!rec) return;
-    this.setData({ 'popup.visible': false, formVisible: true, formRecord: rec });
-  },
-  removeRecord() {
-    const rec = this.data.popup.record;
-    if (!rec) return;
-    wx.showModal({
-      title: '删除足迹',
-      content: '确定删除「' + rec.title + '」？照片将一并移除',
-      confirmColor: '#e54d42',
-      success: (res) => {
-        if (!res.confirm) return;
-        api
-          .del('/footprint-records/' + rec.id)
-          .then(() => {
-            this.setData({ 'popup.visible': false });
-            wx.showToast({ title: '已删除', icon: 'success' });
-            this.loadAll();
-          })
-          .catch((e) => wx.showToast({ title: (e && e.message) || '删除失败', icon: 'none' }));
-      },
-    });
-  },
-  previewPhoto(e) {
-    const ds = (e && e.currentTarget && e.currentTarget.dataset) || {};
-    const urls = ds.urls || [];
-    if (!urls.length) return;
-    wx.previewImage({ urls, current: urls[Number(ds.idx) || 0] });
-  },
-
-  /** 切换形态：map 节点被 wx:if 销毁/重建时声明式 markers 自动重挂，无需任何补投 */
-  switchMode(e) { this.setData({ mode: e.currentTarget.dataset.mode }); },
+  /** 全屏地图上的浮层入口：列表页 / 统计页 */
+  goList() { wx.navigateTo({ url: '/pages/footprint-list/footprint-list' }); },
+  goStats() { wx.navigateTo({ url: '/packageFootprint/pages/footprint-stats/footprint-stats' }); },
   openAdd() { this.setData({ formVisible: true, formRecord: null }); },
   closeForm() { this.setData({ formVisible: false, formRecord: null }); },
-  /** 表单保存成功：关弹层 + 复用整页刷新链（地图与列表一起重拉，保留当前形态） */
+  /** 表单保存成功：关弹层 + 重拉地图数据（列表页数据在其自身页面内加载） */
   onFormSaved() {
     this.setData({ formVisible: false, formRecord: null });
     this.loadAll();

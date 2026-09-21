@@ -17,7 +17,8 @@
     "pages/report/report",
     "pages/topic/topic",
     "pages/year-report/year-report",
-    "pages/footprints/footprints"
+    "pages/footprints/footprints",
+    "pages/footprint-list/footprint-list"
   ],
   "window": {
     "navigationBarBackgroundColor": "#ffffff",
@@ -76,7 +77,8 @@
     {
       "root": "packageFootprint",
       "pages": [
-        "pages/footprint/footprint"
+        "pages/footprint/footprint",
+        "pages/footprint-stats/footprint-stats"
       ]
     }
   ],

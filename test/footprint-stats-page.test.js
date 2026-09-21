@@ -1,0 +1,300 @@
+/**
+ * 足迹统计页（packageFootprint/pages/footprint-stats/footprint-stats.js）页级回归：
+ * 本页是「足迹记录」口径的统计（/footprint-records/stats），与点亮地图页的运动轨迹口径（/stats/footprint）独立。
+ * 覆盖：周期区间换算（visitDate 是 YYYY-MM-DD 字符串，客户端算 [from, to) 日期串）、tab 切换重置偏移、
+ * 翻页边界、抽屉选项数、'all' 不带区间、seq 守卫、错误分档、省界地图只拉一次、地图初始化晚于数据到达。
+ * 运行：npm test（node --test 自动发现）；依赖：仅 node 内置模块。
+ * 桩：wx / Page / getApp / echarts（自定义构建 1MB+，用 require.cache 换成假实现）就地 stub；
+ *     api 走 getApp().globalData.api（分包页取 api 的既有方式）。
+ */
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const path = require('node:path');
+
+const ROOT = path.join(__dirname, '..');
+
+/* ---------------------------------- 环境桩 ---------------------------------- */
+
+const apiCalls = [];
+const statsResponses = []; // 按序弹出；空了就返回默认全 0
+let geoMapCalls = 0;
+let geoMapShouldFail = false;
+const fakeApi = {
+  get(p) {
+    apiCalls.push(p);
+    if (p === '/geo/china-map') {
+      geoMapCalls++;
+      return geoMapShouldFail ? Promise.reject(new Error('地图数据失败')) : Promise.resolve({ type: 'FeatureCollection', features: [] });
+    }
+    const next = statsResponses.length ? statsResponses.shift() : null;
+    if (next instanceof Error) return Promise.reject(next);
+    return Promise.resolve(next || { total: 0, provinceCount: 0, cityCount: 0, provinces: [] });
+  },
+};
+
+// echarts 自定义构建（1MB+ UMD）在 node 下没必要真跑：registerMap/init 换成可断言的假实现
+const registered = [];
+const chartOptions = [];
+const fakeChart = { setOption: (o) => chartOptions.push(o), on() {} };
+const echartsPath = require.resolve(path.join(ROOT, 'miniprogram/packageFootprint/components/ec-canvas/echarts.js'));
+const fakeEcharts = {
+  registerMap: (name, data) => registered.push({ name, data }),
+  init: () => fakeChart,
+};
+require.cache[echartsPath] = { id: echartsPath, filename: echartsPath, loaded: true, exports: fakeEcharts, children: [], paths: [] };
+
+const toasts = [];
+global.wx = {
+  showToast: (o) => toasts.push(o && o.title),
+  nextTick: (cb) => cb(),
+};
+let pageDef = null;
+global.Page = (def) => { pageDef = def; };
+const fakeApp = { globalData: { api: fakeApi, loggedIn: true }, hasSession: () => false };
+global.getApp = () => fakeApp;
+
+require(path.join(ROOT, 'miniprogram/packageFootprint/pages/footprint-stats/footprint-stats.js'));
+assert.ok(pageDef, 'footprint-stats.js 应通过 Page() 交出页面对象');
+
+/* --------------------------------- 页面装配 --------------------------------- */
+
+function applyPath(target, keyPath, value) {
+  const keys = keyPath.split('.');
+  let o = target;
+  for (let i = 0; i < keys.length - 1; i++) o = o[keys[i]];
+  o[keys[keys.length - 1]] = value;
+}
+
+/** ec-canvas 组件桩：init(cb) 立刻回调，cb 返回值即 chart（ec-canvas 内部据此挂 this.chart） */
+function makeMapComp() {
+  return {
+    init(cb) {
+      this.chart = cb({ setChart() {} }, 300, 300, 2);
+      return this.chart;
+    },
+  };
+}
+
+function makePage(withMap) {
+  const p = Object.assign({}, pageDef);
+  p.data = JSON.parse(JSON.stringify(pageDef.data));
+  p.setData = (patch, cb) => {
+    Object.keys(patch).forEach((k) => applyPath(p.data, k, patch[k]));
+    if (cb) cb();
+  };
+  p.selectComponent = () => (withMap ? (p._mapComp = makeMapComp()) : null);
+  return p;
+}
+
+const tick = () => new Promise((r) => setImmediate(r));
+async function flush() {
+  for (let i = 0; i < 5; i++) await tick();
+}
+
+/** 数据概要桩 */
+function stats(total, provinceCount, cityCount, provinces) {
+  return { total, provinceCount, cityCount, provinces: provinces || [] };
+}
+
+const pad = (n) => String(n).padStart(2, '0');
+const fmt = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+function resetEnv() {
+  apiCalls.length = 0;
+  statsResponses.length = 0;
+  chartOptions.length = 0;
+  registered.length = 0;
+  geoMapCalls = 0;
+  geoMapShouldFail = false;
+  toasts.length = 0;
+}
+
+/** 最后一次 stats 请求的 query 串（去掉 /footprint-records/stats 前缀） */
+function lastStatsQuery() {
+  const call = apiCalls.filter((p) => p.startsWith('/footprint-records/stats')).pop();
+  return call ? call.slice('/footprint-records/stats'.length) : null;
+}
+
+/* ---------------------------------- 用例 ---------------------------------- */
+
+test('S1 周期换算：月/年区间是 YYYY-MM-DD 日期串，覆盖当前周期且左闭右开', async () => {
+  resetEnv();
+  const page = makePage();
+  page.onLoad();
+  await flush();
+
+  const now = new Date();
+  const monthFrom = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`;
+  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  assert.equal(lastStatsQuery(), `?from=${monthFrom}&to=${fmt(nextMonth)}`, '默认「月」= 自然月 [本月1日, 下月1日)');
+  assert.equal(page.data.periodLabel, `${now.getFullYear()}年${now.getMonth() + 1}月`);
+  assert.equal(page.data.canGoNext, false, '当前周期不能再往后翻');
+
+  // 切到「年」：自然年 [1月1日, 次年1月1日)
+  page.onRangeChange({ currentTarget: { dataset: { value: 'year' } } });
+  await flush();
+  const y = now.getFullYear();
+  assert.equal(lastStatsQuery(), `?from=${y}-01-01&to=${y + 1}-01-01`);
+  assert.equal(page.data.periodLabel, `${y}年`);
+
+  // 「全部」：不带 from/to
+  page.onRangeChange({ currentTarget: { dataset: { value: 'all' } } });
+  await flush();
+  assert.equal(lastStatsQuery(), '', '「全部」不带区间');
+  assert.equal(page.data.periodLabel, '', '「全部」无周期文案');
+  assert.equal(page.data.canGoNext, false);
+});
+
+test('S2 概况与地图数据落地：数字、点亮省 data、loaded 闸门；省界地图只拉一次', async () => {
+  resetEnv();
+  statsResponses.push(stats(5, 2, 3, [{ name: '浙江省', count: 4 }, { name: '北京市', count: 1 }]));
+  const page = makePage(true);
+  page.onLoad();
+  page.onReady(); // 真实生命周期：onLoad(起请求) → onReady(组件就绪) → 响应到达
+  await flush();
+
+  assert.equal(page.data.total, 5);
+  assert.equal(page.data.provinceCount, 2);
+  assert.equal(page.data.cityCount, 3);
+  assert.equal(page.data.loaded, true, '响应落地后才把「—」换成数字');
+  assert.equal(page.data.loading, false);
+  assert.equal(page.data.error, '');
+  assert.deepEqual(registered.map((r) => r.name), ['china'], '省界 GeoJSON 注册为 china');
+  assert.deepEqual(chartOptions[0].series[0].data, [{ name: '浙江省', value: 4 }, { name: '北京市', value: 1 }], '点亮省按 count 上色');
+
+  // 翻到上个月：地图数据缓存复用，不重复拉
+  statsResponses.push(stats(1, 1, 1, [{ name: '上海市', count: 1 }]));
+  page.onPrevPeriod();
+  await flush();
+  assert.equal(geoMapCalls, 1, '省界地图按需拉取后缓存（只拉一次）');
+  assert.deepEqual(chartOptions[chartOptions.length - 1].series[0].data, [{ name: '上海市', value: 1 }]);
+});
+
+test('S3 翻页边界与偏移重置：‹ 每次往前一档，› 到当前周期为止，切 tab 偏移归零', async () => {
+  resetEnv();
+  const page = makePage();
+  page.onLoad();
+  await flush();
+  const now = new Date();
+
+  page.onNextPeriod();
+  await flush();
+  assert.equal(page.data.periodOffset, 0, '当前周期点 › 不动');
+  assert.equal(apiCalls.filter((p) => p.startsWith('/footprint-records/stats')).length, 1, '点了也不发请求');
+
+  page.onPrevPeriod();
+  await flush();
+  const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  assert.equal(page.data.periodOffset, 1);
+  assert.equal(lastStatsQuery(), `?from=${fmt(prevMonth)}&to=${fmt(new Date(now.getFullYear(), now.getMonth(), 1))}`);
+  assert.equal(page.data.canGoNext, true, '离开当前周期后才能往后翻');
+
+  page.onPrevPeriod();
+  page.onNextPeriod();
+  await flush();
+  assert.equal(page.data.periodOffset, 1, '往前两档再回来一档 = 上一月');
+  assert.equal(lastStatsQuery(), `?from=${fmt(prevMonth)}&to=${fmt(new Date(now.getFullYear(), now.getMonth(), 1))}`);
+
+  // 切到「年」：偏移必须归零（否则会停在「12 个月前的年」这种错位）
+  page.onRangeChange({ currentTarget: { dataset: { value: 'year' } } });
+  await flush();
+  assert.equal(page.data.periodOffset, 0);
+  assert.equal(page.data.periodLabel, `${now.getFullYear()}年`);
+  assert.equal(page.data.canGoNext, false);
+});
+
+test('S4 周期抽屉：选项数按粒度（月 12 / 年 5），选中当前项只关抽屉，选中别的项才切换重拉', async () => {
+  resetEnv();
+  const page = makePage();
+  page.onLoad();
+  await flush();
+  const now = new Date();
+
+  page.onTapPeriodLabel();
+  assert.equal(page.data.showPeriodPicker, true);
+  assert.equal(page.data.periodOptions.length, 12, '月粒度展示最近 12 个月');
+  assert.equal(page.data.periodOptions.filter((o) => o.selected).length, 1);
+  assert.equal(page.data.periodOptions[0].selected, true, '默认选中当前周期（offset 0）');
+  assert.equal(page.data.pickerScrollInto, 'period-0', 'nextTick 后滚动定位到当前周期');
+
+  const callsBefore = apiCalls.length;
+  page.onSelectPeriod({ currentTarget: { dataset: { offset: 0 } } });
+  assert.equal(page.data.showPeriodPicker, false);
+  await flush();
+  assert.equal(apiCalls.length, callsBefore, '选中的就是当前周期：只关抽屉，不重复请求');
+
+  page.onTapPeriodLabel();
+  const opt3 = page.data.periodOptions[3];
+  page.onSelectPeriod({ currentTarget: { dataset: { offset: 3 } } });
+  await flush();
+  assert.equal(page.data.periodOffset, 3);
+  const start = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+  assert.equal(lastStatsQuery(), `?from=${fmt(start)}&to=${fmt(new Date(start.getFullYear(), start.getMonth() + 1, 1))}`, opt3.label + ' 的区间');
+
+  // 年粒度 5 项
+  page.onRangeChange({ currentTarget: { dataset: { value: 'year' } } });
+  await flush();
+  page.onTapPeriodLabel();
+  assert.equal(page.data.periodOptions.length, 5, '年粒度展示最近 5 年');
+  page.onClosePeriodPicker(); // 抽屉有遮罩，真实交互里打开时点不到 tab
+
+  // 「全部」点标签不弹抽屉
+  page.onRangeChange({ currentTarget: { dataset: { value: 'all' } } });
+  await flush();
+  page.onTapPeriodLabel();
+  assert.equal(page.data.showPeriodPicker, false, '「全部」没有周期可选');
+});
+
+test('S5 seq 守卫与错误分档：过期响应不覆盖，失败置 error 且可重试', async () => {
+  resetEnv();
+  const page = makePage();
+  let releaseSlow = null;
+  let call = 0;
+  const slow = new Promise((r) => { releaseSlow = r; });
+  const original = fakeApi.get.bind(fakeApi);
+  fakeApi.get = (p) => {
+    apiCalls.push(p);
+    if (p === '/geo/china-map') return Promise.resolve({ type: 'FeatureCollection', features: [] });
+    call++;
+    if (call === 1) return slow.then(() => stats(9, 9, 9, [])); // 第一次响应卡住
+    return Promise.resolve(stats(2, 1, 1, []));
+  };
+  const running1 = page.fetch();
+  const running2 = page.fetch(); // 后一次先返回
+  await running2;
+  releaseSlow();
+  await running1;
+  await flush();
+  fakeApi.get = original;
+  assert.equal(page.data.total, 2, '过期响应（先发后到）不得覆盖最新一次的数据');
+  assert.equal(page.data.provinceCount, 1);
+
+  // 失败分档：error 置位 + loading 收起，重试成功后清空
+  statsResponses.push(new Error('统计失败'));
+  await page.fetch();
+  assert.equal(page.data.error, '统计失败');
+  assert.equal(page.data.loading, false);
+  assert.equal(page.data.total, 2, '失败保留上一次的数据（不闪空）');
+  statsResponses.push(stats(3, 2, 2, []));
+  await page.fetch();
+  assert.equal(page.data.error, '');
+  assert.equal(page.data.total, 3);
+});
+
+test('S6 地图初始化晚于数据到达：onReady 时用已缓存的数据出图（不空白）', async () => {
+  resetEnv();
+  statsResponses.push(stats(4, 1, 1, [{ name: '广东省', count: 4 }]));
+  const page = makePage(false); // 先不挂组件：模拟 fetch 先于 onReady 完成
+  page.onLoad();
+  await flush();
+  assert.equal(page.data.total, 4);
+  assert.equal(chartOptions.length, 0, '组件还没就绪时不去碰 chart');
+
+  // 组件就绪：init 回调里应把缓存的省界 + 点亮数据一次性画上
+  const comp = (page._mapComp = makeMapComp());
+  page.selectComponent = () => comp;
+  page.onReady();
+  assert.equal(chartOptions.length, 1, 'onReady 时补画（否则首屏地图空白）');
+  assert.deepEqual(chartOptions[0].series[0].data, [{ name: '广东省', value: 4 }]);
+  assert.ok(!chartOptions[0].backgroundColor, '不能设 backgroundColor（不透明画布会盖住页面按钮）');
+});
