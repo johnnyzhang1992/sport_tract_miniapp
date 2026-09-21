@@ -44,10 +44,45 @@ const fakeEcharts = {
 require.cache[echartsPath] = { id: echartsPath, filename: echartsPath, loaded: true, exports: fakeEcharts, children: [], paths: [] };
 
 const toasts = [];
+const albumCalls = []; // saveImageToPhotosAlbum 入参
+let albumResult = 'ok'; // ok | deny | other
+const modalCalls = [];
+let modalConfirm = false;
+let openSettingCalls = 0;
 global.wx = {
   showToast: (o) => toasts.push(o && o.title),
   nextTick: (cb) => cb(),
+  saveImageToPhotosAlbum: (o) => {
+    albumCalls.push(o);
+    if (albumResult === 'ok') o.success();
+    else if (albumResult === 'deny') o.fail({ errMsg: 'saveImageToPhotosAlbum:fail auth deny' });
+    else o.fail({ errMsg: 'saveImageToPhotosAlbum:fail system error' });
+  },
+  showModal: (o) => {
+    modalCalls.push(o);
+    o.success({ confirm: modalConfirm });
+  },
+  openSetting: () => { openSettingCalls++; },
 };
+
+// loading 模块（utils/loading.js）与导出模块（packageFootprint/utils/map-image.js）注入假实现：
+// 页面只负责 loading/toast/预览态，导出本身的像素细节由 test/map-image.test.js 直测
+const loadingCalls = [];
+const loadingPath = require.resolve(path.join(ROOT, 'miniprogram/utils/loading.js'));
+require.cache[loadingPath] = {
+  id: loadingPath, filename: loadingPath, loaded: true,
+  exports: { show: (t) => loadingCalls.push(['show', t]), hide: () => loadingCalls.push(['hide']) },
+  children: [], paths: [],
+};
+const exportCalls = [];
+let exportBehavior = () => Promise.resolve('wxfile://tmp/share.png');
+const mapImagePath = require.resolve(path.join(ROOT, 'miniprogram/packageFootprint/utils/map-image.js'));
+require.cache[mapImagePath] = {
+  id: mapImagePath, filename: mapImagePath, loaded: true,
+  exports: { exportChartImage: (comp, opts) => { exportCalls.push({ comp, opts }); return exportBehavior(comp, opts); } },
+  children: [], paths: [],
+};
+
 let pageDef = null;
 global.Page = (def) => { pageDef = def; };
 const fakeApp = { globalData: { api: fakeApi, loggedIn: true }, hasSession: () => false };
@@ -107,6 +142,14 @@ function resetEnv() {
   geoMapCalls = 0;
   geoMapShouldFail = false;
   toasts.length = 0;
+  albumCalls.length = 0;
+  modalCalls.length = 0;
+  loadingCalls.length = 0;
+  exportCalls.length = 0;
+  albumResult = 'ok';
+  modalConfirm = false;
+  openSettingCalls = 0;
+  exportBehavior = () => Promise.resolve('wxfile://tmp/share.png');
 }
 
 /** 最后一次 stats 请求的 query 串（去掉 /footprint-records/stats 前缀） */
@@ -297,4 +340,94 @@ test('S6 地图初始化晚于数据到达：onReady 时用已缓存的数据出
   assert.equal(chartOptions.length, 1, 'onReady 时补画（否则首屏地图空白）');
   assert.deepEqual(chartOptions[0].series[0].data, [{ name: '广东省', value: 4 }]);
   assert.ok(!chartOptions[0].backgroundColor, '不能设 backgroundColor（不透明画布会盖住页面按钮）');
+});
+
+test('S7 分享导出：未加载完拒绝导出；成功落预览态并带统计行与布局参数；关闭清态', async () => {
+  resetEnv();
+  const page = makePage(true);
+  page.onReady(); // _mapComp 就绪
+  page.openSharePreview();
+  assert.equal(exportCalls.length, 0, '数据未到不发导出');
+  assert.equal(toasts[toasts.length - 1], '还没有数据可分享');
+
+  statsResponses.push(stats(5, 2, 3, [{ name: '浙江省', count: 5 }]));
+  page.onLoad();
+  await flush();
+  assert.equal(page.data.loaded, true);
+
+  page.openSharePreview();
+  assert.equal(exportCalls.length, 1);
+  assert.equal(exportCalls[0].comp, page._mapComp, '导出的是本页地图组件');
+  assert.equal(exportCalls[0].opts.statsText, `${page.data.periodLabel} · 足迹 5 · 省份 2 · 城市 3`);
+  assert.deepEqual(exportCalls[0].opts.layoutCenter, ['50%', '62%'], '地图下移给顶部统计行让位');
+  assert.deepEqual(exportCalls[0].opts.restoreLayout, { layoutCenter: ['50%', '52%'], layoutSize: '108%' });
+  assert.deepEqual(loadingCalls[0], ['show', '生成中…']);
+  await flush();
+  assert.equal(page.data.sharePreview, true);
+  assert.equal(page.data.shareImageSrc, 'wxfile://tmp/share.png');
+  assert.deepEqual(loadingCalls[loadingCalls.length - 1], ['hide'], '导出结束收起 loading');
+
+  page.onRangeChange({ currentTarget: { dataset: { value: 'all' } } });
+  await flush();
+  page.openSharePreview();
+  await flush();
+  assert.ok(exportCalls[1].opts.statsText.startsWith('全部时间 · '), '「全部」档统计行前缀换成全部时间');
+
+  page.closeSharePreview();
+  assert.equal(page.data.sharePreview, false);
+});
+
+test('S8 导出失败：toast 兜底 + 收起 loading，不落预览态', async () => {
+  resetEnv();
+  exportBehavior = () => Promise.reject(new Error('地图尚未就绪'));
+  const page = makePage(true);
+  page.onReady();
+  statsResponses.push(stats(1, 1, 1, []));
+  page.onLoad();
+  await flush();
+  page.openSharePreview();
+  await flush();
+  assert.equal(toasts[toasts.length - 1], '地图尚未就绪');
+  assert.equal(page.data.sharePreview, false);
+  assert.deepEqual(loadingCalls[loadingCalls.length - 1], ['hide']);
+});
+
+test('S9 转发与保存相册：标题带统计、封面用分享图；权限被拒引导去设置', async () => {
+  resetEnv();
+  const page = makePage(true);
+  page.onReady();
+  statsResponses.push(stats(5, 2, 3, []));
+  page.onLoad();
+  await flush();
+
+  // 转发：标题带省市数；未生成分享图时封面留空走默认
+  assert.equal(page.onShareAppMessage().title, '我的足迹统计 · 2 省 3 城');
+  assert.equal(page.onShareAppMessage().path, '/packageFootprint/pages/footprint-stats/footprint-stats');
+  assert.equal(page.onShareAppMessage().imageUrl, '');
+  assert.equal(page.onShareTimeline().title, '我的足迹统计 · 2 省 3 城');
+
+  page.openSharePreview();
+  await flush();
+  assert.equal(page.onShareAppMessage().imageUrl, 'wxfile://tmp/share.png', '生成后转发封面用分享图');
+  assert.equal(page.onShareTimeline().imageUrl, 'wxfile://tmp/share.png');
+
+  // 保存成功：底部按钮拿的是同一张临时图
+  page.saveShareImage();
+  assert.equal(albumCalls.length, 1);
+  assert.equal(albumCalls[0].filePath, 'wxfile://tmp/share.png');
+  assert.equal(toasts[toasts.length - 1], '已保存到相册');
+
+  // 权限被拒 → 弹「去设置」，确认后 openSetting
+  albumResult = 'deny';
+  modalConfirm = true;
+  page.saveShareImage();
+  assert.equal(modalCalls.length, 1);
+  assert.equal(modalCalls[0].title, '需要相册权限');
+  assert.equal(openSettingCalls, 1);
+
+  // 其他失败：只 toast
+  albumResult = 'other';
+  page.saveShareImage();
+  assert.equal(modalCalls.length, 1, '非权限失败不弹设置引导');
+  assert.equal(toasts[toasts.length - 1], '保存失败');
 });

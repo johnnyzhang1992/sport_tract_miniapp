@@ -109,11 +109,18 @@
 }
 
 /* echarts 地图容器高度 */
+.map-canvas {
+  height: 780rpx;
+}
 ec-canvas {
   width: 100%;
   height: 780rpx;
   display: block;
   background: #f4f6fa; /* 浅背景色 */
+}
+/* 分享预览打开期间藏画布（同层 canvas 会盖住弹窗）；容器高度保留，卡片不塌陷 */
+.map-hidden {
+  display: none;
 }
 
 /* 全屏地图 */

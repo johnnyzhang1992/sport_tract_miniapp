@@ -1,40 +1,10 @@
 // 足迹统计页（地图页左上「统计」入口进）：数据概况（总足迹/省份/城市）+ 周期筛选（月/年/全部）+ 中国点亮地图
 // 口径说明：本页统计的是「足迹记录」（/footprint-records/stats），与点亮地图页的运动轨迹口径（/stats/footprint）独立
 const echarts = require('../../components/ec-canvas/echarts');
-
-const RANGES = [
-  { value: 'month', label: '月' },
-  { value: 'year', label: '年' },
-  { value: 'all', label: '全部' },
-];
-
-/** 周期选择弹窗：每个粒度展示最近 N 个周期（对齐运动报告页） */
-const PICKER_COUNT = { month: 12, year: 5 };
-
-const pad = (n) => String(n).padStart(2, '0');
-/** Date → 'YYYY-MM-DD'（本地时区；接口按字符串 $gte/$lt 比对 visitDate） */
-const dateStr = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-
-/** 月/年周期区间 [from, to)（自然月/自然年），offset 为往前的周期数（0=当前周期） */
-function periodRange(range, offset) {
-  const now = new Date();
-  if (range === 'month') {
-    return {
-      from: dateStr(new Date(now.getFullYear(), now.getMonth() - offset, 1)),
-      to: dateStr(new Date(now.getFullYear(), now.getMonth() - offset + 1, 1)),
-    };
-  }
-  return {
-    from: dateStr(new Date(now.getFullYear() - offset, 0, 1)),
-    to: dateStr(new Date(now.getFullYear() - offset + 1, 0, 1)),
-  };
-}
-
-/** 周期文案：月 → "2026年9月"，年 → "2026年"（手工拆串，避开 new Date('YYYY-MM-DD') 的 UTC 解析） */
-function periodLabelOf(range, p) {
-  const [y, m] = p.from.split('-').map(Number);
-  return range === 'month' ? `${y}年${m}月` : `${y}年`;
-}
+const loading = require('../../../utils/loading');
+const mapImage = require('../../utils/map-image.js');
+// 周期换算与列表页共用（utils 在主包，分包页可 require 主包资源）
+const { RANGES, PICKER_COUNT, periodRange, periodLabelOf } = require('../../../utils/footprint-period.js');
 
 /** 地图配置：点亮省高亮（visualMap 按 count 深浅），未点亮灰（对齐点亮地图页，仅去掉分享/全屏/下钻） */
 function getMapOption(data) {
@@ -92,6 +62,8 @@ Page({
     showPeriodPicker: false,
     periodOptions: [], // [{offset, label, compact, selected}]
     pickerScrollInto: '',
+    sharePreview: false,
+    shareImageSrc: '',
   },
 
   onLoad() {
@@ -180,6 +152,86 @@ Page({
   },
   /** 阻止弹窗内容点击冒泡到遮罩 */
   noop() {},
+
+  /* ------------------------------ 分享导出图片 ------------------------------ */
+
+  /** 分享图顶部统计行：周期 · 足迹 · 省份 · 城市 */
+  buildShareText() {
+    const { activeRange, periodLabel, total, provinceCount, cityCount } = this.data;
+    const period = activeRange === 'all' ? '全部时间' : periodLabel;
+    return `${period} · 足迹 ${total} · 省份 ${provinceCount} · 城市 ${cityCount}`;
+  },
+
+  /** 生成分享图：地图临时铺白底 + 顶部统计行 → 预览弹窗（截完恢复透明与原布局） */
+  openSharePreview() {
+    if (!this.data.loaded) {
+      wx.showToast({ title: '还没有数据可分享', icon: 'none' });
+      return;
+    }
+    loading.show('生成中…');
+    mapImage
+      .exportChartImage(this._mapComp, {
+        statsText: this.buildShareText(),
+        layoutCenter: ['50%', '62%'], // 地图下移，给顶部统计行留位
+        layoutSize: '96%',
+        restoreLayout: { layoutCenter: ['50%', '52%'], layoutSize: '108%' },
+      })
+      .then((path) => {
+        this._shareFilePath = path;
+        this.setData({ sharePreview: true, shareImageSrc: path });
+      })
+      .catch((e) => {
+        console.error('导出图片失败', e);
+        wx.showToast({ title: (e && e.message) || '生成失败', icon: 'none' });
+      })
+      .finally(() => loading.hide());
+  },
+
+  closeSharePreview() { this.setData({ sharePreview: false }); },
+
+  /** 保存预览图到相册（首次需授权，拒绝后引导去设置） */
+  saveShareImage() {
+    if (!this._shareFilePath) return;
+    wx.saveImageToPhotosAlbum({
+      filePath: this._shareFilePath,
+      success: () => wx.showToast({ title: '已保存到相册', icon: 'success' }),
+      fail: (err) => {
+        const msg = (err && err.errMsg) || '';
+        if (msg.includes('auth') || msg.includes('deny') || msg.includes('authorize')) {
+          wx.showModal({
+            title: '需要相册权限',
+            content: '保存图片需要相册权限，是否前往设置开启？',
+            confirmText: '去设置',
+            success: (r) => {
+              if (r.confirm) wx.openSetting();
+            },
+          });
+        } else {
+          wx.showToast({ title: '保存失败', icon: 'none' });
+        }
+      },
+    });
+  },
+
+  /** 转发标题：带省市数（数据未到时不报数） */
+  shareTitle() {
+    const { total, provinceCount, cityCount } = this.data;
+    return total ? `我的足迹统计 · ${provinceCount} 省 ${cityCount} 城` : '我的足迹统计';
+  },
+
+  /** 分享给朋友（封面用刚生成的分享图） */
+  onShareAppMessage() {
+    return {
+      title: this.shareTitle(),
+      path: '/packageFootprint/pages/footprint-stats/footprint-stats',
+      imageUrl: this._shareFilePath || '',
+    };
+  },
+
+  /** 分享到朋友圈 */
+  onShareTimeline() {
+    return { title: this.shareTitle(), imageUrl: this._shareFilePath || '' };
+  },
 
   async fetch() {
     const app = getApp();

@@ -1,5 +1,6 @@
 const echarts = require('../../components/ec-canvas/echarts');
 const loading = require('../../../utils/loading');
+const mapImage = require('../../utils/map-image.js');
 
 // 省份名称 → 行政区划代码（与 web 后台 FootprintMap 一致）
 const PROVINCE_TO_CODE = {
@@ -274,7 +275,7 @@ Page({
   openSharePreview() {
     const comp = this.data.fullscreen ? this._fsComp : this._mapComp;
     const statsText = `点亮省份 ${this.data.provinceCount || 0} 个 · 轨迹 ${this._trackCount || 0} 条`;
-    this.exportChartImage(comp, {
+    this.exportMapImage(comp, {
       statsText,
       // 导出图临时布局：地图下移留出顶部标题空间（中国地图专用），导出后恢复
       layoutCenter: ['50%', '62%'],
@@ -285,85 +286,23 @@ Page({
 
   /** 省份弹窗内保存：导出省份地图图片 */
   saveProvinceImage() {
-    this.exportChartImage(this._provComp);
+    this.exportMapImage(this._provComp);
   },
 
-  /**
-   * 导出地图图片：canvas 2d 节点 → wx.canvasToTempFilePath → 预览弹窗
-   * 不用 chart.getDataURL()：小程序环境 zrender 的 drawImage 类型校验会失败
-   * 画布平时保持透明（不透明画布会盖住页面按钮）；导出时临时铺白底，截完恢复
-   * @param {object} opts 可选：{ statsText, layoutCenter, layoutSize, restoreLayout } —— 中国地图分享图加统计标题
-   */
-  exportChartImage(comp, opts = {}) {
-    if (!comp || !comp.canvasNode) {
-      wx.showToast({ title: '地图尚未就绪', icon: 'none' });
-      return;
-    }
+  /** 导出地图图片 → 预览弹窗（导出本身走共享 util map-image；loading 与兜底 toast 留在页面） */
+  exportMapImage(comp, opts = {}) {
     loading.show('生成中…');
-    const chart = comp.chart || null;
-    if (chart) {
-      const exportOpt = { backgroundColor: '#ffffff' };
-      if (opts.statsText) {
-        exportOpt.series = [{ layoutCenter: opts.layoutCenter, layoutSize: opts.layoutSize }];
-      }
-      chart.setOption(exportOpt);
-      // setOption 走 zrender 异步 rAF；不 flush 的话 canvasToTempFilePath 可能抓到旧帧
-      chart.getZr().flush();
-      if (opts.statsText) {
-        // 自定义 echarts 构建未打包 title/graphic 组件，统计标题用原生 2d context 绘制
-        this._drawExportTitle(comp, opts.statsText);
-      }
-    }
-    setTimeout(() => {
-      // 显式按整个 buffer 导出：不传尺寸时默认值各端不一致，真机上可能按逻辑尺寸截取 → 地图被裁剪
-      const node = comp.canvasNode;
-      wx.canvasToTempFilePath({
-        canvas: node,
-        x: 0,
-        y: 0,
-        width: node.width,
-        height: node.height,
-        destWidth: node.width,
-        destHeight: node.height,
-        fileType: 'png',
-        success: (res) => {
-          this._shareFilePath = res.tempFilePath;
-          this.setData({ sharePreview: true, shareImageSrc: res.tempFilePath });
-        },
-        fail: (e) => {
-          console.error('导出图片失败', e);
-          wx.showToast({ title: '生成失败', icon: 'none' });
-        },
-        complete: () => {
-          if (chart) {
-            const restoreOpt = { backgroundColor: 'transparent' };
-            if (opts.statsText) {
-              restoreOpt.series = [opts.restoreLayout];
-            }
-            chart.setOption(restoreOpt);
-            chart.getZr().flush();
-          }
-          loading.hide();
-        },
-      });
-    }, 250);
-  },
-
-  /** 统计标题：直接画在导出画布上（原生 ctx，物理像素坐标），后续 restore 重绘会清掉 */
-  _drawExportTitle(comp, text) {
-    try {
-      const node = comp.canvasNode;
-      const ctx = node.getContext('2d');
-      const dpr = (wx.getWindowInfo ? wx.getWindowInfo().pixelRatio : wx.getSystemInfoSync().pixelRatio) || 1;
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.font = `bold ${Math.round(16 * dpr)}px sans-serif`;
-      ctx.fillStyle = '#1f2329';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'top';
-      ctx.fillText(text, node.width / 2, Math.round(14 * dpr));
-    } catch (e) {
-      console.error('绘制导出标题失败', e);
-    }
+    mapImage
+      .exportChartImage(comp, opts)
+      .then((path) => {
+        this._shareFilePath = path;
+        this.setData({ sharePreview: true, shareImageSrc: path });
+      })
+      .catch((e) => {
+        console.error('导出图片失败', e);
+        wx.showToast({ title: (e && e.message) || '生成失败', icon: 'none' });
+      })
+      .finally(() => loading.hide());
   },
 
   closeSharePreview() {
