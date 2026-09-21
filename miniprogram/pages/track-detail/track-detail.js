@@ -10,7 +10,7 @@ const config = require('../../config/index');
 const { getBestCache, setBestCache } = require('../../services/storage');
 const storage = require('../../services/storage');
 const { uploadPhoto } = require('../../services/oss-upload');
-const { formatDuration, formatPace, formatPaceParts } = require('../../utils/format');
+const { formatDuration, formatPaceParts } = require('../../utils/format');
 const { getPaceScale } = require('../../utils/pace-scale');
 const { computeRunPaceZones } = require('../../utils/track-pace');
 
@@ -440,7 +440,7 @@ Page({
         distText: distKm.toFixed(2), // WXML 不支持方法调用，距离文本在 JS 里格式化
         durationSec,
         durationText: formatDuration(durationSec),
-        paceText: formatPace(durationSec / distKm),
+        paceText: (formatPaceParts(durationSec / distKm) || {}).value || '—', // 列头已有"配速"，不带 /公里 单位
         ...(partial ? { partial: true } : {}),
       });
     };
