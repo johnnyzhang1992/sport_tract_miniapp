@@ -5,7 +5,7 @@
  */
 const api = require('../../services/api');
 const loading = require('../../utils/loading');
-const { uploadPhoto } = require('../../services/oss-upload');
+const { uploadPhoto, editImage } = require('../../services/oss-upload');
 const config = require('../../config/index');
 const { setProfileGuideDone } = require('../../services/storage');
 
@@ -63,11 +63,13 @@ Page({
       mediaType: ['image'],
       sourceType: ['album', 'camera'],
       sizeType: ['compressed'],
-      success: (res) => {
+      success: async (res) => {
         const file = res.tempFiles && res.tempFiles[0];
-        if (file) {
-          this.setData({ avatarTemp: file.tempFilePath, avatarPreset: '', avatarSheetVisible: false }); // 上传优先于预设
-        }
+        if (!file) return;
+        // 先关选择弹窗，再拉起微信原生编辑（裁剪/涂鸦，可取消跳过）；编辑产物替换原图
+        this.setData({ avatarSheetVisible: false });
+        const edited = await editImage(file.tempFilePath);
+        this.setData({ avatarTemp: edited || file.tempFilePath, avatarPreset: '' }); // 上传优先于预设
       },
     });
   },
@@ -158,6 +160,12 @@ Page({
             dir: 'avatar',
             prefix: 'avatar_',
           });
+          if (up && up.tooLarge) {
+            loading.hide();
+            const mb = (up.sizeBytes / 1024 / 1024).toFixed(1);
+            wx.showToast({ title: `头像压缩后仍约 ${mb}MB，超过 1MB 上限，请换一张`, icon: 'none' });
+            return;
+          }
           if (up && up.blocked) {
             loading.hide();
             wx.showToast({ title: '头像包含不当内容', icon: 'none' });

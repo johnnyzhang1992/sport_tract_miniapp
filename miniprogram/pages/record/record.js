@@ -394,6 +394,12 @@ Page({
       if (photos && photos.length) {
         for (const f of photos) {
           const up = await uploadPhoto(f);
+          if (up && up.tooLarge) {
+            loading.hide();
+            const mb = (up.sizeBytes / 1024 / 1024).toFixed(1);
+            wx.showToast({ title: `照片压缩后仍约 ${mb}MB，超过 1MB 上限，请换一张`, icon: 'none' });
+            return;
+          }
           if (up && up.blocked) {
             loading.hide();
             wx.showToast({ title: '图片包含不当内容', icon: 'none' });

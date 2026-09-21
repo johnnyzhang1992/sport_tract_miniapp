@@ -1,7 +1,8 @@
-// 足迹新增/编辑表单：地点（wx.chooseLocation）→ 日期 → 标题 → 人物 → 描述 → 图片（≤3，压缩直传 OSS）→ 提交
+// 足迹新增/编辑表单：地点（wx.chooseLocation）→ 日期 → 标题 → 人物 → 描述 → 图片（≤3）→ 提交
+// 图片：点缩略图拉起微信原生编辑（裁剪/涂鸦/文字/马赛克）；提交时走「q50 检测副本 → q80 存档副本直传 OSS」
 // 保存成功后置 globalData.footprintsDirty，回 tab 时 onShow 重拉列表
 const api = require('../../../services/api');
-const { uploadPhoto } = require('../../../services/oss-upload');
+const { uploadPhoto, editImage } = require('../../../services/oss-upload');
 const MAX_PHOTOS = 3;
 
 Page({
@@ -115,22 +116,33 @@ Page({
     const i = Number(e.currentTarget.dataset.idx);
     this.setData({ photos: this.data.photos.filter((_, j) => j !== i) });
   },
-  compress(path) {
-    return new Promise((resolve) => {
-      wx.compressImage({ src: path, quality: 80, success: (r) => resolve(r.tempFilePath), fail: () => resolve(path) });
-    });
+  /** 点缩略图：拉起微信原生编辑（裁剪/涂鸦/文字/马赛克），结果替换该图；已存 OSS 的旧图不支持 */
+  async editPhoto(e) {
+    const i = Number(e.currentTarget.dataset.idx);
+    const p = this.data.photos[i];
+    if (!p) return;
+    if (!p.localPath) return wx.showToast({ title: '已保存的照片暂不支持编辑', icon: 'none' });
+    if (typeof wx.editImage !== 'function') {
+      return wx.showToast({ title: '当前微信版本不支持图片编辑', icon: 'none' });
+    }
+    const edited = await editImage(p.localPath);
+    if (edited) this.setData({ [`photos[${i}].localPath`]: edited });
   },
   // 中途失败重试会把已上传的对象留在 OSS（孤儿文件）：不回填 url 就不进库，
   // 换来的是"失败不丢已传图"，属既定取舍（后端删除足迹时按库内 URL 清理）
   async uploadPending() {
     const out = [];
-    for (const p of this.data.photos) {
+    for (let i = 0; i < this.data.photos.length; i++) {
+      const p = this.data.photos[i];
       if (!p.localPath) {
         out.push(p.url);
         continue;
       } // 已有图：保留（服务端 cleanUrl 归一签名）
-      const compressed = await this.compress(p.localPath);
-      const r = await uploadPhoto(compressed, { dir: 'footprints', prefix: 'fp_' });
+      const r = await uploadPhoto(p.localPath, { dir: 'footprints', prefix: 'fp_' });
+      if (r && r.tooLarge) {
+        const mb = (r.sizeBytes / 1024 / 1024).toFixed(1);
+        throw new Error(`第 ${i + 1} 张照片压缩后仍约 ${mb}MB，超过 1MB 上限，请换一张`);
+      }
       if (!r) throw new Error('照片上传失败，请重试');
       if (r.blocked) {
         wx.showToast({ title: '照片含违规内容已移除', icon: 'none' });
