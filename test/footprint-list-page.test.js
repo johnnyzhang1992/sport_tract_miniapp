@@ -34,6 +34,7 @@ let stopPullDownCalls = 0;
 global.wx = {
   showToast: (o) => toasts.push(o && o.title),
   navigateTo() {},
+  nextTick: (cb) => cb(),
   stopPullDownRefresh: () => { stopPullDownCalls++; },
 };
 let pageDef = null;
@@ -228,4 +229,131 @@ test('L6 详情/表单接线：点卡片走完整 DTO 快路径；保存与删�
 
   page.closeDetail();
   assert.equal(page.data.detailVisible, false);
+});
+
+const pad = (n) => String(n).padStart(2, '0');
+const fmt = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+test('L7 搜索：输入不请求；点搜索/回车才带 keyword 重拉；清空 ✕ 去词重搜', async () => {
+  resetEnv();
+  respond = pagedRespond([rec('a')]);
+  const page = makePage();
+  await page.loadAll();
+
+  page.onKeywordInput({ detail: { value: '西湖' } });
+  assert.equal(page.data.keywordInput, '西湖');
+  assert.equal(page.data.keyword, '', '输入框内容未提交前不生效');
+  assert.equal(apiCalls.length, 1, '输入不触发请求');
+
+  page.onSearch();
+  await flush();
+  assert.equal(page.data.keyword, '西湖');
+  assert.equal(page.data.filtered, true);
+  assert.equal(apiCalls[apiCalls.length - 1].params.keyword, '西湖');
+  assert.equal(apiCalls[apiCalls.length - 1].params.page, 1, '搜索重拉第一页');
+
+  page.onKeywordInput({ detail: { value: '  故宫  ' } });
+  page.onSearch();
+  await flush();
+  assert.equal(page.data.keyword, '故宫', '首尾空格被 trim');
+  assert.equal(page.data.keywordInput, '故宫', '回填去空格后的词');
+
+  page.onClearKeyword();
+  await flush();
+  assert.equal(page.data.keyword, '');
+  assert.equal(page.data.keywordInput, '');
+  assert.equal(page.data.filtered, false);
+  assert.equal('keyword' in apiCalls[apiCalls.length - 1].params, false, '清空后请求不带 keyword');
+});
+
+test('L8 时间筛选：默认全部不带区间；切月/翻页/抽屉都带对 from/to；切档偏移归零', async () => {
+  resetEnv();
+  respond = pagedRespond([rec('a')]);
+  const page = makePage();
+  page.onLoad(); // 真实生命周期：applyPeriod + loadAll
+  await flush();
+  assert.deepEqual(apiCalls[0].params, { page: 1, pageSize: 20 }, '默认「全部」不带 from/to');
+  assert.equal(page.data.activeRange, 'all');
+  assert.equal(page.data.filtered, false);
+
+  const now = new Date();
+  page.onRangeChange({ currentTarget: { dataset: { value: 'month' } } });
+  await flush();
+  assert.equal(page.data.periodLabel, `${now.getFullYear()}年${now.getMonth() + 1}月`);
+  assert.equal(apiCalls[apiCalls.length - 1].params.from, fmt(new Date(now.getFullYear(), now.getMonth(), 1)));
+  assert.equal(apiCalls[apiCalls.length - 1].params.to, fmt(new Date(now.getFullYear(), now.getMonth() + 1, 1)));
+  assert.equal(page.data.filtered, true, '时间筛选也算生效筛选');
+
+  page.onPrevPeriod();
+  await flush();
+  assert.equal(page.data.periodOffset, 1);
+  assert.equal(page.data.canGoNext, true);
+  assert.equal(apiCalls[apiCalls.length - 1].params.from, fmt(new Date(now.getFullYear(), now.getMonth() - 1, 1)));
+
+  page.onTapPeriodLabel();
+  assert.equal(page.data.periodOptions.length, 12, '月粒度最近 12 个月');
+  assert.equal(page.data.pickerScrollInto, 'period-1', '滚动定位到当前周期');
+  page.onSelectPeriod({ currentTarget: { dataset: { offset: 3 } } });
+  await flush();
+  assert.equal(page.data.periodOffset, 3);
+  const start = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+  assert.equal(apiCalls[apiCalls.length - 1].params.from, fmt(start));
+  assert.equal(apiCalls[apiCalls.length - 1].params.to, fmt(new Date(start.getFullYear(), start.getMonth() + 1, 1)));
+
+  page.onRangeChange({ currentTarget: { dataset: { value: 'year' } } });
+  await flush();
+  assert.equal(page.data.periodOffset, 0, '切档偏移归零');
+  assert.equal(apiCalls[apiCalls.length - 1].params.from, `${now.getFullYear()}-01-01`);
+
+  page.onRangeChange({ currentTarget: { dataset: { value: 'all' } } });
+  await flush();
+  assert.equal('from' in apiCalls[apiCalls.length - 1].params, false, '回「全部」不带区间');
+  assert.equal(page.data.filtered, false);
+  assert.equal(page.data.periodLabel, '');
+});
+
+test('L9 空态分档：有筛选才置 filtered；「清空筛选」清搜索并回全部', async () => {
+  resetEnv();
+  respond = () => Promise.resolve({ items: [], total: 0 });
+  const page = makePage();
+  page.onLoad();
+  await flush();
+  assert.equal(page.data.items.length, 0);
+  assert.equal(page.data.filtered, false, '无筛选空列表 → wxml 走原文案（去地图页记录）');
+
+  page.onKeywordInput({ detail: { value: '不存在的地方' } });
+  page.onSearch();
+  await flush();
+  assert.equal(page.data.filtered, true, '有筛选空列表 → wxml 走「没有匹配的足迹」+ 清空筛选');
+
+  page.onClearFilter();
+  await flush();
+  assert.equal(page.data.keyword, '');
+  assert.equal(page.data.keywordInput, '');
+  assert.equal(page.data.activeRange, 'all');
+  assert.equal(page.data.filtered, false);
+  assert.deepEqual(apiCalls[apiCalls.length - 1].params, { page: 1, pageSize: 20 }, '清空后回到无筛选请求');
+});
+
+test('L10 带筛选翻页：第二页请求仍携带 keyword 与 from/to，追加不覆盖', async () => {
+  resetEnv();
+  respond = pagedRespond([rec('a'), rec('b'), rec('c')]);
+  const page = makePage();
+  page.setData({ pageSize: 2 });
+  page.onLoad();
+  await flush();
+
+  page.onKeywordInput({ detail: { value: '西湖' } });
+  page.onSearch();
+  page.onRangeChange({ currentTarget: { dataset: { value: 'year' } } });
+  await flush();
+  assert.equal(page.data.hasMore, true, '3 条 / 每页 2 → 还有下一页');
+
+  page.onReachBottom();
+  await flush();
+  const last = apiCalls[apiCalls.length - 1].params;
+  assert.equal(last.page, 2);
+  assert.equal(last.keyword, '西湖', '翻页仍带搜索词');
+  assert.equal(last.from, `${new Date().getFullYear()}-01-01`, '翻页仍带时间区间');
+  assert.deepEqual(page.data.items.map((r) => r.id), ['a', 'b', 'c'], '第二页追加');
 });

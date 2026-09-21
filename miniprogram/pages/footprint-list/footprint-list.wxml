@@ -1,8 +1,50 @@
 <view class="container">
+  <!-- 搜索 + 时间筛选（顶部常驻；请求只带「已生效」的筛选，输入框内容不请求） -->
+  <view class="card filter-card">
+    <view class="search-row">
+      <image class="search-icon" src="/assets/icons/lucide-search.png" mode="aspectFit" />
+      <input
+        class="search-input"
+        value="{{keywordInput}}"
+        placeholder="搜标题 / 地点 / 同行的人"
+        placeholder-class="search-ph"
+        confirm-type="search"
+        bindinput="onKeywordInput"
+        bindconfirm="onSearch"
+      />
+      <view wx:if="{{keywordInput}}" class="search-clear" bindtap="onClearKeyword">✕</view>
+      <view class="search-btn" hover-class="search-btn-hover" bindtap="onSearch">搜索</view>
+    </view>
+    <view class="range-row">
+      <view
+        wx:for="{{ranges}}"
+        wx:key="value"
+        class="range-btn {{activeRange === item.value ? 'range-btn-active' : ''}}"
+        data-value="{{item.value}}"
+        bindtap="onRangeChange"
+      >{{item.label}}</view>
+    </view>
+    <view class="period-nav" wx:if="{{activeRange !== 'all'}}">
+      <view class="period-arrow" hover-class="period-arrow-hover" bindtap="onPrevPeriod">‹</view>
+      <view class="period-label" hover-class="period-label-hover" bindtap="onTapPeriodLabel">
+        <text>{{periodLabel}}</text>
+        <image class="period-label-caret" src="/assets/icons/lucide-chevron-down.svg" mode="aspectFit" />
+      </view>
+      <view
+        class="period-arrow {{canGoNext ? '' : 'period-arrow-disabled'}}"
+        hover-class="{{canGoNext ? 'period-arrow-hover' : ''}}"
+        bindtap="onNextPeriod"
+      >›</view>
+    </view>
+  </view>
+
   <view wx:if="{{loading}}" class="list-state">加载中…</view>
   <view wx:elif="{{error}}" class="list-state">{{error}} <text class="retry" bindtap="loadAll">重试</text></view>
   <block wx:else>
-    <view wx:if="{{items.length === 0}}" class="empty">还没有足迹，去地图页点右下角 ＋ 记录第一个去过的地方</view>
+    <view wx:if="{{items.length === 0}}" class="empty {{filtered ? 'empty-filtered' : ''}}">{{filtered ? '没有匹配的足迹' : '还没有足迹，去地图页点右下角 ＋ 记录第一个去过的地方'}}</view>
+    <view wx:if="{{items.length === 0 && filtered}}" class="empty-reset">
+      <view class="empty-reset-btn" hover-class="empty-reset-btn-hover" bindtap="onClearFilter">清空筛选</view>
+    </view>
     <!-- 分页列表：触底翻页闸门在 JS 侧（hasMore && loadingList），卡片字段见 toCard() -->
     <view
       wx:for="{{items}}"
@@ -42,4 +84,26 @@
     bind:saved="onFormSaved"
     bind:close="closeForm"
   />
+</view>
+
+<!-- 周期选择弹窗（底部抽屉，对齐统计页/运动报告页） -->
+<view class="picker-mask" wx:if="{{showPeriodPicker}}" bindtap="onClosePeriodPicker">
+  <view class="picker-sheet" catchtap="noop">
+    <view class="picker-head">
+      <text>选择周期</text>
+      <text class="picker-close" catchtap="onClosePeriodPicker">✕</text>
+    </view>
+    <scroll-view class="picker-list" scroll-y scroll-into-view="{{pickerScrollInto}}">
+      <view class="picker-grid">
+        <view
+          wx:for="{{periodOptions}}"
+          wx:key="offset"
+          id="period-{{item.offset}}"
+          class="picker-card {{item.selected ? 'picker-card-active' : ''}} {{item.compact ? 'picker-card-compact' : ''}}"
+          data-offset="{{item.offset}}"
+          bindtap="onSelectPeriod"
+        >{{item.label}}</view>
+      </view>
+    </scroll-view>
+  </view>
 </view>

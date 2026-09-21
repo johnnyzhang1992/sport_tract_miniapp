@@ -1,5 +1,6 @@
-// 足迹列表独立页（地图页左上「列表」入口进）：分页卡片列表 + 详情/表单半屏组件复用
+// 足迹列表独立页（地图页左上「列表」入口进）：搜索 + 时间筛选 + 分页卡片列表 + 详情/表单半屏组件复用
 const api = require('../../services/api');
+const { RANGES, PICKER_COUNT, periodRange, periodLabelOf } = require('../../utils/footprint-period.js');
 
 /**
  * 卡片展示字段在 JS 侧一次算好：
@@ -23,12 +24,27 @@ Page({
     error: '',
     items: [], // toCard 后的完整 DTO（点卡片直接开详情，不再二次请求）
     page: 1, pageSize: 20, total: 0, hasMore: true, loadingList: false,
+    // 筛选态：keywordInput 是输入框内容（不请求），keyword 是点「搜索」/回车后生效的词
+    keywordInput: '',
+    keyword: '',
+    ranges: RANGES,
+    activeRange: 'all', // 默认全部：列表默认行为与加筛选前一致
+    periodOffset: 0, // 往前的周期数（0=当前月/年）
+    periodLabel: '',
+    canGoNext: false,
+    showPeriodPicker: false,
+    periodOptions: [], // [{offset, label, compact, selected}]
+    pickerScrollInto: '',
+    filtered: false, // 是否有生效的筛选（空态文案与「清空筛选」入口按它分档）
     detailVisible: false,
     detailRecord: null,
     formVisible: false, // 从详情「编辑」进；本页无新增入口（新增在地图页 FAB）
     formRecord: null,
   },
-  onLoad() { this.loadAll(); },
+  onLoad() {
+    this.applyPeriod();
+    this.loadAll();
+  },
 
   onPullDownRefresh() { this.loadAll().finally(() => wx.stopPullDownRefresh()); },
 
@@ -45,6 +61,105 @@ Page({
       // page !== next 说明页码已被别处改动
       if (seq === this._seq && !this.data.loadingList && this.data.page === next) this.setData({ page: next - 1 });
     });
+  },
+
+  /* ------------------------------ 搜索与时间筛选 ------------------------------ */
+
+  /** 输入不请求：只同步输入框内容（生效词仍是 keyword） */
+  onKeywordInput(e) { this.setData({ keywordInput: e.detail.value }); },
+
+  /** 点「搜索」或键盘回车：输入词去首尾空格后落成生效词，重拉第一页 */
+  onSearch() {
+    const kw = (this.data.keywordInput || '').trim();
+    this.setData({ keywordInput: kw, keyword: kw });
+    this.syncFiltered();
+    this.loadAll();
+  },
+
+  /** 清空搜索：清输入框与生效词并立即重搜（时间筛选不动） */
+  onClearKeyword() {
+    if (!this.data.keywordInput && !this.data.keyword) return;
+    this.setData({ keywordInput: '', keyword: '' });
+    this.syncFiltered();
+    this.loadAll();
+  },
+
+  /** 时间档切换（月/年/全部）：偏移归零后重拉 */
+  onRangeChange(e) {
+    const value = e.currentTarget.dataset.value;
+    if (value === this.data.activeRange) return;
+    this.setData({ activeRange: value, periodOffset: 0 });
+    this.applyPeriod();
+    this.syncFiltered();
+    this.loadAll();
+  },
+
+  /** 翻到上一周期（更早） */
+  onPrevPeriod() {
+    this.setData({ periodOffset: this.data.periodOffset + 1 });
+    this.applyPeriod();
+    this.loadAll();
+  },
+
+  /** 翻回下一周期（当前周期后不可再翻） */
+  onNextPeriod() {
+    if (this.data.periodOffset <= 0) return;
+    this.setData({ periodOffset: this.data.periodOffset - 1 });
+    this.applyPeriod();
+    this.loadAll();
+  },
+
+  /** 根据当前档 + 偏移量算周期区间与文案（「全部」无周期）；_period 供 fetchPage 取 from/to */
+  applyPeriod() {
+    const { activeRange, periodOffset } = this.data;
+    if (activeRange === 'all') {
+      this._period = null;
+      this.setData({ periodLabel: '', canGoNext: false });
+      return;
+    }
+    const p = periodRange(activeRange, periodOffset);
+    this._period = p;
+    this.setData({ periodLabel: periodLabelOf(activeRange, p), canGoNext: periodOffset > 0 });
+  },
+
+  /** 打开周期抽屉：按粒度生成最近 N 个周期选项（对齐统计页），nextTick 滚动定位到当前项 */
+  onTapPeriodLabel() {
+    const { activeRange, periodOffset } = this.data;
+    if (activeRange === 'all') return;
+    const count = PICKER_COUNT[activeRange] || 12;
+    const options = [];
+    for (let offset = 0; offset < count; offset++) {
+      const label = periodLabelOf(activeRange, periodRange(activeRange, offset));
+      options.push({ offset, label, compact: label.length > 12, selected: offset === periodOffset });
+    }
+    this.setData({ showPeriodPicker: true, periodOptions: options, pickerScrollInto: '' });
+    wx.nextTick(() => {
+      this.setData({ pickerScrollInto: `period-${this.data.periodOffset}` });
+    });
+  },
+  onClosePeriodPicker() { this.setData({ showPeriodPicker: false }); },
+
+  /** 抽屉里选中某个周期：选中当前项只关抽屉，选别的项才切换重拉 */
+  onSelectPeriod(e) {
+    const offset = Number(e.currentTarget.dataset.offset);
+    this.setData({ showPeriodPicker: false });
+    if (offset === this.data.periodOffset) return;
+    this.setData({ periodOffset: offset });
+    this.applyPeriod();
+    this.loadAll();
+  },
+
+  /** 清空筛选（空态引导）：搜索清空 + 时间回「全部」 */
+  onClearFilter() {
+    this.setData({ keywordInput: '', keyword: '', activeRange: 'all', periodOffset: 0 });
+    this.applyPeriod();
+    this.syncFiltered();
+    this.loadAll();
+  },
+
+  /** filtered 标记：空态文案与「清空筛选」入口按它分档 */
+  syncFiltered() {
+    this.setData({ filtered: !!(this.data.keyword || this.data.activeRange !== 'all') });
   },
 
   async loadAll() {
@@ -75,8 +190,15 @@ Page({
   fetchPage(seq) {
     this.setData({ loadingList: true });
     const page = this.data.page;
+    // 请求只带生效中的筛选（输入框里没提交的词不带）；「全部」档不带 from/to
+    const params = { page, pageSize: this.data.pageSize };
+    if (this.data.keyword) params.keyword = this.data.keyword;
+    if (this._period) {
+      params.from = this._period.from;
+      params.to = this._period.to;
+    }
     return api
-      .get('/footprint-records', { page, pageSize: this.data.pageSize })
+      .get('/footprint-records', params)
       .then((data) => {
         if (seq !== this._seq) return;
         // page 1（首屏/刷新）替换整页；page > 1（触底）追加
