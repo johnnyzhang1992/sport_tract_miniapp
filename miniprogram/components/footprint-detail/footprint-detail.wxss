@@ -17,6 +17,10 @@
   border-radius: 24rpx 24rpx 0 0;
   padding: 0 32rpx calc(24rpx + env(safe-area-inset-bottom));
 }
+/* tab 页的弹层：底边在 tabBar 上方，不加屏幕安全区 */
+.sheet-no-safe {
+  padding-bottom: 24rpx;
+}
 .sheet-head {
   display: flex;
   align-items: center;

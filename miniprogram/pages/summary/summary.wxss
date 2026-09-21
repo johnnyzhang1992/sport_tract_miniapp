@@ -39,6 +39,13 @@
 .sub {
   margin-top: 16rpx;
 }
+/* 运动数据卡片内的口径说明（脚注，位于指标网格下方） */
+.dist-note {
+  margin-top: 16rpx;
+  font-size: 22rpx;
+  line-height: 1.5;
+  color: #ad6800;
+}
 .marker-item {
   display: flex;
   align-items: flex-start;
@@ -59,10 +66,13 @@
 }
 .actions {
   display: flex;
+  gap: 24rpx;
   padding-bottom: 40rpx;
 }
-.btn-discard {
-  margin-right: 20rpx;
+/* 两个按钮等分整行（t-button 带 block 时各占一半，gap 负责中间间距） */
+.actions > t-button {
+  flex: 1;
+  min-width: 0;
 }
 
 .title-icon {
@@ -72,13 +82,14 @@
   vertical-align: middle;
 }
 
-/* 轨迹无效提示（点数过少/距离过短，保存时被服务端自动作废） */
+/* 轨迹无效提示（点数过少/距离过短，保存时被服务端自动作废）：
+   与 .card 同款白底卡片，左右边距交给 .container，仅边框用警示色区分 */
 .invalid-hint {
-  margin: 20rpx 32rpx 0;
-  padding: 16rpx 24rpx;
-  background: #fff7e6;
+  margin: 0 0 24rpx;
+  padding: 24rpx;
+  background: #fff;
   border: 1rpx solid #ffd591;
-  border-radius: 12rpx;
+  border-radius: 16rpx;
   font-size: 26rpx;
   color: #ad6800;
   line-height: 1.5;

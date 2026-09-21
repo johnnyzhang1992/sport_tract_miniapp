@@ -15,6 +15,8 @@ Component({
   properties: {
     visible: { type: Boolean, value: false },
     record: { type: Object, value: null }, // 传记录 = 编辑态（详情弹窗的完整 DTO 直接回填）
+    // tab 页的弹层底边在 tabBar 上方，不含屏幕底部安全区，由页面传 false
+    safeBottom: { type: Boolean, value: true },
   },
   observers: {
     // 只在「打开」时初始化：可见期间父级换 record 不重来，避免覆盖用户正在编辑的内容

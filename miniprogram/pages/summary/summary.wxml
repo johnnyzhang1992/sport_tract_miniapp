@@ -28,6 +28,8 @@
     <view class="text-muted sub" wx:if="{{stats.elevationGain}}">
       累计爬升 {{stats.elevationGain}}m · 最高海拔 {{stats.maxAltitude || '—'}}m
     </view>
+    <!-- 距离口径说明：保存时服务端清洗轨迹后重算，通常比运动中显示的略短 -->
+    <view class="text-muted dist-note">保存时会剔除 GPS 漂移点并重算，距离通常比运动中缩短 1%~5%。</view>
   </view>
 
   <!-- 打点时间线 -->

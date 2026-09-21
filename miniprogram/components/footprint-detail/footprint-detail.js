@@ -6,6 +6,8 @@ Component({
   properties: {
     visible: { type: Boolean, value: false },
     record: { type: Object, value: null }, // geo/列表卡的轻量 DTO 即可，缺描述/人物/照片时补拉
+    // tab 页的弹层底边在 tabBar 上方，不含屏幕底部安全区，由页面传 false
+    safeBottom: { type: Boolean, value: true },
   },
   observers: {
     'visible, record': function (visible) {

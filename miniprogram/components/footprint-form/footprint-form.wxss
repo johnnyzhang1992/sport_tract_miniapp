@@ -44,92 +44,93 @@
   box-sizing: border-box;
   padding: 16rpx 32rpx calc(24rpx + env(safe-area-inset-bottom));
 }
+/* tab 页的弹层：底边在 tabBar 上方，不加屏幕安全区 */
+.fp-body-no-safe {
+  padding-bottom: 24rpx;
+}
 
-/* —— 以下表单样式与 components/marker-form、app.wxss 既有表单卡片风格对齐 —— */
-.field-label {
-  font-size: 28rpx;
-  color: #666;
+/* —— 表单分组：白底发丝边框卡 + 行式布局（标签左、值右），内容与弹层标题同一条左基线 —— */
+.fgroup {
+  background: #fff;
+  border: 1rpx solid #eef0f3;
+  border-radius: 16rpx;
   margin-bottom: 16rpx;
+  overflow: hidden;
 }
-.field-input {
-  font-size: 32rpx;
-  padding: 12rpx 0;
-  border-bottom: 2rpx solid #eee;
-}
-.field-tip {
-  margin-top: 12rpx;
-  font-size: 22rpx;
-}
-
-/* 地点 */
-.loc-picked {
-  background: #eef4ff;
-  border-radius: 12rpx;
-  padding: 20rpx 24rpx;
-  margin-bottom: 20rpx;
-}
-.loc-name {
-  font-size: 30rpx;
-  color: #1f2329;
-  font-weight: 500;
-}
-.loc-address {
-  margin-top: 6rpx;
-}
-.loc-empty-tip {
-  margin-bottom: 16rpx;
-}
-.loc-actions {
-  display: flex;
-}
-.loc-btn {
-  flex: 1;
-  text-align: center;
-  padding: 20rpx 0;
-  border-radius: 12rpx;
-  background: #f7f8fa;
-  color: #2b6cf6;
-  font-size: 28rpx;
-}
-.loc-btn:last-child {
-  margin-right: 0;
-}
-.loc-btn-hover {
-  background: #eef4ff;
-}
-
-/* 日期 picker */
-.picker-value {
-  font-size: 32rpx;
-  padding: 12rpx 0;
-  border-bottom: 2rpx solid #eee;
-  color: #1f2329;
-}
-
-/* 同行的人 */
-.people-row {
+.frow {
   display: flex;
   align-items: center;
+  min-height: 88rpx;
+  padding: 12rpx 24rpx;
 }
-.people-input {
+.frow-tap {
+  /* 整行可点（地点/日期），点击反馈与浮层入口同色 */
+}
+.frow-hover {
+  background: #f7f8fa;
+}
+.flabel {
+  flex: none;
+  width: 132rpx;
+  font-size: 30rpx;
+  color: #1f2329;
+}
+.fval {
   flex: 1;
-  margin-right: 20rpx;
+  text-align: right;
+  font-size: 30rpx;
+  color: #1f2329;
+  word-break: break-all;
 }
-.people-add {
-  padding: 12rpx 32rpx;
-  border-radius: 999rpx;
-  background: #eef4ff;
-  color: #2b6cf6;
+.fval-ph {
+  color: #c2c7d0;
+}
+.fval-sub {
+  margin-top: 4rpx;
+  font-size: 22rpx;
+  color: #8a93a6;
+}
+.farrow {
+  flex: none;
+  margin-left: 8rpx;
+  color: #c2c7d0;
+  font-size: 32rpx;
+  line-height: 1;
+}
+/* 输入行：文字右对齐，占位色与 .fval-ph 一致 */
+.finput {
+  flex: 1;
+  min-width: 0;
+  font-size: 30rpx;
+  color: #1f2329;
+  text-align: right;
+}
+.fph {
+  color: #c2c7d0;
+}
+.fadd {
+  flex: none;
+  margin-left: 16rpx;
   font-size: 28rpx;
+  color: #2b6cf6;
 }
-.people-add-hover {
-  background: #dce7fd;
+.fadd-hover {
+  opacity: 0.6;
 }
-.people-tags {
+/* 组内说明行（22rpx 次级灰，与标签同一条左基线） */
+.fnote {
+  padding: 0 24rpx 16rpx;
+  font-size: 22rpx;
+  line-height: 1.5;
+  color: #8a93a6;
+}
+
+/* 同行的人：标签（可点删） */
+.fpeople {
   display: flex;
   flex-wrap: wrap;
   gap: 16rpx;
-  margin-top: 20rpx;
+  padding: 0 24rpx 16rpx;
 }
 .people-tag {
   display: inline-flex;
@@ -146,21 +147,31 @@
   font-size: 30rpx;
 }
 
-/* 描述 */
-.desc-input {
+/* 非行式控件（描述/照片）：标签在上，控件占满整行 */
+.flabel-block {
+  padding: 24rpx 24rpx 0;
+  font-size: 30rpx;
+  color: #1f2329;
+}
+.ftextarea-wrap {
+  padding: 16rpx 24rpx 8rpx;
+}
+.ftextarea {
   width: 100%;
-  height: 160rpx;
+  height: 180rpx;
+  padding: 16rpx 24rpx;
+  box-sizing: border-box;
   background: #f7f8fa;
   border-radius: 12rpx;
-  padding: 16rpx 20rpx;
-  box-sizing: border-box;
   font-size: 28rpx;
+  line-height: 1.5;
 }
 
 /* 图片九宫格（度量对齐 components/marker-form） */
 .photo-grid {
   display: flex;
   flex-wrap: wrap;
+  padding: 16rpx 24rpx 0;
 }
 .photo-item {
   position: relative;
@@ -212,7 +223,7 @@
   justify-content: center;
   line-height: 1;
   font-size: 32rpx;
-  margin-top: 8rpx;
+  margin-top: 24rpx;
 }
 .submit-btn[disabled] {
   background: #cdd8f0;
