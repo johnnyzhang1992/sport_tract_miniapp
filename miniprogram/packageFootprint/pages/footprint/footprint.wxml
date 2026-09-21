@@ -12,18 +12,20 @@
     </view>
   </view>
 
-  <!-- 真实中国地图（echarts）。分享预览打开期间藏画布：canvas 同层合成会盖在弹窗上（模拟器实测重影）；
+  <!-- 真实中国地图（echarts）。分享预览/全屏打开期间藏画布：canvas 同层合成会盖在弹窗与全屏遮罩上（模拟器实测重影）；
        藏内层组件、外层容器高度保留 → 卡片不塌陷、页面不跳动 -->
   <view class="card map-card">
     <view class="map-canvas">
-      <ec-canvas id="footprintMap" canvas-id="footprintMap" class="{{sharePreview ? 'map-hidden' : ''}}" ec="{{ ec }}"></ec-canvas>
+      <ec-canvas id="footprintMap" canvas-id="footprintMap" class="{{sharePreview || fullscreen ? 'map-hidden' : ''}}" ec="{{ ec }}"></ec-canvas>
     </view>
     <view class="zoom-controls">
       <view class="zoom-btn" bindtap="zoomIn">+</view>
       <view class="zoom-btn" bindtap="zoomOut">−</view>
     </view>
-    <view class="fullscreen-btn share-btn" bindtap="openSharePreview"><image class="btn-icon" src="/assets/icons/lucide-share.png" mode="aspectFit" /><text>分享</text></view>
-    <view class="fullscreen-btn" bindtap="openFullscreen"><image class="btn-icon" src="/assets/icons/lucide-maximize.png" mode="aspectFit" /><text>全屏</text></view>
+    <view class="map-actions">
+      <view class="fullscreen-btn" bindtap="openSharePreview"><image class="btn-icon" src="/assets/icons/lucide-share.png" mode="aspectFit" /><text>分享</text></view>
+      <view class="fullscreen-btn" bindtap="openFullscreen"><image class="btn-icon" src="/assets/icons/lucide-maximize.png" mode="aspectFit" /><text>全屏</text></view>
+    </view>
   </view>
 
   <!-- 全屏地图弹窗 -->

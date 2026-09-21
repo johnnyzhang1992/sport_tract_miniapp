@@ -110,6 +110,96 @@ ec-canvas {
   display: block;
   background: #f4f6fa; /* 浅背景色 */
 }
+
+/* 地图控件（+/− 缩放、全屏；度量对齐足迹页 .zoom-* / .map-actions） */
+.map-actions {
+  position: absolute;
+  right: 48rpx;
+  bottom: 48rpx; /* 右下角，离地图内容远一点 */
+  z-index: 10; /* 确保盖在 canvas 之上 */
+  display: flex;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
+  border-radius: 12rpx;
+  overflow: hidden;
+}
+.fullscreen-btn {
+  box-sizing: border-box;
+  padding: 8rpx 16rpx;
+  font-size: 24rpx;
+  color: #4e5969;
+  background: rgba(255, 255, 255, 0.82); /* 半透明：地图透一点出来，又不影响读字 */
+  border: 1rpx solid #e5e6eb; /* 白底地图上也可见 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-icon {
+  width: 28rpx;
+  height: 28rpx;
+  margin-right: 8rpx;
+  flex-shrink: 0;
+}
+.close-icon {
+  width: 36rpx;
+  height: 36rpx;
+}
+.zoom-controls {
+  position: absolute;
+  right: 48rpx; /* 与全屏按钮距右侧一致 */
+  bottom: 120rpx; /* 全屏按钮上方 */
+  z-index: 10; /* 确保盖在 canvas 之上 */
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
+  border-radius: 12rpx;
+  overflow: hidden;
+}
+.zoom-btn {
+  width: 48rpx;
+  height: 48rpx;
+  background: rgba(255, 255, 255, 0.82); /* 半透明：地图透一点出来，又不影响读字 */
+  color: #1f2329;
+  font-size: 28rpx;
+  border: 1rpx solid #e5e6eb; /* 白底地图上也可见 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.zoom-btn:first-child {
+  border-bottom: 1rpx solid #e5e6eb;
+}
+/* 全屏内缩放按钮（右下角） */
+.fs-zoom {
+  bottom: 48rpx;
+  right: 48rpx;
+}
+
+/* 全屏地图 */
+.fullscreen-mask {
+  position: fixed;
+  inset: 0;
+  background: #fff;
+  z-index: 10000;
+}
+.fullscreen-mask ec-canvas {
+  width: 100%;
+  height: 100vh;
+  display: block;
+}
+.fullscreen-close {
+  position: absolute;
+  top: calc(24rpx + env(safe-area-inset-top));
+  left: 24rpx;
+  z-index: 10001;
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  padding: 14rpx;
+  box-sizing: border-box;
+}
+
 .tip {
   padding: 24rpx 0;
   text-align: center;

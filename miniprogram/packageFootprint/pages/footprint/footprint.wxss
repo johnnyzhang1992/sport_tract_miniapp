@@ -127,24 +127,30 @@ ec-canvas {
 .map-card {
   position: relative;
 }
-.fullscreen-btn {
+/* 分享/全屏按钮（图标 + 文案，横向成组共用阴影与中缝）：留足点击区域 */
+.map-actions {
   position: absolute;
-  bottom: 48rpx; /* 右下角，离地图内容远一点 */
   right: 48rpx;
+  bottom: 48rpx; /* 右下角，离地图内容远一点 */
   z-index: 10; /* 确保盖在 canvas 之上 */
-  background: #fff;
-  border-radius: 999rpx;
-  padding: 10rpx 22rpx;
+  display: flex;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
+  border-radius: 12rpx;
+  overflow: hidden;
+}
+.fullscreen-btn {
+  box-sizing: border-box;
+  padding: 8rpx 16rpx;
   font-size: 24rpx;
   color: #4e5969;
+  background: rgba(255, 255, 255, 0.82); /* 半透明：地图透一点出来，又不影响读字 */
   border: 1rpx solid #e5e6eb; /* 白底地图上也可见 */
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
   display: flex;
   align-items: center;
+  justify-content: center;
 }
-/* 分享按钮：全屏按钮左侧（全屏按钮约 128rpx 宽 + 间距） */
-.share-btn {
-  right: 192rpx;
+.fullscreen-btn:first-child {
+  border-right: 1rpx solid #e5e6eb;
 }
 .btn-icon {
   width: 28rpx;
@@ -195,7 +201,7 @@ ec-canvas {
 .zoom-btn {
   width: 48rpx;
   height: 48rpx;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.82); /* 半透明：地图透一点出来，又不影响读字 */
   color: #1f2329;
   font-size: 28rpx;
   border: 1rpx solid #e5e6eb; /* 白底地图上也可见 */

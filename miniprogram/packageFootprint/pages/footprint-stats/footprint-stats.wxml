@@ -24,13 +24,31 @@
     </view>
   </view>
 
-  <!-- 点亮地图（只保留地图本身：分享/全屏/省份下钻/城市列表都不在本页）
+  <!-- 点亮地图（只保留地图本身：省份下钻/城市列表不在本页）
        canvas 是独立合成层，会盖住普通 view（既有点亮地图页的省份弹窗同样如此）：
-       抽屉/分享预览打开期间把画布 display:none 藏起来（visibility 实测无效，且不销毁 canvas 省去重挂重绘）。
-       藏的是内层 ec-canvas 而非 .map-canvas：容器高度保留，弹层打开时下方内容不会跳动 -->
+       抽屉/分享预览/全屏打开期间把画布 display:none 藏起来（visibility 实测无效，且不销毁 canvas 省去重挂重绘）。
+       藏的是内层 ec-canvas 而非 .map-canvas：容器高度保留，弹层打开时下方内容不会跳动。
+       全屏也要藏卡片画布：否则它会穿透全屏白底遮罩，屏上出现「两套地图」（模拟器实测，两个南海诸岛框） -->
   <view class="card map-card">
     <view class="map-canvas">
-      <ec-canvas id="litMap" canvas-id="litMap" class="{{showPeriodPicker || sharePreview ? 'map-hidden' : ''}}" ec="{{ ec }}"></ec-canvas>
+      <ec-canvas id="litMap" canvas-id="litMap" class="{{showPeriodPicker || sharePreview || fullscreen ? 'map-hidden' : ''}}" ec="{{ ec }}"></ec-canvas>
+    </view>
+    <view class="zoom-controls">
+      <view class="zoom-btn" bindtap="zoomIn">+</view>
+      <view class="zoom-btn" bindtap="zoomOut">−</view>
+    </view>
+    <view class="map-actions">
+      <view class="fullscreen-btn" bindtap="openFullscreen"><image class="btn-icon" src="/assets/icons/lucide-maximize.png" mode="aspectFit" /><text>全屏</text></view>
+    </view>
+  </view>
+
+  <!-- 全屏地图弹窗（另起一个 ec-canvas：进入时按当前周期数据绘制，关闭销毁重建） -->
+  <view class="fullscreen-mask" wx:if="{{fullscreen}}">
+    <view class="fullscreen-close" bindtap="closeFullscreen"><image class="close-icon" src="/assets/icons/lucide-x.png" mode="aspectFit" /></view>
+    <ec-canvas id="fsMap" canvas-id="fsMap" class="{{sharePreview ? 'map-hidden' : ''}}" ec="{{ fsEc }}"></ec-canvas>
+    <view class="zoom-controls fs-zoom">
+      <view class="zoom-btn" bindtap="zoomIn">+</view>
+      <view class="zoom-btn" bindtap="zoomOut">−</view>
     </view>
   </view>
 
