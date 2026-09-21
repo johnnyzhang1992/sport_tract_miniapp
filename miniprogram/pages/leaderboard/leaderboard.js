@@ -660,4 +660,13 @@ Page({
       path: '/pages/leaderboard/leaderboard',
     };
   },
+
+  /** 分享到朋友圈（单页模式，进入后仅浏览榜单内容） */
+  onShareTimeline() {
+    const n = this.data.totalUsers || 0;
+    return {
+      title: n > 0 ? `运动榜 · 已有${n}位迹路者点亮地图` : '运动榜',
+      query: '',
+    };
+  },
 });

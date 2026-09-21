@@ -64,4 +64,13 @@ Page({
       path: `/pages/topic/topic${t ? `?id=${t.id}` : ''}`,
     };
   },
+
+  /** 分享到朋友圈（单页模式） */
+  onShareTimeline() {
+    const t = this.data.topic;
+    return {
+      title: t ? t.title : '小迹一下 · 专题',
+      query: t ? `id=${t.id}` : '',
+    };
+  },
 });
