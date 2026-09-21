@@ -38,6 +38,7 @@
       <view class="zoom-btn" bindtap="zoomOut">−</view>
     </view>
     <view class="map-actions">
+      <view class="fullscreen-btn" bindtap="openSharePreview"><image class="btn-icon" src="/assets/icons/lucide-share.png" mode="aspectFit" /><text>分享</text></view>
       <view class="fullscreen-btn" bindtap="openFullscreen"><image class="btn-icon" src="/assets/icons/lucide-maximize.png" mode="aspectFit" /><text>全屏</text></view>
     </view>
   </view>
