@@ -1,12 +1,26 @@
-// 足迹 tab 主页：地图（原生 marker 聚合 + 详情弹窗）/ 列表（Task 6）切换 + 数据加载
+// 足迹 tab 主页：地图（本地网格聚合 + 自绘小圆气泡 marker / 详情弹窗）/ 列表（Task 6）切换 + 数据加载
 const api = require('../../services/api');
 const geo = require('../../utils/footprint-geo');
 
 const MAP_ID = 'footprintMap';
-/** map scale 上限（文档 scale: 3~20）：原生聚合到顶仍并在一起的簇（同坐标点）走成员列表兜底 */
+/** map scale 上限（文档 scale: 3~20）：到顶仍同格（同坐标点本地网格也拆不开）→ 成员半屏列表兜底 */
 const MAX_SCALE = 20;
+/** 点簇气泡一次放大的层级步长（对齐原生 zoomOnClick 手感） */
+const EXPAND_ZOOM_STEP = 2;
 /** 视野由程序改动后的静默窗口：期间忽略 regionchange 回读，避免自激 */
 const PROGRAMMATIC_CAMERA_MS = 900;
+/** marker id 分段（微信 map 的 markerId 是数字）：1..N = records 下标 + 1；≥ 基准则为自绘聚合簇 */
+const CLUSTER_ID_BASE = 100000;
+
+/** —— 自绘簇气泡样式（用户要求尺寸/配色可控，直接改这四个常量）——
+ * 原生默认聚合簇实测不可缩（3104c7c 给 initMarkerCluster 加的 size/color 等参数被运行时忽略），
+ * 故簇气泡改回离屏 canvas 自绘小圆：直径 24 CSS px，画布按 2x（48px）出图保证清晰度 */
+const CLUSTER_BUBBLE_SIZE = 24; // marker 显示直径（CSS px）
+const CLUSTER_BG_COLOR = '#2b6cf6';
+const CLUSTER_TEXT_COLOR = '#ffffff';
+const CLUSTER_BORDER_WIDTH = 2; // 白描边（CSS px，画布上 ×2）
+/** 聚合簇数字气泡缓存（同 track-map 公里标做法：离屏 canvas 画好 → tempFilePath 按 count 缓存） */
+const CLUSTER_ICON_CACHE = {};
 
 /**
  * 列表卡展示字段在 JS 侧一次算好：
@@ -32,12 +46,51 @@ function mapViewport() {
   return { width, height: Math.max(200, height - (112 * width) / 750) };
 }
 
+/** 画聚合簇小圆气泡（蓝底白字 + 白描边，2x 出图）；>2 位数字逐级缩字号防溢出。
+ *  不支持离屏 canvas 时返回 ''，调用方退化为默认点 + callout 数字，聚合仍可读 */
+function buildClusterIcon(count) {
+  const key = 'fp-cluster-' + count;
+  if (CLUSTER_ICON_CACHE[key]) return Promise.resolve(CLUSTER_ICON_CACHE[key]);
+  return new Promise((resolve) => {
+    try {
+      const px = CLUSTER_BUBBLE_SIZE * 2;
+      const border = CLUSTER_BORDER_WIDTH * 2;
+      const canvas = wx.createOffscreenCanvas({ type: '2d', width: px, height: px });
+      const ctx = canvas.getContext('2d');
+      ctx.beginPath();
+      ctx.arc(px / 2, px / 2, px / 2 - border / 2, 0, Math.PI * 2);
+      ctx.fillStyle = CLUSTER_BG_COLOR;
+      ctx.fill();
+      ctx.lineWidth = border;
+      ctx.strokeStyle = CLUSTER_TEXT_COLOR;
+      ctx.stroke();
+      ctx.fillStyle = CLUSTER_TEXT_COLOR;
+      const digits = String(count).length;
+      ctx.font = 'bold ' + (digits >= 4 ? 11 : digits === 3 ? 13 : digits === 2 ? 16 : 19) + 'px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(count), px / 2, px / 2 + 1);
+      wx.canvasToTempFilePath({
+        canvas,
+        success: (r) => resolve(r.tempFilePath),
+        fail: () => resolve(''),
+      });
+    } catch (e) {
+      resolve('');
+    }
+  }).then((path) => {
+    if (path) CLUSTER_ICON_CACHE[key] = path;
+    return path;
+  });
+}
+
 Page({
   data: {
     mode: 'map', // map | list
     loading: true,
     error: '',
     records: [], // /geo 轻量点缓存 {id,title,visitDate,latitude,longitude,coverPhoto}
+    markers: [], // 本地网格聚合产物：叶 marker + 自绘簇气泡 marker，声明式绑给 <map>
     center: { latitude: 30.5, longitude: 114.3 }, // 视野由 fitBounds 覆盖，这里只是无数据时的兜底
     scale: 12,
     items: [], page: 1, pageSize: 20, total: 0, hasMore: true, loadingList: false,
@@ -56,26 +109,24 @@ Page({
   async loadAll() {
     // 请求序号守卫：只应用最后一次结果，防竞态
     const seq = (this._seq = (this._seq || 0) + 1);
-    // 仅首屏（records/items 都还没内容）才进 loading 态；下拉/footprintsDirty 刷新保留已渲染内容，防闪屏
+    // 仅首屏（records/items 都还没内容）才进 loading 态；刷新保留已渲染内容，防闪屏
     const firstLoad = this.data.records.length === 0 && this.data.items.length === 0;
-    this.setData(firstLoad ? { loading: true, error: '' } : { error: '' }, () => this.trackMapNode());
+    this.setData(firstLoad ? { loading: true, error: '' } : { error: '' });
     try {
       await Promise.all([this.loadGeo(seq), this.reloadList(seq)]);
       // 守卫同上：刷新期间的旧请求回来不能把 loadingList 复位成失败态之外的值
       if (seq !== this._seq) return;
-      // setData 回调里 map 节点已渲染：消费挂起的原生聚合 marker（冷启动首屏唯一注入路径；
-      // 实测 map 的 bindload 在本模拟器不触发，故不能只靠 onMapLoad）
-      this.setData({ loading: false }, () => this.syncNativeMarkers());
+      this.setData({ loading: false });
     } catch (e) {
       if (seq !== this._seq) return;
       // 复位 loadingList，否则 Task 6 触底闸门会卡死或重复发请求
       this.setData({ loading: false, loadingList: false });
       if (firstLoad) {
         // 首屏失败没有可展示的内容 → 整页错误态
-        this.setData({ error: e.message || '加载失败' }, () => this.trackMapNode());
+        this.setData({ error: e.message || '加载失败' });
       } else {
         // 刷新失败：已渲染内容仍然可用，只提示不打断（整页错误态留给首屏）
-        this.setData({ error: '' }, () => this.trackMapNode());
+        this.setData({ error: '' });
         wx.showToast({ title: e.message || '刷新失败', icon: 'none' });
       }
     }
@@ -137,26 +188,16 @@ Page({
   },
 
   /**
-   * 由 records 生成 marker 并注入原生聚合（官方 map「marker 聚合」：initMarkerCluster + addMarkers，基础库 ≥2.8.0）。
-   * 修复轮模拟器实测（证据见 task-5-report Fix round 1）：自带蓝底数字气泡正常渲染、
-   * 稀疏孤点走普通 marker（iconPath + bindmarkertap），契约不变：markerId = records 下标 + 1、openPopup(record)。
-   * 要点（按官方文档与社区坑）：
-   * - 原生聚合要求 marker 由 MapContext.addMarkers 命令式注入（声明式 markers 属性不参与聚合），
-   *   故 wxml 的 map 不绑 markers 属性
-   * - enableDefaultStyle:true —— 地图自带聚合簇气泡（需求原话「地图自带的聚合簇」）；
-   *   社区坑：false 时簇点击事件在部分端不派发，且簇图标要自备
-   * - zoomOnClick:true —— 点簇原生放大展开；展开后的叶 marker 点击走 bindmarkertap → openPopup
-   * - 实测模拟器里带 joinCluster 的孤点也会被画成「1」字气泡，与「稀疏区域直接展示点」不符：
-   *   joinCluster 只给本地网格（geo.gridCluster）判定为多点同处的点
-   * - 注入时机：marker 只能投给「已存在的 map 节点」。wxml 的 loading / error 闸门会把整块
-   *   （含 map）挡在节点树外，冷启动首屏必然处于该状态，所以 buildMarkers 里不直接消费，
-   *   payload 留在 _pendingNative，由渲染驱动的钩子（setData({loading:false}) 回调 / bindload /
-   *   switchMode 回调）注入；节点已挂载（下拉刷新、dirty 刷新）时同一条路径就地注入
-   * fit=false（保留 Task 4 语义）只重投 marker，不动视野。
+   * 由 records 生成 markers（本地网格聚合 + 自绘小圆气泡，<map> 声明式 markers 绑定）。
+   * 原生聚合已整体废弃：3104c7c 实测默认簇气泡不可缩（initMarkerCluster 的 size/color 参数被运行时忽略），
+   * 组件内网格聚合（utils/footprint-geo.js#gridCluster）重新成为唯一路线，marker 全部回到 setData：
+   * 挂载时序不再有问题——loading/error 闸门或模式切换把 map 节点重建时，声明式属性自动带上最新 markers。
+   * fit=false（用户缩放后重建聚合）只换 marker，不动视野，避免和 regionchange 互相打断。
+   * 契约：叶 marker id = records 下标 + 1；簇 marker id = CLUSTER_ID_BASE + 簇在 _clusters 中的下标。
    */
   buildMarkers(opts) {
     const fit = !opts || opts.fit !== false;
-    // 簇图标注入是异步的：同样要防竞态，旧一次构建不能覆盖新一批 marker
+    // 簇图标是离屏 canvas 异步产出的：同样要防竞态，旧一次构建不能覆盖新一批 markers
     const seq = this._seq;
     const records = this.data.records;
     const points = [];
@@ -166,7 +207,7 @@ Page({
       if (Number.isFinite(latitude) && Number.isFinite(longitude)) points.push({ index: i, latitude, longitude });
     });
 
-    // 先定视野再分桶：joinCluster 判定按最终视野的 zoom 做，否则簇的疏密对不上
+    // 先定视野再聚合：格子按屏幕像素切（utils/footprint-geo.js），zoom 必须和最终视野一致，否则簇的疏密对不上
     const patch = {};
     if (points.length && fit) {
       const fitted = geo.fitBounds(points, mapViewport());
@@ -177,119 +218,59 @@ Page({
     }
     const zoom = this._gridZoom || this.data.scale;
     const clusters = geo.gridCluster(points, zoom);
-    const inCluster = {};
-    clusters.forEach((c) => {
-      if (c.count > 1) c.members.forEach((i) => { inCluster[i] = true; });
-    });
-    const markers = points.map((p) => ({
-      id: p.index + 1, // 契约：marker id = records 下标 + 1
-      latitude: p.latitude,
-      longitude: p.longitude,
-      joinCluster: !!inCluster[p.index],
-      iconPath: '/assets/icons/marker-dot.png',
-      width: 18,
-      height: 18,
-      anchor: { x: 0.5, y: 0.5 },
-    }));
-    // 顺序很重要：先过 seq 守卫，再挂 marker 载荷 —— 被后续批次取代的构建既不注入，
-    // 也不占用 _pendingNative（否则会把过期 payload 留给渲染钩子，甚至覆盖更新的一批）
-    return Promise.resolve().then(() => {
-      if (seq !== this._seq) return;
-      this._pendingNative = { markers, clusters };
-      this._clusters = clusters; // 防竞态通过后再提交，旧一次构建不覆盖簇数据
-      this.setData(patch);
-      // 已挂载 → 立即注入；未挂载（loading / 错误态 / 列表模式）→ 载荷留在 _pendingNative，
-      // 由渲染驱动的钩子（setData({loading:false}) 回调 / onMapLoad / switchMode 回调）消费
-      return this.syncNativeMarkers();
-    });
-  },
 
-  /**
-   * map 节点存在性判定 + 生命周期记账。
-   * 存在条件与 wxml 闸门严格一致：loading / error 期间整块 <block wx:else>（含 map）不存在，
-   * 列表模式下 map 也被 wx:if 销毁 —— 此时 createMapContext / addMarkers 打到的是空节点。
-   * 由「不可见 → 可见」的跃迁说明节点是新建的，聚合初始化与事件绑定必须重做一次。
-   */
-  trackMapNode() {
-    const mounted = !this.data.loading && !this.data.error && this.data.mode === 'map';
-    if (mounted && !this._mapMounted) {
-      this._nativeInited = false; // 节点重建：initMarkerCluster / ctx.on 重新来一次
-      this._handlersBound = false;
-      this._clusterMembers = {}; // clusterId → markerIds：markerClusterCreate 事件回灌，成员列表兜底用
-    }
-    this._mapMounted = mounted;
-    return mounted;
-  },
-
-  /** 把待注入的原生 marker 交给 map：map 节点存在时立即消费，否则保留 payload 等渲染钩子再调 */
-  syncNativeMarkers() {
-    const mounted = this.trackMapNode();
-    if (!this._pendingNative) return Promise.resolve();
-    if (!mounted) return Promise.resolve(); // 节点不存在：pending 原样留着，不能空转消费掉
-    const pending = this._pendingNative;
-    this._pendingNative = null;
-    this._lastNativeMarkers = pending.markers; // 模式切换重建 map 节点后重投用
-    const ctx = wx.createMapContext(MAP_ID, this);
-    // 一个节点生命周期内只绑一次事件：否则每次刷新都会重复注册，同一事件回调被调用多遍
-    if (!this._handlersBound) {
-      this._handlersBound = true;
-      ctx.on('markerClusterCreate', (e) => {
-        const cs = (e && e.detail && e.detail.clusters) || [];
-        cs.forEach((c) => {
-          if (c && c.clusterId != null) this._clusterMembers[c.clusterId] = c.markerIds || [];
-        });
+    return Promise.all(clusters.map((c) => (c.count > 1 ? buildClusterIcon(c.count) : Promise.resolve('')))).then((icons) => {
+      if (seq !== this._seq) return; // 被后续批次取代：既不 setData，也不覆盖 _clusters（否则 expandCluster 会按陈旧桶开错记录）
+      const markers = clusters.map((c, ci) => {
+        if (c.count === 1) {
+          // 稀疏点：普通叶 marker，点击直接开详情
+          return {
+            id: c.recordIndex + 1,
+            latitude: c.latitude,
+            longitude: c.longitude,
+            iconPath: '/assets/icons/marker-dot.png',
+            width: 18,
+            height: 18,
+            anchor: { x: 0.5, y: 0.5 },
+          };
+        }
+        const marker = {
+          id: CLUSTER_ID_BASE + ci, // 与叶 id 分段，onMarkerTap 据此区分簇展开 / 叶弹窗
+          latitude: c.latitude,
+          longitude: c.longitude,
+          width: CLUSTER_BUBBLE_SIZE,
+          height: CLUSTER_BUBBLE_SIZE,
+          anchor: { x: 0.5, y: 0.5 },
+        };
+        if (icons[ci]) {
+          marker.iconPath = icons[ci];
+        } else {
+          // 离屏 canvas 不可用：退回默认点 + 常显数字气泡，聚合仍可读
+          marker.iconPath = '/assets/icons/marker-dot.png';
+          marker.callout = { content: String(c.count), color: CLUSTER_TEXT_COLOR, fontSize: 12, bgColor: CLUSTER_BG_COLOR, borderRadius: 10, padding: 6, display: 'ALWAYS', textAlign: 'center' };
+        }
+        return marker;
       });
-      ctx.on('markerClusterClick', (e) => this.onNativeClusterClick(e));
-    }
-    // 聚合初始化同样一次一节点：后续刷新只 addMarkers({clear:true}) 换点
-    if (!this._nativeInited) {
-      this._nativeInited = true;
-      ctx.initMarkerCluster({
-        enableDefaultStyle: true,
-        zoomOnClick: true,
-        gridSize: 60,
-        minClusterSize: 2, // 默认 3；足迹两点即并簇更贴近密度需求
-        // 默认簇样式微调（旧基础库不支持时静默忽略）：缩小圆圈、统一品牌蓝底白字
-        size: 28,
-        color: '#ffffff',
-        bgColor: '#2b6cf6',
-        borderWidth: 2,
-        borderColor: '#ffffff',
-        fail: (e) => console.error('[footprints] initMarkerCluster fail', e),
-      });
-    }
-    // 每次重投 marker 前清簇成员缓存：addMarkers({clear:true}) 后旧的 clusterId → markerIds
-    // 映射随之失效（真机上原生簇 id 会被复用），留着会让 onNativeClusterClick 按陈旧成员
-    // 开错记录。节点未重建时 trackMapNode 不会复位，故在这里自行清空，等新的
-    // markerClusterCreate 回灌。
-    this._clusterMembers = {};
-    // 实测模拟器只回 success、不回 onComplete：两个都挂，谁先到算谁
-    return new Promise((resolve) => {
-      let done = false;
-      const finish = (err) => {
-        if (done) return;
-        done = true;
-        if (err) console.error('[footprints] addMarkers fail', err);
-        resolve();
-      };
-      ctx.addMarkers({ markers: pending.markers, clear: true, onComplete: () => finish(), success: () => finish(), fail: finish });
+      this._clusters = clusters; // 与 markers 同一提交点更新：簇下标 ci 必须和屏上气泡对齐
+      this.setData(Object.assign({ markers }, patch));
     });
   },
-  /** map 渲染完成（部分端支持）：消费挂起的 marker；不支持时由 setData 回调兜底 */
-  onMapLoad() {
-    this.syncNativeMarkers();
-  },
 
-  /** 视野变化结束时记录当前缩放（原生自管聚合，无需重建；跨端字段不一致，取不到用 getScale 兜底） */
+  /** map 渲染完成钩子：声明式 markers 在节点挂载时自动生效，无需命令式补投；保留仅为观测/兜底 */
+  onMapLoad() {},
+
+  /** 视野变化结束时按当前缩放重建聚合分级（跨端字段不一致，取不到用 getScale 兜底） */
   onRegionChange(e) {
     const d = (e && e.detail) || {};
     const type = (e && e.type) || d.type;
     if (type !== 'end') return;
-    if (Date.now() < (this._progCamUntil || 0)) return;
+    if (Date.now() < (this._progCamUntil || 0)) return; // 程序改视野（fit/expand）的静默窗口：期间不回读，避免自激重建
     const apply = (raw) => {
       const s = Number(raw);
       if (!Number.isFinite(s)) return;
-      this._gridZoom = s; // 最大缩放簇兜底判断用
+      if (Math.abs(s - (this._gridZoom || this.data.scale)) < 0.5) return; // 没换层级不重建，防高频 regionchange 抖动
+      this._gridZoom = s;
+      this.buildMarkers({ fit: false });
     };
     const raw = Number.isFinite(e.scale) ? e.scale : Number.isFinite(d.scale) ? d.scale : null;
     if (raw != null) return apply(raw);
@@ -301,37 +282,31 @@ Page({
     const d = (e && e.detail) || {};
     const id = Number(d.markerId);
     if (!Number.isFinite(id)) return;
+    if (id >= CLUSTER_ID_BASE) {
+      this.expandCluster(id - CLUSTER_ID_BASE);
+      return;
+    }
     const r = this.data.records[id - 1];
     if (r) this.openPopup(r);
   },
   /**
-   * 原生聚合：点自带簇气泡（enableDefaultStyle 下簇点击不走 bindmarkertap，走 markerClusterClick）。
-   * 单成员簇 = 点 marker 语义 → 详情弹窗；多成员未到顶 → 放大展开由原生 zoomOnClick 负责；
-   * 最大缩放仍并在一起（同坐标点原生拆不开）→ 成员列表兜底。
-   * 成员优先取 markerClusterCreate 回灌的 markerIds，取不到用本地网格桶按簇心匹配。
-   * 注：本模拟器未派发过 markerClusterCreate/markerClusterClick（已留档），该链路以真机回归为准（docs/11 §6）。
+   * 点簇气泡：向簇心放大 EXPAND_ZOOM_STEP 级（等效原生 zoomOnClick 的展开语义）。
+   * 已到 scale 上限仍并簇（同坐标点本地网格拆不开）→ 成员半屏列表兜底（fix 轮留存的 clusterSheet）。
    */
-  onNativeClusterClick(e) {
-    const d = (e && e.detail) || {};
-    const ids = (this._clusterMembers && this._clusterMembers[d.clusterId]) || [];
-    let recs = ids.map((id) => this.data.records[id - 1]).filter(Boolean);
-    if (!recs.length) {
-      const center = d.center || {};
-      const c = (this._clusters || []).find(
-        (x) =>
-          Number.isFinite(center.latitude) &&
-          Math.abs(x.latitude - center.latitude) < 0.01 &&
-          Math.abs(x.longitude - center.longitude) < 0.01,
-      );
-      if (c) recs = c.members.map((i) => this.data.records[i]).filter(Boolean);
-    }
-    if (recs.length === 1) {
-      this.openPopup(recs[0]);
+  expandCluster(idx) {
+    const c = (this._clusters || [])[idx];
+    if (!c) return;
+    const base = Math.max(this._gridZoom || 0, this.data.scale);
+    if (base >= MAX_SCALE - 0.5) {
+      const recs = (c.members || []).map((i) => this.data.records[i]).filter(Boolean);
+      if (recs.length) this.showClusterMembers(recs);
       return;
     }
-    if (recs.length > 1 && (this._gridZoom || this.data.scale) >= MAX_SCALE - 0.5) {
-      this.showClusterMembers(recs);
-    }
+    const next = Math.min(MAX_SCALE, base + EXPAND_ZOOM_STEP);
+    this._gridZoom = next;
+    this._progCamUntil = Date.now() + PROGRAMMATIC_CAMERA_MS;
+    this.setData({ center: { latitude: c.latitude, longitude: c.longitude }, scale: next });
+    this.buildMarkers({ fit: false });
   },
   /** POI 点击兜底：点到底图同坐标标注时，按坐标回落到该足迹 */
   onPoiTap(e) {
@@ -415,17 +390,8 @@ Page({
     wx.previewImage({ urls, current: urls[Number(ds.idx) || 0] });
   },
 
-  switchMode(e) {
-    this.setData({ mode: e.currentTarget.dataset.mode }, () => {
-      // 切回地图时 wx:if 重建了 map 节点：把上一批 marker 重新挂成 pending，
-      // 由 syncNativeMarkers 统一消费（trackMapNode 检出节点重建 → 重做一次 init + 绑一次事件）；
-      // 切到列表时同样调一次，仅为让 trackMapNode 记录「节点已销毁」
-      if (this.data.mode === 'map' && !this._pendingNative && this._lastNativeMarkers) {
-        this._pendingNative = { markers: this._lastNativeMarkers };
-      }
-      this.syncNativeMarkers();
-    });
-  },
+  /** 切换形态：map 节点被 wx:if 销毁/重建时声明式 markers 自动重挂，无需任何补投 */
+  switchMode(e) { this.setData({ mode: e.currentTarget.dataset.mode }); },
   openAdd() { wx.navigateTo({ url: '/packageFootRecords/pages/record-edit/record-edit' }); },
   noop() {},
 });
