@@ -52,7 +52,7 @@ Page({
       this.loadAll();
     }
   },
-  onPullDownRefresh() { this.loadAll().finally(() => wx.stopPullDownRefresh()); },
+
   async loadAll() {
     // 请求序号守卫：只应用最后一次结果，防竞态
     const seq = (this._seq = (this._seq || 0) + 1);
