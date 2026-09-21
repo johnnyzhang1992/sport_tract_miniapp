@@ -117,5 +117,13 @@
     </view>
   </view>
 
+  <!-- 新增/编辑半屏表单（组件内完成 编辑→检测→上传→保存；保存成功后由页面刷新地图/列表） -->
+  <footprint-form
+    visible="{{formVisible}}"
+    record="{{formRecord}}"
+    bind:saved="onFormSaved"
+    bind:close="closeForm"
+  />
+
   <view class="fab" bindtap="openAdd">＋</view>
 </view>

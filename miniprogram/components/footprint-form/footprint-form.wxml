@@ -1,0 +1,115 @@
+<!-- 新增/编辑半屏表单：遮罩点击关闭；弹层高度/位置由 sheetStyle 控制（键盘弹起时抬高并缩高） -->
+<view class="fp-mask" wx:if="{{visible}}" bindtap="onMaskTap">
+  <view class="fp-sheet" style="{{sheetStyle}}" catchtap="noop">
+    <view class="fp-head">
+      <view class="fp-title">{{isEdit ? '编辑足迹' : '新增足迹'}}</view>
+      <view class="fp-close" bindtap="onClose">✕</view>
+    </view>
+    <!-- scroll-into-view 指向焦点字段 id（ff-title/ff-people/ff-desc），键盘遮挡时把它滚进可视区 -->
+    <scroll-view scroll-y class="fp-body" scroll-into-view="{{scrollTarget}}">
+      <!-- 地点 -->
+      <view class="card">
+        <view class="field-label">地点</view>
+        <view class="loc-picked" wx:if="{{location}}">
+          <view class="loc-name">{{location.name || location.address || '已选位置'}}</view>
+          <view class="text-muted loc-address" wx:if="{{location.address}}">{{location.address}}</view>
+        </view>
+        <view class="text-muted loc-empty-tip" wx:else>还没选地点，点下面按钮选一个</view>
+        <view class="loc-actions">
+          <view class="loc-btn" bindtap="pickByWx" hover-class="loc-btn-hover">快速选点</view>
+        </view>
+      </view>
+
+      <!-- 日期 -->
+      <view class="card">
+        <view class="field-label">日期</view>
+        <picker mode="date" value="{{visitDate}}" bindchange="onDate">
+          <view class="picker-value">{{visitDate || '选择日期'}}</view>
+        </picker>
+      </view>
+
+      <!-- 标题 -->
+      <view class="card">
+        <view class="field-label">标题</view>
+        <input
+          id="ff-title"
+          class="field-input"
+          placeholder="给这次足迹起个标题"
+          value="{{title}}"
+          bindinput="onTitle"
+          bindfocus="onFieldFocus"
+          bindblur="onFieldBlur"
+          bindkeyboardheightchange="onKeyboardHeight"
+          adjust-position="{{false}}"
+          maxlength="50"
+        />
+        <view class="text-muted field-tip">必填，最长 50 字</view>
+      </view>
+
+      <!-- 同行的人（标签可点删） -->
+      <view class="card">
+        <view class="field-label">同行的人</view>
+        <view class="people-row">
+          <input
+            id="ff-people"
+            class="field-input people-input"
+            placeholder="输入名字后点添加"
+            value="{{peopleInput}}"
+            bindinput="onPeopleInput"
+            bindconfirm="addPerson"
+            bindfocus="onFieldFocus"
+            bindblur="onFieldBlur"
+            bindkeyboardheightchange="onKeyboardHeight"
+            adjust-position="{{false}}"
+            maxlength="20"
+          />
+          <view class="people-add" bindtap="addPerson" hover-class="people-add-hover">添加</view>
+        </view>
+        <view class="people-tags" wx:if="{{people.length}}">
+          <view wx:for="{{people}}" wx:key="*this" class="people-tag" data-idx="{{index}}" bindtap="removePerson">{{item}}<text class="tag-x">×</text></view>
+        </view>
+        <view class="text-muted field-tip">最多 10 人，每人最长 20 字，点标签删除</view>
+      </view>
+
+      <!-- 描述 -->
+      <view class="card">
+        <view class="field-label">描述</view>
+        <textarea
+          id="ff-desc"
+          class="desc-input"
+          placeholder="记录点什么（可选）"
+          value="{{description}}"
+          bindinput="onDesc"
+          bindfocus="onFieldFocus"
+          bindblur="onFieldBlur"
+          bindkeyboardheightchange="onKeyboardHeight"
+          adjust-position="{{false}}"
+          maxlength="500"
+        />
+        <view class="text-muted field-tip">最长 500 字</view>
+      </view>
+
+      <!-- 图片九宫格（≤3）：+ 占位添加，点图拉起微信原生编辑，x 删除 -->
+      <view class="card">
+        <view class="field-label">照片（最多 3 张）</view>
+        <view class="photo-grid">
+          <view wx:for="{{photos}}" wx:key="index" class="photo-item">
+            <image class="photo-img" src="{{item.localPath || item.url}}" mode="aspectFill" data-idx="{{index}}" bindtap="editPhoto" />
+            <view class="photo-remove" data-idx="{{index}}" bindtap="removePhoto">×</view>
+          </view>
+          <view class="photo-add" wx:if="{{photos.length < 3}}" bindtap="choosePhoto" hover-class="photo-add-hover">＋</view>
+        </view>
+        <view class="text-muted field-tip">点图片可编辑（裁剪/涂鸦/文字/马赛克），点 × 删除</view>
+      </view>
+
+      <!-- 提交（必填项不满足 / 上传中禁用） -->
+      <button
+        class="btn-primary submit-btn"
+        disabled="{{!canSubmit || submitting}}"
+        loading="{{submitting}}"
+        bindtap="submit"
+      >{{isEdit ? '保存修改' : '保存足迹'}}</button>
+      <view class="submit-tip text-muted" wx:if="{{!canSubmit}}">填写标题并在上方选一个地点后可保存</view>
+    </scroll-view>
+  </view>
+</view>
