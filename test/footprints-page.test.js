@@ -1,11 +1,13 @@
 /**
  * 足迹页（pages/footprints/footprints.js）页级回归：本地网格聚合 + 离屏 canvas 自绘小圆簇
  * 由 2026-09-21 簇改造的临时 harness（/tmp/fp-cluster-harness.js）升格入仓，四条原场景保留为 P1~P4，
- * fix 轮 1 的三条交互回归补为 P0/P5/P6（外加 P7 覆盖 loadGeo 的 loading 与 markers 同帧）。
+ * fix 轮 1 的三条交互回归补为 P0/P5/P6（外加 P7 覆盖 loadGeo 的 loading 与 markers 同帧），
+ * P5 在 fix 轮 2 追加「scale 回写必须配套回写当前中心」的断言。
  * 运行：npm test（node --test 自动发现）；依赖：仅 node 内置模块。
  * 桩：wx / Page / getApp 就地 stub；services/api 用 require.cache 注入假实现（绕开 config/storage 的真实
  *     wx 依赖）；utils/footprint-geo 走真实纯函数。createMapContext 的 initMarkerCluster/addMarkers 被
- *     stub 成抛错——页面若还残留原生聚合调用会立刻炸。
+ *     stub 成抛错——页面若还残留原生聚合调用会立刻炸；getScale/getCenterLocation 由用例控制回读值
+ *     （mapCameraCenter 即「相机此刻真实所在的中心」，P5 用它验证 scale 回写配套回写中心）。
  */
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -44,6 +46,9 @@ const canvasCtx = {
   fillText() {},
 };
 
+// MapContext.getCenterLocation 回读的「相机当前中心」：用例改这个值即可模拟用户缩放时顺带平移过的视野
+let mapCameraCenter = { latitude: 30.245, longitude: 120.145 };
+
 global.wx = {
   getWindowInfo: () => ({ windowWidth: 393, windowHeight: 851 }),
   getSystemInfoSync: () => ({ windowWidth: 393, windowHeight: 851 }),
@@ -54,6 +59,9 @@ global.wx = {
   previewImage() {},
   createMapContext: () => ({
     getScale() {},
+    getCenterLocation: ({ success }) => {
+      if (success) success(mapCameraCenter);
+    },
     initMarkerCluster: () => { throw new Error('原生聚合已废弃，不得再调用'); },
     addMarkers: () => { throw new Error('原生注入已废弃，不得再调用'); },
   }),
@@ -249,7 +257,7 @@ test('P4 叶 marker 点击 → openPopup 快路径（完整 DTO 不二次请求�
   assert.equal(apiCalls.filter((u) => /^\/footprint-records\/./.test(u)).length, 0, '快路径不补拉详情');
 });
 
-test('P5 手势缩放回写 data.scale：封顶后双指缩小再点簇仍是放大展开，不误弹成员表', async () => {
+test('P5 手势缩放配套回写 scale+当前中心：封顶后双指缩小再点簇仍是放大展开，不误弹成员表', async () => {
   resetCanvasQueue();
   const page = makePage();
   const recs = [0, 1, 2].map((i) => ({ id: 'x' + i, title: '同点位' + i, visitDate: '2026-09-02', latitude: 30.245, longitude: 120.145 }));
@@ -273,12 +281,31 @@ test('P5 手势缩放回写 data.scale：封顶后双指缩小再点簇仍是放
   assert.equal(page.data.clusterSheet.visible, true, '封顶点簇 → 成员半屏（预期行为）');
   page.closeClusterSheet();
 
-  // 用户双指缩小回 12 级：静默窗口已过 → regionchange end 回读并回写 data.scale
+  // 用户双指缩小回 12 级（顺带把视野平移走了）：静默窗口已过 → regionchange end 回读并配套回写
+  const staleCenter = Object.assign({}, page.data.center); // 手势前 data 里那个陈旧中心（= 上一次 expand 的簇心）
+  mapCameraCenter = { latitude: 30.9876, longitude: 120.6543 }; // 相机此刻真实所在处（MapContext 回读）
+  const patches = [];
+  const upstreamSetData = page.setData;
+  page.setData = (patch, cb) => {
+    patches.push(patch);
+    return upstreamSetData(patch, cb);
+  };
   page._progCamUntil = 0;
   page.onRegionChange({ type: 'end', detail: { scale: 12 } });
   await settle();
+  page.setData = upstreamSetData;
   assert.equal(page._gridZoom, 12);
-  assert.equal(page.data.scale, 12, '手势缩放必须回写 data.scale（相机已在此层级，setData 不会再移动视野）');
+  assert.equal(page.data.scale, 12, '手势缩放必须回写 data.scale');
+  // 回归（fix 轮 2）：scale 回写必须与「当前中心」同一次 setData 配套。
+  // <map> 的 scale 属性一改就会把相机重置到绑定的 center 上，只写 scale = 手势一结束视野就弹回 staleCenter，
+  // 故事件不带 center 时要走 MapContext.getCenterLocation 兜底，把回读到的真实中心一起写回。
+  const camPatch = patches.find((x) => x.scale !== undefined);
+  assert.ok(camPatch, '应有回写 data.scale 的那次 setData');
+  assert.ok(camPatch.center, 'scale 与 center 必须在同一次 setData 里配套回写');
+  assert.deepEqual(camPatch.center, { latitude: 30.9876, longitude: 120.6543 }, '写回的是相机当前中心，不是手势前的陈旧值');
+  assert.ok(patches.every((x) => x.scale === undefined || x.center), '不得出现只写 scale 的裸回写（会弹回陈旧中心）');
+  assert.notEqual(page.data.center.latitude, staleCenter.latitude, 'data.center 已被带离陈旧值');
+  assert.equal(patches.filter((x) => x.scale !== undefined).length, 1, '一次手势只提交一次相机回写');
 
   // 关键回归：此时点簇该继续放大展开，而不是被陈旧的封顶值骗去开成员半屏
   const cluster = page.data.markers.find((m) => m.id >= CLUSTER_ID_BASE);
@@ -287,9 +314,10 @@ test('P5 手势缩放回写 data.scale：封顶后双指缩小再点簇仍是放
   await settle();
   assert.equal(page.data.clusterSheet.visible, false, '未封顶不该弹成员表');
   assert.equal(page.data.scale, 14, '点簇 +2 级');
+  assert.ok(Math.abs(page.data.center.latitude - 30.245) < 1e-9, '点簇后中心移到簇心（放大语义）');
 });
 
-test('P6 并发构建：records 已换 / 令牌已被取走的过期构建不得覆盖 markers', async () => {
+test('P6 并发构建：records 已换 / 令牌已被取走的过期构建不得覆盖 markers，也不得留下孤儿 _gridZoom', async () => {
   // 两条子用例的过期构建都靠「在途 canvas 出图」卡住提交时机，簇 count 取 200/250：
   // 全文件只有这里点数够多，能保证这两个 count 的图标尚未进 CLUSTER_ICON_CACHE（缓存命中就不会在途）
   // 6a 同一 _seq 下 records 数组身份变了（刷新期间又起一次构建）
@@ -299,8 +327,9 @@ test('P6 并发构建：records 已换 / 令牌已被取走的过期构建不得
   const spread = [0, 1, 2].map((i) => ({ id: 'b' + i, title: '散' + i, visitDate: '2026-09-04', latitude: 30.245, longitude: 120.145 + i * 0.05 }));
   pageA._gridZoom = 16;
   pageA.setData({ records: dense });
-  const staleBuild = pageA.buildMarkers({ fit: false }); // 1 张「200」字图在途
+  const staleBuild = pageA.buildMarkers(); // fit 视野那一路：1 张「200」字图在途，fitted.scale 此刻还没资格生效
   assert.equal(pendingCanvas.length, 1, '过期构建确实卡在出图阶段');
+  assert.equal(pageA._gridZoom, 16, '出图在途期间 fit 不得抢跑写 _gridZoom（聚合 zoom 与静默窗口同属提交点）');
   pageA.setData({ records: spread }); // 换一批数据（数组身份不同）
   const freshBuild = pageA.buildMarkers({ fit: false }); // 3 个叶，无出图，立刻提交
   await settle(); // 过期构建的图这时才落地
@@ -308,6 +337,7 @@ test('P6 并发构建：records 已换 / 令牌已被取走的过期构建不得
   assert.equal(pageA.data.markers.length, 3, '过期构建被丢弃：屏上是后一次（3 叶）');
   assert.ok(pageA.data.markers.every((m) => m.id < CLUSTER_ID_BASE));
   assert.equal(pageA._clusters.length, 3);
+  assert.equal(pageA._gridZoom, 16, '被令牌作废的 fit 不留孤儿 _gridZoom：屏上分桶与后续展开判定同源');
 
   // 6b records 数组身份没变、只是 zoom 变了（两次数值不同的构建）：records/_seq 都拦不住，只有构建令牌能拦
   resetCanvasQueue();
