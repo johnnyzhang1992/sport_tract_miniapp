@@ -11,7 +11,19 @@
     bindcallouttap="onMarkerTap"
     bindregionchange="onRegionChange"
     bindpoitap="onPoiTap"
-  />
+  >
+    <!-- 无图单点的标题胶囊气泡（常显）；有图单点走离屏合成的照片卡 marker 图标 -->
+    <cover-view slot="callout">
+      <cover-view
+        wx:for="{{callouts}}"
+        wx:key="id"
+        marker-id="{{item.id}}"
+        class="fp-callout fp-callout-pill"
+      >
+        <cover-view class="fp-callout-title fp-callout-title-pill">{{item.title}}</cover-view>
+      </cover-view>
+    </cover-view>
+  </map>
 
   <view wx:if="{{loading}}" class="center-tip veil">加载中…</view>
   <view wx:elif="{{error}}" class="center-tip veil">{{error}} <text class="retry" bindtap="loadAll">重试</text></view>

@@ -2,17 +2,19 @@
   <!-- 搜索 + 时间筛选（顶部常驻；请求只带「已生效」的筛选，输入框内容不请求） -->
   <view class="card filter-card">
     <view class="search-row">
-      <image class="search-icon" src="/assets/icons/lucide-search.png" mode="aspectFit" />
-      <input
-        class="search-input"
-        value="{{keywordInput}}"
-        placeholder="搜标题 / 地点 / 同行的人"
-        placeholder-class="search-ph"
-        confirm-type="search"
-        bindinput="onKeywordInput"
-        bindconfirm="onSearch"
-      />
-      <view wx:if="{{keywordInput}}" class="search-clear" bindtap="onClearKeyword">✕</view>
+      <view class="search-box">
+        <image class="search-icon" src="/assets/icons/lucide-search.png" mode="aspectFit" />
+        <input
+          class="search-input"
+          value="{{keywordInput}}"
+          placeholder="搜标题 / 地点 / 同行的人"
+          placeholder-class="search-ph"
+          confirm-type="search"
+          bindinput="onKeywordInput"
+          bindconfirm="onSearch"
+        />
+        <view wx:if="{{keywordInput}}" class="search-clear" bindtap="onClearKeyword">✕</view>
+      </view>
       <view class="search-btn" hover-class="search-btn-hover" bindtap="onSearch">搜索</view>
     </view>
     <view class="range-row">
