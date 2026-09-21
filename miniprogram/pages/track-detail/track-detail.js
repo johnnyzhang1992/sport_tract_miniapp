@@ -12,6 +12,7 @@ const storage = require('../../services/storage');
 const { uploadPhoto } = require('../../services/oss-upload');
 const { formatDuration, formatPace, formatPaceParts } = require('../../utils/format');
 const { getPaceScale } = require('../../utils/pace-scale');
+const { computeRunPaceZones } = require('../../utils/track-pace');
 
 Page({
   data: {
@@ -36,6 +37,15 @@ Page({
     kmSegs: [],
     displaySegs: [], // 默认前 10 段
     segsVisible: false,
+
+    // 运动数据网格（Keep 风：标签在上、数值 + 单位在下）
+    metrics: [],
+
+    // 特别成就（个人最佳）
+    achievements: [],
+
+    // 跑步配速区间（自锚定：边界 = 本次平均配速 × 比例）
+    runZones: { hasData: false, zones: [] },
   },
 
   onLoad(options) {
@@ -70,19 +80,27 @@ Page({
         .filter((a) => typeof a === 'number' && a > 0);
       const avgAccuracy = accs.length > 0 ? Math.round(accs.reduce((s, a) => s + a, 0) / accs.length) : null;
       const endTime = activity.endTime || activity.startTime + (activity.duration || 0) * 1000;
-      // 最低/最高海拔（决策：徒步/爬山展示海拔区间；其他类型与其他旧数据回退仅最高海拔）
-      const isAltType = ['hiking', 'mountaineering'].includes(activity.type);
-      const hasAltRange = isAltType && activity.minAltitude != null && activity.maxAltitude != null;
-      const altRangeText = hasAltRange
-        ? `${activity.minAltitude} ~ ${activity.maxAltitude}m`
-        : activity.maxAltitude != null
-          ? `${activity.maxAltitude}m`
-          : '';
       // 最快 1km（服务端分段计算；游泳/骑行无配速概念不展示）
       const fastestParts =
         activity.fastestKm && !['swimming', 'cycling'].includes(activity.type)
           ? formatPaceParts(activity.fastestKm)
           : null;
+      // 运动数据网格（参考 Keep：标签在上、大数值 + 小单位在下；缺数据的格不占位）
+      // 运动时长 = 扣除暂停；总时长 = 墙钟（含暂停），服务端下发，旧接口/旧数据按墙钟回退
+      const paceParts = formatPaceParts(activity.avgPace);
+      const totalSec =
+        activity.totalDuration != null
+          ? activity.totalDuration
+          : Math.max(activity.duration || 0, Math.round((endTime - activity.startTime) / 1000));
+      const metrics = [
+        { label: '运动时长', value: formatDuration(activity.duration) },
+        paceParts && { label: '平均配速', value: paceParts.value, unit: paceParts.unit },
+        { label: '运动消耗', value: String(activity.calories || 0), unit: '千卡' },
+        { label: '总时长', value: formatDuration(totalSec) },
+        fastestParts && { label: '最快 1km', value: fastestParts.value, unit: fastestParts.unit },
+        { label: '爬升高度', value: String(activity.elevationGain || 0), unit: '米' },
+        (activity.markers || []).length > 0 && { label: '打点', value: String(activity.markers.length), unit: '个' },
+      ].filter(Boolean);
       // 轨迹线着色：徒步/爬山且有海拔数据 → 按海拔；否则按配速（绝对刻度，越快越偏黄）
       const colorMode =
         ['hiking', 'mountaineering'].includes(activity.type) &&
@@ -113,14 +131,11 @@ Page({
           durationText: formatDuration(activity.duration),
           paceValue: (formatPaceParts(activity.avgPace) || {}).value || '—',
           paceUnit: (formatPaceParts(activity.avgPace) || {}).unit || '',
-          fastestKmValue: fastestParts ? fastestParts.value : '',
-          fastestKmUnit: fastestParts ? fastestParts.unit : '',
           startTimeText: fmtTime(activity.startTime),
           endTimeText: fmtTime(endTime),
           avgAccuracy,
-          altRangeText,
-          altRangeIsRange: hasAltRange,
         },
+        metrics,
         // 轨迹线着色：徒步/爬山且有海拔数据 → 按海拔；否则按配速（绝对刻度，越快越偏黄）
         colorMode,
         activityType: activity.type,
@@ -162,7 +177,7 @@ Page({
           best = null;
         }
       }
-      this.setData({ bestBadges: this.computeBestBadges(activity, best) });
+      this.setData({ achievements: this.computeBestBadges(activity, best) });
       // 单段明细（每公里分段；默认展示前 10）
       const segs = this.computeKmSegments(activity.trackPoints || []);
       const full = segs.filter((s) => !s.partial);
@@ -171,7 +186,7 @@ Page({
         const fastest = full.reduce((a, b) => (b.durationSec / b.distKm < a.durationSec / a.distKm ? b : a), full[0]);
         fastest.fastest = true;
       }
-      this.setData({ kmSegs: segs, displaySegs: segs.slice(0, 5) });
+      this.setData({ kmSegs: segs, displaySegs: segs.slice(0, 5), runZones: this.buildRunZones(activity) });
     } catch (e) {
       wx.showToast({ title: '加载详情失败', icon: 'none' });
       console.error(e);
@@ -366,23 +381,33 @@ Page({
     return out;
   },
 
+  /**
+   * 特别成就：本轨迹在所属运动类型中持有的个人最佳（最远距离/最快配速/最长时长/最大爬升）
+   * 口径与 /stats/best 一致：最快配速取 fastestKm、最长时长取 duration（运动时长）；数值取本轨迹自身的成绩
+   */
   computeBestBadges(activity) {
     const app = getApp();
     const best = getBestCache(app.globalData.user ? app.globalData.user.id : '');
     if (!best) return [];
     const id = String(activity.id || this.data.id);
+    const paceParts = formatPaceParts(activity.fastestKm);
     const rows = [
-      { list: best.maxDistanceByType, label: '最远距离' },
-      { list: best.minPaceByType, label: '最快配速' },
-      { list: best.maxDurationByType, label: '最长时长' },
-      { list: best.maxElevationByType, label: '最大爬升' },
-    ];
-    const badges = [];
-    for (const { list, label } of rows) {
+      { list: best.maxDistanceByType, label: '最远距离', value: (activity.distance / 1000).toFixed(2), unit: '公里' },
+      paceParts && { list: best.minPaceByType, label: '最快配速', value: paceParts.value, unit: paceParts.unit },
+      { list: best.maxDurationByType, label: '最长时长', value: formatDuration(activity.duration), unit: '' },
+      activity.elevationGain > 0 && {
+        list: best.maxElevationByType,
+        label: '最大爬升',
+        value: String(activity.elevationGain),
+        unit: '米',
+      },
+    ].filter(Boolean);
+    const achievements = [];
+    for (const { list, label, value, unit } of rows) {
       const rec = (list || []).find((r) => r.type === activity.type);
-      if (rec && String(rec.id) === id) badges.push(label);
+      if (rec && String(rec.id) === id) achievements.push({ label, value, unit });
     }
-    return badges;
+    return achievements;
   },
 
   /** 单段明细：按每公里切分段（序号/时间/配速），最后不足 1km 记为余段 */
@@ -412,6 +437,7 @@ Page({
       segs.push({
         idx: segs.length + 1,
         distKm,
+        distText: distKm.toFixed(2), // WXML 不支持方法调用，距离文本在 JS 里格式化
         durationSec,
         durationText: formatDuration(durationSec),
         paceText: formatPace(durationSec / distKm),
@@ -438,6 +464,18 @@ Page({
     // 最后不足 1km 的余段（位移 >20m 才展示）
     if (acc > 20) pushSeg(true);
     return segs;
+  },
+
+  /** 跑步配速区间（自锚定：边界 = 本次平均配速 × 比例；45s 平滑配速按移动时间加权） */
+  buildRunZones(activity) {
+    if (activity.type !== 'running') return { hasData: false, zones: [] };
+    const zones = computeRunPaceZones(activity.trackPoints || [], activity.avgPace);
+    if (!zones.hasData) return zones;
+    return {
+      ...zones,
+      anchorText: `平均配速 ${(formatPaceParts(zones.anchorPace) || {}).value}`,
+      totalText: formatDuration(zones.totalSec),
+    };
   },
 
   /** 查看全部单段（弹窗） */
