@@ -249,6 +249,12 @@ Page({
         zoomOnClick: true,
         gridSize: 60,
         minClusterSize: 2, // 默认 3；足迹两点即并簇更贴近密度需求
+        // 默认簇样式微调（旧基础库不支持时静默忽略）：缩小圆圈、统一品牌蓝底白字
+        size: 28,
+        color: '#ffffff',
+        bgColor: '#2b6cf6',
+        borderWidth: 2,
+        borderColor: '#ffffff',
         fail: (e) => console.error('[footprints] initMarkerCluster fail', e),
       });
     }
