@@ -17,7 +17,9 @@
       <view wx:if="{{mode === 'map'}}" class="map-wrap">
         <!-- 本地网格聚合 + 自绘小圆气泡（原生默认簇尺寸/配色不可改，3104c7c 实测参数被忽略，见 docs/11 §4.2）：
              markers 由 buildMarkers 生成后声明式绑定，节点重建（loading 闸门/模式切换）时自动重挂；
-             点簇 → onMarkerTap 按 id 分段：叶 marker 开详情，簇气泡放大展开，封顶后走成员半屏 -->
+             点簇 → onMarkerTap 按 id 分段：叶 marker 开详情，簇气泡放大展开，封顶后走成员半屏；
+             bindcallouttap 只在离屏 canvas 不可用的退化形态下起作用（那时簇是 marker-dot + ALWAYS callout
+             数字，点数字命中的是 callout 而非 marker），e.detail.markerId 与 bindmarkertap 同形，共用一个处理函数 -->
         <map
           id="footprintMap"
           class="fp-map"
@@ -26,6 +28,7 @@
           show-location
           bindload="onMapLoad"
           bindmarkertap="onMarkerTap"
+          bindcallouttap="onMarkerTap"
           bindregionchange="onRegionChange"
           bindpoitap="onPoiTap"
         />
