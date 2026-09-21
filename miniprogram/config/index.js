@@ -96,4 +96,10 @@ module.exports = {
     /** 单批上传点数上限 */
     BATCH_MAX_POINTS: 2000,
   },
+
+  /** 有效运动最小距离（米）：与后端 MIN_EFFECTIVE_DISTANCE_M 一致，低于该值保存时被自动作废 */
+  MIN_EFFECTIVE_DISTANCE_M: 10,
+
+  /** 有效运动最小轨迹点数：与后端 MIN_EFFECTIVE_POINTS 一致，少于该值保存时被自动作废 */
+  MIN_EFFECTIVE_POINTS: 3,
 };

@@ -78,10 +78,11 @@ class SyncService {
     await api.post(`/activities/${this.activityId}/markers`, marker);
   }
 
-  /** 结束：提交 final 包对账（决策 D13：以 final 包为准） */
+  /** 结束：提交 final 包对账（决策 D13：以 final 包为准）
+   *  返回 { status, lastPointSeq, activity, reason? }；距离过短时 status='cancelled'、reason='DISTANCE_TOO_SHORT' */
   async finish(finalPack) {
     const res = await api.put(`/activities/${this.activityId}/finish`, finalPack);
-    return res.activity;
+    return res;
   }
 
   /** 放弃：取消活动 */

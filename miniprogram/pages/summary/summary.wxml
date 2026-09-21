@@ -42,6 +42,9 @@
     </view>
   </view>
 
+  <!-- 轨迹无效提示（点数过少/距离过短，保存时被服务端自动作废） -->
+  <view class="invalid-hint" wx:if="{{tooShort}}">⚠️ 本次运动距离过短或轨迹点过少，保存时将自动放弃</view>
+
   <!-- 操作 -->
   <view class="actions">
     <t-button
