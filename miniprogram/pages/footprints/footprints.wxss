@@ -47,37 +47,50 @@
   gap: 16rpx;
 }
 .entry-btn {
-  padding: 0 28rpx;
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 0 24rpx;
   height: 72rpx;
-  line-height: 72rpx;
   border-radius: 999rpx;
   background: rgba(255, 255, 255, 0.95);
   color: #2b6cf6;
   font-size: 26rpx;
   box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
 }
+/* 图标沿用项目既有 lucide 资源（深色，与点亮地图页 .btn-icon 同款用法） */
+.entry-icon {
+  flex: none;
+  width: 32rpx;
+  height: 32rpx;
+}
 .entry-btn-hover {
   background: #eef4ff;
 }
 
-/* 右上刷新按钮（替代已禁用的页面下拉刷新） */
+/* 右上刷新按钮（替代已禁用的页面下拉刷新）：⟳ + 文案的胶囊，与左侧入口同族 */
 .map-refresh {
   position: absolute;
   top: 24rpx;
   right: 24rpx;
   z-index: 5;
-  width: 72rpx;
-  height: 72rpx;
   display: flex;
   align-items: center;
-  justify-content: center;
-  border-radius: 50%;
+  gap: 6rpx;
+  padding: 0 24rpx;
+  height: 72rpx;
+  border-radius: 999rpx;
   background: rgba(255, 255, 255, 0.95);
   color: #2b6cf6;
-  font-size: 44rpx;
+  font-size: 26rpx;
   box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
 }
-.map-refresh.spinning {
+.refresh-icon {
+  flex: none;
+  font-size: 38rpx;
+  line-height: 1;
+}
+.refresh-icon.spinning {
   animation: fp-refresh-spin 0.9s linear infinite;
 }
 @keyframes fp-refresh-spin {

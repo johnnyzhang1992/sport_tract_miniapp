@@ -18,10 +18,20 @@
   <view wx:elif="{{records.length === 0}}" class="center-tip empty">还没有足迹，点右下角 ＋ 记录第一个去过的地方</view>
 
   <view class="map-entries">
-    <view class="entry-btn" hover-class="entry-btn-hover" bindtap="goList">列表</view>
-    <view class="entry-btn" hover-class="entry-btn-hover" bindtap="goStats">统计</view>
+    <view class="entry-btn" hover-class="entry-btn-hover" bindtap="goList">
+      <image class="entry-icon" src="/assets/icons/lucide-text-align-justify.png" mode="aspectFit" />
+      <text>列表</text>
+    </view>
+    <view class="entry-btn" hover-class="entry-btn-hover" bindtap="goStats">
+      <image class="entry-icon" src="/assets/icons/lucide-chart.png" mode="aspectFit" />
+      <text>统计</text>
+    </view>
   </view>
-  <view class="map-refresh {{loading ? 'spinning' : ''}}" bindtap="loadAll">⟳</view>
+  <!-- 刷新：⟳ + 文案；只有图标转，文案不跟着转 -->
+  <view class="map-refresh" hover-class="entry-btn-hover" bindtap="loadAll">
+    <view class="refresh-icon {{loading ? 'spinning' : ''}}">⟳</view>
+    <text>刷新</text>
+  </view>
 
   <!-- 详情半屏（地图/列表页共用组件；「编辑」转表单、删除后刷新地图） -->
   <footprint-detail
