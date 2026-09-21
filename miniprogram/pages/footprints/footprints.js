@@ -213,16 +213,18 @@ Page({
     });
 
     // 先定视野再聚合：格子按屏幕像素切（utils/footprint-geo.js），zoom 必须和最终视野一致，否则簇的疏密对不上
+    // 但这次只落到局部变量 fittedZoom：_gridZoom 的写入推到下方提交点，被令牌作废的过期构建不会留下孤儿值
     const patch = {};
+    let fittedZoom = null;
     if (points.length && fit) {
       const fitted = geo.fitBounds(points, mapViewport());
       patch.center = fitted.center;
       patch.scale = fitted.scale;
-      this._gridZoom = fitted.scale;
+      fittedZoom = fitted.scale;
       // 静默窗口不在这里打点：出图要等若干个 microtask，若在 await 之前起算，900ms 会被等待消耗掉一块，
       // 提交时窗口可能已过期 → 用户手势和这次 fit 互相打断。改到下方相机真正落地处打点。
     }
-    const zoom = this._gridZoom || this.data.scale;
+    const zoom = fittedZoom || this._gridZoom || this.data.scale;
     const clusters = geo.gridCluster(points, zoom);
 
     // 一次构建内按 distinct count 出图：CLUSTER_ICON_CACHE 只在出图「完成后」写入，拦不住在途并发，
@@ -266,8 +268,13 @@ Page({
         return marker;
       });
       this._clusters = clusters; // 与 markers 同一提交点更新：簇下标 ci 必须和屏上气泡对齐
-      // 视野与 markers 同一次 setData 交给 <map>：静默窗口就从这一刻起算
-      if (patch.center) this._progCamUntil = Date.now() + PROGRAMMATIC_CAMERA_MS;
+      // 视野与 markers 同一次 setData 交给 <map>：静默窗口和聚合 zoom 都从这一刻起算——
+      // 上面守卫里被作废的过期构建根本走不到这一行，故不会再留下一个「视野没落地却已生效」的孤儿 _gridZoom，
+      // 去喂后续 gridCluster 的分格与 expandCluster 的封顶判定
+      if (patch.center) {
+        this._gridZoom = patch.scale;
+        this._progCamUntil = Date.now() + PROGRAMMATIC_CAMERA_MS;
+      }
       this.setData(Object.assign({ markers }, patch));
     });
   },
@@ -275,28 +282,50 @@ Page({
   /** map 渲染完成钩子：声明式 markers 在节点挂载时自动生效，无需命令式补投；保留仅为观测/兜底 */
   onMapLoad() {},
 
-  /** 视野变化结束时按当前缩放重建聚合分级（跨端字段不一致，取不到用 getScale 兜底） */
+  /** 视野变化结束时按当前缩放重建聚合分级（跨端字段不一致，取不到用 getScale / getCenterLocation 兜底） */
   onRegionChange(e) {
     const d = (e && e.detail) || {};
     const type = (e && e.type) || d.type;
     if (type !== 'end') return;
     if (Date.now() < (this._progCamUntil || 0)) return; // 程序改视野（fit/expand）的静默窗口：期间不回读，避免自激重建
-    const apply = (raw) => {
-      const s = Number(raw);
-      if (!Number.isFinite(s)) return;
-      if (Math.abs(s - (this._gridZoom || this.data.scale)) < 0.5) return; // 没换层级不重建，防高频 regionchange 抖动
+    // 回写 data.scale + data.center，一次 setData，两者缺一不可：
+    // · scale：s 是用户手势结束后相机真实所在的层级（regionchange end 回读值）。不回写的话 data.scale
+    //   会停在 fit/expand 的旧值：从封顶 20 级双指缩小后 expandCluster 读到的还是 20 → 点任何簇都误弹成员半屏，
+    //   且地图⇄列表往返把 <map> 重建时也会按这个陈旧值重设视野。
+    // · center：scale 属性回写会连带把相机重置到「当前绑定的 center」上（track-map 实测教训，
+    //   见 components/track-map/track-map.js applyOverviewScale 的注释与 getCenterLocation 兜底），
+    //   所以只写 scale = 手势一结束视野就被弹回 fit/expand 留下的旧中心。必须把回读到的当前中心配套写回。
+    const commit = (s, center) => {
+      if (Math.abs(s - (this._gridZoom || this.data.scale)) < 0.5) return; // 没换层级不重建；异步取中心期间被更新的手势也挡掉
       this._gridZoom = s;
-      // 回写 data.scale：s 是用户手势结束后相机真实所在的层级（regionchange end 回读值），
-      // setData 只是让 data 与视图对齐、不会再移动相机。不回写的话 data.scale 会停在 fit/expand 的旧值：
-      // 从封顶 20 级双指缩小后 expandCluster 读到的还是 20 → 点任何簇都误弹成员半屏，
-      // 且地图⇄列表往返把 <map> 重建时也会按这个陈旧值重设视野
-      this.setData({ scale: s });
+      this.setData({ scale: s, center });
       this.buildMarkers({ fit: false });
     };
+    const apply = (raw, center) => {
+      const s = Number(raw);
+      if (!Number.isFinite(s)) return;
+      if (Math.abs(s - (this._gridZoom || this.data.scale)) < 0.5) return; // 先按层级闸门，纯平移/微抖不必去异步取中心
+      // 注意用 NaN 兜底判空：Number(null) 是 0，直接 Number(center && center.latitude) 会把「没有中心」当成 0 纬度
+      const lat = center ? Number(center.latitude) : NaN;
+      const lng = center ? Number(center.longitude) : NaN;
+      if (Number.isFinite(lat) && Number.isFinite(lng)) return commit(s, { latitude: lat, longitude: lng });
+      // 事件不带中心点（各端字段不一致）：先异步问相机现在到底在哪，问出来之前不回写 scale
+      const ctx = wx.createMapContext(MAP_ID, this);
+      if (!ctx.getCenterLocation) return;
+      ctx.getCenterLocation({
+        success: (loc) => {
+          const cLat = loc ? Number(loc.latitude) : NaN;
+          const cLng = loc ? Number(loc.longitude) : NaN;
+          if (Number.isFinite(cLat) && Number.isFinite(cLng)) commit(s, { latitude: cLat, longitude: cLng });
+        },
+        fail: () => {},
+      });
+    };
     const raw = Number.isFinite(e.scale) ? e.scale : Number.isFinite(d.scale) ? d.scale : null;
-    if (raw != null) return apply(raw);
+    const center = e.centerLocation || d.centerLocation || null;
+    if (raw != null) return apply(raw, center);
     const ctx = wx.createMapContext(MAP_ID, this);
-    if (ctx.getScale) ctx.getScale({ success: (r) => apply(r && r.scale), fail: () => {} });
+    if (ctx.getScale) ctx.getScale({ success: (r) => apply(r && r.scale, center), fail: () => {} });
   },
 
   onMarkerTap(e) {
