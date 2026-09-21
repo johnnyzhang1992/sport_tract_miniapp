@@ -4,6 +4,7 @@
     id="footprintMap"
     class="fp-map"
     longitude="{{center.longitude}}" latitude="{{center.latitude}}" scale="{{scale}}"
+    markers="{{markers}}"
     show-location
     bindload="onMapLoad"
     bindmarkertap="onMarkerTap"

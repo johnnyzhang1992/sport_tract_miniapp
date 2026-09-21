@@ -42,13 +42,18 @@
     </view>
   </view>
 
-  <!-- 点亮地图（只保留地图本身：分享/全屏/省份下钻/城市列表都不在本页） -->
+  <!-- 点亮地图（只保留地图本身：分享/全屏/省份下钻/城市列表都不在本页）
+       canvas 是独立合成层，会盖住普通 view（既有点亮地图页的省份弹窗同样如此）：
+       抽屉打开期间用 display:none 藏起画布（visibility 实测无效，且不销毁 canvas 省去重挂重绘） -->
   <view class="card map-card">
-    <ec-canvas id="litMap" canvas-id="litMap" ec="{{ ec }}"></ec-canvas>
-    <view wx:if="{{loading}}" class="map-veil">统计中…</view>
+    <view class="map-canvas {{showPeriodPicker ? 'map-canvas-hidden' : ''}}">
+      <ec-canvas id="litMap" canvas-id="litMap" ec="{{ ec }}"></ec-canvas>
+    </view>
   </view>
 
+  <!-- 状态行放地图下方而非浮在地图上：canvas 是独立合成层，浮层会被它盖住（模拟器实测） -->
   <view wx:if="{{error}}" class="tip">{{error}} <text class="retry" bindtap="fetch">重试</text></view>
+  <view wx:elif="{{loading}}" class="tip">统计中…</view>
   <view wx:elif="{{loaded && total === 0}}" class="tip">该时间段还没有足迹，去地图页记录一个吧</view>
 </view>
 
