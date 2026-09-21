@@ -27,9 +27,13 @@
       <text>统计</text>
     </view>
   </view>
-  <!-- 刷新：⟳ + 文案；只有图标转，文案不跟着转 -->
-  <view class="map-refresh" hover-class="entry-btn-hover" bindtap="loadAll">
-    <view class="refresh-icon {{loading ? 'spinning' : ''}}">⟳</view>
+  <!-- 刷新：lucide 图标 + 文案；点一下图标转一圈（文案不跟着转） -->
+  <view class="map-refresh" hover-class="entry-btn-hover" bindtap="onRefreshTap">
+    <image
+      class="refresh-icon {{refreshSpin ? 'spin-once' : ''}}"
+      src="/assets/icons/lucide-refresh-cw.png"
+      mode="aspectFit"
+    />
     <text>刷新</text>
   </view>
 

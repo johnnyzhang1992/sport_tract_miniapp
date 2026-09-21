@@ -535,3 +535,19 @@ test('P9 接线：详情编辑转表单 / 保存与删除后重拉 / 新增态 /
   assert.deepEqual(nav, ['/pages/footprint-list/footprint-list', '/packageFootprint/pages/footprint-stats/footprint-stats']);
   global.wx.navigateTo = origNavigateTo;
 });
+
+/**
+ * P10 刷新按钮：一次性旋转动画由 refreshSpin 驱动——点一下置位（类名挂上）+ 重拉数据，
+ * 动画时长过后必须复位，否则下次点击类名没摘掉、CSS 动画不会重播。
+ */
+test('P10 刷新按钮：置位旋转标记 + 重拉数据，动画结束后复位', async () => {
+  resetCanvasQueue();
+  const page = makePage();
+  const before = page._seq;
+  page.onRefreshTap();
+  assert.equal(page.data.refreshSpin, true, '点一下即置位（动画类名随之挂上）');
+  assert.ok(page._seq > before, 'onRefreshTap 应触发 loadAll（请求序号自增）');
+  await page.loadAll().catch(() => {}); // 收掉这次刷新，别把在途 promise 漏给后面的用例
+  await new Promise((r) => setTimeout(r, 1600)); // 等 REFRESH_SPIN_MS(1520) 过后复位
+  assert.equal(page.data.refreshSpin, false, '动画结束必须复位，否则下次点击动画不重播');
+});

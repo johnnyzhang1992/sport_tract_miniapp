@@ -10,6 +10,8 @@ const MAX_SCALE = 20;
 const EXPAND_ZOOM_STEP = 2;
 /** 视野由程序改动后的静默窗口：期间忽略 regionchange 回读，避免自激 */
 const PROGRAMMATIC_CAMERA_MS = 900;
+/** 刷新图标转三圈的时长（与 wxss 的 1.5s 对齐，留 20ms 余量后复位动画标记） */
+const REFRESH_SPIN_MS = 1520;
 /** marker id 分段（微信 map 的 markerId 是数字）：1..N = records 下标 + 1；≥ 基准则为自绘聚合簇 */
 const CLUSTER_ID_BASE = 100000;
 
@@ -82,8 +84,22 @@ Page({
     clusterSheet: { visible: false, records: [] }, // 最大缩放兜底：同处多条足迹的成员列表
     formVisible: false, // 新增/编辑半屏表单（components/footprint-form）
     formRecord: null, // 传入记录即为编辑态
+    refreshSpin: false, // 刷新图标一次性旋转动画的开关
   },
   onLoad() { this.loadAll(); },
+
+  /**
+   * 刷新：点一下图标转一圈（先复位再置位，连点也能重新播放动画——同一个类名不摘掉是重播不了的），
+   * 随后重拉地图数据。动画标记由定时器复位，故不会出现「转完停在斜着的角度」。
+   */
+  onRefreshTap() {
+    this.setData({ refreshSpin: false }, () => {
+      this.setData({ refreshSpin: true });
+      if (this._spinTimer) clearTimeout(this._spinTimer);
+      this._spinTimer = setTimeout(() => this.setData({ refreshSpin: false }), REFRESH_SPIN_MS);
+    });
+    this.loadAll();
+  },
 
   async loadAll() {
     // 请求序号守卫：只应用最后一次结果，防竞态
