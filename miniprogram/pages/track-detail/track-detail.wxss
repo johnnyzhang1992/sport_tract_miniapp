@@ -99,35 +99,40 @@
   font-weight: 600;
   margin-bottom: 20rpx;
 }
-.track-metrics {
-  display: flex;
-  background: #f7f8fa;
-  border-radius: 12rpx;
-  padding: 24rpx 0;
-}
-.metric {
-  flex: 1;
-  text-align: center;
-  min-width: 0;
-}
-.metric-num {
-  font-size: 34rpx;
+/* 运动数据网格（Keep 风：标签在上、大数值 + 小单位在下，每行 3 格） */
+.md-title {
+  font-size: 32rpx;
   font-weight: 600;
-  white-space: nowrap;
+  margin: 8rpx 0 4rpx;
 }
-.metric-label {
+.md-grid {
+  display: flex;
+  flex-wrap: wrap;
+}
+.md-cell {
+  width: 33.33%;
+  box-sizing: border-box;
+  padding: 12rpx 12rpx 12rpx 0;
+}
+.md-label {
   font-size: 22rpx;
-  color: #999;
+  color: #8a93a6;
+}
+.md-value {
+  display: flex;
+  align-items: baseline;
   margin-top: 4rpx;
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #1f2329;
   white-space: nowrap;
+  overflow: hidden;
 }
-.pace-unit {
-  font-size: 24rpx;
-  color: #999;
-  margin-left: 2rpx;
-}
-.detail-sub {
-  margin-top: 16rpx;
+.md-unit {
+  margin-left: 4rpx;
+  font-size: 22rpx;
+  font-weight: 400;
+  color: #8a93a6;
 }
 .marker-item {
   display: flex;
@@ -156,13 +161,14 @@
 .container {
   padding-bottom: 180rpx;
 }
-/* 固定底部操作栏 */
+/* 固定底部操作栏（分享居中主色，左右描边） */
 .fixed-actions {
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
   display: flex;
+  gap: 20rpx; /* t-button 宿主不吃 class 里的 margin，间距用父级 gap */
   padding: 16rpx 24rpx calc(16rpx + env(safe-area-inset-bottom));
   background: #fff;
   box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.06);
@@ -170,17 +176,19 @@
 }
 .fixed-actions .act-btn {
   flex: 1;
-  font-size: 22rpx; /* 小屏 4 按钮放不下，缩小字号 */
-  padding: 0 8rpx;
+  font-size: 26rpx;
 }
-.fixed-actions .act-btn + .act-btn {
-  margin-left: 10rpx;
+/* 描边按钮：variant=outline 的边框依赖基础库默认 button::after，这里显式补一层 */
+.act-btn-line {
+  border: 2rpx solid #dcdfe5;
 }
 
 /* 开始/结束时间 */
 .detail-time {
   display: flex;
   align-items: center;
+  flex-wrap: wrap; /* 窄屏放不下时整段换行，不挤断日期 */
+  row-gap: 4rpx;
   font-size: 24rpx;
   color: #8a93a6;
   margin-top: 10rpx;
@@ -264,52 +272,69 @@
 .seg-row {
   display: flex;
   align-items: center;
-  padding: 18rpx 0;
+  padding: 14rpx 0;
   border-bottom: 1rpx solid #f2f3f5;
 }
 .seg-row:last-child {
   border-bottom: none;
 }
-.seg-idx {
-  width: 56rpx;
-  height: 56rpx;
-  border-radius: 50%;
-  background: #e8f0ff;
-  color: #2b6cf6;
-  font-size: 26rpx;
-  font-weight: 600;
+/* 单段明细：表头 + 单行表格（# 公里 用时 配速） */
+.seg-thead {
   display: flex;
   align-items: center;
-  justify-content: center;
-  margin-right: 20rpx;
-  flex-shrink: 0;
-}
-.seg-idx-partial {
-  background: #fff3e0;
-  color: #ff9800;
-}
-.seg-info {
-  flex: 1;
-  min-width: 0;
-}
-.seg-meta {
-  display: flex;
-  align-items: baseline;
-}
-.seg-time {
-  font-size: 30rpx;
-  font-weight: 600;
-  color: #1f2329;
-  margin-right: 16rpx;
-}
-.seg-dist {
+  padding: 0 0 10rpx;
+  border-bottom: 1rpx solid #eef0f3;
   font-size: 22rpx;
   color: #8a93a6;
 }
-.seg-pace {
+.seg-row {
+  display: flex;
+  align-items: center;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #f2f3f5;
+}
+.seg-row:last-child {
+  border-bottom: none;
+}
+.seg-col-no {
+  width: 60rpx;
+  flex-shrink: 0;
+}
+.seg-col-dist {
+  width: 130rpx;
+  flex-shrink: 0;
+}
+.seg-col-time {
+  width: 150rpx;
+  flex-shrink: 0;
+}
+.seg-col-pace {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+.seg-row .seg-col-no {
   font-size: 24rpx;
-  color: #4e5969;
-  margin-top: 4rpx;
+  color: #8a93a6;
+}
+.seg-col-partial {
+  color: #ff9800;
+  font-weight: 600;
+}
+.seg-row .seg-col-dist {
+  font-size: 24rpx;
+  color: #8a93a6;
+}
+.seg-row .seg-col-time {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+.seg-pace-val {
+  font-size: 26rpx;
+  color: #1f2329;
 }
 .seg-head {
   display: flex;
@@ -320,6 +345,91 @@
 .seg-more {
   color: #2b6cf6;
   font-size: 24rpx;
+}
+
+/* 配速区间（跑步） */
+.pz-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 12rpx;
+}
+.pz-title {
+  font-size: 32rpx;
+  font-weight: 600;
+}
+.pz-anchor {
+  font-size: 22rpx;
+  color: #8a93a6;
+}
+.pz-row {
+  padding: 14rpx 0;
+  border-bottom: 1rpx solid #f2f3f5;
+}
+.pz-row:last-child {
+  border-bottom: none;
+}
+.pz-line {
+  display: flex;
+  align-items: center;
+}
+.pz-line-bar {
+  margin-top: 8rpx;
+}
+.pz-dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  margin-right: 14rpx;
+  flex-shrink: 0;
+}
+.pz-name {
+  width: 152rpx; /* 固定列宽：区间名对齐，比例列左侧对齐 */
+  flex-shrink: 0;
+  font-size: 28rpx;
+  color: #1f2329;
+}
+.pz-ratio {
+  flex: 1;
+  font-size: 20rpx;
+  color: #8a93a6;
+  margin-left: 12rpx;
+}
+.pz-pct {
+  width: 84rpx;
+  text-align: right;
+  font-size: 26rpx;
+  font-weight: 600;
+}
+.pz-dur {
+  width: 108rpx;
+  text-align: right;
+  font-size: 22rpx;
+  color: #8a93a6;
+}
+.pz-range {
+  width: 206rpx;
+  padding-left: 30rpx; /* 与区间名左对齐（让开圆点） */
+  flex-shrink: 0;
+  font-size: 20rpx;
+  color: #8a93a6;
+}
+.pz-bar {
+  flex: 1;
+  height: 12rpx;
+  border-radius: 6rpx;
+  background: #f2f3f5;
+  overflow: hidden;
+}
+.pz-bar-fill {
+  height: 100%;
+  border-radius: 6rpx;
+}
+.pz-note {
+  font-size: 20rpx;
+  color: #8a93a6;
+  line-height: 1.5;
+  margin-top: 14rpx;
 }
 
 /* 全部单段弹窗 */
@@ -360,13 +470,10 @@
   vertical-align: middle;
 }
 
-/* 最快配速段徽章 */
-.seg-pace {
-  display: flex;
-  align-items: center;
-  gap: 10rpx;
-}
+/* 最快配速段徽章（在配速左侧） */
 .seg-fast {
+  flex-shrink: 0;
+  margin-right: 12rpx;
   font-size: 18rpx;
   color: #fff;
   background: #ff6b3d;
@@ -374,19 +481,50 @@
   padding: 2rpx 10rpx;
 }
 
-/* 个人最佳徽章 */
-.best-badges {
+/* 特别成就（个人最佳） */
+.ach-head {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10rpx;
-  margin: 8rpx 0;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 8rpx;
 }
-.best-badge {
-  font-size: 20rpx;
-  color: #ff6b3d;
-  background: #fff4ef;
-  border-radius: 999rpx;
-  padding: 4rpx 16rpx;
+.ach-title {
+  font-size: 32rpx;
+  font-weight: 600;
+}
+.ach-count {
+  font-size: 22rpx;
+  color: #8a93a6;
+}
+.ach-row {
+  display: flex;
+  align-items: center;
+  padding: 18rpx 0;
+  border-bottom: 1rpx solid #f2f3f5;
+}
+.ach-row:last-child {
+  border-bottom: none;
+}
+.ach-medal {
+  font-size: 36rpx;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+}
+.ach-label {
+  flex: 1;
+  font-size: 28rpx;
+  color: #1f2329;
+}
+.ach-value {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+.ach-unit {
+  margin-left: 4rpx;
+  font-size: 22rpx;
+  font-weight: 400;
+  color: #8a93a6;
 }
 
 /* 打点 emoji 图标 */

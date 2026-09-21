@@ -70,9 +70,6 @@
         <view class="hero-date">{{activity.startTimeText}}</view>
       </view>
     </view>
-    <view class="best-badges" wx:if="{{bestBadges.length}}">
-      <view class="best-badge" wx:for="{{bestBadges}}" wx:key="*this">🏆 {{item}}</view>
-    </view>
     <view class="note-text" wx:if="{{activity.note}}">{{activity.note}}</view>
     <!-- 轨迹线颜色说明（徒步/爬山按海拔，其余按配速） -->
     <view class="legend-row">
@@ -80,51 +77,80 @@
       <view class="legend-bar {{colorMode === 'altitude' ? 'legend-bar-altitude' : 'legend-bar-pace'}}"></view>
       <text class="legend-text">{{colorMode === 'altitude' ? '海拔高' : paceFastText + ' 快'}}</text>
     </view>
-    <view class="track-metrics">
-      <view class="metric">
-        <view class="metric-num">{{activity.durationText}}</view>
-        <view class="metric-label">时长</view>
+    <view class="md-title">运动数据</view>
+    <view class="md-grid">
+      <view class="md-cell" wx:for="{{metrics}}" wx:key="label">
+        <view class="md-label">{{item.label}}</view>
+        <view class="md-value">{{item.value}}<text class="md-unit" wx:if="{{item.unit}}">{{item.unit}}</text></view>
       </view>
-      <view class="metric">
-        <view class="metric-num">{{activity.paceValue}}</view>
-        <view class="metric-label">平均配速 {{activity.paceUnit}}</view>
-      </view>
-      <view class="metric" wx:if="{{activity.fastestKmValue}}">
-        <view class="metric-num">{{activity.fastestKmValue}}</view>
-        <view class="metric-label">最快1km</view>
-      </view>
-      <view class="metric">
-        <view class="metric-num">{{activity.calories}}</view>
-        <view class="metric-label">千卡</view>
-      </view>
-    </view>
-    <view class="text-muted detail-sub" wx:if="{{activity.elevationGain && activity.altRangeText}}">
-      累计爬升 {{activity.elevationGain}}m · {{activity.altRangeIsRange ? '海拔' : '最高海拔'}} {{activity.altRangeText}} · 打点 {{markerList.length}} 个{{activity.avgAccuracy ? ' · 📡 精度 ' + activity.avgAccuracy + 'm' : ''}}
     </view>
     <view class="detail-time">
       <text>开始 {{activity.startTimeText}}</text>
       <text class="time-sep">·</text>
       <text>结束 {{activity.endTimeText}}</text>
+      <block wx:if="{{activity.avgAccuracy}}">
+        <text class="time-sep">·</text>
+        <text>📡 精度 {{activity.avgAccuracy}}m</text>
+      </block>
     </view>
   </view>
 
-  <!-- 单段明细（每公里） -->
+  <!-- 特别成就（本轨迹在所属运动类型中持有的个人最佳） -->
+  <view class="card" wx:if="{{achievements.length}}">
+    <view class="ach-head">
+      <text class="ach-title">特别成就</text>
+      <text class="ach-count">共 {{achievements.length}} 个</text>
+    </view>
+    <view class="ach-row" wx:for="{{achievements}}" wx:key="label">
+      <text class="ach-medal">🏆</text>
+      <text class="ach-label">{{item.label}}</text>
+      <text class="ach-value">{{item.value}}<text class="ach-unit" wx:if="{{item.unit}}">{{item.unit}}</text></text>
+    </view>
+  </view>
+
+  <!-- 配速区间（跑步：自锚定分档，边界 = 本次平均配速 × 比例） -->
+  <view class="card" wx:if="{{runZones.hasData}}">
+    <view class="pz-head">
+      <text class="pz-title">配速区间</text>
+      <text class="pz-anchor">{{runZones.anchorText}}</text>
+    </view>
+    <view wx:for="{{runZones.zones}}" wx:key="key" class="pz-row">
+      <view class="pz-line">
+        <view class="pz-dot" style="background: {{item.color}}"></view>
+        <text class="pz-name">{{item.name}}</text>
+        <text class="pz-ratio">{{item.ratioText}}</text>
+        <text class="pz-pct" style="color: {{item.color}}">{{item.pctText}}%</text>
+        <text class="pz-dur">{{item.durationText}}</text>
+      </view>
+      <view class="pz-line pz-line-bar">
+        <text class="pz-range">{{item.paceText}}</text>
+        <view class="pz-bar">
+          <view class="pz-bar-fill" style="width: {{item.barPct}}%; background: {{item.color}}"></view>
+        </view>
+      </view>
+    </view>
+    <view class="pz-note">以本次平均配速为分档基准 · 45 秒平滑配速按移动时间加权（有效 {{runZones.totalText}}）</view>
+  </view>
+
+  <!-- 单段明细（每公里，表头 + 单行表格） -->
   <view class="card" wx:if="{{displaySegs.length > 0}}">
     <view class="seg-head">
       <view class="detail-title">单段明细 <text class="text-muted" style="font-size:22rpx">（每公里）</text></view>
       <view class="seg-more" wx:if="{{kmSegs.length > 5}}" bindtap="openAllSegs">查看全部 ›</view>
     </view>
+    <view class="seg-thead">
+      <text class="seg-col-no">#</text>
+      <text class="seg-col-dist">公里</text>
+      <text class="seg-col-time">用时</text>
+      <text class="seg-col-pace">配速</text>
+    </view>
     <view wx:for="{{displaySegs}}" wx:key="idx" class="seg-row">
-      <view class="seg-idx {{item.partial ? 'seg-idx-partial' : ''}}">{{item.partial ? '余' : item.idx}}</view>
-      <view class="seg-info">
-        <view class="seg-meta">
-          <text class="seg-time">{{item.durationText}}</text>
-          <text class="seg-dist">{{item.distKm.toFixed(2)}} 公里{{item.partial ? '（不足 1km）' : ''}}</text>
-        </view>
-        <view class="seg-pace">
-        <text>配速 {{item.paceText}}</text>
+      <text class="seg-col-no {{item.partial ? 'seg-col-partial' : ''}}">{{item.partial ? '余' : item.idx}}</text>
+      <text class="seg-col-dist">{{item.distText}}</text>
+      <text class="seg-col-time">{{item.durationText}}</text>
+      <view class="seg-col-pace">
         <text class="seg-fast" wx:if="{{item.fastest}}">最快</text>
-      </view>
+        <text class="seg-pace-val">{{item.paceText}}</text>
       </view>
     </view>
   </view>
@@ -133,19 +159,21 @@
   <t-popup visible="{{segsVisible}}" placement="bottom" bind:visible-change="onSegsVisibleChange">
     <view class="segs-panel">
       <view class="segs-title">单段明细（{{kmSegs.length}} 段）</view>
+      <view class="seg-thead">
+        <text class="seg-col-no">#</text>
+        <text class="seg-col-dist">公里</text>
+        <text class="seg-col-time">用时</text>
+        <text class="seg-col-pace">配速</text>
+      </view>
       <scroll-view scroll-y class="segs-scroll">
         <view class="segs-list">
           <view wx:for="{{kmSegs}}" wx:key="idx" class="seg-row">
-            <view class="seg-idx {{item.partial ? 'seg-idx-partial' : ''}}">{{item.partial ? '余' : item.idx}}</view>
-            <view class="seg-info">
-              <view class="seg-meta">
-                <text class="seg-time">{{item.durationText}}</text>
-                <text class="seg-dist">{{item.distKm.toFixed(2)}} 公里{{item.partial ? '（不足 1km）' : ''}}</text>
-              </view>
-              <view class="seg-pace">
-                <text>配速 {{item.paceText}}</text>
-                <text class="seg-fast" wx:if="{{item.fastest}}">最快</text>
-              </view>
+            <text class="seg-col-no {{item.partial ? 'seg-col-partial' : ''}}">{{item.partial ? '余' : item.idx}}</text>
+            <text class="seg-col-dist">{{item.distText}}</text>
+            <text class="seg-col-time">{{item.durationText}}</text>
+            <view class="seg-col-pace">
+              <text class="seg-fast" wx:if="{{item.fastest}}">最快</text>
+              <text class="seg-pace-val">{{item.paceText}}</text>
             </view>
           </view>
         </view>
@@ -180,11 +208,11 @@
     </view>
   </view>
 
-  <!-- 操作（固定底部；非本人只读：隐藏编辑类入口，保留分享海报） -->
+  <!-- 操作（固定底部；分享居中主色，其余描边；非本人只读：隐藏编辑类入口） -->
   <view class="fixed-actions">
-    <t-button class="act-btn" variant="outline" size="medium" block bind:tap="sharePoster">分享海报</t-button>
-    <t-button class="act-btn" wx:if="{{activity.isOwner}}" variant="outline" size="medium" block bind:tap="exportGpx">导出 GPX</t-button>
-    <t-button class="act-btn" wx:if="{{activity.isOwner}}" variant="outline" size="medium" block bind:tap="reprocessTrack">纠偏</t-button>
+    <t-button class="act-btn" t-class="act-btn-line" wx:if="{{activity.isOwner}}" variant="outline" size="medium" block bind:tap="exportGpx">导出 GPX</t-button>
+    <t-button class="act-btn" theme="primary" size="medium" block bind:tap="sharePoster">分享运动</t-button>
+    <t-button class="act-btn" t-class="act-btn-line" wx:if="{{activity.isOwner}}" variant="outline" size="medium" block bind:tap="reprocessTrack">纠偏</t-button>
   </view>
 
   <!-- 分享海报（离屏绘制，无可见 UI） -->

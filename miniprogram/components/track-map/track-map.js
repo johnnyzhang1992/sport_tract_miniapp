@@ -6,6 +6,7 @@
 // 合集模式"密集区域"半径（km）：轨迹中心距核心在此范围内即视为同一密集簇
 const DENSE_REGION_KM = 50;
 const { getPaceScale } = require('../../utils/pace-scale.js');
+const { haversineKm, splitByPauseGaps, computeSegPaces } = require('../../utils/track-pace.js');
 
 Component({
   properties: {
@@ -159,7 +160,7 @@ Component({
     /** 默认配色：按打点 + pauseGap 分段轮换颜色 */
     buildDefaultPolyline(pts) {
       // 按打点 + pauseGap 分段
-      const segsWithGap = this.splitByPauseGaps(this.splitByMarkers(pts));
+      const segsWithGap = splitByPauseGaps(this.splitByMarkers(pts));
 
       // 计算每段是否由 pauseGap 产生（用于保持同色）
       const isGapSeg = segsWithGap.map((seg, i) => {
@@ -195,7 +196,7 @@ Component({
       }
 
       // 先按 pauseGap 分段，每段独立着色（暂停间隙断开）
-      const segs = this.splitByPauseGaps([pts]);
+      const segs = splitByPauseGaps([pts]);
       const allPolylines = [];
 
       for (const seg of segs) {
@@ -248,35 +249,14 @@ Component({
      * - 暂停间隙断开不跨段；累计距离过小（原地）按最慢档处理
      */
     buildPacePolyline(pts) {
-      const WINDOW_SEC = 45; // 滑动窗口时长：配速平滑粒度
-      const segs = this.splitByPauseGaps([pts]).filter((seg) => seg.length >= 2);
+      const segs = splitByPauseGaps([pts]);
       if (segs.length === 0) {
         this.setData({ polyline: [] });
         return;
       }
 
-      // 每个点的平滑配速（秒/公里）：回溯累计近 WINDOW_SEC 秒；无 timestamp / 累计距离过小（原地）→ null
-      const segPaces = segs.map((seg) => {
-        const paces = new Array(seg.length).fill(null);
-        for (let i = 1; i < seg.length; i++) {
-          const a = seg[i - 1];
-          const b = seg[i];
-          if (!a.timestamp || !b.timestamp) continue;
-          let dt = (b.timestamp - a.timestamp) / 1000;
-          if (!Number.isFinite(dt) || dt <= 0) continue;
-          let d = haversineKm(a, b) * 1000;
-          let j = i - 1;
-          while (j > 0 && dt < WINDOW_SEC) {
-            const sdt = (seg[j].timestamp - seg[j - 1].timestamp) / 1000;
-            if (!Number.isFinite(sdt) || sdt < 0 || sdt > 60) break; // 不跨断档回溯
-            dt += sdt;
-            d += haversineKm(seg[j - 1], seg[j]) * 1000;
-            j--;
-          }
-          paces[i] = d >= 5 ? dt / (d / 1000) : null;
-        }
-        return paces;
-      });
+      // 每个点的平滑配速（秒/公里）：回溯累计近 WINDOW_SEC 秒；无 timestamp / 原地 → null
+      const segPaces = computeSegPaces(segs);
 
       // 绝对刻度映射：按运动类型固定的配速区间（超出截断）
       const hasAny = segPaces.some((paces) => paces.some((p) => p != null));
@@ -344,24 +324,6 @@ Component({
       }
       if (start < pts.length - 1) segs.push(pts.slice(start));
       return segs.length > 0 ? segs : [pts];
-    },
-
-    /** 按 pauseGap 标记将分段再切分（暂停间隙断开连线） */
-    splitByPauseGaps(segs) {
-      const result = [];
-      for (const seg of segs) {
-        let start = 0;
-        for (let i = 0; i < seg.length; i++) {
-          if (seg[i].pauseGap && i > start) {
-            // 前一段不包含 pauseGap 点，后一段从 pauseGap 点开始（两段不共享端点）
-            result.push(seg.slice(start, i));
-            start = i;
-          }
-        }
-        if (start < seg.length) result.push(seg.slice(start));
-      }
-      // 过滤掉只有1个点的段（无法绘制线段）
-      return result.filter(s => s.length >= 2);
     },
 
     /** 点到轨迹点序列的最近索引（平方距离近似） */
@@ -972,18 +934,6 @@ function defaultMarkerIcon() {
 }
 function defaultCurrentIcon() {
   return '/assets/icons/current-dot.png';
-}
-
-/** 两点球面距离（公里），兼容 {lat,lng} */
-function haversineKm(a, b) {
-  const R = 6371;
-  const toRad = (deg) => (deg * Math.PI) / 180;
-  const dLat = toRad(b.lat - a.lat);
-  const dLng = toRad(b.lng - a.lng);
-  const s =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(s));
 }
 
 /** 海拔色带：蓝 → 绿 → 黄 → 红（12 档线性插值） */
