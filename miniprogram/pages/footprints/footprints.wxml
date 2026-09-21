@@ -28,6 +28,8 @@
           bindregionchange="onRegionChange"
           bindpoitap="onPoiTap"
         />
+        <!-- 页面下拉刷新已禁用（拖动地图会误触发），地图内提供刷新按钮 -->
+        <view class="map-refresh {{loading || loadingList ? 'spinning' : ''}}" bindtap="loadAll">⟳</view>
       </view>
       <view wx:if="{{mode === 'list'}}" class="list-wrap">
         <!-- 分页列表：触底翻页闸门在 JS 侧（hasMore && loadingList），卡片字段见 toCard() -->
