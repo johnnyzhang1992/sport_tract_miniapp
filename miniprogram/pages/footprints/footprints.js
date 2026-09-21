@@ -135,7 +135,8 @@ Page({
     return api.get('/footprint-records/geo').then((data) => {
       if (seq !== this._seq) return;
       this.setData({ records: data.items });
-      this.buildMarkers();
+      // return 出去：markers 与 loading:false 落在同一帧（否则首屏会先闪一帧无 marker 的空图）
+      return this.buildMarkers();
     });
   },
   reloadList(seq) {
@@ -198,8 +199,12 @@ Page({
   buildMarkers(opts) {
     const fit = !opts || opts.fit !== false;
     // 簇图标是离屏 canvas 异步产出的：同样要防竞态，旧一次构建不能覆盖新一批 markers
+    // 构建令牌：canvas 在途期间 regionchange / expandCluster / loadAll 可以并发再进来构建，
+    // 只靠 _seq（管数据新鲜度）拦不住「同一批数据被构建了两次」的互相覆盖，
+    // 故每次构建取一个单调递增号，提交时号已被后来者取走、或 records 已换过 → 整次构建作废
+    const build = (this._buildSeq = (this._buildSeq || 0) + 1);
     const seq = this._seq;
-    const records = this.data.records;
+    const records = this.data.records; // 记下本次构建用的数组身份，提交时校验（loadGeo 会整体换新数组）
     const points = [];
     records.forEach((r, i) => {
       const latitude = Number(r.latitude);
@@ -214,13 +219,22 @@ Page({
       patch.center = fitted.center;
       patch.scale = fitted.scale;
       this._gridZoom = fitted.scale;
-      this._progCamUntil = Date.now() + PROGRAMMATIC_CAMERA_MS;
+      // 静默窗口不在这里打点：出图要等若干个 microtask，若在 await 之前起算，900ms 会被等待消耗掉一块，
+      // 提交时窗口可能已过期 → 用户手势和这次 fit 互相打断。改到下方相机真正落地处打点。
     }
     const zoom = this._gridZoom || this.data.scale;
     const clusters = geo.gridCluster(points, zoom);
 
-    return Promise.all(clusters.map((c) => (c.count > 1 ? buildClusterIcon(c.count) : Promise.resolve('')))).then((icons) => {
-      if (seq !== this._seq) return; // 被后续批次取代：既不 setData，也不覆盖 _clusters（否则 expandCluster 会按陈旧桶开错记录）
+    // 一次构建内按 distinct count 出图：CLUSTER_ICON_CACHE 只在出图「完成后」写入，拦不住在途并发，
+    // 直接 map 的话 30 个「2」字簇会向离屏 canvas 发 30 次一模一样的绘制请求
+    const iconJobs = new Map();
+    clusters.forEach((c) => {
+      if (c.count > 1 && !iconJobs.has(c.count)) iconJobs.set(c.count, buildClusterIcon(c.count));
+    });
+
+    return Promise.all(clusters.map((c) => (c.count > 1 ? iconJobs.get(c.count) : Promise.resolve('')))).then((icons) => {
+      // 被后续构建/刷新取代：既不 setData，也不覆盖 _clusters（否则 expandCluster 会按陈旧桶开错记录）
+      if (seq !== this._seq || build !== this._buildSeq || records !== this.data.records) return;
       const markers = clusters.map((c, ci) => {
         if (c.count === 1) {
           // 稀疏点：普通叶 marker，点击直接开详情
@@ -245,13 +259,15 @@ Page({
         if (icons[ci]) {
           marker.iconPath = icons[ci];
         } else {
-          // 离屏 canvas 不可用：退回默认点 + 常显数字气泡，聚合仍可读
+          // 离屏 canvas 不可用：退回默认点 + 常显数字气泡，聚合仍可读（点击走 bindcallouttap，见 wxml）
           marker.iconPath = '/assets/icons/marker-dot.png';
           marker.callout = { content: String(c.count), color: CLUSTER_TEXT_COLOR, fontSize: 12, bgColor: CLUSTER_BG_COLOR, borderRadius: 10, padding: 6, display: 'ALWAYS', textAlign: 'center' };
         }
         return marker;
       });
       this._clusters = clusters; // 与 markers 同一提交点更新：簇下标 ci 必须和屏上气泡对齐
+      // 视野与 markers 同一次 setData 交给 <map>：静默窗口就从这一刻起算
+      if (patch.center) this._progCamUntil = Date.now() + PROGRAMMATIC_CAMERA_MS;
       this.setData(Object.assign({ markers }, patch));
     });
   },
@@ -270,6 +286,11 @@ Page({
       if (!Number.isFinite(s)) return;
       if (Math.abs(s - (this._gridZoom || this.data.scale)) < 0.5) return; // 没换层级不重建，防高频 regionchange 抖动
       this._gridZoom = s;
+      // 回写 data.scale：s 是用户手势结束后相机真实所在的层级（regionchange end 回读值），
+      // setData 只是让 data 与视图对齐、不会再移动相机。不回写的话 data.scale 会停在 fit/expand 的旧值：
+      // 从封顶 20 级双指缩小后 expandCluster 读到的还是 20 → 点任何簇都误弹成员半屏，
+      // 且地图⇄列表往返把 <map> 重建时也会按这个陈旧值重设视野
+      this.setData({ scale: s });
       this.buildMarkers({ fit: false });
     };
     const raw = Number.isFinite(e.scale) ? e.scale : Number.isFinite(d.scale) ? d.scale : null;
@@ -296,10 +317,13 @@ Page({
   expandCluster(idx) {
     const c = (this._clusters || [])[idx];
     if (!c) return;
-    const base = Math.max(this._gridZoom || 0, this.data.scale);
+    // 不再 Math.max(_gridZoom, data.scale)：onRegionChange 已把手势缩放回写进 data.scale，
+    // 两者现在同源，取其一即可（Math.max 会把封顶值永久留在 base 上，误判「已到底」）
+    const base = this._gridZoom || this.data.scale;
     if (base >= MAX_SCALE - 0.5) {
       const recs = (c.members || []).map((i) => this.data.records[i]).filter(Boolean);
       if (recs.length) this.showClusterMembers(recs);
+      else console.warn('[footprints] expandCluster: 封顶簇无有效成员，_clusters 与 records 已脱节 idx=' + idx + ' count=' + c.count);
       return;
     }
     const next = Math.min(MAX_SCALE, base + EXPAND_ZOOM_STEP);
