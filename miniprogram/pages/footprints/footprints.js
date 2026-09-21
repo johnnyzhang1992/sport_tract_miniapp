@@ -96,15 +96,10 @@ Page({
     items: [], page: 1, pageSize: 20, total: 0, hasMore: true, loadingList: false,
     popup: { visible: false, record: null },
     clusterSheet: { visible: false, records: [] }, // 最大缩放兜底：同处多条足迹的成员列表
+    formVisible: false, // 新增/编辑半屏表单（components/footprint-form）
+    formRecord: null, // 传入记录即为编辑态（详情弹窗的完整 DTO 直接回填）
   },
   onLoad() { this.loadAll(); },
-  onShow() {
-    const app = getApp();
-    if (app.globalData.footprintsDirty) {
-      app.globalData.footprintsDirty = false;
-      this.loadAll();
-    }
-  },
 
   async loadAll() {
     // 请求序号守卫：只应用最后一次结果，防竞态
@@ -428,11 +423,11 @@ Page({
     if (r) this.openPopup(r);
   },
 
+  /** 详情弹窗的编辑：关详情、就地开半屏表单（完整 DTO 直接回填，不再二次请求） */
   editRecord() {
     const rec = this.data.popup.record;
     if (!rec) return;
-    this.setData({ 'popup.visible': false });
-    wx.navigateTo({ url: '/packageFootRecords/pages/record-edit/record-edit?id=' + rec.id });
+    this.setData({ 'popup.visible': false, formVisible: true, formRecord: rec });
   },
   removeRecord() {
     const rec = this.data.popup.record;
@@ -463,6 +458,12 @@ Page({
 
   /** 切换形态：map 节点被 wx:if 销毁/重建时声明式 markers 自动重挂，无需任何补投 */
   switchMode(e) { this.setData({ mode: e.currentTarget.dataset.mode }); },
-  openAdd() { wx.navigateTo({ url: '/packageFootRecords/pages/record-edit/record-edit' }); },
+  openAdd() { this.setData({ formVisible: true, formRecord: null }); },
+  closeForm() { this.setData({ formVisible: false, formRecord: null }); },
+  /** 表单保存成功：关弹层 + 复用整页刷新链（地图与列表一起重拉，保留当前形态） */
+  onFormSaved() {
+    this.setData({ formVisible: false, formRecord: null });
+    this.loadAll();
+  },
   noop() {},
 });

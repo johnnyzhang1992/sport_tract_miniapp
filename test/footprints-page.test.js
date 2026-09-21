@@ -490,3 +490,32 @@ test('P8 相机回写：过期异步回读被写序令牌挡掉 / 静默窗口�
   assert.ok(pageC.data.markers.every((m) => m.id < CLUSTER_ID_BASE));
   assert.equal(pageC._clusters.length, 6);
 });
+
+/**
+ * P9 表单接线（新增/编辑改半屏组件后，页面侧的契约）：
+ * openAdd 开新增态；详情「编辑」先关详情、带完整 DTO 开编辑态；保存成功后关弹层并整页重拉。
+ */
+test('P9 表单接线：openAdd 开新增态 / 编辑关详情开编辑态 / 保存后关弹层并 loadAll', () => {
+  resetCanvasQueue();
+  const page = makePage();
+
+  page.openAdd();
+  assert.equal(page.data.formVisible, true);
+  assert.equal(page.data.formRecord, null);
+
+  page.setData({ popup: { visible: true, record: { id: 'r1', title: '西湖' } } });
+  page.editRecord();
+  assert.equal(page.data.popup.visible, false, '开表单前先关详情弹窗');
+  assert.equal(page.data.formVisible, true);
+  assert.equal(page.data.formRecord.id, 'r1');
+
+  const before = page._seq;
+  page.onFormSaved();
+  assert.equal(page.data.formVisible, false);
+  assert.equal(page.data.formRecord, null);
+  assert.ok(page._seq > before, 'onFormSaved 应触发 loadAll（请求序号自增）');
+
+  page.openAdd();
+  page.closeForm();
+  assert.equal(page.data.formVisible, false);
+});

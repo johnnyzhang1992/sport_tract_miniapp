@@ -78,12 +78,6 @@
       "pages": [
         "pages/footprint/footprint"
       ]
-    },
-    {
-      "root": "packageFootRecords",
-      "pages": [
-        "pages/record-edit/record-edit"
-      ]
     }
   ],
   "requiredBackgroundModes": [

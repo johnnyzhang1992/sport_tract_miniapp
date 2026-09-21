@@ -1,9 +1,51 @@
-/* 足迹编辑页：表单卡片风格对齐 pages/profile + pages/settings（复用全局 .container / .card / .btn-primary / .text-muted） */
-.container {
-  padding-bottom: calc(40rpx + env(safe-area-inset-bottom));
+/* 半屏表单弹层（观感对齐 pages/footprints 既有的 .mask/.sheet：同色遮罩、24rpx 圆角、底部弹出） */
+.fp-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+}
+.fp-sheet {
+  width: 100%;
+  box-sizing: border-box;
+  background: #fff;
+  border-radius: 24rpx 24rpx 0 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.fp-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28rpx 32rpx 8rpx;
+}
+.fp-title {
+  flex: 1;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+.fp-close {
+  flex: none;
+  padding: 8rpx 0 8rpx 24rpx;
+  font-size: 30rpx;
+  color: #999;
+}
+.fp-body {
+  flex: 1;
+  min-height: 0;
+  box-sizing: border-box;
+  padding: 16rpx 32rpx calc(24rpx + env(safe-area-inset-bottom));
 }
 
-/* 通用字段标签 / 输入（同 profile） */
+/* —— 以下表单样式与 components/marker-form、原 record-edit 对齐 —— */
 .field-label {
   font-size: 28rpx;
   color: #666;
@@ -48,7 +90,6 @@
   background: #f7f8fa;
   color: #2b6cf6;
   font-size: 28rpx;
-  margin-right: 16rpx;
 }
 .loc-btn:last-child {
   margin-right: 0;
