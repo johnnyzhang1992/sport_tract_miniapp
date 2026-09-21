@@ -1,6 +1,6 @@
 <!-- 详情半屏（观感同 pages/footprints 既有 .mask/.sheet）；补拉期间只显示「加载中…」骨架 -->
 <view wx:if="{{visible}}" class="mask" bindtap="onMaskTap">
-  <view class="sheet" catchtap="noop">
+  <view class="sheet {{safeBottom ? '' : 'sheet-no-safe'}}" catchtap="noop">
     <view class="sheet-head">
       <view class="sheet-title">{{detail.title || ''}}</view>
       <view class="sheet-close" catchtap="onClose">✕</view>

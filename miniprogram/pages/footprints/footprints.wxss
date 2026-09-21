@@ -51,14 +51,14 @@
   align-items: center;
   gap: 8rpx;
   padding: 0 18rpx;
-  height: 72rpx;
+  height: 64rpx;
   border-radius: 999rpx;
   background: rgba(255, 255, 255, 0.95);
   color: #2b6cf6;
   font-size: 26rpx;
   box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
 }
-/* 图标沿用项目既有 lucide 资源（深色，与点亮地图页 .btn-icon 同款用法） */
+/* 图标用 lucide 蓝色版（#2b6cf6，与胶囊文案同色；深色原版留给轨迹页/我的页） */
 .entry-icon {
   flex: none;
   width: 32rpx;
@@ -78,7 +78,7 @@
   align-items: center;
   gap: 6rpx;
   padding: 0 18rpx;
-  height: 72rpx;
+  height: 64rpx;
   border-radius: 999rpx;
   background: rgba(255, 255, 255, 0.95);
   color: #2b6cf6;
@@ -117,7 +117,8 @@
   box-sizing: border-box;
   background: #fff;
   border-radius: 24rpx 24rpx 0 0;
-  padding: 0 32rpx calc(24rpx + env(safe-area-inset-bottom));
+  /* tab 页：弹层底边在 tabBar 上方，不需要再加屏幕底部安全区 */
+  padding: 0 32rpx 24rpx;
 }
 .sheet-head {
   display: flex;

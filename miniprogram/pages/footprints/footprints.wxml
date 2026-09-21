@@ -19,11 +19,11 @@
 
   <view class="map-entries">
     <view class="entry-btn" hover-class="entry-btn-hover" bindtap="goList">
-      <image class="entry-icon" src="/assets/icons/lucide-text-align-justify.png" mode="aspectFit" />
+      <image class="entry-icon" src="/assets/icons/lucide-text-align-justify-blue.png" mode="aspectFit" />
       <text>列表</text>
     </view>
     <view class="entry-btn" hover-class="entry-btn-hover" bindtap="goStats">
-      <image class="entry-icon" src="/assets/icons/lucide-chart.png" mode="aspectFit" />
+      <image class="entry-icon" src="/assets/icons/lucide-chart-blue.png" mode="aspectFit" />
       <text>统计</text>
     </view>
   </view>
@@ -41,6 +41,7 @@
   <footprint-detail
     visible="{{detailVisible}}"
     record="{{detailRecord}}"
+    safe-bottom="{{false}}"
     bind:close="closeDetail"
     bind:edit="onDetailEdit"
     bind:deleted="onDetailDeleted"
@@ -70,6 +71,7 @@
   <footprint-form
     visible="{{formVisible}}"
     record="{{formRecord}}"
+    safe-bottom="{{false}}"
     bind:saved="onFormSaved"
     bind:close="closeForm"
   />
