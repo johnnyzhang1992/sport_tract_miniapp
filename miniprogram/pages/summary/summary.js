@@ -49,6 +49,10 @@ Page({
         maxAltitude: stats.maxAltitude,
         markerCount: (finalPack.markers || []).length,
       },
+      // 轨迹无效提示（点数过少/距离过短）：保存时会被服务端自动作废（与后端同口径）
+      tooShort:
+        stats.distance < config.MIN_EFFECTIVE_DISTANCE_M ||
+        (finalPack.trackPoints || []).length < config.MIN_EFFECTIVE_POINTS,
       mapPoints: (finalPack.trackPoints || []).map((p) => ({
         lat: p.lat,
         lng: p.lng,
@@ -85,8 +89,25 @@ Page({
         })),
         pausedMs: pack.pausedMs != null && pack.pausedMs < 0 ? 0 : pack.pausedMs,
       };
-      await this.sync.finish(cleanPack);
+      const res = await this.sync.finish(cleanPack);
       loading.hide();
+      // 轨迹无效被服务端自动作废（服务端重算为准）：清暂存回首页
+      if (res.status === 'cancelled') {
+        wx.removeStorageSync('pending_summary');
+        wx.removeStorageSync('pending_sync_activity');
+        wx.removeStorageSync('ongoingActivity');
+        const reasonText =
+          res.reason === 'TOO_FEW_POINTS'
+            ? `有效轨迹点不足 ${config.MIN_EFFECTIVE_POINTS} 个`
+            : `运动距离过短（不足 ${config.MIN_EFFECTIVE_DISTANCE_M} 米）`;
+        wx.showModal({
+          title: '本次运动未保存',
+          content: `${reasonText}，已自动放弃`,
+          showCancel: false,
+          success: () => wx.switchTab({ url: '/pages/index/index' }),
+        });
+        return;
+      }
       wx.removeStorageSync('pending_summary');
       wx.removeStorageSync('pending_sync_activity');
       wx.removeStorageSync('ongoingActivity');
