@@ -82,8 +82,7 @@
     {
       "root": "packageFootRecords",
       "pages": [
-        "pages/record-edit/record-edit",
-        "pages/map-picker/map-picker"
+        "pages/record-edit/record-edit"
       ]
     }
   ],

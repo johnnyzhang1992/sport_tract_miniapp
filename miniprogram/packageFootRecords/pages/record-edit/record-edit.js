@@ -1,4 +1,4 @@
-// 足迹新增/编辑表单：地点（自建地图选点 / wx.chooseLocation）→ 日期 → 标题 → 人物 → 描述 → 图片（≤3，压缩直传 OSS）→ 提交
+// 足迹新增/编辑表单：地点（wx.chooseLocation）→ 日期 → 标题 → 人物 → 描述 → 图片（≤3，压缩直传 OSS）→ 提交
 // 保存成功后置 globalData.footprintsDirty，回 tab 时 onShow 重拉列表
 const api = require('../../../services/api');
 const { uploadPhoto } = require('../../../services/oss-upload');
@@ -76,7 +76,7 @@ Page({
     this.setData({ people: this.data.people.filter((_, j) => j !== i) });
   },
 
-  /** 主选点：wx.chooseLocation（免费，自带搜索+地图点选） */
+  /** 选点：wx.chooseLocation（免费，自带搜索+地图点选） */
   pickByWx() {
     wx.chooseLocation({
       success: (res) => {
@@ -87,18 +87,6 @@ Page({
       },
       fail: (e) => {
         if (String(e.errMsg).includes('auth deny')) wx.showToast({ title: '需要位置权限才能选点', icon: 'none' });
-      },
-    });
-  },
-  /** 备用：自建地图选点页（Task 8 实现其页面） */
-  pickBySelfMap() {
-    wx.navigateTo({
-      url: '/packageFootRecords/pages/map-picker/map-picker',
-      events: {
-        acceptPick: (loc) => {
-          this.setData({ location: loc });
-          this.refreshCanSubmit();
-        },
       },
     });
   },
