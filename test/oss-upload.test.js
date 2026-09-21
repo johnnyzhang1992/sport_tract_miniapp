@@ -9,7 +9,6 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('node:path');
 
-const ROOT = path.join(__dirname, '..');
 const KB = 1024;
 const MB = 1024 * 1024;
 
@@ -39,10 +38,10 @@ const fakeApi = {
     });
   },
 };
-const apiPath = require.resolve(path.join(ROOT, 'miniprogram/services/api.js'));
+const apiPath = require.resolve('../miniprogram/services/api.js');
 require.cache[apiPath] = { id: apiPath, filename: apiPath, loaded: true, exports: fakeApi, children: [], paths: [] };
 
-const { uploadPhoto, editImage } = require(path.join(ROOT, 'miniprogram/services/oss-upload.js'));
+const { uploadPhoto, editImage } = require('../miniprogram/services/oss-upload.js');
 
 function setup({ sizes = {}, check = { risky: false }, broken = false } = {}) {
   compressCalls = [];

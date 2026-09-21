@@ -7,11 +7,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('node:path');
 
-const { RANGES, PICKER_COUNT, periodRange, periodLabelOf } = require(path.join(
-  __dirname,
-  '..',
-  'miniprogram/utils/footprint-period.js',
-));
+const { RANGES, PICKER_COUNT, periodRange, periodLabelOf } = require('../miniprogram/utils/footprint-period.js');
 
 const pad = (n) => String(n).padStart(2, '0');
 const fmt = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;

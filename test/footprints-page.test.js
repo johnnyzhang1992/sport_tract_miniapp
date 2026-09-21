@@ -16,7 +16,6 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('node:path');
 
-const ROOT = path.join(__dirname, '..');
 const CLUSTER_ID_BASE = 100000; // 与 footprints.js 的 id 分段约定一致
 
 /* ---------------------------------- 环境桩 ---------------------------------- */
@@ -34,7 +33,7 @@ const fakeApi = {
     return Promise.resolve({});
   },
 };
-const apiPath = require.resolve(path.join(ROOT, 'miniprogram/services/api.js'));
+const apiPath = require.resolve('../miniprogram/services/api.js');
 require.cache[apiPath] = { id: apiPath, filename: apiPath, loaded: true, exports: fakeApi, children: [], paths: [] };
 
 // 离屏 canvas 出图排成「手动 flush」队列：簇图何时落地由用例决定，好造并发构建的时序
@@ -99,7 +98,7 @@ let pageDef = null;
 global.Page = (def) => { pageDef = def; };
 global.getApp = () => ({ globalData: {} });
 
-require(path.join(ROOT, 'miniprogram/pages/footprints/footprints.js'));
+require('../miniprogram/pages/footprints/footprints.js');
 assert.ok(pageDef, 'footprints.js 应通过 Page() 交出页面对象');
 
 /* --------------------------------- 页面装配 --------------------------------- */

@@ -12,8 +12,6 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('node:path');
 
-const ROOT = path.join(__dirname, '..');
-
 /* ---------------------------------- 环境桩 ---------------------------------- */
 
 const apiCalls = [];
@@ -52,7 +50,7 @@ function makeChart() {
   charts.push(c);
   return c;
 }
-const echartsPath = require.resolve(path.join(ROOT, 'miniprogram/packageFootprint/components/ec-canvas/echarts.js'));
+const echartsPath = require.resolve('../miniprogram/packageFootprint/components/ec-canvas/echarts.js');
 const fakeEcharts = {
   registerMap: (name, data) => registered.push({ name, data }),
   init: () => makeChart(),
@@ -84,7 +82,7 @@ global.wx = {
 // loading 模块（utils/loading.js）与导出模块（packageFootprint/utils/map-image.js）注入假实现：
 // 页面只负责 loading/toast/预览态，导出本身的像素细节由 test/map-image.test.js 直测
 const loadingCalls = [];
-const loadingPath = require.resolve(path.join(ROOT, 'miniprogram/utils/loading.js'));
+const loadingPath = require.resolve('../miniprogram/utils/loading.js');
 require.cache[loadingPath] = {
   id: loadingPath, filename: loadingPath, loaded: true,
   exports: { show: (t) => loadingCalls.push(['show', t]), hide: () => loadingCalls.push(['hide']) },
@@ -92,7 +90,7 @@ require.cache[loadingPath] = {
 };
 const exportCalls = [];
 let exportBehavior = () => Promise.resolve('wxfile://tmp/share.png');
-const mapImagePath = require.resolve(path.join(ROOT, 'miniprogram/packageFootprint/utils/map-image.js'));
+const mapImagePath = require.resolve('../miniprogram/packageFootprint/utils/map-image.js');
 require.cache[mapImagePath] = {
   id: mapImagePath, filename: mapImagePath, loaded: true,
   exports: { exportChartImage: (comp, opts) => { exportCalls.push({ comp, opts }); return exportBehavior(comp, opts); } },
@@ -104,7 +102,7 @@ global.Page = (def) => { pageDef = def; };
 const fakeApp = { globalData: { api: fakeApi, loggedIn: true }, hasSession: () => false };
 global.getApp = () => fakeApp;
 
-require(path.join(ROOT, 'miniprogram/packageFootprint/pages/footprint-stats/footprint-stats.js'));
+require('../miniprogram/packageFootprint/pages/footprint-stats/footprint-stats.js');
 assert.ok(pageDef, 'footprint-stats.js 应通过 Page() 交出页面对象');
 
 /* --------------------------------- 页面装配 --------------------------------- */

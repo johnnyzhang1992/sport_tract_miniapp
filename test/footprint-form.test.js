@@ -8,7 +8,6 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('node:path');
 
-const ROOT = path.join(__dirname, '..');
 const MB = 1024 * 1024;
 
 /* ---------------------------------- 环境桩 ---------------------------------- */
@@ -41,8 +40,8 @@ const fakeOss = {
   },
 };
 for (const [p, exports] of [
-  [require.resolve(path.join(ROOT, 'miniprogram/services/api.js')), fakeApi],
-  [require.resolve(path.join(ROOT, 'miniprogram/services/oss-upload.js')), fakeOss],
+  [require.resolve('../miniprogram/services/api.js'), fakeApi],
+  [require.resolve('../miniprogram/services/oss-upload.js'), fakeOss],
 ]) {
   require.cache[p] = { id: p, filename: p, loaded: true, exports, children: [], paths: [] };
 }
@@ -56,7 +55,7 @@ global.wx = {
   editImage() {},
   previewImage() {},
 };
-require(path.join(ROOT, 'miniprogram/components/footprint-form/footprint-form.js'));
+require('../miniprogram/components/footprint-form/footprint-form.js');
 assert.ok(compDef, 'footprint-form.js 应通过 Component() 交出组件对象');
 
 /* --------------------------------- 组件装配 --------------------------------- */

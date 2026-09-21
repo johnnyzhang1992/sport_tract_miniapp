@@ -10,8 +10,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('node:path');
 
-const ROOT = path.join(__dirname, '..');
-const { exportChartImage } = require(path.join(ROOT, 'miniprogram/packageFootprint/utils/map-image.js'));
+const { exportChartImage } = require('../miniprogram/packageFootprint/utils/map-image.js');
 
 let exportCalls = [];
 global.wx = {
