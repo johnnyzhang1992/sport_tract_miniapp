@@ -11,6 +11,11 @@
   align-items: flex-end;
 }
 .fp-sheet {
+  /* 绝对定位（相对 .fp-mask）：键盘弹起时 JS 传入的 bottom/height 才会生效——
+     弹层底部抬到键盘上沿、高度收缩，输入框不被键盘遮挡。非定位元素 bottom 无效（真机踩坑） */
+  position: absolute;
+  left: 0;
+  right: 0;
   width: 100%;
   box-sizing: border-box;
   background: #fff;
@@ -43,6 +48,8 @@
   min-height: 0;
   box-sizing: border-box;
   padding: 16rpx 32rpx calc(24rpx + env(safe-area-inset-bottom));
+  /* 键盘弹起压缩弹层高度后，被盖住的下半部分内容靠滚动触达 */
+  overflow-y: auto;
 }
 /* tab 页的弹层：底边在 tabBar 上方，不加屏幕安全区 */
 .fp-body-no-safe {

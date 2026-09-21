@@ -7,7 +7,7 @@ const { uploadPhoto, editImage } = require('../../services/oss-upload');
 const MAX_PHOTOS = 3;
 /** 键盘弹起时弹层顶与屏幕上沿之间的留白（px） */
 const SHEET_TOP_GAP = 48;
-/** 无键盘时的弹层样式（弹层高度调这里） */
+/** 无键盘时的弹层样式（弹层高度调这里）；键盘弹起时抬升至键盘上方并缩高，见 onKeyboardHeight */
 const SHEET_DEFAULT_STYLE = 'bottom:0;height:78vh;';
 
 Component({
@@ -17,6 +17,9 @@ Component({
     record: { type: Object, value: null }, // 传记录 = 编辑态（详情弹窗的完整 DTO 直接回填）
     // tab 页的弹层底边在 tabBar 上方，不含屏幕底部安全区，由页面传 false
     safeBottom: { type: Boolean, value: true },
+    // 页面是否 tab 页：tab 页 fixed 基准是 tabBar 上沿，而键盘高度是屏幕基准，
+    // 抬升量需减去 (screenHeight - windowHeight) 才能贴住键盘上沿
+    onTab: { type: Boolean, value: false },
   },
   observers: {
     // 只在「打开」时初始化：可见期间父级换 record 不重来，避免覆盖用户正在编辑的内容
@@ -150,9 +153,22 @@ Component({
     onKeyboardHeight(e) {
       const h = Number((e.detail && e.detail.height) || 0);
       if (h === this.data.kbHeight) return;
+      // 键盘高度是屏幕基准；tab 页 fixed 弹层的 bottom 基准是 tabBar 上沿（页面可视区底部）。
+      // 两者基准差 = screenHeight - windowHeight，tab 页需从抬升量中扣除，否则弹层多抬一段露出背景地图
+      let lift = h;
+      if (h > 0 && this.data.onTab) {
+        try {
+          const info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
+          lift = Math.max(0, h - Math.max(0, (info.screenHeight || 0) - (info.windowHeight || 0)));
+        } catch (err) {}
+      }
+      // iOS 已知问题：键盘弹起时 webview 会被整体上推（即使 adjust-position=false），
+      // position:fixed 的弹层随之错位——表现为弹层和键盘之间露出一条页面背景。
+      // 标准解法（社区共识）：键盘开/合时立刻把页面滚动位置强制复位，再按键盘高度抬升弹层
+      wx.pageScrollTo({ scrollTop: 0, duration: 0 }).catch(() => {});
       this.setData({
         kbHeight: h,
-        sheetStyle: h > 0 ? `bottom:${h}px;height:calc(100vh - ${h + SHEET_TOP_GAP}px);` : SHEET_DEFAULT_STYLE,
+        sheetStyle: lift > 0 ? `bottom:${lift}px;height:calc(100vh - ${lift + SHEET_TOP_GAP}px);` : SHEET_DEFAULT_STYLE,
       });
     },
 
