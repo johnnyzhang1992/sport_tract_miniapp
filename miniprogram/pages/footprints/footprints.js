@@ -296,7 +296,9 @@ Page({
     //   见 components/track-map/track-map.js applyOverviewScale 的注释与 getCenterLocation 兜底），
     //   所以只写 scale = 手势一结束视野就被弹回 fit/expand 留下的旧中心。必须把回读到的当前中心配套写回。
     const commit = (s, center) => {
-      if (Math.abs(s - (this._gridZoom || this.data.scale)) < 0.5) return; // 没换层级不重建；异步取中心期间被更新的手势也挡掉
+      // 这里复校的只有「层级几乎没变」这一种提交（异步取中心期间 data.scale/_gridZoom 可能已被对齐到新值）；
+      // 「谁的先后」不在这里判——见下面 apply 的相机写序令牌
+      if (Math.abs(s - (this._gridZoom || this.data.scale)) < 0.5) return;
       this._gridZoom = s;
       this.setData({ scale: s, center });
       this.buildMarkers({ fit: false });
@@ -305,20 +307,36 @@ Page({
       const s = Number(raw);
       if (!Number.isFinite(s)) return;
       if (Math.abs(s - (this._gridZoom || this.data.scale)) < 0.5) return; // 先按层级闸门，纯平移/微抖不必去异步取中心
+      // 相机写序令牌：中心要异步问，问回来之前可能又并进一次（甚至两次）手势，
+      // 只有最后取号那次有权写相机——否则早先那次会带着「已不属于当前视野」的 scale+中心把镜头拽走，
+      // 而 commit 的 <0.5 复校看不见次序（8 与 12 差得远，挡不住）
+      const tok = (this._camWriteSeq = (this._camWriteSeq || 0) + 1);
       // 注意用 NaN 兜底判空：Number(null) 是 0，直接 Number(center && center.latitude) 会把「没有中心」当成 0 纬度
       const lat = center ? Number(center.latitude) : NaN;
       const lng = center ? Number(center.longitude) : NaN;
       if (Number.isFinite(lat) && Number.isFinite(lng)) return commit(s, { latitude: lat, longitude: lng });
-      // 事件不带中心点（各端字段不一致）：先异步问相机现在到底在哪，问出来之前不回写 scale
+      // 事件不带中心点（各端字段不一致）：先异步问相机现在到底在哪，问出来之前不回写 scale。
+      // 中心问不到（端上无 getCenterLocation / 回读 fail）时也不再整条放弃，降级为「无相机」提交：
+      // 只同步聚合层级 + 重建分桶，一个相机属性都不 setData。
+      // 为什么不裸写 scale：scale 一改，<map> 就把相机重置到当前绑定的 center 上（track-map 实测教训，
+      // 见 components/track-map/track-map.js applyOverviewScale），而 center 恰恰是这次问不到的值 → 必然弹回旧视野。
+      // fit:false 的 patch 是空的，buildMarkers 只换 markers，视野原地不动，也就没有弹回可言。
+      const degrade = () => {
+        this._gridZoom = s;
+        this.buildMarkers({ fit: false });
+      };
       const ctx = wx.createMapContext(MAP_ID, this);
-      if (!ctx.getCenterLocation) return;
+      if (!ctx.getCenterLocation) return degrade();
       ctx.getCenterLocation({
         success: (loc) => {
+          // 令牌已被更晚的手势取走，或这中间 expandCluster/fit 把相机程序化挪走了（静默窗口未到）：
+          // 这次读到的中心不再属于当前视野，写回会把镜头拽去别处，整次丢弃
+          if (tok !== this._camWriteSeq || Date.now() < (this._progCamUntil || 0)) return;
           const cLat = loc ? Number(loc.latitude) : NaN;
           const cLng = loc ? Number(loc.longitude) : NaN;
           if (Number.isFinite(cLat) && Number.isFinite(cLng)) commit(s, { latitude: cLat, longitude: cLng });
         },
-        fail: () => {},
+        fail: () => degrade(),
       });
     };
     const raw = Number.isFinite(e.scale) ? e.scale : Number.isFinite(d.scale) ? d.scale : null;

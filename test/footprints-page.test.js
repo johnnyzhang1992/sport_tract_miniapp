@@ -2,12 +2,14 @@
  * 足迹页（pages/footprints/footprints.js）页级回归：本地网格聚合 + 离屏 canvas 自绘小圆簇
  * 由 2026-09-21 簇改造的临时 harness（/tmp/fp-cluster-harness.js）升格入仓，四条原场景保留为 P1~P4，
  * fix 轮 1 的三条交互回归补为 P0/P5/P6（外加 P7 覆盖 loadGeo 的 loading 与 markers 同帧），
- * P5 在 fix 轮 2 追加「scale 回写必须配套回写当前中心」的断言。
+ * P5 在 fix 轮 2 追加「scale 回写必须配套回写当前中心」的断言，
+ * P8（polish 轮）覆盖相机写序令牌（过期异步回读不得写回）与「问不到中心 → 无相机降级」。
  * 运行：npm test（node --test 自动发现）；依赖：仅 node 内置模块。
  * 桩：wx / Page / getApp 就地 stub；services/api 用 require.cache 注入假实现（绕开 config/storage 的真实
  *     wx 依赖）；utils/footprint-geo 走真实纯函数。createMapContext 的 initMarkerCluster/addMarkers 被
  *     stub 成抛错——页面若还残留原生聚合调用会立刻炸；getScale/getCenterLocation 由用例控制回读值
- *     （mapCameraCenter 即「相机此刻真实所在的中心」，P5 用它验证 scale 回写配套回写中心）。
+ *     （mapCameraCenter 即「相机此刻真实所在的中心」，P5 用它验证 scale 回写配套回写中心；
+ *     centerMode='defer' 把回读挂在在途队列里、'fail' 只回失败，配合 flushCenters() 造异步交错的时序）。
  */
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -47,7 +49,19 @@ const canvasCtx = {
 };
 
 // MapContext.getCenterLocation 回读的「相机当前中心」：用例改这个值即可模拟用户缩放时顺带平移过的视野
-let mapCameraCenter = { latitude: 30.245, longitude: 120.145 };
+const DEFAULT_CAMERA_CENTER = { latitude: 30.245, longitude: 120.145 };
+let mapCameraCenter = Object.assign({}, DEFAULT_CAMERA_CENTER);
+// 回读形态：'ok' 同步回 mapCameraCenter（默认，多数用例走这条）
+//          'defer' 把 success 排进队列由用例放行 —— 造「异步回读还在途时又并进一次手势」的交错
+//          'fail'  只回 fail —— 端上问不到中心，页面该走「无相机」降级
+let centerMode = 'ok';
+let pendingCenter = [];
+/** 相机中心/回读形态都是模块级状态：用完必须还原，否则漏给后面的用例 */
+function resetCameraStub() {
+  centerMode = 'ok';
+  pendingCenter = [];
+  mapCameraCenter = Object.assign({}, DEFAULT_CAMERA_CENTER);
+}
 
 global.wx = {
   getWindowInfo: () => ({ windowWidth: 393, windowHeight: 851 }),
@@ -59,8 +73,17 @@ global.wx = {
   previewImage() {},
   createMapContext: () => ({
     getScale() {},
-    getCenterLocation: ({ success }) => {
-      if (success) success(mapCameraCenter);
+    getCenterLocation: (opts) => {
+      if (!opts) return;
+      if (centerMode === 'defer') {
+        pendingCenter.push(opts);
+        return;
+      }
+      if (centerMode === 'fail') {
+        if (opts.fail) opts.fail({ errMsg: 'getCenterLocation:fail' });
+        return;
+      }
+      if (opts.success) opts.success(mapCameraCenter);
     },
     initMarkerCluster: () => { throw new Error('原生聚合已废弃，不得再调用'); },
     addMarkers: () => { throw new Error('原生注入已废弃，不得再调用'); },
@@ -121,6 +144,30 @@ async function settle() {
 function resetCanvasQueue() {
   pendingCanvas = [];
   canvasCalls = 0;
+}
+
+/** 放行在途的 getCenterLocation 回读（FIFO，各自读放行时刻的 mapCameraCenter） */
+function flushCenters() {
+  const q = pendingCenter;
+  pendingCenter = [];
+  q.forEach((o) => { if (o.success) o.success(mapCameraCenter); });
+  return q.length;
+}
+
+/** 把 setData 的 patch 按序记下来，供「哪一次写了相机属性」断言用；返回 stop 交还原始 setData */
+function recordPatches(page) {
+  const patches = [];
+  const upstream = page.setData;
+  page.setData = (patch, cb) => {
+    patches.push(patch);
+    return upstream(patch, cb);
+  };
+  return { patches, stop: () => { page.setData = upstream; } };
+}
+
+/** 一条经度每隔 0.002° 的 6 点直线：zoom 10 下整列跨约 7px 并成一簇，zoom 20 下相邻两点已隔约 1.5kpx 各自成叶 */
+function lineRecords() {
+  return Array.from({ length: 6 }, (_, i) => ({ id: 'l' + i, title: '列' + i, visitDate: '2026-09-06', latitude: 30.245, longitude: 120.145 + i * 0.002 }));
 }
 
 /* ---------------------------------- 数据集 ---------------------------------- */
@@ -284,16 +331,11 @@ test('P5 手势缩放配套回写 scale+当前中心：封顶后双指缩小再�
   // 用户双指缩小回 12 级（顺带把视野平移走了）：静默窗口已过 → regionchange end 回读并配套回写
   const staleCenter = Object.assign({}, page.data.center); // 手势前 data 里那个陈旧中心（= 上一次 expand 的簇心）
   mapCameraCenter = { latitude: 30.9876, longitude: 120.6543 }; // 相机此刻真实所在处（MapContext 回读）
-  const patches = [];
-  const upstreamSetData = page.setData;
-  page.setData = (patch, cb) => {
-    patches.push(patch);
-    return upstreamSetData(patch, cb);
-  };
+  const { patches, stop: stopRecording } = recordPatches(page);
   page._progCamUntil = 0;
   page.onRegionChange({ type: 'end', detail: { scale: 12 } });
   await settle();
-  page.setData = upstreamSetData;
+  stopRecording();
   assert.equal(page._gridZoom, 12);
   assert.equal(page.data.scale, 12, '手势缩放必须回写 data.scale');
   // 回归（fix 轮 2）：scale 回写必须与「当前中心」同一次 setData 配套。
@@ -315,6 +357,7 @@ test('P5 手势缩放配套回写 scale+当前中心：封顶后双指缩小再�
   assert.equal(page.data.clusterSheet.visible, false, '未封顶不该弹成员表');
   assert.equal(page.data.scale, 14, '点簇 +2 级');
   assert.ok(Math.abs(page.data.center.latitude - 30.245) < 1e-9, '点簇后中心移到簇心（放大语义）');
+  resetCameraStub(); // mapCameraCenter 是模块级的，本例把它挪走过；不还原就会漏给后面的用例
 });
 
 test('P6 并发构建：records 已换 / 令牌已被取走的过期构建不得覆盖 markers，也不得留下孤儿 _gridZoom', async () => {
@@ -375,4 +418,75 @@ test('P7 loadAll：markers 与 loading:false 同帧落地', async () => {
   assert.ok(markersWhenResolved > 0, 'loading 收起时 markers 已在（首屏不闪空图；loadGeo 必须 return buildMarkers()）');
   assert.equal(page.data.records.length, 300);
   apiGeo.items = [];
+});
+
+test('P8 相机回写：过期异步回读被写序令牌挡掉 / 静默窗口内不写回 / 问不到中心时降级为无相机提交', async () => {
+  // 8a 两次手势的中心回读都在途（getCenterLocation 是异步的），只有最后取号那次有权写相机。
+  // 数据用 6 点直线：zoom 10/12 都并成 1 个「6」字簇，zoom 20 拆成 6 个叶 —— 层级是否真生效看得见
+  resetCanvasQueue();
+  resetCameraStub();
+  centerMode = 'defer';
+  const pageA = makePage();
+  pageA.setData({ records: lineRecords(), scale: 10 });
+  pageA._gridZoom = 10;
+  await (async () => { const b = pageA.buildMarkers({ fit: false }); await settle(); return b; })();
+  assert.equal(pageA.data.markers.length, 1, '起始 zoom 10：6 点并成 1 簇');
+  const { patches: patchesA, stop: stopA } = recordPatches(pageA);
+
+  pageA._progCamUntil = 0;
+  pageA.onRegionChange({ type: 'end', detail: { scale: 8 } }); // 事件不带中心 → 走异步回读（令牌 1）
+  assert.equal(pendingCenter.length, 1, '第一次回读确实卡在在途');
+  assert.equal(pageA.data.scale, 10, '中心问出来之前不回写 scale');
+  pageA.onRegionChange({ type: 'end', detail: { scale: 12 } }); // 更晚的一次手势（令牌 2，此后 1 就是过期回读）
+  assert.equal(pendingCenter.length, 2, '第二次回读也在途');
+  mapCameraCenter = { latitude: 29.88, longitude: 121.5 };
+  flushCenters(); // FIFO：8 级那次先落地，12 级那次随后
+  await settle();
+  stopA();
+
+  const camPatches = patchesA.filter((x) => x.scale !== undefined);
+  // 回归（polish 轮）：commit 里那次 <0.5 复校只挡「层级几乎没变」，8 与 12 差 4 级它拦不住，
+  // 次序得由 _camWriteSeq 写序令牌保证——否则过期回读会带着不属于当前视野的 scale+中心把镜头拽走
+  assert.equal(camPatches.length, 1, '过期回读被令牌挡掉：交错两次手势只提交一次相机回写');
+  assert.equal(camPatches[0].scale, 12, '留下的是一次交错里最后那次手势的层级');
+  assert.deepEqual(camPatches[0].center, { latitude: 29.88, longitude: 121.5 }, '配套写回的仍是相机当前中心');
+  assert.equal(pageA.data.scale, 12);
+  assert.equal(pageA._gridZoom, 12);
+  assert.equal(pageA.data.markers.length, 1, 'zoom 12 下 6 点仍一簇（分桶按新层级重建过）');
+
+  // 8b 令牌是最新的，但回读在途期间点簇把相机程序化挪走了（静默窗口未到）：这次回读同样作废
+  pageA.onRegionChange({ type: 'end', detail: { scale: 14 } });
+  assert.equal(pendingCenter.length, 1, '第三次回读在途');
+  pageA._progCamUntil = Date.now() + 900; // 模拟 expandCluster：相机已按簇心放大重设
+  const { patches: patchesB, stop: stopB } = recordPatches(pageA);
+  flushCenters();
+  await settle();
+  stopB();
+  assert.equal(patchesB.filter((x) => x.scale !== undefined).length, 0, '静默窗口内的回读不写相机');
+  assert.equal(pageA.data.scale, 12, '程序化视野不被过期回读覆盖');
+  assert.equal(pageA._gridZoom, 12, '连层级都不动：整次提交丢弃');
+
+  // 8c 端上问不到中心（getCenterLocation 只回 fail）：降级为「只同步聚合层级 + 重建分桶，一个相机属性都不写」。
+  // 不能裸回写 scale —— scale 一改相机就被重置到绑定的 center 上，而 center 恰恰是这次问不到的值（必弹回旧视野）；
+  // fit:false 的 patch 为空，视野原地不动，也就无从弹回
+  resetCanvasQueue();
+  resetCameraStub();
+  centerMode = 'fail';
+  const pageC = makePage();
+  pageC.setData({ records: lineRecords(), scale: 10 });
+  pageC._gridZoom = 10;
+  await (async () => { const b = pageC.buildMarkers({ fit: false }); await settle(); return b; })();
+  assert.equal(pageC.data.markers.length, 1);
+  const { patches: patchesC, stop: stopC } = recordPatches(pageC);
+  pageC._progCamUntil = 0;
+  pageC.onRegionChange({ type: 'end', detail: { scale: 20 } });
+  await settle();
+  stopC();
+  resetCameraStub();
+  assert.equal(pageC._gridZoom, 20, '问不到中心也要把新层级同步进 _gridZoom（否则后续分桶/封顶判定还按 10 级算）');
+  assert.ok(patchesC.every((x) => x.scale === undefined && x.center === undefined), '降级路径不得写任何相机属性');
+  assert.equal(pageC.data.scale, 10, 'data.scale 原地不动 = 视野不动');
+  assert.equal(pageC.data.markers.length, 6, 'markers 仍按新层级重建：zoom 20 下 6 点各自成叶');
+  assert.ok(pageC.data.markers.every((m) => m.id < CLUSTER_ID_BASE));
+  assert.equal(pageC._clusters.length, 6);
 });
