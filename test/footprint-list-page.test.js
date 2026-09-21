@@ -10,8 +10,6 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('node:path');
 
-const ROOT = path.join(__dirname, '..');
-
 /* ---------------------------------- 环境桩 ---------------------------------- */
 
 const apiCalls = [];
@@ -26,7 +24,7 @@ const fakeApi = {
     return Promise.resolve({});
   },
 };
-const apiPath = require.resolve(path.join(ROOT, 'miniprogram/services/api.js'));
+const apiPath = require.resolve('../miniprogram/services/api.js');
 require.cache[apiPath] = { id: apiPath, filename: apiPath, loaded: true, exports: fakeApi, children: [], paths: [] };
 
 const toasts = [];
@@ -41,7 +39,7 @@ let pageDef = null;
 global.Page = (def) => { pageDef = def; };
 global.getApp = () => ({ globalData: {} });
 
-require(path.join(ROOT, 'miniprogram/pages/footprint-list/footprint-list.js'));
+require('../miniprogram/pages/footprint-list/footprint-list.js');
 assert.ok(pageDef, 'footprint-list.js 应通过 Page() 交出页面对象');
 
 /* --------------------------------- 页面装配 --------------------------------- */

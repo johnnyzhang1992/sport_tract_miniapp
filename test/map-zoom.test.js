@@ -7,10 +7,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('node:path');
 
-const { zoomChart, ZOOM_FACTOR, MIN_ZOOM, MAX_ZOOM } = require(path.join(
-  __dirname,
-  '../miniprogram/packageFootprint/utils/map-zoom.js'
-));
+const { zoomChart, ZOOM_FACTOR, MIN_ZOOM, MAX_ZOOM } = require('../miniprogram/packageFootprint/utils/map-zoom.js');
 
 /** chart 桩：setOption 里回写 zoom，模拟 echarts 的 getOption/setOption 往返 */
 function makeChart(zoom) {
