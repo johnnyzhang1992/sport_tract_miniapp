@@ -79,3 +79,201 @@
   color: #999;
   text-align: center;
 }
+
+/* ------------------------------ 搜索 + 时间筛选 ------------------------------ */
+/* 筛选卡与统计页同款（.range-btn / .period-nav / .picker-* 对齐 footprint-stats.wxss），多一行搜索框 */
+.filter-card {
+  padding: 14rpx 16rpx;
+}
+.search-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 0 4rpx 12rpx;
+}
+.search-icon {
+  flex: none;
+  width: 30rpx;
+  height: 30rpx;
+  margin-left: 8rpx;
+}
+.search-input {
+  flex: 1;
+  min-width: 0;
+  height: 64rpx;
+  padding: 0 16rpx;
+  background: #f2f3f5;
+  border-radius: 12rpx;
+  font-size: 26rpx;
+  color: #1f2329;
+}
+.search-ph {
+  color: #b8bfcc;
+}
+.search-clear {
+  flex: none;
+  width: 44rpx;
+  height: 64rpx;
+  line-height: 64rpx;
+  text-align: center;
+  font-size: 26rpx;
+  color: #b8bfcc;
+}
+.search-btn {
+  flex: none;
+  height: 64rpx;
+  line-height: 64rpx;
+  padding: 0 26rpx;
+  border-radius: 12rpx;
+  background: #eef4ff;
+  color: #2b6cf6;
+  font-size: 26rpx;
+  font-weight: 600;
+}
+.search-btn-hover {
+  background: #e0ebff;
+}
+.range-row {
+  display: flex;
+  gap: 12rpx;
+}
+.range-btn {
+  flex: 1;
+  text-align: center;
+  padding: 12rpx 0;
+  border-radius: 12rpx;
+  background: #f2f3f5;
+  font-size: 26rpx;
+  color: #666;
+}
+.range-btn-active {
+  background: #eef4ff;
+  color: #2b6cf6;
+  border: 2rpx solid #2b6cf6;
+}
+.period-nav {
+  display: flex;
+  align-items: center;
+  margin-top: 14rpx;
+}
+.period-arrow {
+  width: 56rpx;
+  height: 56rpx;
+  line-height: 54rpx;
+  text-align: center;
+  font-size: 36rpx;
+  color: #2b6cf6;
+  border-radius: 50%;
+  background: #f2f3f5;
+}
+.period-arrow-hover {
+  background: #e2e6eb;
+}
+.period-arrow-disabled {
+  color: #c0c4cc;
+}
+.period-label {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #333;
+}
+.period-label-hover {
+  opacity: 0.7;
+}
+.period-label-caret {
+  margin-left: 10rpx;
+  width: 32rpx;
+  height: 32rpx;
+  flex-shrink: 0;
+}
+
+/* 空态（有筛选）：文案上方收紧，下方给「清空筛选」 */
+.empty-filtered {
+  padding-bottom: 40rpx;
+}
+.empty-reset {
+  display: flex;
+  justify-content: center;
+  padding-bottom: 80rpx;
+}
+.empty-reset-btn {
+  height: 68rpx;
+  line-height: 68rpx;
+  padding: 0 44rpx;
+  border-radius: 999rpx;
+  background: #eef4ff;
+  color: #2b6cf6;
+  font-size: 26rpx;
+  font-weight: 600;
+}
+.empty-reset-btn-hover {
+  background: #e0ebff;
+}
+
+/* 周期选择弹窗（底部抽屉，对齐统计页） */
+.picker-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+}
+.picker-sheet {
+  width: 100%;
+  background: #fff;
+  border-radius: 24rpx 24rpx 0 0;
+  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
+}
+.picker-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 28rpx 32rpx 12rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+.picker-close {
+  font-size: 32rpx;
+  color: #999;
+  padding: 8rpx 8rpx 8rpx 24rpx;
+}
+.picker-list {
+  max-height: 60vh;
+}
+.picker-grid {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 16rpx 24rpx 24rpx;
+}
+.picker-card {
+  width: calc(50% - 24rpx);
+  box-sizing: border-box;
+  margin: 12rpx;
+  padding: 26rpx 8rpx;
+  text-align: center;
+  font-size: 24rpx;
+  color: #333;
+  background: #f7f8fa;
+  border: 2rpx solid transparent;
+  border-radius: 24rpx;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.picker-card-active {
+  background: #eef4ff;
+  border-color: #2b6cf6;
+  color: #2b6cf6;
+  font-weight: 600;
+}
+.picker-card-compact {
+  font-size: 20rpx;
+}
