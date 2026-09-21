@@ -1,14 +1,13 @@
 <view class="container">
-  <!-- 地点：两个入口按钮（地图选点=自建页 Task 8 / 快速选点=wx.chooseLocation），已选显示 name/address+重选 -->
+  <!-- 地点：wx.chooseLocation 选点（微信原生选点面板，免费），已选显示 name/address+重选 -->
   <view class="card">
     <view class="field-label">地点</view>
     <view class="loc-picked" wx:if="{{location}}">
       <view class="loc-name">{{location.name || location.address || '已选位置'}}</view>
       <view class="text-muted loc-address" wx:if="{{location.address}}">{{location.address}}</view>
     </view>
-    <view class="text-muted loc-empty-tip" wx:else>还没选地点，点下面任一按钮选一个</view>
+    <view class="text-muted loc-empty-tip" wx:else>还没选地点，点下面按钮选一个</view>
     <view class="loc-actions">
-      <view class="loc-btn" bindtap="pickBySelfMap" hover-class="loc-btn-hover">地图选点</view>
       <view class="loc-btn" bindtap="pickByWx" hover-class="loc-btn-hover">快速选点</view>
     </view>
   </view>
