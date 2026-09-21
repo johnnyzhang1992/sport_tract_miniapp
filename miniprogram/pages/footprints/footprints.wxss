@@ -183,3 +183,39 @@
   line-height: 1;
   box-shadow: 0 8rpx 24rpx rgba(43, 108, 246, 0.35);
 }
+
+/* 有图单点的照片卡气泡（customCallout 内容）：图上标题下，圆角卡片 */
+.fp-callout {
+  width: 108px;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+}
+.fp-callout-img {
+  width: 108px;
+  height: 64px;
+}
+.fp-callout-title {
+  height: 20px;
+  line-height: 20px;
+  padding: 0 6px;
+  font-size: 12px;
+  color: #1f2329;
+  overflow: hidden;
+}
+/* 无图变体：标题胶囊（白底圆角小标签，宽度随文字自适应） */
+.fp-callout-pill {
+  width: auto;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 999px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+.fp-callout-title-pill {
+  height: 24px;
+  line-height: 24px;
+  padding: 0 12px;
+  text-align: center;
+  font-size: 11px;
+  color: #1f2329;
+}

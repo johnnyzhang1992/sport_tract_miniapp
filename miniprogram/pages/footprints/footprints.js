@@ -25,6 +25,86 @@ const CLUSTER_BORDER_WIDTH = 2; // 白描边（CSS px，画布上 ×2）
 /** 聚合簇数字气泡缓存（同 track-map 公里标做法：离屏 canvas 画好 → tempFilePath 按 count 缓存） */
 const CLUSTER_ICON_CACHE = {};
 
+/** —— 有图单点的照片卡 marker（离屏 canvas 合成"cover 裁切图 + 标题条"整卡出图）——
+ * 不用 cover-image 原因：customCallout 里 cover-image 的 mode 在开发者工具被忽略（scaleToFill 拉伸变形），
+ * 离屏 canvas 自己做 cover 裁切全端一致。尺寸 CSS px，画布 ×2 保清晰 */
+const CARD_W = 108;
+const CARD_IMG_H = 64;
+const CARD_TITLE_H = 22;
+const CARD_H = CARD_IMG_H + CARD_TITLE_H;
+const PHOTO_ICON_CACHE = {};
+/** 单点气泡分档阈值：scale ≥9 有图出照片卡；scale ≥7 全部出标题胶囊；<7 只显示定位圆点。
+ *  缩放跨档时 regionchange 触发重建，气泡随之自动出现/移除 */
+const PILL_MIN_SCALE = 7;
+const PHOTO_CARD_MIN_SCALE = 9;
+
+/** 圆角矩形路径 */
+function cardRoundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+/** 画有图单点的照片卡 marker：图 cover 裁切不变形 + 白底标题条（单行超长省略）；失败返回 '' 走标题胶囊兜底 */
+function buildPhotoCardIcon(record) {
+  const key = 'fp-photo-' + record.id;
+  if (PHOTO_ICON_CACHE[key]) return Promise.resolve(PHOTO_ICON_CACHE[key]);
+  return new Promise((resolve) => {
+    try {
+      const W = CARD_W * 2;
+      const H = CARD_H * 2;
+      const imgH = CARD_IMG_H * 2;
+      const canvas = wx.createOffscreenCanvas({ type: '2d', width: W, height: H });
+      const ctx = canvas.getContext('2d');
+      const img = canvas.createImage();
+      img.onload = () => {
+        try {
+          cardRoundRect(ctx, 0, 0, W, H, 16);
+          ctx.fillStyle = '#ffffff';
+          ctx.fill();
+          // 图片区：cover 裁切（等比缩放后居中裁满，绝不拉伸）
+          ctx.save();
+          cardRoundRect(ctx, 0, 0, W, imgH, 16);
+          ctx.clip();
+          const s = Math.max(W / img.width, imgH / img.height);
+          const sw = W / s;
+          const sh = imgH / s;
+          ctx.drawImage(img, (img.width - sw) / 2, (img.height - sh) / 2, sw, sh, 0, 0, W, imgH);
+          ctx.restore();
+          // 标题：单行居中，超长截断加省略号
+          ctx.font = '22px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          let t = record.title || '';
+          const full = t;
+          while (t && ctx.measureText(t).width > W - 20) t = t.slice(0, -1);
+          if (t !== full) t += '…';
+          ctx.fillStyle = '#1f2329';
+          ctx.fillText(t, W / 2, imgH + CARD_TITLE_H);
+          wx.canvasToTempFilePath({
+            canvas,
+            success: (r) => resolve(r.tempFilePath),
+            fail: () => resolve(''),
+          });
+        } catch (e) {
+          resolve('');
+        }
+      };
+      img.onerror = () => resolve('');
+      img.src = record.coverPhoto;
+    } catch (e) {
+      resolve('');
+    }
+  }).then((path) => {
+    if (path) PHOTO_ICON_CACHE[key] = path;
+    return path;
+  });
+}
+
 /** 地图可视区（CSS px）：整页即地图（全屏），tabBar 不占 windowHeight */
 function mapViewport() {
   const info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
@@ -77,6 +157,7 @@ Page({
     error: '',
     records: [], // /geo 轻量点缓存 {id,title,visitDate,latitude,longitude,coverPhoto}
     markers: [], // 本地网格聚合产物：叶 marker + 自绘簇气泡 marker，声明式绑给 <map>
+    callouts: [], // 叶照片卡内容（有 coverPhoto 的单点），配合 map 的 customCallout slot
     center: { latitude: 30.5, longitude: 114.3 }, // 视野由 fitBounds 覆盖，这里只是无数据时的兜底
     scale: 12,
     detailVisible: false, // 详情半屏（components/footprint-detail）
@@ -172,20 +253,35 @@ Page({
     const zoom = fittedZoom || this._gridZoom || this.data.scale;
     const clusters = geo.gridCluster(points, zoom);
 
-    // 一次构建内按 distinct count 出图：CLUSTER_ICON_CACHE 只在出图「完成后」写入，拦不住在途并发，
-    // 直接 map 的话 30 个「2」字簇会向离屏 canvas 发 30 次一模一样的绘制请求
+    // 一次构建内按 distinct count 出图（簇）+ 按 distinct record 出图（有图叶点的照片卡）。
+    // 每个图标任务都套 4s 超时：离屏 canvas 图片加载可能既不 onload 也不 onerror，
+    // 不兜底会卡死 Promise.all → 整张地图一个 marker 都不出（实测教训）
+    const timeout = (p) => Promise.race([p, new Promise((r) => setTimeout(() => r(''), 4000))]);
     const iconJobs = new Map();
+    const photoJobs = new Map();
     clusters.forEach((c) => {
-      if (c.count > 1 && !iconJobs.has(c.count)) iconJobs.set(c.count, buildClusterIcon(c.count));
+      if (c.count > 1) {
+        if (!iconJobs.has(c.count)) iconJobs.set(c.count, timeout(buildClusterIcon(c.count)));
+      } else if (zoom >= PHOTO_CARD_MIN_SCALE) {
+        const r = records[c.recordIndex] || {};
+        if (r.coverPhoto && !photoJobs.has(r.id)) photoJobs.set(r.id, timeout(buildPhotoCardIcon(r)));
+      }
     });
+    const callouts = []; // 无图叶点的标题胶囊 customCallout 内容（marker-id 定位，wxml slot 渲染）
 
-    return Promise.all(clusters.map((c) => (c.count > 1 ? iconJobs.get(c.count) : Promise.resolve('')))).then((icons) => {
+    const iconKeys = [...iconJobs.keys()];
+    const photoKeys = [...photoJobs.keys()];
+    return Promise.all([...iconJobs.values(), ...photoJobs.values()]).then((vals) => {
       // 被后续构建/刷新取代：既不 setData，也不覆盖 _clusters（否则 expandCluster 会按陈旧桶开错记录）
       if (seq !== this._seq || build !== this._buildSeq || records !== this.data.records) return;
+      // Promise.all 的解包值按提交顺序还原：前段=簇图标，后段=照片卡图标
+      const iconPathByCount = new Map(iconKeys.map((k, i) => [k, vals[i]]));
+      const photoPathById = new Map(photoKeys.map((k, i) => [k, vals[iconKeys.length + i]]));
       const markers = clusters.map((c, ci) => {
         if (c.count === 1) {
-          // 稀疏点：普通叶 marker，点击直接开详情
-          return {
+          // 稀疏点装饰分档：scale ≥9 有图出照片卡；scale ≥7 出标题胶囊；<7 只显示定位圆点
+          const r = records[c.recordIndex] || {};
+          const leaf = {
             id: c.recordIndex + 1,
             latitude: c.latitude,
             longitude: c.longitude,
@@ -194,6 +290,17 @@ Page({
             height: 18,
             anchor: { x: 0.5, y: 0.5 },
           };
+          const photoPath = zoom >= PHOTO_CARD_MIN_SCALE && r.coverPhoto ? photoPathById.get(r.id) : '';
+          if (photoPath) {
+            leaf.iconPath = photoPath;
+            leaf.width = CARD_W;
+            leaf.height = CARD_H;
+            leaf.anchor = { x: 0.5, y: 1 }; // 卡片底部尖端对准坐标
+          } else if (zoom >= PILL_MIN_SCALE) {
+            leaf.customCallout = { display: 'ALWAYS' };
+            callouts.push({ id: leaf.id, title: r.title || '' });
+          }
+          return leaf;
         }
         const marker = {
           id: CLUSTER_ID_BASE + ci, // 与叶 id 分段，onMarkerTap 据此区分簇展开 / 叶弹窗
@@ -203,8 +310,9 @@ Page({
           height: CLUSTER_BUBBLE_SIZE,
           anchor: { x: 0.5, y: 0.5 },
         };
-        if (icons[ci]) {
-          marker.iconPath = icons[ci];
+        const icon = iconPathByCount.get(c.count);
+        if (icon) {
+          marker.iconPath = icon;
         } else {
           // 离屏 canvas 不可用：退回默认点 + 常显数字气泡，聚合仍可读（点击走 bindcallouttap，见 wxml）
           marker.iconPath = '/assets/icons/marker-dot.png';
@@ -220,7 +328,7 @@ Page({
         this._gridZoom = patch.scale;
         this._progCamUntil = Date.now() + PROGRAMMATIC_CAMERA_MS;
       }
-      this.setData(Object.assign({ markers }, patch));
+      this.setData(Object.assign({ markers, callouts }, patch));
     });
   },
 
