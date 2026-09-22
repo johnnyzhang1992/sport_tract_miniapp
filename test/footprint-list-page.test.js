@@ -15,10 +15,12 @@ const path = require('node:path');
 const apiCalls = [];
 /** 用例内改写的响应钩子：(path, params) => Promise<data> */
 let respond = () => Promise.resolve({ items: [], total: 0 });
+// /calendar 是总览 + 打点数据，与列表请求分开桩，避免两个请求互相踩默认值
+let calendarRespond = () => Promise.resolve({ total: 0, placeCount: 0, photoCount: 0, days: [] });
 const fakeApi = {
   get(p, params) {
     apiCalls.push({ path: p, params });
-    return respond(p, params);
+    return p === '/footprint-records/calendar' ? calendarRespond(p, params) : respond(p, params);
   },
   del() {
     return Promise.resolve({});
@@ -28,10 +30,11 @@ const apiPath = require.resolve('../miniprogram/services/api.js');
 require.cache[apiPath] = { id: apiPath, filename: apiPath, loaded: true, exports: fakeApi, children: [], paths: [] };
 
 const toasts = [];
+const navs = [];
 let stopPullDownCalls = 0;
 global.wx = {
   showToast: (o) => toasts.push(o && o.title),
-  navigateTo() {},
+  navigateTo: (o) => navs.push(o && o.url),
   nextTick: (cb) => cb(),
   stopPullDownRefresh: () => { stopPullDownCalls++; },
 };
@@ -83,8 +86,10 @@ function pagedRespond(all) {
 function resetEnv() {
   apiCalls.length = 0;
   toasts.length = 0;
+  navs.length = 0;
   stopPullDownCalls = 0;
   respond = () => Promise.resolve({ items: [], total: 0 });
+  calendarRespond = () => Promise.resolve({ total: 0, placeCount: 0, photoCount: 0, days: [] });
 }
 
 /* ---------------------------------- 用例 ---------------------------------- */
@@ -97,8 +102,8 @@ test('L1 首屏：GET /footprint-records page=1 替换整页，卡片字段由 t
     return Promise.resolve({
       total: 2,
       items: [
-        rec('a', { people: ['小李', '', null], photos: ['https://cdn/1.jpg'], location: { city: '杭州市' } }),
-        rec('b', { location: { name: '故宫' } }),
+        rec('a', { visitDate: '2026-09-05', description: 'make 北魏 Great again!', people: ['小李', '', null], photos: ['https://cdn/1.jpg'], location: { city: '杭州市', address: '浙江省杭州市西湖区' } }),
+        rec('b', { visitDate: '2026-10-20', location: { name: '故宫' } }),
       ],
     });
   };
@@ -108,13 +113,23 @@ test('L1 首屏：GET /footprint-records page=1 替换整页，卡片字段由 t
   await running;
   assert.equal(page.data.loading, false);
   assert.equal(page.data.items.length, 2);
-  assert.equal(page.data.items[0].peopleText, '小李', 'people 过滤空值后 join（wxml 不能 join 数组）');
-  assert.equal(page.data.items[0].subText, '2026-05-01 · 杭州市', 'subText = 日期 · 城市');
-  assert.equal(page.data.items[0].cover, 'https://cdn/1.jpg', 'cover 取首图');
-  assert.equal(page.data.items[1].peopleText, '');
-  assert.equal(page.data.items[1].subText, '2026-05-01 · 故宫', '无 city 时回落 name/address');
-  assert.equal(page.data.items[1].cover, '');
+  const a = page.data.items[0];
+  assert.equal(a.dayNum, '5', '日期徽章：日去前导零');
+  assert.equal(a.monthNum, '9月');
+  assert.equal(a.metaText, '浙江省杭州市西湖区 · 和小李', '地址优先，同行并到同一行（竞片卡片形态）');
+  assert.equal(a.descText, 'make 北魏 Great again!');
+  assert.deepEqual(a.photos, ['https://cdn/1.jpg'], '照片行直接给数组');
+  assert.equal(a.peopleText, '小李', 'people 过滤空值后 join（wxml 不能 join 数组）');
+  const b = page.data.items[1];
+  assert.equal(b.metaText, '故宫', '无 address/city 时回落地点名');
+  assert.equal(b.descText, '');
+  assert.deepEqual(b.photos, []);
   assert.equal(page.data.hasMore, false, '2 条已达 total → 到底');
+  assert.deepEqual(
+    page.data.groups.map((g) => g.label),
+    ['2026年9月', '2026年10月'],
+    '列表态按 visitDate 分组（跨页同月不重复开组由 groupByMonth 保证）',
+  );
 });
 
 test('L2 触底翻页：第二页追加不覆盖，到底后闸门拦住不再请求', async () => {
@@ -200,10 +215,12 @@ test('L6 详情/表单接线：点卡片走完整 DTO 快路径；保存与删�
   await page.loadAll();
 
   const callsBefore = apiCalls.length;
-  page.onCardTap({ currentTarget: { dataset: { idx: 1 } } });
+  page.onCardTap({ currentTarget: { dataset: { id: 'b' } } });
   assert.equal(page.data.detailVisible, true);
   assert.equal(page.data.detailRecord.id, 'b', 'items 是完整 DTO：详情组件走快路径');
   assert.equal(apiCalls.length, callsBefore, '点卡片不再补拉详情');
+  page.onCardTap({ currentTarget: { dataset: { id: '不存在' } } });
+  assert.equal(page.data.detailRecord.id, 'b', '按 id 找不到记录时不开详情、不覆盖已开内容');
 
   page.onDetailEdit({ detail: page.data.detailRecord });
   assert.equal(page.data.detailVisible, false, '开表单前先关详情');
@@ -354,4 +371,189 @@ test('L10 带筛选翻页：第二页请求仍携带 keyword 与 from/to，追�
   assert.equal(last.keyword, '西湖', '翻页仍带搜索词');
   assert.equal(last.from, `${new Date().getFullYear()}-01-01`, '翻页仍带时间区间');
   assert.deepEqual(page.data.items.map((r) => r.id), ['a', 'b', 'c'], '第二页追加');
+});
+
+/* ------------------------------ 两态改版：总览 / 日历态 / 顶部入口 ------------------------------ */
+
+const calCalls = () => apiCalls.filter((c) => c.path === '/footprint-records/calendar');
+const listCalls = () => apiCalls.filter((c) => c.path === '/footprint-records');
+
+test('L11 总览与打点：onLoad 拉一次 /calendar 拼出总览文案；失败给具体原因不静默', async () => {
+  resetEnv();
+  respond = pagedRespond([rec('a')]);
+  calendarRespond = () => Promise.resolve({ total: 4, placeCount: 4, photoCount: 18, days: [{ date: '2026-09-20', count: 2 }] });
+  const page = makePage();
+  page.onLoad();
+  await flush();
+  assert.equal(calCalls().length, 1, '首屏拉一次日历/总览');
+  assert.equal(page.data.summaryText, '4 条记录 · 4 个地方 · 18 张照片');
+  assert.equal(page.data.calendarDays.length, 1);
+  assert.equal(page.data.calendarMonth, `${new Date().getFullYear()}-${pad(new Date().getMonth() + 1)}`, '默认落在当前月');
+
+  resetEnv();
+  respond = pagedRespond([rec('a')]);
+  calendarRespond = () => Promise.reject(new Error('日历接口 500'));
+  const p2 = makePage();
+  p2.onLoad();
+  await flush();
+  assert.ok(toasts.includes('日历接口 500'), '总览拉不到要 toast，不能凭空少一行');
+  assert.equal(p2.data.summaryText, '');
+});
+
+test('L12 切日历态：请求带整月区间、不清 items（防闪屏）、标题变「本月 N 条」；切回列表态恢复', async () => {
+  resetEnv();
+  respond = pagedRespond([rec('a', { visitDate: '2026-09-20' }), rec('b', { visitDate: '2026-08-11' })]);
+  const page = makePage();
+  page.onLoad();
+  await flush();
+  assert.equal(page.data.view, 'list');
+
+  page.onSwitchView({ currentTarget: { dataset: { view: 'calendar' } } });
+  assert.equal(page.data.items.length, 2, '切态瞬间保留旧内容，不出现空窗闪屏');
+  await flush();
+  const now = new Date();
+  const last = listCalls()[listCalls().length - 1].params;
+  assert.equal(last.from, fmt(new Date(now.getFullYear(), now.getMonth(), 1)), '日历态默认整月区间');
+  assert.equal(last.to, fmt(new Date(now.getFullYear(), now.getMonth() + 1, 1)));
+  assert.equal('keyword' in last, false);
+  assert.equal(page.data.sectionTitle, `本月 ${page.data.total} 条`);
+  assert.deepEqual(page.data.groups, [], '日历态不分组（单月，直接渲染 items）');
+  assert.equal(page.data.filtered, false, '整月不算筛选态');
+
+  page.onSwitchView({ currentTarget: { dataset: { view: 'calendar' } } });
+  assert.equal(listCalls().length, 2, '重复点当前态不再发请求');
+
+  page.onSwitchView({ currentTarget: { dataset: { view: 'list' } } });
+  await flush();
+  const back = listCalls()[listCalls().length - 1].params;
+  assert.equal('from' in back, false, '回列表态（默认「全部」）不带区间');
+  assert.equal(page.data.sectionTitle, '', '列表态分组标题走 groups，不用 sectionTitle');
+  assert.deepEqual(
+    page.data.groups.map((g) => g.label),
+    ['2026年9月', '2026年8月'],
+    '列表态恢复按月分组',
+  );
+});
+
+test('L13 点某天：区间收成那一天，再点同一天取消回整月', async () => {
+  resetEnv();
+  respond = pagedRespond([rec('a')]);
+  calendarRespond = () => Promise.resolve({ total: 1, placeCount: 1, photoCount: 0, days: [{ date: '2026-09-20', count: 1 }] });
+  const page = makePage();
+  page.onLoad();
+  page.onSwitchView({ currentTarget: { dataset: { view: 'calendar' } } });
+  await flush();
+
+  const day = `${page.data.calendarMonth}-20`;
+  page.onCalendarDayTap({ detail: { date: day } });
+  await flush();
+  let last = listCalls()[listCalls().length - 1].params;
+  assert.equal(last.from, day, '点选后区间起点就是那天');
+  assert.equal(last.to, `${page.data.calendarMonth}-21`, '右开到次日');
+  assert.equal(page.data.calendarSelected, day);
+  assert.equal(page.data.filtered, true, '点选某天算筛选态');
+  assert.equal(page.data.sectionTitle, `9月20日 · ${page.data.total} 条`);
+
+  page.onCalendarDayTap({ detail: { date: day } });
+  await flush();
+  last = listCalls()[listCalls().length - 1].params;
+  assert.equal(page.data.calendarSelected, '', '再点同一天取消选中');
+  assert.equal(last.from, `${page.data.calendarMonth}-01`, '取消后回到整月区间');
+
+  page.onCalendarDayTap({ detail: { date: '' } });
+  assert.equal(listCalls().length, 4, '补白格（无 date）不触发请求');
+});
+
+test('L14 换月：区间跟随、选中清空、同月不重复请求', async () => {
+  resetEnv();
+  respond = pagedRespond([rec('a')]);
+  const page = makePage();
+  page.onLoad();
+  page.onSwitchView({ currentTarget: { dataset: { view: 'calendar' } } });
+  await flush();
+  const before = listCalls().length;
+
+  page.onCalendarMonthChange({ detail: { month: '2026-08' } });
+  await flush();
+  let last = listCalls()[listCalls().length - 1].params;
+  assert.deepEqual({ from: last.from, to: last.to }, { from: '2026-08-01', to: '2026-09-01' });
+  assert.equal(page.data.calendarMonth, '2026-08');
+
+  page.onCalendarDayTap({ detail: { date: '2026-08-15' } });
+  await flush();
+  assert.equal(page.data.calendarSelected, '2026-08-15');
+  page.onCalendarMonthChange({ detail: { month: '2026-07' } });
+  await flush();
+  assert.equal(page.data.calendarSelected, '', '换月要清掉上一月的点选，否则区间与月历对不上');
+  last = listCalls()[listCalls().length - 1].params;
+  assert.deepEqual({ from: last.from, to: last.to }, { from: '2026-07-01', to: '2026-08-01' });
+
+  const n = listCalls().length;
+  page.onCalendarMonthChange({ detail: { month: '2026-07' } });
+  page.onCalendarMonthChange({ detail: { month: '' } });
+  assert.equal(listCalls().length, n, '同月/空月都不再发请求');
+  assert.equal(listCalls().length - before >= 3, true, '前面确实换过月');
+});
+
+test('L15 顶部入口：统计跳页、＋ 开新增态表单', async () => {
+  resetEnv();
+  respond = pagedRespond([rec('a')]);
+  const page = makePage();
+  page.onLoad();
+  await flush();
+
+  page.goStats();
+  assert.deepEqual(navs, ['/packageFootprint/pages/footprint-stats/footprint-stats'], '统计仍是独立页');
+
+  page.setData({ detailVisible: true, detailRecord: rec('a') });
+  page.openAdd();
+  assert.equal(page.data.formVisible, true);
+  assert.equal(page.data.formRecord, null, 'record 为 null 即新增态（组件按此判定）');
+  assert.equal(page.data.detailVisible, true, '＋ 不动详情弹层（此处仅验不误关）');
+  page.closeForm();
+  assert.equal(page.data.formVisible, false);
+});
+
+test('L16 新增/编辑/删除后：列表与总览一起刷新（打点与「N 条记录」都会变）', async () => {
+  resetEnv();
+  respond = pagedRespond([rec('a')]);
+  const page = makePage();
+  page.onLoad();
+  await flush();
+  const calBefore = calCalls().length;
+
+  page.openAdd();
+  page.onFormSaved();
+  await flush();
+  assert.equal(calCalls().length, calBefore + 1, '保存后要重取总览/打点');
+  assert.equal(listCalls()[listCalls().length - 1].params.page, 1, '列表回第一页');
+
+  page.setData({ detailVisible: true, detailRecord: rec('a') });
+  page.onDetailDeleted();
+  await flush();
+  assert.equal(calCalls().length, calBefore + 2, '删除后同样两处都刷');
+});
+
+test('L17 空态文案分档：日历整月 / 日历点选 / 列表无筛选各说各话', async () => {
+  resetEnv();
+  respond = () => Promise.resolve({ items: [], total: 0 });
+  const page = makePage();
+  page.onLoad();
+  await flush();
+  assert.equal(page.data.emptyText, '', '列表态无筛选 → wxml 走「点右上角 ＋ 记录第一个去过的地方」兜底');
+
+  page.onSwitchView({ currentTarget: { dataset: { view: 'calendar' } } });
+  await flush();
+  assert.equal(page.data.emptyText, '本月没有足迹');
+  assert.equal(page.data.sectionTitle, '本月 0 条');
+
+  page.onCalendarDayTap({ detail: { date: '2026-09-20' } });
+  await flush();
+  assert.equal(page.data.emptyText, '9月20日 没有足迹');
+  assert.equal(page.data.filtered, true, '点选态空列表要给「清空筛选」出口');
+
+  page.onClearFilter();
+  await flush();
+  assert.equal(page.data.calendarSelected, '', '清空筛选在日历态顺带取消点选');
+  assert.equal(page.data.filtered, false);
 });

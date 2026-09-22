@@ -1,0 +1,41 @@
+<view class="cal-card">
+  <view class="cal-head">
+    <text class="cal-title">{{label}}</text>
+    <view class="cal-nav">
+      <view class="cal-today" hover-class="cal-today-hover" bindtap="onToday">今天</view>
+      <view class="cal-arrow" hover-class="cal-arrow-hover" bindtap="onPrev">‹</view>
+      <view
+        class="cal-arrow {{canGoNext ? '' : 'cal-arrow-disabled'}}"
+        hover-class="{{canGoNext ? 'cal-arrow-hover' : ''}}"
+        bindtap="onNext"
+      >›</view>
+    </view>
+  </view>
+
+  <view class="cal-week">
+    <view class="cal-week-cell" wx:for="{{weekLabels}}" wx:key="*this">{{item}}</view>
+  </view>
+
+  <view class="cal-grid">
+    <view
+      class="cal-cell"
+      wx:for="{{cells}}"
+      wx:key="key"
+      data-date="{{item.date}}"
+      bindtap="onDayTap"
+    >
+      <block wx:if="{{!item.out}}">
+        <view class="cal-day {{item.isToday ? 'is-today' : ''}} {{item.selected ? 'is-selected' : ''}} {{item.marked && !item.selected ? 'is-marked' : ''}}">
+          {{item.day}}
+        </view>
+        <view class="cal-dot {{item.marked ? '' : 'cal-dot-hidden'}}"></view>
+      </block>
+      <view wx:else class="cal-day cal-day-out"></view>
+    </view>
+  </view>
+
+  <view class="cal-legend">
+    <view class="cal-dot cal-dot-demo"></view>
+    <text>有足迹的日子</text>
+  </view>
+</view>

@@ -13,63 +13,147 @@
   font-weight: 600;
 }
 
-.fp-card {
+/* ------------------------------ 顶部：总览 + 形态切换 ------------------------------ */
+.head-row {
   display: flex;
   align-items: center;
-  padding: 24rpx 28rpx;
+  justify-content: space-between;
+  padding: 0 4rpx 16rpx;
+}
+.head-summary {
+  flex: 1;
+  min-width: 0;
+  font-size: 24rpx;
+  color: #8a93a6;
+}
+.head-actions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+.head-act {
+  width: 64rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12rpx;
+}
+.head-act-active {
+  background: #eef4ff;
+}
+.head-act-hover {
+  opacity: 0.7;
+}
+.head-icon {
+  width: 36rpx;
+  height: 36rpx;
+}
+.head-act-add {
+  font-size: 40rpx;
+  line-height: 1;
+  color: #2b6cf6;
+}
+
+/* 分组/月份标题：竞品「2026年9月」「本月 4 条」那一行 */
+.section-title {
+  padding: 8rpx 4rpx 14rpx;
+  font-size: 26rpx;
+  color: #8a93a6;
+}
+
+/* ------------------------------ 足迹卡片 ------------------------------ */
+/* 日期徽章 + 标题/地址·同行/描述/照片行；照片上限 3 张，故不出现竞片的「+N」叠层 */
+.fp-card {
+  display: flex;
+  align-items: flex-start;
+  padding: 24rpx;
   margin-bottom: 16rpx;
   background: #fff;
   border-radius: 16rpx;
-  overflow: hidden;
   box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
 }
 .fp-card-hover {
   opacity: 0.7;
 }
-.fp-thumb {
+.fp-date-badge {
   flex: none;
-  width: 156rpx;
-  height: 156rpx;
-  margin-right: 24rpx;
-  border-radius: 16rpx;
-  background: #f2f3f5;
-}
-.fp-thumb.placeholder {
+  width: 88rpx;
+  margin-right: 20rpx;
+  padding: 10rpx 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  font-size: 26rpx;
-  color: #bbb;
+  border-radius: 12rpx;
+  background: #eef4ff;
+}
+.fp-date-day {
+  font-size: 36rpx;
+  font-weight: 600;
+  line-height: 1.1;
+  color: #2b6cf6;
+}
+.fp-date-month {
+  margin-top: 2rpx;
+  font-size: 20rpx;
+  color: #2b6cf6;
+  opacity: 0.8;
 }
 .fp-card-main {
   flex: 1;
   min-width: 0;
+}
+.fp-card-head {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 6rpx;
+  align-items: center;
+  justify-content: space-between;
 }
 .fp-card-title {
-  font-size: 28rpx;
-  font-weight: 500;
+  flex: 1;
+  min-width: 0;
+  font-size: 30rpx;
+  font-weight: 600;
   color: #1f2329;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.fp-card-sub {
+.fp-card-chevron {
+  flex: none;
+  margin-left: 8rpx;
+  font-size: 32rpx;
+  line-height: 1;
+  color: #c0c4cc;
+}
+.fp-card-meta {
+  margin-top: 8rpx;
   font-size: 24rpx;
   color: #8a93a6;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.fp-card-people {
-  font-size: 22rpx;
-  color: #8a93a6;
+.fp-card-desc {
+  margin-top: 12rpx;
+  font-size: 26rpx;
+  line-height: 1.5;
+  color: #4e5969;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+}
+.fp-photos {
+  display: flex;
+  margin-top: 14rpx;
+}
+.fp-photo {
+  width: 132rpx;
+  height: 132rpx;
+  margin-right: 12rpx;
+  border-radius: 12rpx;
+  background: #f2f3f5;
 }
 
 /* 列表尾提示：对齐 tracks 的 .loading-tip（text-align center + padding 24rpx 0）与 .text-muted */
