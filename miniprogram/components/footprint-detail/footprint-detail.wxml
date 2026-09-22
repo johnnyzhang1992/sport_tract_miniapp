@@ -9,14 +9,13 @@
       <view class="sheet-meta">{{detail.metaText}}</view>
       <view wx:if="{{detail.peopleText}}" class="sheet-people">同行：{{detail.peopleText}}</view>
       <view wx:if="{{detail.description}}" class="sheet-desc">{{detail.description}}</view>
-      <scroll-view wx:if="{{detail.photos.length}}" scroll-x class="sheet-photos">
+      <scroll-view wx:if="{{detail.photoThumbs.length}}" scroll-x class="sheet-photos">
         <image
-          wx:for="{{detail.photos}}"
+          wx:for="{{detail.photoThumbs}}"
           wx:key="*this"
           src="{{item}}"
           mode="aspectFill"
           class="sheet-photo"
-          data-urls="{{detail.photos}}"
           data-idx="{{index}}"
           bindtap="previewPhoto"
         />

@@ -42,8 +42,8 @@
     <view class="photo-section" wx:if="{{editMode && existingPhotos.length > 0}}">
       <view class="photo-label">已有照片</view>
       <view class="photo-grid">
-        <view wx:for="{{existingPhotos}}" wx:key="*this" class="photo-item">
-          <image class="photo-img" src="{{item}}" mode="aspectFill" />
+        <view wx:for="{{existingThumbs}}" wx:key="*this" class="photo-item">
+          <image class="photo-img" src="{{item}}" mode="aspectFill" data-idx="{{index}}" bindtap="previewExisting" />
           <view class="photo-remove" data-idx="{{index}}" bindtap="removeExistingPhoto"><image src="/assets/icons/lucide-x-white.png" mode="aspectFit" /></view>
         </view>
       </view>

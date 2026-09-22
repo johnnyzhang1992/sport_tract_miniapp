@@ -70,9 +70,9 @@ async function flush() {
   for (let i = 0; i < 5; i++) await tick();
 }
 
-/** 一条记录（卡片字段由 toCard 补齐，用例只给原始 DTO 形态） */
+/** 一条记录（卡片字段由 toCard 补齐，用例只给原始 DTO 形态：后端同时给 photos 原图与 photoThumbs 缩略图） */
 function rec(id, over = {}) {
-  return Object.assign({ id, title: '足迹' + id, visitDate: '2026-05-01', people: [], photos: [], location: {} }, over);
+  return Object.assign({ id, title: '足迹' + id, visitDate: '2026-05-01', people: [], photos: [], photoThumbs: [], location: {} }, over);
 }
 
 /** 分页桩：按 params.page/pageSize 从 all 里切一页，total 恒为 all.length */
@@ -102,7 +102,7 @@ test('L1 首屏：GET /footprint-records page=1 替换整页，卡片字段由 t
     return Promise.resolve({
       total: 2,
       items: [
-        rec('a', { visitDate: '2026-09-05', description: 'make 北魏 Great again!', people: ['小李', '', null], photos: ['https://cdn/1.jpg'], location: { city: '杭州市', address: '浙江省杭州市西湖区' } }),
+        rec('a', { visitDate: '2026-09-05', description: 'make 北魏 Great again!', people: ['小李', '', null], photos: ['https://cdn/o1.jpg'], photoThumbs: ['https://cdn/t1.jpg'], location: { city: '杭州市', address: '浙江省杭州市西湖区' } }),
         rec('b', { visitDate: '2026-10-20', location: { name: '故宫' } }),
       ],
     });
@@ -118,12 +118,13 @@ test('L1 首屏：GET /footprint-records page=1 替换整页，卡片字段由 t
   assert.equal(a.monthNum, '9月');
   assert.equal(a.metaText, '浙江省杭州市西湖区 · 和小李', '地址优先，同行并到同一行（竞片卡片形态）');
   assert.equal(a.descText, 'make 北魏 Great again!');
-  assert.deepEqual(a.photos, ['https://cdn/1.jpg'], '照片行直接给数组');
+  assert.deepEqual(a.photoThumbs, ['https://cdn/t1.jpg'], '照片行用缩略图档（一屏 30 图不该拉原图）');
+  assert.deepEqual(a.photos, ['https://cdn/o1.jpg'], '原图字段原样透传（点开大图才用）');
   assert.equal(a.peopleText, '小李', 'people 过滤空值后 join（wxml 不能 join 数组）');
   const b = page.data.items[1];
   assert.equal(b.metaText, '故宫', '无 address/city 时回落地点名');
   assert.equal(b.descText, '');
-  assert.deepEqual(b.photos, []);
+  assert.deepEqual(b.photoThumbs, []);
   assert.equal(page.data.hasMore, false, '2 条已达 total → 到底');
   assert.deepEqual(
     page.data.groups.map((g) => g.label),

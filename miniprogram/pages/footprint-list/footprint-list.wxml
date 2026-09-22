@@ -12,9 +12,9 @@
       </view>
       <view class="fp-card-meta">{{card.metaText}}</view>
       <view wx:if="{{card.descText}}" class="fp-card-desc">{{card.descText}}</view>
-      <view wx:if="{{card.photos.length}}" class="fp-photos">
+      <view wx:if="{{card.photoThumbs.length}}" class="fp-photos">
         <image
-          wx:for="{{card.photos}}"
+          wx:for="{{card.photoThumbs}}"
           wx:for-item="url"
           wx:key="*this"
           class="fp-photo"
