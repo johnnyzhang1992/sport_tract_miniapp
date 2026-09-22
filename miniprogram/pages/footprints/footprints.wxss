@@ -37,65 +37,123 @@
   font-weight: 600;
 }
 
-/* 左上浮层入口：列表 / 统计 */
-.map-entries {
+/* —— 浮层按钮统一规格：88rpx 白圆底 + 40rpx 黑色 lucide 字形 + 同一档投影 ——
+   四组按钮（左上竖排、右上搜索、右下列表/新增）共用 .tool-btn，风格差异只用修饰类表达 */
+.tool-col {
   position: absolute;
-  top: 24rpx;
-  left: 24rpx;
   z-index: 5;
   display: flex;
-  gap: 16rpx;
+  flex-direction: column;
+  gap: 20rpx;
+  transition: opacity 0.2s ease;
 }
-.entry-btn {
+.tool-col-left {
+  top: 24rpx;
+  left: 24rpx;
+}
+.tool-col-right {
+  right: 24rpx;
+  bottom: 80rpx;
+}
+/* 搜索展开时左上整列淡出（输入框要占满这一行） */
+.tool-fade {
+  opacity: 0;
+  pointer-events: none;
+}
+.tool-btn {
+  position: relative;
+  width: 88rpx;
+  height: 88rpx;
   display: flex;
   align-items: center;
-  gap: 6rpx;
-  padding: 8rpx 16rpx; /* 不设固定高度，由内边距随内容撑起 */
-  border-radius: 12rpx;
-  background: rgba(255, 255, 255, 0.95);
-  color: #2b6cf6;
-  font-size: 22rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.14);
 }
-/* 图标用 lucide 蓝色版（#2b6cf6，与胶囊文案同色；深色原版留给轨迹页/我的页） */
-.entry-icon {
-  flex: none;
-  width: 26rpx;
-  height: 26rpx;
+.tool-btn-hover {
+  background: #f2f3f5;
 }
-.entry-btn-hover {
-  background: #eef4ff;
+.tool-icon {
+  width: 40rpx;
+  height: 40rpx;
 }
+/* 有筛选生效时给个蓝环，收起状态下也看得出来"当前不是全量" */
+.tool-btn-on {
+  box-shadow: 0 0 0 3rpx #2b6cf6, 0 2rpx 12rpx rgba(0, 0, 0, 0.14);
+}
+.tool-badge {
+  position: absolute;
+  top: -4rpx;
+  right: -4rpx;
+  min-width: 30rpx;
+  height: 30rpx;
+  padding: 0 6rpx;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #2b6cf6;
+  color: #fff;
+  font-size: 20rpx;
+  line-height: 1;
+  border: 2rpx solid #fff;
+}
+/* 新增：比常规按钮大一档，保持白底黑图标（用户要求四个按钮风格统一，不用品牌蓝实心） */
+/* 右下两个入口（列表 / 新增）与左上筛选、右上搜索同一套度量：88rpx 白圆 + 40rpx 黑色图标 */
 
-/* 右上刷新按钮（替代已禁用的页面下拉刷新）：⟳ + 文案的胶囊，与左侧入口同族 */
-.map-refresh {
+/* 右上搜索：收起时是一个圆钮，展开时向左长成整行输入框 */
+.search-dock {
   position: absolute;
   top: 24rpx;
   right: 24rpx;
-  z-index: 5;
+  z-index: 6;
+  width: 88rpx;
+  height: 88rpx;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
-  gap: 6rpx;
-  padding: 8rpx 16rpx;
-  border-radius: 12rpx;
-  background: rgba(255, 255, 255, 0.95);
-  color: #2b6cf6;
-  font-size: 22rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
+  padding: 0 24rpx;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.14);
+  transition: width 0.22s ease;
 }
-.refresh-icon {
+.search-dock-open {
+  width: calc(100% - 48rpx);
+}
+.dock-icon {
   flex: none;
-  width: 24rpx;
-  height: 24rpx;
 }
-/* 点一下转三圈（一次性 1080°，缓入缓出）：由页面置 refreshSpin 触发，转完即复位 */
-.refresh-icon.spin-once {
-  animation: fp-refresh-spin 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+.dock-input {
+  flex: 1;
+  min-width: 0;
+  height: 56rpx;
+  margin-left: 12rpx;
+  font-size: 28rpx;
+  color: #1f2329;
 }
-@keyframes fp-refresh-spin {
-  to {
-    transform: rotate(1080deg);
-  }
+.dock-placeholder {
+  color: #b6bcc6;
+  font-size: 26rpx;
+}
+.dock-clear {
+  flex: none;
+  width: 44rpx;
+  height: 44rpx;
+  margin-left: 8rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #f2f3f5;
+  color: #8a9099;
+  font-size: 22rpx;
+}
+.search-dock .tool-badge {
+  top: 2rpx;
+  right: 2rpx;
 }
 
 /* 半屏容器（成员列表兜底用；详情/表单各自是组件自带样式） */
@@ -163,24 +221,7 @@
   color: #8a9099;
 }
 
-/* 新增足迹 FAB */
-.fab {
-  position: fixed;
-  right: 32rpx;
-  bottom: 80rpx;
-  z-index: 10;
-  width: 104rpx;
-  height: 104rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: #2b6cf6;
-  color: #fff;
-  font-size: 56rpx;
-  line-height: 1;
-  box-shadow: 0 8rpx 24rpx rgba(43, 108, 246, 0.35);
-}
+/* 新增足迹按钮已并入右下 .tool-col-right（原 .fab 蓝底白字与四个按钮风格不统一，删除） */
 
 /* 有图单点的照片卡气泡（customCallout 内容）：图上标题下，圆角卡片 */
 .fp-callout {

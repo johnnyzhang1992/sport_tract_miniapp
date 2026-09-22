@@ -4,6 +4,26 @@
  * ============================================================
  */
 
+/**
+ * 足迹分类盘：key 与后端 src/utils/footprint-category.ts 一一对应（新增分类两处都要改）。
+ * 图标是打进包的静态 PNG（地图 marker 的 iconPath 只吃图片）：
+ *   assets/icons/fp-cat-<key>.png       透明底黑字形 —— 表单 chips、列表/详情标签
+ *   assets/icons/fp-cat-<key>-chip.png  白圆底黑字形 —— 地图打点
+ * 换字形/配色跑 scripts/gen-category-icons.mjs，别手改 PNG。
+ */
+const FOOTPRINT_CATEGORIES = [
+  { key: 'scenic', label: '景区', icon: 'ticket' },
+  { key: 'mountain', label: '山峰', icon: 'mountain-snow' },
+  { key: 'park', label: '公园绿地', icon: 'tree-pine' },
+  { key: 'heritage', label: '古迹寺庙', icon: 'castle' },
+  { key: 'museum', label: '博物馆展馆', icon: 'landmark' },
+  { key: 'street', label: '商圈街区', icon: 'store' },
+  { key: 'food', label: '餐饮咖啡', icon: 'coffee' },
+  { key: 'camp', label: '露营户外', icon: 'tent' },
+  { key: 'other', label: '其他', icon: 'circle-dot' },
+];
+const footprintCategoryOf = (key) => FOOTPRINT_CATEGORIES.find((c) => c.key === key);
+
 module.exports = {
   /**
    * 后端 API 地址（按环境自动切换）
@@ -46,6 +66,13 @@ module.exports = {
     { type: 'photo', label: '拍照点', icon: '📷', iconImg: '/assets/icons/lucide-camera.png' },
     { type: 'note', label: '备注', icon: '📝', iconImg: '/assets/icons/lucide-note.png' },
   ],
+
+  /** 足迹分类（见文件头注释）：顺序即表单/筛选弹窗里 chips 的顺序 */
+  FOOTPRINT_CATEGORIES,
+  /** 未分类或未知 key → 空串，调用方自行兜底（地图退回归小圆点、表单显示「未分类」） */
+  footprintCategoryLabel: (key) => (footprintCategoryOf(key) || {}).label || '',
+  footprintCategoryIcon: (key, chip) =>
+    footprintCategoryOf(key) ? `/assets/icons/fp-cat-${key}${chip ? '-chip' : ''}.png` : '',
 
   /** 默认头像预设：资源放 miniprogram/assets/avatars/<key>.png（建议 200×200 png）
    * 非空时资料编辑页头像区显示预设网格，选中存 avatarPreset（avatarUrl 为空时生效） */

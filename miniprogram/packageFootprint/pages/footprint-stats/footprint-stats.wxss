@@ -1,4 +1,4 @@
-/* 足迹统计页：周期筛选 + 点亮地图 + 数据概况（三格，地图下方）+ 底部「分享图片」栏
+/* 足迹统计页：周期筛选 + 点亮地图 + 数据概况（三格，地图下方）+ 省市明细列表 + 底部「分享图片」栏
    度量对齐 packageFootprint/pages/footprint/footprint.wxss（stats-card/share-*）与 pages/report/report.wxss（range-card/period-nav/picker） */
 .stats-card {
   display: flex;
@@ -27,6 +27,96 @@
   width: 1rpx;
   height: 60rpx;
   background: #e5e6eb;
+}
+
+/* 省市明细列表（省份可展开城市）：行高/字号对齐足迹列表页卡片，不另立一套度量 */
+.region-card {
+  padding: 24rpx 20rpx 8rpx;
+}
+.region-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0 4rpx 12rpx;
+}
+.region-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+.region-summary {
+  font-size: 24rpx;
+  color: #8a93a6;
+}
+.region-head-row {
+  border-top: none;
+  height: 52rpx;
+}
+.region-head-row .region-name,
+.region-head-row .region-count {
+  font-size: 22rpx;
+  color: #a3a9b5;
+  font-weight: 400;
+}
+.region-row {
+  display: flex;
+  align-items: center;
+  min-height: 80rpx;
+  border-top: 1rpx solid #f2f3f5;
+}
+.region-row-hover {
+  background: #f7f8fa;
+}
+.region-dot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 50%;
+  background: #cfe0ff;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+}
+.region-dot-on {
+  background: #2b6cf6;
+}
+.region-name {
+  flex: 1;
+  font-size: 28rpx;
+  color: #1f2329;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.region-count {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #2b6cf6;
+  margin-right: 16rpx;
+}
+.region-city {
+  padding-left: 64rpx; /* 明显缩进：省名从 28rpx（圆点+间距）起，市名再往里 36rpx */
+  min-height: 68rpx;
+}
+.region-city .region-name {
+  font-size: 26rpx;
+  color: #4e5969;
+  font-weight: 400;
+}
+.region-count-city {
+  font-size: 24rpx;
+  font-weight: 400;
+  color: #8a93a6;
+}
+.region-caret {
+  width: 32rpx;
+  flex-shrink: 0;
+}
+.region-caret-icon {
+  width: 28rpx;
+  height: 28rpx;
+  transition: transform 0.2s;
+}
+.region-caret-icon-up {
+  transform: rotate(180deg);
 }
 
 /* 周期筛选 */

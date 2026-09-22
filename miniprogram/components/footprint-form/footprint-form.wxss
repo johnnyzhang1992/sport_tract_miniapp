@@ -148,6 +148,30 @@
   color: #4e5969;
   font-size: 26rpx;
 }
+/* 分类 chips：透明底黑字形（fp-cat-<key>.png），选中态换成品牌蓝底 + 白字 */
+.cat-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+.cat-chip {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 12rpx 20rpx;
+  border-radius: 999rpx;
+  background: #f2f3f5;
+  color: #4e5969;
+  font-size: 26rpx;
+}
+.cat-icon {
+  width: 30rpx;
+  height: 30rpx;
+}
+.cat-chip-on {
+  background: #2b6cf6;
+  color: #fff;
+}
 .tag-x {
   margin-left: 10rpx;
   color: #999;

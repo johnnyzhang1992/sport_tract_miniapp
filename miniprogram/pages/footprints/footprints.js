@@ -1,7 +1,14 @@
 // 足迹 tab 主页：全屏地图（本地网格聚合 + 自绘小圆气泡 marker）+ 详情/表单半屏；
-// 列表与统计为独立页面（浮层入口进），本页只负责地图与聚合。
+// 浮层只留 筛选 / 搜索 / 列表 / 新增 四个入口（统计页入口在列表页顶部栏），本页只负责地图与聚合。
 const api = require('../../services/api');
 const geo = require('../../utils/footprint-geo');
+const config = require('../../config/index');
+const ffilter = require('../../utils/footprint-filter');
+
+/** 分类 chips 与候选项的展示顺序跟着 config 的分类盘走 */
+const CATEGORY_KEYS = config.FOOTPRINT_CATEGORIES.map((c) => c.key);
+/** 分类图标的 marker 显示尺寸（CSS px）：白圆底比原来的 18px 圆点大一档，字形才认得出 */
+const CAT_MARKER_SIZE = 26;
 
 const MAP_ID = 'footprintMap';
 /** map scale 上限（文档 scale: 3~20）：到顶仍同格（同坐标点本地网格也拆不开）→ 成员半屏列表兜底 */
@@ -10,8 +17,6 @@ const MAX_SCALE = 20;
 const EXPAND_ZOOM_STEP = 2;
 /** 视野由程序改动后的静默窗口：期间忽略 regionchange 回读，避免自激 */
 const PROGRAMMATIC_CAMERA_MS = 900;
-/** 刷新图标转三圈的时长（与 wxss 的 1.5s 对齐，留 20ms 余量后复位动画标记） */
-const REFRESH_SPIN_MS = 1520;
 /** marker id 分段（微信 map 的 markerId 是数字）：1..N = records 下标 + 1；≥ 基准则为自绘聚合簇 */
 const CLUSTER_ID_BASE = 100000;
 
@@ -151,11 +156,29 @@ function buildClusterIcon(count) {
   });
 }
 
+/**
+ * 无匹配结果的 toast 文案：带关键词就点名该词（超 10 字截断，toast 标题两行就顶到导航栏），
+ * 只有省/年/分类筛选时说「当前筛选」——两种情况用户能取消的入口不一样。
+ */
+function noMatchToast(keyword) {
+  const kw = (keyword || '').trim();
+  if (!kw) return '没有符合当前筛选的足迹';
+  return `没有匹配「${kw.length > 10 ? `${kw.slice(0, 10)}…` : kw}」的足迹`;
+}
+
 Page({
   data: {
     loading: true,
     error: '',
-    records: [], // /geo 轻量点缓存 {id,title,visitDate,latitude,longitude,coverPhoto,coverPhotoThumb}
+    records: [], // 当前展示的点集（可能已被筛选/搜索过滤）：/geo item
+    options: { provinces: [], years: [], categories: [] }, // 筛选弹窗的候选，来自未过滤快照
+    filter: { province: '', year: '', category: '' }, // 已生效的筛选（弹窗点确定才写这里）
+    filterCount: 0, // 生效项数，驱动筛选按钮角标
+    filterVisible: false,
+    keywordInput: '', // 输入框里的值（未提交）
+    keyword: '', // 已提交的关键词：回车/点搜索才生效，与列表页同一套双态
+    searchOpen: false,
+    searchFocus: false,
     markers: [], // 本地网格聚合产物：叶 marker + 自绘簇气泡 marker，声明式绑给 <map>
     callouts: [], // 叶照片卡内容（有 coverPhoto 的单点），配合 map 的 customCallout slot
     center: { latitude: 30.5, longitude: 114.3 }, // 视野由 fitBounds 覆盖，这里只是无数据时的兜底
@@ -165,22 +188,8 @@ Page({
     clusterSheet: { visible: false, records: [] }, // 最大缩放兜底：同处多条足迹的成员列表
     formVisible: false, // 新增/编辑半屏表单（components/footprint-form）
     formRecord: null, // 传入记录即为编辑态
-    refreshSpin: false, // 刷新图标一次性旋转动画的开关
   },
   onLoad() { this.loadAll(); },
-
-  /**
-   * 刷新：点一下图标转一圈（先复位再置位，连点也能重新播放动画——同一个类名不摘掉是重播不了的），
-   * 随后重拉地图数据。动画标记由定时器复位，故不会出现「转完停在斜着的角度」。
-   */
-  onRefreshTap() {
-    this.setData({ refreshSpin: false }, () => {
-      this.setData({ refreshSpin: true });
-      if (this._spinTimer) clearTimeout(this._spinTimer);
-      this._spinTimer = setTimeout(() => this.setData({ refreshSpin: false }), REFRESH_SPIN_MS);
-    });
-    this.loadAll();
-  },
 
   async loadAll() {
     // 请求序号守卫：只应用最后一次结果，防竞态
@@ -188,10 +197,24 @@ Page({
     // 仅首屏才进 loading 态；刷新保留已渲染内容，防闪屏
     const firstLoad = this.data.records.length === 0;
     this.setData(firstLoad ? { loading: true, error: '' } : { error: '' });
+    const q = ffilter.buildGeoQuery(Object.assign({}, this.data.filter, { keyword: this.data.keyword }));
+    const plain = Object.keys(q).length === 0;
     try {
-      await this.loadGeo(seq);
+      // 筛选态下多拉一次全量：候选项（省份/年份/分类）必须来自未过滤快照，
+      // 否则选中的省份会在候选里消失、没法改回去。只在进页/刷新/增删改后发生，切筛选不重复拉。
+      const [shown, all] = await Promise.all([this.fetchGeo(q), plain ? null : this.fetchGeo({})]);
       if (seq !== this._seq) return;
-      this.setData({ loading: false });
+      const snapshot = plain ? shown.items : (all || shown).items;
+      this.setData({
+        loading: false,
+        records: shown.items,
+        options: ffilter.buildFilterOptions(snapshot, CATEGORY_KEYS),
+        filterCount: ffilter.activeFilterCount(this.data.filter),
+      });
+      // 查不到只 toast，不在地图上摆浮层文本；空白账号（无筛选无关键词）不走这里，留给地图上的新增引导
+      if (shown.items.length === 0 && !plain) wx.showToast({ title: noMatchToast(this.data.keyword), icon: 'none' });
+      // return 出去：markers 与 loading:false 落在同一帧（否则首屏会先闪一帧无 marker 的空图）
+      return this.buildMarkers();
     } catch (e) {
       if (seq !== this._seq) return;
       this.setData({ loading: false });
@@ -205,13 +228,8 @@ Page({
       }
     }
   },
-  loadGeo(seq) {
-    return api.get('/footprint-records/geo').then((data) => {
-      if (seq !== this._seq) return;
-      this.setData({ records: data.items });
-      // return 出去：markers 与 loading:false 落在同一帧（否则首屏会先闪一帧无 marker 的空图）
-      return this.buildMarkers();
-    });
+  fetchGeo(query) {
+    return api.get('/footprint-records/geo', query);
   },
 
   /**
@@ -296,9 +314,18 @@ Page({
             leaf.width = CARD_W;
             leaf.height = CARD_H;
             leaf.anchor = { x: 0.5, y: 1 }; // 卡片底部尖端对准坐标
-          } else if (zoom >= PILL_MIN_SCALE) {
-            leaf.customCallout = { display: 'ALWAYS' };
-            callouts.push({ id: leaf.id, title: r.title || '' });
+          } else {
+            // 分类图标（白圆底）优先于灰色圆点；未分类/未知 key 走 footprintCategoryIcon 的空串兜底
+            const catIcon = config.footprintCategoryIcon(r.category, true);
+            if (catIcon) {
+              leaf.iconPath = catIcon;
+              leaf.width = CAT_MARKER_SIZE;
+              leaf.height = CAT_MARKER_SIZE;
+            }
+            if (zoom >= PILL_MIN_SCALE) {
+              leaf.customCallout = { display: 'ALWAYS' };
+              callouts.push({ id: leaf.id, title: r.title || '' });
+            }
           }
           return leaf;
         }
@@ -469,9 +496,8 @@ Page({
     if (r) this.openDetail(r);
   },
 
-  /** 全屏地图上的浮层入口：列表页 / 统计页 */
+  /** 全屏地图上的浮层入口：列表页（统计入口在列表页顶部栏） */
   goList() { wx.navigateTo({ url: '/pages/footprint-list/footprint-list' }); },
-  goStats() { wx.navigateTo({ url: '/packageFootprint/pages/footprint-stats/footprint-stats' }); },
   openAdd() { this.setData({ formVisible: true, formRecord: null }); },
   closeForm() { this.setData({ formVisible: false, formRecord: null }); },
   /** 表单保存成功：关弹层 + 重拉地图数据（列表页数据在其自身页面内加载） */
@@ -479,5 +505,35 @@ Page({
     this.setData({ formVisible: false, formRecord: null });
     this.loadAll();
   },
+  /** —— 筛选半屏（省份/年份/分类，候选来自未过滤快照）—— */
+  openFilter() { this.setData({ filterVisible: true }); },
+  closeFilter() { this.setData({ filterVisible: false }); },
+  onFilterConfirm(e) {
+    this.setData({
+      filterVisible: false,
+      filter: Object.assign({ province: '', year: '', category: '' }, e.detail),
+    });
+    this.loadAll();
+  },
+
+  /** —— 搜索：右上按钮向左展开成输入框；回车才生效（与列表页同一套 keywordInput/keyword 双态）—— */
+  toggleSearch() {
+    if (this.data.searchOpen) this.setData({ searchOpen: false, searchFocus: false });
+    else this.setData({ searchOpen: true, searchFocus: true, keywordInput: this.data.keyword });
+  },
+  onKeywordInput(e) { this.setData({ keywordInput: e.detail.value }); },
+  onSearchConfirm() {
+    const kw = (this.data.keywordInput || '').trim();
+    if (kw === this.data.keyword) return; // 没改词就不必重拉
+    this.setData({ keyword: kw });
+    this.loadAll();
+  },
+  /** ✕：清掉关键词并收起输入框（点 X 就该整条收回，不必再点一次放大镜）；框本来就空时只收起 */
+  onClearKeyword() {
+    const had = !!(this.data.keywordInput || this.data.keyword);
+    this.setData({ keywordInput: '', keyword: '', searchOpen: false, searchFocus: false });
+    if (had) this.loadAll();
+  },
+
   noop() {},
 });

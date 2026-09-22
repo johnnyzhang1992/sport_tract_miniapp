@@ -1,5 +1,5 @@
 <view class="page">
-  <!-- 全屏地图 + 浮层入口（左上：列表/统计；右上：刷新；右下：＋） -->
+  <!-- 全屏地图 + 浮层入口（左上：筛选；右上：搜索；右下：列表 / ＋） -->
   <map
     id="footprintMap"
     class="fp-map"
@@ -27,26 +27,50 @@
 
   <view wx:if="{{loading}}" class="center-tip veil">加载中…</view>
   <view wx:elif="{{error}}" class="center-tip veil">{{error}} <text class="retry" bindtap="loadAll">重试</text></view>
-  <view wx:elif="{{records.length === 0}}" class="center-tip empty">还没有足迹，点右下角 ＋ 记录第一个去过的地方</view>
+  <!-- 筛选/搜索无命中不再摆这里：地图上不盖浮层文本，改由页面 toast（见 footprints.js noMatchToast）。
+       条件必须带「无筛选且无关键词」，否则查不到东西时这条引导会漏出来盖在地图上（模拟器实测踩过）。 -->
+  <view wx:elif="{{records.length === 0 && !filterCount && !keyword}}" class="center-tip empty">还没有足迹，点右下角 ＋ 记录第一个去过的地方</view>
 
-  <view class="map-entries">
-    <view class="entry-btn" hover-class="entry-btn-hover" bindtap="goList">
-      <image class="entry-icon" src="/assets/icons/lucide-text-align-justify-blue.png" mode="aspectFit" />
-      <text>列表</text>
-    </view>
-    <view class="entry-btn" hover-class="entry-btn-hover" bindtap="goStats">
-      <image class="entry-icon" src="/assets/icons/lucide-chart-blue.png" mode="aspectFit" />
-      <text>统计</text>
+  <!-- 浮层按钮统一规格：白底圆形 + 黑色 lucide 字形（对标参考图，不再是白底蓝字胶囊） -->
+  <!-- 左上：只有筛选（带生效角标）；搜索展开时整列淡出。统计入口在列表页顶部栏 -->
+  <view class="tool-col tool-col-left {{searchOpen ? 'tool-fade' : ''}}">
+    <view class="tool-btn {{filterCount ? 'tool-btn-on' : ''}}" hover-class="tool-btn-hover" bindtap="openFilter">
+      <image class="tool-icon" src="/assets/icons/lucide-sliders-horizontal.png" mode="aspectFit" />
+      <view wx:if="{{filterCount}}" class="tool-badge">{{filterCount}}</view>
     </view>
   </view>
-  <!-- 刷新：lucide 图标 + 文案；点一下图标转一圈（文案不跟着转） -->
-  <view class="map-refresh" hover-class="entry-btn-hover" bindtap="onRefreshTap">
+
+  <!-- 右上：搜索按钮，点一下向左展开成整行输入框（✕ 清空、回车生效、再点图标收起） -->
+  <view class="search-dock {{searchOpen ? 'search-dock-open' : ''}}">
     <image
-      class="refresh-icon {{refreshSpin ? 'spin-once' : ''}}"
-      src="/assets/icons/lucide-refresh-cw.png"
+      class="tool-icon dock-icon"
+      src="/assets/icons/lucide-search.png"
       mode="aspectFit"
+      bindtap="toggleSearch"
     />
-    <text>刷新</text>
+    <input
+      wx:if="{{searchOpen}}"
+      class="dock-input"
+      placeholder="搜索标题 / 描述 / 同行人 / 省市 / 位置"
+      placeholder-class="dock-placeholder"
+      value="{{keywordInput}}"
+      focus="{{searchFocus}}"
+      confirm-type="search"
+      bindinput="onKeywordInput"
+      bindconfirm="onSearchConfirm"
+    />
+    <view wx:if="{{searchOpen}}" class="dock-clear" catchtap="onClearKeyword">✕</view>
+    <view wx:if="{{!searchOpen && keyword}}" class="tool-badge">1</view>
+  </view>
+
+  <!-- 右下竖排：列表 / 新增 -->
+  <view class="tool-col tool-col-right">
+    <view class="tool-btn" hover-class="tool-btn-hover" bindtap="goList">
+      <image class="tool-icon" src="/assets/icons/lucide-text-align-justify.png" mode="aspectFit" />
+    </view>
+    <view class="tool-btn" hover-class="tool-btn-hover" bindtap="openAdd">
+      <image class="tool-icon" src="/assets/icons/lucide-plus.png" mode="aspectFit" />
+    </view>
   </view>
 
   <!-- 详情半屏（地图/列表页共用组件；「编辑」转表单、删除后刷新地图） -->
@@ -89,5 +113,13 @@
     bind:close="closeForm"
   />
 
-  <view class="fab" bindtap="openAdd">＋</view>
+  <!-- 筛选半屏：省份/年份/分类，草稿态，点确定才回传 -->
+  <footprint-filter-sheet
+    visible="{{filterVisible}}"
+    value="{{filter}}"
+    options="{{options}}"
+    safe-bottom="{{false}}"
+    bind:close="closeFilter"
+    bind:confirm="onFilterConfirm"
+  />
 </view>

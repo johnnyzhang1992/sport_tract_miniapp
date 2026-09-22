@@ -1,0 +1,33 @@
+<view wx:if="{{visible}}" class="mask" bindtap="onClose">
+  <view class="sheet {{safeBottom ? '' : 'sheet-no-safe'}}" catchtap="noop">
+    <view class="sheet-head">
+      <view class="sheet-title">筛选足迹</view>
+      <view class="sheet-close" catchtap="onClose">✕</view>
+    </view>
+
+    <view wx:if="{{empty}}" class="sheet-empty">还没有可筛选的省份/年份/分类，先去记几条足迹吧</view>
+
+    <view class="sec" wx:for="{{sections}}" wx:for-item="sec" wx:key="field">
+      <view class="sec-title">{{sec.title}}</view>
+      <view class="chips">
+        <view
+          class="chip {{item.active ? 'chip-on' : ''}}"
+          wx:for="{{sec.items}}"
+          wx:key="key"
+          data-field="{{sec.field}}"
+          data-key="{{item.key}}"
+          catchtap="onChipTap"
+        >
+          <image wx:if="{{item.icon}}" class="chip-icon" src="{{item.icon}}" mode="aspectFit" />
+          <text>{{item.label}}</text>
+          <text wx:if="{{item.count}}" class="chip-count">{{item.count}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="sheet-foot">
+      <view class="btn btn-ghost" catchtap="onReset">重置</view>
+      <view class="btn btn-primary" catchtap="onConfirm">确定</view>
+    </view>
+  </view>
+</view>

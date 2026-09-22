@@ -6,7 +6,13 @@
       <view class="sheet-close" catchtap="onClose">✕</view>
     </view>
     <block wx:if="{{detail}}">
-      <view class="sheet-meta">{{detail.metaText}}</view>
+      <view class="sheet-metarow">
+        <view class="sheet-meta">{{detail.metaText}}</view>
+        <view wx:if="{{detail.categoryLabel}}" class="cat-tag">
+          <image class="cat-tag-icon" src="{{detail.categoryIcon}}" mode="aspectFit" />
+          <text>{{detail.categoryLabel}}</text>
+        </view>
+      </view>
       <view wx:if="{{detail.peopleText}}" class="sheet-people">同行：{{detail.peopleText}}</view>
       <view wx:if="{{detail.description}}" class="sheet-desc">{{detail.description}}</view>
       <scroll-view wx:if="{{detail.photoThumbs.length}}" scroll-x class="sheet-photos">

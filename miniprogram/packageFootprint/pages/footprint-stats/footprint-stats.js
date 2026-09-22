@@ -1,9 +1,10 @@
-// 足迹统计页（地图页左上「统计」入口进）：数据概况（总足迹/省份/城市）+ 周期筛选（月/年/全部）+ 中国点亮地图
+// 足迹统计页（地图页左上「统计」入口进）：数据概况（总足迹/省份/城市）+ 周期筛选（月/年/全部）+ 中国点亮地图 + 省市明细列表
 // 口径说明：本页统计的是「足迹记录」（/footprint-records/stats），与点亮地图页的运动轨迹口径（/stats/footprint）独立
 const echarts = require('../../components/ec-canvas/echarts');
 const loading = require('../../../utils/loading');
 const mapImage = require('../../utils/map-image.js');
 const mapZoom = require('../../utils/map-zoom.js');
+const regionList = require('../../utils/region-list.js');
 // 周期换算与列表页共用（utils 在主包，分包页可 require 主包资源）
 const { RANGES, PICKER_COUNT, periodRange, periodLabelOf } = require('../../../utils/footprint-period.js');
 
@@ -67,6 +68,9 @@ Page({
     pickerScrollInto: '',
     sharePreview: false,
     shareImageSrc: '',
+    regionRows: [], // 地图下方的省市列表（含 expanded/expandable 视图态）
+    regionSummary: '', // 「共 N 省 M 城」
+    expandedRegions: [], // 展开中的省份名（允许多个同时展开）
   },
 
   onLoad() {
@@ -155,6 +159,19 @@ Page({
   },
   /** 阻止弹窗内容点击冒泡到遮罩 */
   noop() {},
+
+  /* ------------------------------ 省市列表 ------------------------------ */
+
+  /** 点省份行展开/收起其城市；允许多省同时展开 */
+  onToggleRegion(e) {
+    const name = e.currentTarget.dataset.name;
+    if (!name) return;
+    const expandedRegions = regionList.toggleRegion(this.data.expandedRegions, name);
+    this.setData({
+      expandedRegions,
+      regionRows: regionList.buildRegionRows(this._provinces || [], expandedRegions),
+    });
+  },
 
   /* ------------------------------ 地图缩放 / 全屏 ------------------------------ */
 
@@ -306,12 +323,17 @@ Page({
       const qs = p ? `?from=${p.from}&to=${p.to}` : '';
       const res = await app.globalData.api.get(`/footprint-records/stats${qs}`);
       if (seq !== this._fetchSeq) return;
-      const provinceData = (res.provinces || []).map((x) => ({ name: x.name, value: x.count }));
+      const provinces = res.provinces || [];
+      this._provinces = provinces; // 展开/收起时据此重算行，不重新请求
+      const provinceData = provinces.map((x) => ({ name: x.name, value: x.count }));
       this._provinceData = provinceData;
       this.setData({
         total: res.total || 0,
         provinceCount: res.provinceCount || 0,
         cityCount: res.cityCount || 0,
+        // 列表按本期结果重建：展开中的省若已不在本期，行自然消失（不留悬空展开态）
+        regionRows: regionList.buildRegionRows(provinces, this.data.expandedRegions),
+        regionSummary: regionList.regionSummaryText(provinces),
         loaded: true,
         loading: false,
         error: '',
