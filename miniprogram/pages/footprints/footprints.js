@@ -95,7 +95,7 @@ function buildPhotoCardIcon(record) {
         }
       };
       img.onerror = () => resolve('');
-      img.src = record.coverPhoto;
+      img.src = record.coverPhotoThumb;
     } catch (e) {
       resolve('');
     }
@@ -155,7 +155,7 @@ Page({
   data: {
     loading: true,
     error: '',
-    records: [], // /geo 轻量点缓存 {id,title,visitDate,latitude,longitude,coverPhoto}
+    records: [], // /geo 轻量点缓存 {id,title,visitDate,latitude,longitude,coverPhoto,coverPhotoThumb}
     markers: [], // 本地网格聚合产物：叶 marker + 自绘簇气泡 marker，声明式绑给 <map>
     callouts: [], // 叶照片卡内容（有 coverPhoto 的单点），配合 map 的 customCallout slot
     center: { latitude: 30.5, longitude: 114.3 }, // 视野由 fitBounds 覆盖，这里只是无数据时的兜底
@@ -264,7 +264,7 @@ Page({
         if (!iconJobs.has(c.count)) iconJobs.set(c.count, timeout(buildClusterIcon(c.count)));
       } else if (zoom >= PHOTO_CARD_MIN_SCALE) {
         const r = records[c.recordIndex] || {};
-        if (r.coverPhoto && !photoJobs.has(r.id)) photoJobs.set(r.id, timeout(buildPhotoCardIcon(r)));
+        if (r.coverPhotoThumb && !photoJobs.has(r.id)) photoJobs.set(r.id, timeout(buildPhotoCardIcon(r)));
       }
     });
     const callouts = []; // 无图叶点的标题胶囊 customCallout 内容（marker-id 定位，wxml slot 渲染）
@@ -290,7 +290,7 @@ Page({
             height: 18,
             anchor: { x: 0.5, y: 0.5 },
           };
-          const photoPath = zoom >= PHOTO_CARD_MIN_SCALE && r.coverPhoto ? photoPathById.get(r.id) : '';
+          const photoPath = zoom >= PHOTO_CARD_MIN_SCALE && r.coverPhotoThumb ? photoPathById.get(r.id) : '';
           if (photoPath) {
             leaf.iconPath = photoPath;
             leaf.width = CARD_W;

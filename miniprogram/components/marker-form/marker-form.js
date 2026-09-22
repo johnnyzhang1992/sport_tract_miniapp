@@ -27,7 +27,8 @@ Component({
     selectedType: 'checkpoint',
     note: '',
     photos: [], // 新选待上传（本地路径）
-    existingPhotos: [], // 编辑模式已有照片（URL，可删除）
+    existingPhotos: [], // 编辑模式已有照片（原图 URL：提交比对 + 点开看大图）
+    existingThumbs: [], // 同一批照片的缩略图档，只喂 140rpx 格子
     maxPhotos: MAX_PHOTOS,
   },
 
@@ -38,13 +39,18 @@ Component({
         // 已有照片：photos + photoUrl 合并，按裸 URL（去 query）去重
         // 注意：签名 URL 每次生成不同，必须按去参数后的地址判断是否同一张图
         const merged = [...(marker.photos || []), ...(marker.photoUrl ? [marker.photoUrl] : [])];
+        const thumbs = marker.photoThumbs || [];
         const seen = new Set();
-        const existingPhotos = merged.filter((u) => {
-          if (!u) return false;
+        const existingPhotos = [];
+        const existingThumbs = [];
+        merged.forEach((u, i) => {
+          if (!u) return;
           const bare = String(u).split('?')[0];
-          if (seen.has(bare)) return false;
+          if (seen.has(bare)) return;
           seen.add(bare);
-          return true;
+          existingPhotos.push(u);
+          // 老数据只有 photoUrl 时后端也给一条缩略图；缺档就退回原图，格子不会空
+          existingThumbs.push(thumbs[i] || u);
         });
         const preset = config.MARKER_ICON_PRESETS.find((p) => p.icon === marker.icon);
         this.setData({
@@ -54,9 +60,10 @@ Component({
           note: marker.note || '',
           photos: [],
           existingPhotos,
+          existingThumbs,
         });
       } else {
-        this.setData({ selectedType: 'checkpoint', selectedIcon: '📍', label: '', note: '', photos: [], existingPhotos: [] });
+        this.setData({ selectedType: 'checkpoint', selectedIcon: '📍', label: '', note: '', photos: [], existingPhotos: [], existingThumbs: [] });
       }
     },
   },
@@ -111,7 +118,23 @@ Component({
     /** 删除已有照片（编辑模式） */
     removeExistingPhoto(e) {
       const idx = Number(e.currentTarget.dataset.idx);
-      this.setData({ existingPhotos: this.data.existingPhotos.filter((_, i) => i !== idx) });
+      const keep = (_, i) => i !== idx;
+      // 两个数组按下标一一对应，删一个不删另一个会让缩略图串到别的照片上
+      this.setData({
+        existingPhotos: this.data.existingPhotos.filter(keep),
+        existingThumbs: this.data.existingThumbs.filter(keep),
+      });
+    },
+
+    /** 点已有照片看大图：格子是缩略图档，preview 一律用原图地址 */
+    previewExisting(e) {
+      const idx = Number(e.currentTarget.dataset.idx) || 0;
+      const urls = this.data.existingPhotos || [];
+      if (urls.length === 0) {
+        wx.showToast({ title: '这条打点没有可预览的照片', icon: 'none' });
+        return;
+      }
+      wx.previewImage({ urls, current: urls[idx] || urls[0] });
     },
 
     confirm() {

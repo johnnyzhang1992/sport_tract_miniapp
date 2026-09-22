@@ -23,7 +23,8 @@ Component({
       const record = this.data.record;
       if (!record || !record.id) return;
       const seq = (this._seq = (this._seq || 0) + 1);
-      const need = !record.location || record.description === undefined || record.people === undefined || record.photos === undefined;
+      // 列表卡自带 photoThumbs 就不必补拉；缺字段（地图 geo 那一路）才拉完整详情
+      const need = !record.location || record.description === undefined || record.people === undefined || record.photoThumbs === undefined;
       if (!need) {
         this.setData({ detail: this.decorate(record), loading: false });
         return;
@@ -45,11 +46,14 @@ Component({
       const loc = full.location || {};
       const people = Array.isArray(full.people) ? full.people.filter(Boolean) : [];
       const photos = Array.isArray(full.photos) ? full.photos.filter(Boolean) : [];
+      // 半屏里的格子只有 200rpx，一律用缩略图档；photos 只在 previewImage 时才拉
+      const photoThumbs = Array.isArray(full.photoThumbs) ? full.photoThumbs.filter(Boolean) : photos;
       const place = loc.city || loc.address || loc.name || '';
       return Object.assign({}, full, {
         people,
         peopleText: people.join('、'),
         photos,
+        photoThumbs,
         metaText: [full.visitDate, place].filter(Boolean).join(' · '),
       });
     },
@@ -83,9 +87,29 @@ Component({
     },
     previewPhoto(e) {
       const ds = (e && e.currentTarget && e.currentTarget.dataset) || {};
-      const urls = ds.urls || [];
-      if (!urls.length) return;
-      wx.previewImage({ urls, current: urls[Number(ds.idx) || 0] });
+      const idx = Number(ds.idx) || 0;
+      const detail = this.data.detail;
+      if (!detail) return;
+      const show = (urls) => {
+        const list = (Array.isArray(urls) ? urls : []).filter(Boolean);
+        if (list.length === 0) {
+          wx.showToast({ title: `这条足迹的 ${idx + 1} 号照片没有可访问地址`, icon: 'none' });
+          return;
+        }
+        wx.previewImage({ urls: list, current: list[idx] || list[0] });
+      };
+      // 格子是缩略图档，preview 必须用原图；老版本 DTO 没带 photos 时点开才补拉
+      if (detail.photos && detail.photos.length) {
+        show(detail.photos);
+        return;
+      }
+      api
+        .get('/footprint-records/' + detail.id)
+        .then((full) => {
+          if (full && full.photos) this.setData({ detail: this.decorate(full) });
+          show(full && full.photos);
+        })
+        .catch((err) => wx.showToast({ title: (err && err.message) || '原图加载失败', icon: 'none' }));
     },
   },
 });

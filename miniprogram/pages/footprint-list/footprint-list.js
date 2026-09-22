@@ -8,12 +8,13 @@ const STATS_URL = '/packageFootprint/pages/footprint-stats/footprint-stats';
 
 /**
  * 卡片展示字段在 JS 侧一次算好（WXML 不能 join 数组、不能给缺失字段兜底）：
- * 日期徽章拆成 dayNum/monthNum，地址与同行拼成 metaText，照片行直接用 photos（本页上限 3 张，不出现 +N）。
+ * 日期徽章拆成 dayNum/monthNum，地址与同行拼成 metaText，照片行用缩略图档（列表接口不下发原图，
+ * 一屏 10 条 × 3 图拉原图是 30MB 量级；点开详情的 previewImage 才用原图）。
  * openDetail 收的是原 DTO 字段，附加字段不影响详情组件的快路径。
  */
 function toCard(r) {
   const people = Array.isArray(r.people) ? r.people.filter(Boolean) : [];
-  const photos = Array.isArray(r.photos) ? r.photos.filter(Boolean) : [];
+  const photoThumbs = Array.isArray(r.photoThumbs) ? r.photoThumbs.filter(Boolean) : [];
   const loc = r.location || {};
   const place = loc.address || loc.city || loc.name || '';
   const ymd = String(r.visitDate || '').split('-');
@@ -23,7 +24,7 @@ function toCard(r) {
     monthNum: ymd[1] ? `${Number(ymd[1])}月` : '',
     metaText: [place || '未知地点', people.length ? `和${people.join('、')}` : ''].filter(Boolean).join(' · '),
     descText: r.description || '',
-    photos,
+    photoThumbs,
   });
 }
 
