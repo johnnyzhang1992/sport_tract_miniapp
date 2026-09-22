@@ -18,6 +18,7 @@ let uploadCalls; // uploadPhoto 入参
 let uploadResult; // uploadPhoto 返回值（用例控制）
 let chooseLocationResult; // wx.chooseLocation success 参数
 let editImageCalls; // editImage 调用次数
+let pageScrolls = []; // pageScrollTo 入参（键盘开合各复位一次）
 
 const fakeApi = {
   put(url, body) {
@@ -54,6 +55,8 @@ global.wx = {
   chooseMedia() {},
   editImage() {},
   previewImage() {},
+  // iOS 键盘修复会强制复位滚动位置；真机返回 Promise，桩同形态才不掩盖 .catch 链
+  pageScrollTo(o) { pageScrolls.push(o); return Promise.resolve(); },
 };
 require('../miniprogram/components/footprint-form/footprint-form.js');
 assert.ok(compDef, 'footprint-form.js 应通过 Component() 交出组件对象');
@@ -224,10 +227,12 @@ test('点已存 OSS 的照片：toast 拦截、不调编辑', async () => {
 });
 
 test('键盘高度变化：弹层抬升并缩高，收键盘后还原默认样式', () => {
+  pageScrolls = [];
   const c = open(null);
   c.onKeyboardHeight({ detail: { height: 300 } });
   assert.match(c.data.sheetStyle, /bottom:300px/);
   assert.match(c.data.sheetStyle, /calc\(100vh - 348px\)/);
   c.onKeyboardHeight({ detail: { height: 0 } });
   assert.equal(c.data.sheetStyle, 'bottom:0;height:78vh;');
+  assert.equal(pageScrolls.length, 2, '键盘开合都要复位滚动位置（iOS fixed 弹层错位的标准解法）');
 });
