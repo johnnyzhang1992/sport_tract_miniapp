@@ -1,5 +1,61 @@
+<!-- 足迹卡片模板（列表态分组与日历态共用一套形态）：日期徽章 + 标题 + 地址·同行 + 描述 + 照片行 -->
+<template name="fpCard">
+  <view class="fp-card" hover-class="fp-card-hover" hover-stay-time="80" data-id="{{card.id}}" bindtap="onCardTap">
+    <view class="fp-date-badge">
+      <text class="fp-date-day">{{card.dayNum}}</text>
+      <text class="fp-date-month">{{card.monthNum}}</text>
+    </view>
+    <view class="fp-card-main">
+      <view class="fp-card-head">
+        <text class="fp-card-title">{{card.title}}</text>
+        <text class="fp-card-chevron">›</text>
+      </view>
+      <view class="fp-card-meta">{{card.metaText}}</view>
+      <view wx:if="{{card.descText}}" class="fp-card-desc">{{card.descText}}</view>
+      <view wx:if="{{card.photos.length}}" class="fp-photos">
+        <image
+          wx:for="{{card.photos}}"
+          wx:for-item="url"
+          wx:key="*this"
+          class="fp-photo"
+          src="{{url}}"
+          mode="aspectFill"
+          lazy-load
+        />
+      </view>
+    </view>
+  </view>
+</template>
+
 <view class="container">
-  <!-- 搜索 + 时间筛选（顶部常驻；请求只带「已生效」的筛选，输入框内容不请求） -->
+  <!-- 顶部：总览文案（左）+ 形态切换/统计/新增（右） -->
+  <view class="head-row">
+    <view class="head-summary">{{summaryText}}</view>
+    <view class="head-actions">
+      <view
+        class="head-act head-act-list {{view === 'list' ? 'head-act-active' : ''}}"
+        hover-class="head-act-hover"
+        data-view="list"
+        bindtap="onSwitchView"
+      >
+        <image class="head-icon" src="/assets/icons/lucide-text-align-justify{{view === 'list' ? '-blue' : ''}}.png" mode="aspectFit" />
+      </view>
+      <view
+        class="head-act head-act-calendar {{view === 'calendar' ? 'head-act-active' : ''}}"
+        hover-class="head-act-hover"
+        data-view="calendar"
+        bindtap="onSwitchView"
+      >
+        <image class="head-icon" src="/assets/icons/lucide-calendar{{view === 'calendar' ? '-blue' : ''}}.png" mode="aspectFit" />
+      </view>
+      <view class="head-act head-act-stats" hover-class="head-act-hover" bindtap="goStats">
+        <image class="head-icon" src="/assets/icons/lucide-chart.png" mode="aspectFit" />
+      </view>
+      <view class="head-act head-act-add" hover-class="head-act-hover" bindtap="openAdd">＋</view>
+    </view>
+  </view>
+
+  <!-- 搜索（两态常驻）；时间筛选只在列表态出现，日历态由月历承担时间筛选 -->
   <view class="card filter-card">
     <view class="search-row">
       <view class="search-box">
@@ -17,54 +73,64 @@
       </view>
       <view class="search-btn" hover-class="search-btn-hover" bindtap="onSearch">搜索</view>
     </view>
-    <view class="range-row">
-      <view
-        wx:for="{{ranges}}"
-        wx:key="value"
-        class="range-btn {{activeRange === item.value ? 'range-btn-active' : ''}}"
-        data-value="{{item.value}}"
-        bindtap="onRangeChange"
-      >{{item.label}}</view>
-    </view>
-    <view class="period-nav" wx:if="{{activeRange !== 'all'}}">
-      <view class="period-arrow" hover-class="period-arrow-hover" bindtap="onPrevPeriod">‹</view>
-      <view class="period-label" hover-class="period-label-hover" bindtap="onTapPeriodLabel">
-        <text>{{periodLabel}}</text>
-        <image class="period-label-caret" src="/assets/icons/lucide-chevron-down.svg" mode="aspectFit" />
+    <block wx:if="{{view === 'list'}}">
+      <view class="range-row">
+        <view
+          wx:for="{{ranges}}"
+          wx:key="value"
+          class="range-btn {{activeRange === item.value ? 'range-btn-active' : ''}}"
+          data-value="{{item.value}}"
+          bindtap="onRangeChange"
+        >{{item.label}}</view>
       </view>
-      <view
-        class="period-arrow {{canGoNext ? '' : 'period-arrow-disabled'}}"
-        hover-class="{{canGoNext ? 'period-arrow-hover' : ''}}"
-        bindtap="onNextPeriod"
-      >›</view>
-    </view>
+      <view class="period-nav" wx:if="{{activeRange !== 'all'}}">
+        <view class="period-arrow" hover-class="period-arrow-hover" bindtap="onPrevPeriod">‹</view>
+        <view class="period-label" hover-class="period-label-hover" bindtap="onTapPeriodLabel">
+          <text>{{periodLabel}}</text>
+          <image class="period-label-caret" src="/assets/icons/lucide-chevron-down.svg" mode="aspectFit" />
+        </view>
+        <view
+          class="period-arrow {{canGoNext ? '' : 'period-arrow-disabled'}}"
+          hover-class="{{canGoNext ? 'period-arrow-hover' : ''}}"
+          bindtap="onNextPeriod"
+        >›</view>
+      </view>
+    </block>
   </view>
+
+  <!-- 日历态：月历打点 + 当月（或点选某天）列表 -->
+  <footprint-calendar
+    wx:if="{{view === 'calendar'}}"
+    month="{{calendarMonth}}"
+    days="{{calendarDays}}"
+    selected="{{calendarSelected}}"
+    bind:monthchange="onCalendarMonthChange"
+    bind:daytap="onCalendarDayTap"
+  />
 
   <view wx:if="{{loading}}" class="list-state">加载中…</view>
   <view wx:elif="{{error}}" class="list-state">{{error}} <text class="retry" bindtap="loadAll">重试</text></view>
   <block wx:else>
-    <view wx:if="{{items.length === 0}}" class="empty {{filtered ? 'empty-filtered' : ''}}">{{filtered ? '没有匹配的足迹' : '还没有足迹，去地图页点右下角 ＋ 记录第一个去过的地方'}}</view>
+    <view wx:if="{{items.length === 0}}" class="empty {{filtered ? 'empty-filtered' : ''}}">{{emptyText || '还没有足迹，点右上角 ＋ 记录第一个去过的地方'}}</view>
     <view wx:if="{{items.length === 0 && filtered}}" class="empty-reset">
       <view class="empty-reset-btn" hover-class="empty-reset-btn-hover" bindtap="onClearFilter">清空筛选</view>
     </view>
+
     <!-- 分页列表：触底翻页闸门在 JS 侧（hasMore && loadingList），卡片字段见 toCard() -->
-    <view
-      wx:for="{{items}}"
-      wx:key="id"
-      class="fp-card"
-      hover-class="fp-card-hover"
-      hover-stay-time="80"
-      data-idx="{{index}}"
-      bindtap="onCardTap"
-    >
-      <image wx:if="{{item.cover}}" src="{{item.cover}}" mode="aspectFill" lazy-load class="fp-thumb"/>
-      <view wx:else class="fp-thumb placeholder">图</view>
-      <view class="fp-card-main">
-        <view class="fp-card-title">{{item.title}}</view>
-        <view class="fp-card-sub">{{item.subText}}</view>
-        <view wx:if="{{item.peopleText}}" class="fp-card-people">同行：{{item.peopleText}}</view>
-      </view>
-    </view>
+    <block wx:if="{{view === 'calendar'}}">
+      <view wx:if="{{items.length}}" class="section-title">{{sectionTitle}}</view>
+      <block wx:for="{{items}}" wx:key="id">
+        <template is="fpCard" data="{{card: item}}" />
+      </block>
+    </block>
+    <block wx:else>
+      <block wx:for="{{groups}}" wx:key="month" wx:for-item="group">
+        <view class="section-title">{{group.label}}</view>
+        <block wx:for="{{group.items}}" wx:key="id" wx:for-item="card">
+          <template is="fpCard" data="{{card: card}}" />
+        </block>
+      </block>
+    </block>
     <!-- 尾提示：下拉刷新（page 仍为 1）不在底部重复报加载 -->
     <view wx:if="{{loadingList && page > 1}}" class="list-tip">加载中…</view>
     <view wx:elif="{{!hasMore && items.length}}" class="list-tip">没有更多了</view>
@@ -79,7 +145,7 @@
     bind:deleted="onDetailDeleted"
   />
 
-  <!-- 半屏表单（仅编辑态：记录由详情带出，保存后刷新列表） -->
+  <!-- 半屏表单（record 为空即新增态；保存后刷新列表与总览） -->
   <footprint-form
     visible="{{formVisible}}"
     record="{{formRecord}}"

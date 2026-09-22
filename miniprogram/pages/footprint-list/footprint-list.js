@@ -1,25 +1,42 @@
-// 足迹列表独立页（地图页左上「列表」入口进）：搜索 + 时间筛选 + 分页卡片列表 + 详情/表单半屏组件复用
+// 足迹列表页（地图页左上「列表」入口进）：顶部 列表/日历 两态 + 总览文案 + 搜索 + 分页卡片 + 详情/表单半屏。
+// 列表态：搜索 + 月/年/全部时间筛选 + 按月分组卡片；日历态：月历打点 + 当月（或点选的某天）卡片列表。
 const api = require('../../services/api');
 const { RANGES, PICKER_COUNT, periodRange, periodLabelOf } = require('../../utils/footprint-period.js');
+const cal = require('../../utils/footprint-calendar.js');
+
+const STATS_URL = '/packageFootprint/pages/footprint-stats/footprint-stats';
 
 /**
- * 卡片展示字段在 JS 侧一次算好：
- * WXML 不能对 people 数组做 join（直接渲染会变成 [object]），也不能给缺失的 location 兜底，
- * 故卡片额外挂 peopleText / subText / cover（openDetail 收的是原 DTO 字段，附加字段不影响快路径）。
+ * 卡片展示字段在 JS 侧一次算好（WXML 不能 join 数组、不能给缺失字段兜底）：
+ * 日期徽章拆成 dayNum/monthNum，地址与同行拼成 metaText，照片行直接用 photos（本页上限 3 张，不出现 +N）。
+ * openDetail 收的是原 DTO 字段，附加字段不影响详情组件的快路径。
  */
 function toCard(r) {
   const people = Array.isArray(r.people) ? r.people.filter(Boolean) : [];
   const photos = Array.isArray(r.photos) ? r.photos.filter(Boolean) : [];
   const loc = r.location || {};
+  const place = loc.address || loc.city || loc.name || '';
+  const ymd = String(r.visitDate || '').split('-');
   return Object.assign({}, r, {
     peopleText: people.join('、'),
-    subText: [r.visitDate, loc.city || loc.address || loc.name || '未知地点'].filter(Boolean).join(' · '),
-    cover: photos[0] || '',
+    dayNum: ymd[2] ? String(Number(ymd[2])) : '',
+    monthNum: ymd[1] ? `${Number(ymd[1])}月` : '',
+    metaText: [place || '未知地点', people.length ? `和${people.join('、')}` : ''].filter(Boolean).join(' · '),
+    descText: r.description || '',
+    photos,
   });
 }
 
 Page({
   data: {
+    view: 'list', // list | calendar
+    summaryText: '', // 「4 条记录 · 4 个地方 · 18 张照片」（全局口径，不随筛选变）
+    calendarMonth: '', // YYYY-MM
+    calendarDays: [], // 接口全量打点，换月在本地过滤
+    calendarSelected: '', // 点选的具体某天，'' = 整月
+    sectionTitle: '', // 列表区的分组/月份标题
+    emptyText: '',
+    groups: [], // 列表态：按月分组（日历态单月，直接渲染 items）
     loading: true,
     error: '',
     items: [], // toCard 后的完整 DTO（点卡片直接开详情，不再二次请求）
@@ -38,15 +55,21 @@ Page({
     filtered: false, // 是否有生效的筛选（空态文案与「清空筛选」入口按它分档）
     detailVisible: false,
     detailRecord: null,
-    formVisible: false, // 从详情「编辑」进；本页无新增入口（新增在地图页 FAB）
-    formRecord: null,
+    formVisible: false,
+    formRecord: null, // null = 新增态（顶部 ＋），带记录 = 编辑态（详情「编辑」带出）
   },
   onLoad() {
+    this.setData({ calendarMonth: cal.currentMonth() });
     this.applyPeriod();
+    this.syncSection();
     this.loadAll();
+    this.loadCalendar();
   },
 
-  onPullDownRefresh() { this.loadAll().finally(() => wx.stopPullDownRefresh()); },
+  onPullDownRefresh() {
+    this.loadCalendar();
+    this.loadAll().finally(() => wx.stopPullDownRefresh());
+  },
 
   /** 触底翻页：不提前清空 items，追加由 fetchPage 的 page > 1 分支负责 */
   onReachBottom() {
@@ -61,6 +84,69 @@ Page({
       // page !== next 说明页码已被别处改动
       if (seq === this._seq && !this.data.loadingList && this.data.page === next) this.setData({ page: next - 1 });
     });
+  },
+
+  /* ------------------------------ 形态切换与总览 ------------------------------ */
+
+  onSwitchView(e) {
+    const view = e.currentTarget.dataset.view;
+    if (!view || view === this.data.view) return;
+    // 不清 items：与切时间档一致，新数据到达后整体替换，切态不留空窗
+    this.setData({ view, calendarSelected: '' });
+    this.applyPeriod();
+    this.syncFiltered();
+    this.loadAll();
+    if (view === 'calendar' && !this._calLoaded) this.loadCalendar();
+  },
+
+  /** 总览文案 + 日历打点：一次 /calendar 全量拿（换月不再请求） */
+  loadCalendar() {
+    const seq = (this._calSeq = (this._calSeq || 0) + 1);
+    return api
+      .get('/footprint-records/calendar')
+      .then((data) => {
+        if (seq !== this._calSeq) return;
+        const d = data || {};
+        this._calLoaded = true;
+        this.setData({
+          calendarDays: d.days || [],
+          summaryText: cal.summaryText({ total: d.total, placeCount: d.placeCount, photoCount: d.photoCount }),
+        });
+      })
+      .catch((e) => {
+        // 静默失败会让总览/打点凭空消失，按 bug 处理：给出具体原因
+        wx.showToast({ title: (e && e.message) || '日历数据加载失败', icon: 'none' });
+      });
+  },
+
+  goStats() {
+    wx.navigateTo({ url: STATS_URL });
+  },
+
+  /** 顶部 ＋：新增态表单（record 传 null 即新增），保存后 onFormSaved 统一刷新 */
+  openAdd() {
+    this.setData({ formVisible: true, formRecord: null });
+  },
+
+  /* ------------------------------ 日历态交互 ------------------------------ */
+
+  onCalendarMonthChange(e) {
+    const month = (e.detail && e.detail.month) || '';
+    if (!month || month === this.data.calendarMonth) return;
+    this.setData({ calendarMonth: month, calendarSelected: '' });
+    this.applyPeriod();
+    this.syncFiltered();
+    this.loadAll();
+  },
+
+  /** 点某天 → 下方只列那天；再点同一天取消，回到整月 */
+  onCalendarDayTap(e) {
+    const date = (e.detail && e.detail.date) || '';
+    if (!date) return;
+    this.setData({ calendarSelected: this.data.calendarSelected === date ? '' : date });
+    this.applyPeriod();
+    this.syncFiltered();
+    this.loadAll();
   },
 
   /* ------------------------------ 搜索与时间筛选 ------------------------------ */
@@ -109,9 +195,18 @@ Page({
     this.loadAll();
   },
 
-  /** 根据当前档 + 偏移量算周期区间与文案（「全部」无周期）；_period 供 fetchPage 取 from/to */
+  /**
+   * 按当前形态算请求区间：
+   * 日历态 = 点选的那一天 [date, 次日) 或整月 [月初, 下月初)；
+   * 列表态 = 月/年档的周期区间，「全部」不带 from/to。
+   */
   applyPeriod() {
-    const { activeRange, periodOffset } = this.data;
+    const { view, activeRange, periodOffset, calendarMonth, calendarSelected } = this.data;
+    if (view === 'calendar') {
+      this._period = calendarSelected ? cal.dayRange(calendarSelected) : cal.monthRange(calendarMonth);
+      this.setData({ periodLabel: '', canGoNext: false });
+      return;
+    }
     if (activeRange === 'all') {
       this._period = null;
       this.setData({ periodLabel: '', canGoNext: false });
@@ -149,9 +244,9 @@ Page({
     this.loadAll();
   },
 
-  /** 清空筛选（空态引导）：搜索清空 + 时间回「全部」 */
+  /** 清空筛选（空态引导）：搜索清空 + 时间回「全部」（日历态顺带清掉点选的某天） */
   onClearFilter() {
-    this.setData({ keywordInput: '', keyword: '', activeRange: 'all', periodOffset: 0 });
+    this.setData({ keywordInput: '', keyword: '', activeRange: 'all', periodOffset: 0, calendarSelected: '' });
     this.applyPeriod();
     this.syncFiltered();
     this.loadAll();
@@ -159,7 +254,25 @@ Page({
 
   /** filtered 标记：空态文案与「清空筛选」入口按它分档 */
   syncFiltered() {
-    this.setData({ filtered: !!(this.data.keyword || this.data.activeRange !== 'all') });
+    const { keyword, activeRange, view, calendarSelected } = this.data;
+    this.setData({ filtered: !!(keyword || (view === 'list' && activeRange !== 'all') || (view === 'calendar' && calendarSelected)) });
+  },
+
+  /** 列表区标题与空态文案：分组、月份标题、无数据提示都在这算，wxml 只做展示 */
+  syncSection() {
+    const { view, calendarSelected, items, total, filtered } = this.data;
+    const patch = {
+      groups: view === 'list' ? cal.groupByMonth(items) : [],
+      sectionTitle: '',
+      emptyText: '',
+    };
+    if (view === 'calendar') {
+      patch.sectionTitle = calendarSelected ? `${cal.dayLabel(calendarSelected)} · ${total} 条` : `本月 ${total} 条`;
+      patch.emptyText = calendarSelected ? `${cal.dayLabel(calendarSelected)} 没有足迹` : '本月没有足迹';
+    } else if (filtered) {
+      patch.emptyText = '没有匹配的足迹';
+    }
+    this.setData(patch);
   },
 
   async loadAll() {
@@ -190,7 +303,7 @@ Page({
   fetchPage(seq) {
     this.setData({ loadingList: true });
     const page = this.data.page;
-    // 请求只带生效中的筛选（输入框里没提交的词不带）；「全部」档不带 from/to
+    // 请求只带生效中的筛选（输入框里没提交的词不带）；区间由 applyPeriod 决定
     const params = { page, pageSize: this.data.pageSize };
     if (this.data.keyword) params.keyword = this.data.keyword;
     if (this._period) {
@@ -212,6 +325,7 @@ Page({
           hasMore: fresh.length > 0 && items.length < data.total,
           loadingList: false,
         });
+        this.syncSection();
       })
       .catch((e) => {
         if (seq === this._seq) this.setData({ loadingList: false });
@@ -219,9 +333,11 @@ Page({
       });
   },
 
+  /** 点卡片（分组内外同一处理）：items 是完整 DTO，按 id 取，详情组件走快路径不再二次请求 */
   onCardTap(e) {
-    const r = this.data.items[Number(e.currentTarget.dataset.idx)];
-    if (r) this.openDetail(r); // items 是完整 DTO：详情组件走快路径，不再二次请求
+    const id = e.currentTarget.dataset.id;
+    const r = this.data.items.find((x) => x.id === id);
+    if (r) this.openDetail(r);
   },
 
   /** 详情半屏：轻量/完整 DTO 都行（缺字段由组件补拉 GET /:id，seq 守卫在组件内） */
@@ -237,12 +353,17 @@ Page({
   /** 详情里删除成功：关详情并整页刷新（分页回第一页，避免页码落在已被删空的区间） */
   onDetailDeleted() {
     this.setData({ detailVisible: false, detailRecord: null });
-    this.loadAll();
+    this.reloadAll();
   },
   closeForm() { this.setData({ formVisible: false, formRecord: null }); },
   /** 表单保存成功：关弹层 + 重拉第一页 */
   onFormSaved() {
     this.setData({ formVisible: false, formRecord: null });
+    this.reloadAll();
+  },
+  /** 数据变了：列表与总览/打点都要重取（新增、编辑、删除后共用） */
+  reloadAll() {
+    this.loadCalendar();
     this.loadAll();
   },
   noop() {},

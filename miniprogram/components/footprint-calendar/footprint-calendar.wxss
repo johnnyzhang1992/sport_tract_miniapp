@@ -1,0 +1,124 @@
+/* 足迹月历卡片：白卡度量与列表页 .card 一致（圆角 16rpx + 0 2rpx 12rpx rgba(0,0,0,.04)） */
+.cal-card {
+  background: #fff;
+  border-radius: 16rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+  padding: 24rpx 16rpx 16rpx;
+  margin-bottom: 16rpx;
+}
+.cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12rpx 8rpx;
+}
+.cal-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+.cal-nav {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+.cal-today {
+  height: 52rpx;
+  line-height: 52rpx;
+  padding: 0 20rpx;
+  border-radius: 999rpx;
+  font-size: 24rpx;
+  color: #2b6cf6;
+  background: #eef4ff;
+}
+.cal-today-hover {
+  background: #e0ebff;
+}
+.cal-arrow {
+  width: 52rpx;
+  height: 52rpx;
+  line-height: 50rpx;
+  text-align: center;
+  font-size: 34rpx;
+  color: #2b6cf6;
+  border-radius: 50%;
+  background: #f2f3f5;
+}
+.cal-arrow-hover {
+  background: #e2e6eb;
+}
+.cal-arrow-disabled {
+  color: #c0c4cc;
+}
+
+.cal-week {
+  display: flex;
+  padding: 8rpx 0;
+}
+.cal-week-cell {
+  width: 14.2857%;
+  text-align: center;
+  font-size: 24rpx;
+  color: #8a93a6;
+}
+.cal-grid {
+  display: flex;
+  flex-wrap: wrap;
+}
+.cal-cell {
+  width: 14.2857%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6rpx 0;
+}
+.cal-day {
+  width: 64rpx;
+  height: 64rpx;
+  line-height: 60rpx;
+  box-sizing: border-box;
+  text-align: center;
+  border-radius: 50%;
+  font-size: 28rpx;
+  color: #1f2329;
+  border: 2rpx solid transparent;
+}
+.cal-day-out {
+  border: none;
+}
+/* 有足迹的日子：数字变蓝，下方小点 */
+.is-marked {
+  color: #2b6cf6;
+}
+/* 今天：描边（与选中态可叠加，选中优先填色） */
+.is-today {
+  border-color: #2b6cf6;
+  color: #2b6cf6;
+}
+.is-selected {
+  background: #2b6cf6;
+  border-color: #2b6cf6;
+  color: #fff;
+  font-weight: 600;
+}
+.cal-dot {
+  width: 8rpx;
+  height: 8rpx;
+  border-radius: 50%;
+  background: #2b6cf6;
+  margin-top: 2rpx;
+}
+/* 无足迹也占位，避免数字上下跳 */
+.cal-dot-hidden {
+  background: transparent;
+}
+.cal-legend {
+  display: flex;
+  align-items: center;
+  padding: 12rpx 16rpx 4rpx;
+  font-size: 22rpx;
+  color: #8a93a6;
+}
+.cal-dot-demo {
+  margin-right: 10rpx;
+}

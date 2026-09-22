@@ -4,6 +4,7 @@
   "backgroundTextStyle": "dark",
   "usingComponents": {
     "footprint-detail": "/components/footprint-detail/footprint-detail",
-    "footprint-form": "/components/footprint-form/footprint-form"
+    "footprint-form": "/components/footprint-form/footprint-form",
+    "footprint-calendar": "/components/footprint-calendar/footprint-calendar"
   }
 }
