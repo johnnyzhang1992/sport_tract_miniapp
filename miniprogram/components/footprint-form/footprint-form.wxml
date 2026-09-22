@@ -76,6 +76,24 @@
         <view class="fnote">最长 500 字</view>
       </view>
 
+      <!-- 分类：图标 + 名称的 chips，再点已选中的即取消（回到未分类） -->
+      <view class="fgroup">
+        <view class="flabel-block">分类</view>
+        <view class="cat-grid">
+          <view
+            wx:for="{{categories}}"
+            wx:key="key"
+            class="cat-chip {{item.active ? 'cat-chip-on' : ''}}"
+            data-key="{{item.key}}"
+            bindtap="onCategory"
+          >
+            <image class="cat-icon" src="{{item.active ? item.iconOn : item.icon}}" mode="aspectFit" />
+            <text>{{item.label}}</text>
+          </view>
+        </view>
+        <view class="fnote">给这段足迹打个标签，点已选中的可取消</view>
+      </view>
+
       <!-- 同行的人（标签可点删） -->
       <view class="fgroup">
         <view class="frow">

@@ -3,6 +3,7 @@
 // 键盘：输入框 adjust-position=false，bindkeyboardheightchange 抬升弹层 + scroll-into-view 露出焦点字段
 const api = require('../../services/api');
 const { uploadPhoto, editImage } = require('../../services/oss-upload');
+const config = require('../../config/index');
 
 const MAX_PHOTOS = 3;
 /** 键盘弹起时弹层顶与屏幕上沿之间的留白（px） */
@@ -37,6 +38,8 @@ Component({
     description: '',
     location: null, // {name,address,latitude,longitude}
     photos: [], // [{ url: 已上传URL, localPath: 本地临时文件|null }]
+    category: '', // '' = 未分类；候选与图标来自 config.FOOTPRINT_CATEGORIES
+    categories: [], // 视图态：[{key,label,icon,active}]，WXML 不能算 active，选完重渲染
     submitting: false,
     canSubmit: false,
     kbHeight: 0,
@@ -57,13 +60,33 @@ Component({
         peopleInput: '',
         description: edit ? rec.description || '' : '',
         location: edit ? rec.location || null : null,
+        category: edit ? rec.category || '' : '',
         photos: edit ? (rec.photos || []).filter(Boolean).map((url) => ({ url, localPath: null })) : [],
         submitting: false,
         kbHeight: 0,
         sheetStyle: SHEET_DEFAULT_STYLE,
         scrollTarget: '',
       });
+      this.renderCategories();
       this.refreshCanSubmit();
+    },
+    /** 分类 chips 的视图态：未选中用透明底黑字形，选中换成白圆底（与地图 marker 同一张图），免得两套配色 */
+    renderCategories() {
+      const sel = this.data.category;
+      this.setData({
+        categories: config.FOOTPRINT_CATEGORIES.map((c) => ({
+          key: c.key,
+          label: c.label,
+          icon: config.footprintCategoryIcon(c.key),
+          iconOn: config.footprintCategoryIcon(c.key, true),
+          active: c.key === sel,
+        })),
+      });
+    },
+    onCategory(e) {
+      const key = e.currentTarget.dataset.key;
+      this.setData({ category: this.data.category === key ? '' : key }); // 再点一次等于取消
+      this.renderCategories();
     },
     today() {
       const d = new Date();
@@ -219,6 +242,7 @@ Component({
             longitude: this.data.location.longitude,
           },
           photos,
+          category: this.data.category,
         };
         if (this.data.isEdit) await api.put(`/footprint-records/${this.data.id}`, payload);
         else await api.post('/footprint-records', payload);

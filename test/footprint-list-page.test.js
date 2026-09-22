@@ -558,3 +558,14 @@ test('L17 空态文案分档：日历整月 / 日历点选 / 列表无筛选各�
   assert.equal(page.data.calendarSelected, '', '清空筛选在日历态顺带取消点选');
   assert.equal(page.data.filtered, false);
 });
+
+test('L18 分类标签：卡片带中文名与透明底图标，未分类给空串', async () => {
+  resetEnv();
+  respond = () => Promise.resolve({ total: 2, items: [rec('a', { category: 'museum' }), rec('b')] });
+  const page = makePage();
+  await page.loadAll();
+  assert.equal(page.data.items[0].categoryLabel, '博物馆展馆');
+  assert.equal(page.data.items[0].categoryIcon, '/assets/icons/fp-cat-museum.png');
+  assert.equal(page.data.items[1].categoryLabel, '', '未分类不显示标签');
+  assert.equal(page.data.items[1].categoryIcon, '');
+});

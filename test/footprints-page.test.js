@@ -21,11 +21,15 @@ const CLUSTER_ID_BASE = 100000; // 与 footprints.js 的 id 分段约定一致
 /* ---------------------------------- 环境桩 ---------------------------------- */
 
 const apiCalls = [];
+const apiQueries = []; // /geo 第二次参数（筛选/搜索 query）单独记，apiCalls 仍是纯路径供旧断言用
 const apiGeo = { items: [] }; // P7 用：loadAll 时 /geo 返回这批点
 const fakeApi = {
-  get(p) {
+  get(p, query) {
     apiCalls.push(p);
-    if (p === '/footprint-records/geo') return Promise.resolve({ items: apiGeo.items.slice(), total: apiGeo.items.length });
+    if (p === '/footprint-records/geo') {
+      apiQueries.push(query || {});
+      return Promise.resolve({ items: apiGeo.items.slice(), total: apiGeo.items.length });
+    }
     if (p === '/footprint-records') return Promise.resolve({ items: [], total: 0 });
     return Promise.reject(new Error('unexpected GET ' + p)); // 详情补拉走快路径时不该被调用（P4 断言）
   },
@@ -56,6 +60,8 @@ let mapCameraCenter = Object.assign({}, DEFAULT_CAMERA_CENTER);
 //          'fail'  只回 fail —— 端上问不到中心，页面该走「无相机」降级
 let centerMode = 'ok';
 let pendingCenter = [];
+/** 页面 toast 记录（无匹配结果的提示走 toast，不再在地图上摆浮层文本） */
+const toasts = [];
 /** 相机中心/回读形态都是模块级状态：用完必须还原，否则漏给后面的用例 */
 function resetCameraStub() {
   centerMode = 'ok';
@@ -66,7 +72,7 @@ function resetCameraStub() {
 global.wx = {
   getWindowInfo: () => ({ windowWidth: 393, windowHeight: 851 }),
   getSystemInfoSync: () => ({ windowWidth: 393, windowHeight: 851 }),
-  showToast() {},
+  showToast: (o) => toasts.push(o && o.title),
   hideToast() {},
   showModal() {},
   navigateTo() {},
@@ -144,6 +150,7 @@ async function settle() {
 function resetCanvasQueue() {
   pendingCanvas = [];
   canvasCalls = 0;
+  toasts.length = 0;
 }
 
 /** 放行在途的 getCenterLocation 回读（FIFO，各自读放行时刻的 mapCameraCenter） */
@@ -496,7 +503,7 @@ test('P8 相机回写：过期异步回读被写序令牌挡掉 / 静默窗口�
  * 详情半屏是地图页唯一的记录详情入口（列表/统计各自成页），点「编辑」要关详情、带 DTO 开表单；
  * 保存/删除成功后关弹层并重拉地图数据；左上浮层两个入口分别 navigateTo 列表页与分包统计页。
  */
-test('P9 接线：详情编辑转表单 / 保存与删除后重拉 / 新增态 / 列表+统计入口跳转', () => {
+test('P9 接线：详情编辑转表单 / 保存与删除后重拉 / 新增态 / 列表入口跳转', () => {
   resetCanvasQueue();
   const page = makePage();
   const nav = [];
@@ -530,23 +537,154 @@ test('P9 接线：详情编辑转表单 / 保存与删除后重拉 / 新增态 /
   assert.equal(page.data.formVisible, false);
 
   page.goList();
-  page.goStats();
-  assert.deepEqual(nav, ['/pages/footprint-list/footprint-list', '/packageFootprint/pages/footprint-stats/footprint-stats']);
+  assert.deepEqual(nav, ['/pages/footprint-list/footprint-list'], '地图页只剩「列表」一个跳转入口（统计收进列表页顶部栏）');
   global.wx.navigateTo = origNavigateTo;
 });
 
 /**
- * P10 刷新按钮：一次性旋转动画由 refreshSpin 驱动——点一下置位（类名挂上）+ 重拉数据，
- * 动画时长过后必须复位，否则下次点击类名没摘掉、CSS 动画不会重播。
+ * P10（2026-09-22 改版）：地图页浮层只留筛选，统计与刷新入口整体移除。
+ * 页面不能再挂 goStats/onRefreshTap/refreshSpin——WXML 已无按钮可点，留着就是不可达死代码。
  */
-test('P10 刷新按钮：置位旋转标记 + 重拉数据，动画结束后复位', async () => {
+test('P10 统计/刷新入口已移除：页面不再暴露对应 handler 与动画标记', () => {
+  assert.equal(typeof pageDef.goStats, 'undefined', '统计入口收进列表页顶部栏，地图页不该再有 goStats');
+  assert.equal(typeof pageDef.onRefreshTap, 'undefined', '刷新按钮已移除，数据靠进页与增删改后重拉');
+  assert.equal(pageDef.data.refreshSpin, undefined, '旋转动画标记随按钮一起删掉');
+});
+
+/* ---------------- 筛选 / 搜索 / 分类打点（2026-09-22 地图页改版） ---------------- */
+
+const GEO_ONE = [
+  { id: 'a', title: '西湖', visitDate: '2024-05-01', latitude: 30.2, longitude: 120.1, province: '浙江省', city: '杭州市', category: 'scenic' },
+  { id: 'b', title: '灵隐寺', visitDate: '2025-03-02', latitude: 30.21, longitude: 120.11, province: '浙江省', city: '杭州市', category: 'heritage' },
+  { id: 'c', title: '老屋', visitDate: '2025-06-06', latitude: 34.3, longitude: 108.9, province: '陕西省', city: '西安市', category: '' },
+];
+
+test('P11 筛选确定：三项写进 filter 并按 query 重拉，另拉一次全量算候选，角标计数', async () => {
   resetCanvasQueue();
+  apiCalls.length = 0;
+  apiQueries.length = 0;
+  apiGeo.items = GEO_ONE.map((x) => Object.assign({}, x));
   const page = makePage();
-  const before = page._seq;
-  page.onRefreshTap();
-  assert.equal(page.data.refreshSpin, true, '点一下即置位（动画类名随之挂上）');
-  assert.ok(page._seq > before, 'onRefreshTap 应触发 loadAll（请求序号自增）');
-  await page.loadAll().catch(() => {}); // 收掉这次刷新，别把在途 promise 漏给后面的用例
-  await new Promise((r) => setTimeout(r, 1600)); // 等 REFRESH_SPIN_MS(1520) 过后复位
-  assert.equal(page.data.refreshSpin, false, '动画结束必须复位，否则下次点击动画不重播');
+  await page.loadAll();
+  assert.deepEqual(apiQueries, [{}], '无筛选时 /geo 不带参数、也不多拉');
+  assert.deepEqual(page.data.options.provinces.map((p) => p.name), ['浙江省', '陕西省']);
+  assert.deepEqual(page.data.options.years.map((y) => y.year), [2025, 2024]);
+  assert.deepEqual(page.data.options.categories.map((c) => c.key), ['scenic', 'heritage'], '分类候选按 config 顺序、未分类不计入');
+
+  apiQueries.length = 0;
+  page.onFilterConfirm({ detail: { province: '浙江省', year: '2024', category: 'scenic' } });
+  await settle();
+  await settle();
+  assert.equal(page.data.filterVisible, false, '确定即收起半屏');
+  assert.deepEqual(page.data.filter, { province: '浙江省', year: '2024', category: 'scenic' });
+  assert.equal(page.data.filterCount, 3, '三项生效 → 按钮角标 3');
+  assert.equal(apiQueries.length, 2, '筛选态要额外拉一次全量：候选必须来自未过滤快照，否则选中的省份会从候选里消失');
+  assert.deepEqual(apiQueries[0], { province: '浙江省', year: '2024', category: 'scenic' });
+  assert.deepEqual(apiQueries[1], {});
+  assert.equal(page.data.options.provinces.length, 2, '候选仍是全量口径');
+  apiGeo.items = [];
+});
+
+test('P13 搜索双态：打字不发请求，回车才生效且同词不重拉，✕ 清空并收起', async () => {
+  resetCanvasQueue();
+  apiGeo.items = GEO_ONE.map((x) => Object.assign({}, x));
+  const page = makePage();
+  await page.loadAll();
+  page.toggleSearch();
+  assert.equal(page.data.searchOpen, true, '点搜索即展开输入框');
+  assert.equal(page.data.searchFocus, true);
+  apiQueries.length = 0;
+  page.onKeywordInput({ detail: { value: ' 灵隐 ' } });
+  assert.equal(page.data.keywordInput, ' 灵隐 ');
+  assert.equal(apiQueries.length, 0, '只改框内值，未提交不发请求（与列表页同一套双态）');
+
+  page.onSearchConfirm();
+  await settle();
+  await settle();
+  assert.equal(page.data.keyword, '灵隐', '提交时去首尾空格');
+  assert.deepEqual(apiQueries[0], { keyword: '灵隐' });
+
+  apiQueries.length = 0;
+  page.onSearchConfirm();
+  await settle();
+  assert.equal(apiQueries.length, 0, '同一个词再回车不重复请求');
+
+  apiQueries.length = 0;
+  page.onClearKeyword();
+  await settle();
+  await settle();
+  assert.equal(page.data.keyword, '');
+  assert.equal(page.data.keywordInput, '');
+  assert.deepEqual(apiQueries[0], {}, '清空后回到全量口径');
+  assert.equal(page.data.searchOpen, false, '✕ 顺手把输入框收回去（不必再点一次放大镜）');
+  assert.equal(page.data.searchFocus, false, '同时失焦，键盘收起');
+
+  // 框里没字时点 ✕：没东西可清，但收起这个动作必须仍然生效（旧实现在这里直接 return 了）
+  page.toggleSearch();
+  assert.equal(page.data.searchOpen, true);
+  page.onClearKeyword();
+  assert.equal(page.data.searchOpen, false, '空框点 ✕ 也能收起');
+  apiGeo.items = [];
+});
+
+/**
+ * P15 无匹配结果改走 toast：地图上不摆浮层文本（用户明确要求），且提示要具体到「搜的词 / 筛选」。
+ * 三条边界：带关键词点名该词、只有筛选说筛选、账号真没数据不弹（那是引导不是"没匹配"）。
+ */
+test('P15 无匹配只弹 toast：带词点名并截断超长、只有筛选说筛选、真无数据不弹', async () => {
+  resetCanvasQueue();
+  apiGeo.items = [];
+
+  const page = makePage();
+  page.setData({ keyword: '灵隐寺' });
+  await page.loadAll();
+  await settle();
+  assert.deepEqual(toasts, ['没有匹配「灵隐寺」的足迹'], '搜索无命中 → toast 带上实际关键词');
+  assert.equal(page.data.records.length, 0, '数据仍是空集（地图不出点，不靠浮层说明）');
+
+  // 超长关键词截断：toast 标题两行就顶到地图标题栏了
+  toasts.length = 0;
+  const long = makePage();
+  long.setData({ keyword: '一二三四五六七八九十还超长的词' });
+  await long.loadAll();
+  await settle();
+  assert.deepEqual(toasts, ['没有匹配「一二三四五六七八九十…」的足迹'], '超 10 字截断加省略号');
+
+  // 只有筛选生效（无关键词）
+  toasts.length = 0;
+  const filtered = makePage();
+  filtered.setData({ filter: { province: '西藏自治区', year: '2022', category: '' } });
+  await filtered.loadAll();
+  await settle();
+  assert.deepEqual(toasts, ['没有符合当前筛选的足迹']);
+
+  // 真·无数据：不是"没匹配"，不该弹 toast 打扰
+  toasts.length = 0;
+  const fresh = makePage();
+  await fresh.loadAll();
+  await settle();
+  assert.deepEqual(toasts, [], '无筛选无关键词的空白账号不弹 toast（保留地图上的新增引导）');
+  apiGeo.items = [];
+});
+
+test('P14 单点 marker 用分类图标（白圆底），未分类仍走灰色圆点', async () => {
+  resetCanvasQueue();
+  apiGeo.items = [Object.assign({}, GEO_ONE[0])];
+  const page = makePage();
+  await page.loadAll();
+  await settle();
+  await settle();
+  const leaf = page.data.markers.find((m) => m.id === 1);
+  assert.ok(leaf, '单点应出一个叶 marker');
+  assert.equal(leaf.iconPath, '/assets/icons/fp-cat-scenic-chip.png');
+  assert.equal(leaf.width, 26);
+
+  apiGeo.items = [Object.assign({}, GEO_ONE[2])]; // category ''
+  const page2 = makePage();
+  await page2.loadAll();
+  await settle();
+  await settle();
+  const dot = page2.data.markers.find((m) => m.id === 1);
+  assert.equal(dot.iconPath, '/assets/icons/marker-dot.png', '未分类保持原圆点，不硬塞「其他」图标');
+  apiGeo.items = [];
 });

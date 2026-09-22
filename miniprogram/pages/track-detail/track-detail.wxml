@@ -90,7 +90,7 @@
       <text>结束 {{activity.endTimeText}}</text>
       <block wx:if="{{activity.avgAccuracy}}">
         <text class="time-sep">·</text>
-        <text>📡 精度 {{activity.avgAccuracy}}m</text>
+        <text>精度 {{activity.avgAccuracy}}m</text>
       </block>
     </view>
   </view>

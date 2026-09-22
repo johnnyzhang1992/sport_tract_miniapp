@@ -1,6 +1,7 @@
 // 足迹详情半屏（地图页与列表页共用）：轻量数据缺字段时自行补拉 GET /:id（seq 守卫防连点覆盖），
 // 内置 看图/编辑/删除；事件：close（关闭）、edit（带完整记录，父级转开表单）、deleted（删除成功，父级刷新）。
 const api = require('../../services/api');
+const config = require('../../config/index');
 
 Component({
   properties: {
@@ -55,6 +56,8 @@ Component({
         photos,
         photoThumbs,
         metaText: [full.visitDate, place].filter(Boolean).join(' · '),
+        categoryLabel: config.footprintCategoryLabel(full.category),
+        categoryIcon: config.footprintCategoryIcon(full.category),
       });
     },
 

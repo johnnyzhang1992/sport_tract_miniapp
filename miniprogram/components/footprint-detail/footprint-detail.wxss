@@ -52,6 +52,27 @@
   font-size: 24rpx;
   color: #8a9099;
 }
+/* 日期·地点 一行，分类标签跟在后面（未分类时不渲染标签，行高不变） */
+.sheet-metarow {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+.cat-tag {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  padding: 4rpx 14rpx;
+  border-radius: 999rpx;
+  background: #f2f3f5;
+  color: #4e5969;
+  font-size: 22rpx;
+}
+.cat-tag-icon {
+  width: 26rpx;
+  height: 26rpx;
+}
 .sheet-people {
   margin-top: 12rpx;
   font-size: 26rpx;

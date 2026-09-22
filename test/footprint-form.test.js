@@ -236,3 +236,53 @@ test('键盘高度变化：弹层抬升并缩高，收键盘后还原默认样�
   assert.equal(c.data.sheetStyle, 'bottom:0;height:78vh;');
   assert.equal(pageScrolls.length, 2, '键盘开合都要复位滚动位置（iOS fixed 弹层错位的标准解法）');
 });
+
+/* ---------------- 分类（2026-09-22 足迹分类上线） ---------------- */
+
+const CAT_KEYS = ['scenic', 'mountain', 'park', 'heritage', 'museum', 'street', 'food', 'camp', 'other'];
+
+test('分类：新增态未选，chips 用 config 的 9 类；点选与再点取消', () => {
+  const c = open(null);
+  assert.equal(c.data.category, '');
+  assert.deepEqual(c.data.categories.map((x) => x.key), CAT_KEYS);
+  assert.equal(c.data.categories[0].label, '景区');
+  assert.equal(c.data.categories[0].icon, '/assets/icons/fp-cat-scenic.png', '表单用透明底字形，底色交给 CSS');
+  c.onCategory({ currentTarget: { dataset: { key: 'museum' } } });
+  assert.equal(c.data.category, 'museum');
+  assert.equal(c.data.categories.find((x) => x.key === 'museum').active, true);
+  c.onCategory({ currentTarget: { dataset: { key: 'museum' } } });
+  assert.equal(c.data.category, '', '再点一次等于取消分类');
+  assert.equal(c.data.categories.find((x) => x.key === 'museum').active, false);
+});
+
+test('分类：编辑态回填，POST/PUT 两条提交路径都带上 category', async () => {
+  toasts = [];
+  apiCalls = [];
+  uploadCalls = [];
+  const full = {
+    id: 'rec1',
+    visitDate: '2026-08-01',
+    title: '古镇',
+    people: [],
+    description: '',
+    location: { name: '乌镇', address: '嘉兴', latitude: 30.7, longitude: 120.5 },
+    photos: [],
+    category: 'heritage',
+  };
+  const edit = open(full);
+  assert.equal(edit.data.category, 'heritage');
+  await edit.submit();
+  assert.equal(apiCalls[0].method, 'PUT');
+  assert.equal(apiCalls[0].body.category, 'heritage');
+
+  apiCalls = [];
+  uploadCalls = [];
+  const add = open(null);
+  add.onTitle({ detail: { value: '营地' } });
+  chooseLocationResult = { name: '西湖边营地', address: '杭州', latitude: 30.2, longitude: 120.1 };
+  add.pickByWx();
+  add.onCategory({ currentTarget: { dataset: { key: 'camp' } } });
+  await add.submit();
+  assert.equal(apiCalls[0].method, 'POST');
+  assert.equal(apiCalls[0].body.category, 'camp');
+});

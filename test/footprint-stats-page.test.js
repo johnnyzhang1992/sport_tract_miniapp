@@ -506,3 +506,45 @@ test('S11 全屏：另起一张图并按当前周期数据绘制，关闭销毁�
   assert.equal(page.data.fullscreen, false, '全屏层关闭');
   assert.equal(page.fsChart, null, '销毁 chart 引用，下次打开重新初始化');
 });
+
+test('S12 省市列表：接口带城市明细时落行、汇总文案就位，点省份展开/再点收起', async () => {
+  resetEnv();
+  statsResponses.push(
+    stats(6, 3, 3, [
+      { name: '浙江省', count: 4, cities: [{ name: '杭州市', count: 3 }, { name: '舟山市', count: 1 }] },
+      { name: '北京市', count: 1, cities: [{ name: '北京市', count: 1 }] },
+      { name: '广东省', count: 1, cities: [] },
+    ]),
+  );
+  const page = makePage(true);
+  page.onLoad();
+  await flush();
+  assert.deepEqual(page.data.regionRows.map((r) => r.name), ['浙江省', '北京市', '广东省']);
+  assert.equal(page.data.regionRows[0].expanded, false, '默认全部收起');
+  assert.equal(page.data.regionSummary, '共 3 省 3 城');
+
+  page.onToggleRegion({ currentTarget: { dataset: { name: '浙江省' } } });
+  assert.equal(page.data.regionRows[0].expanded, true);
+  assert.equal(page.data.regionRows[1].expanded, false, '只影响被点的那一行');
+  page.onToggleRegion({ currentTarget: { dataset: { name: '北京市' } } });
+  assert.equal(page.data.regionRows[0].expanded, true, '允许两个省同时展开，方便跨省对比');
+  page.onToggleRegion({ currentTarget: { dataset: { name: '北京市' } } });
+  assert.deepEqual(page.data.regionRows.filter((r) => r.expanded).map((r) => r.name), ['浙江省']);
+});
+
+test('S13 省市列表随周期重算：换月后按新数据重建行，展开的省若已不在结果里就自然消失', async () => {
+  resetEnv();
+  statsResponses.push(stats(4, 1, 1, [{ name: '浙江省', count: 4, cities: [{ name: '杭州市', count: 4 }] }]));
+  const page = makePage(true);
+  page.onLoad();
+  await flush();
+  page.onToggleRegion({ currentTarget: { dataset: { name: '浙江省' } } });
+  assert.equal(page.data.regionRows[0].expanded, true);
+
+  statsResponses.push(stats(1, 1, 1, [{ name: '上海市', count: 1, cities: [{ name: '上海市', count: 1 }] }]));
+  page.onPrevPeriod();
+  await flush();
+  assert.deepEqual(page.data.regionRows.map((r) => r.name), ['上海市'], '行按新周期数据重建');
+  assert.equal(page.data.regionRows[0].expanded, false, '上次展开的浙江不在本期结果里，不留悬空展开态');
+  assert.equal(page.data.regionSummary, '共 1 省 1 城');
+});

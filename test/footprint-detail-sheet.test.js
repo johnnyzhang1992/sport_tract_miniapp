@@ -109,3 +109,12 @@ test('补拉失败：toast 说具体原因，不静默', async () => {
   assert.equal(previews.length, 0);
   assert.deepEqual(toasts, ['网络不给力']);
 });
+
+test('分类标签：有分类给中文名与透明底图标，未分类给空串', async () => {
+  const c = await open(Object.assign({}, LIST_CARD, { category: 'museum' }));
+  assert.equal(c.data.detail.categoryLabel, '博物馆展馆');
+  assert.equal(c.data.detail.categoryIcon, '/assets/icons/fp-cat-museum.png');
+  const c2 = await open(LIST_CARD);
+  assert.equal(c2.data.detail.categoryLabel, '', '未分类不显示标签');
+  assert.equal(c2.data.detail.categoryIcon, '');
+});

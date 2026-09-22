@@ -1,6 +1,7 @@
-// 足迹列表页（地图页左上「列表」入口进）：顶部 列表/日历 两态 + 总览文案 + 搜索 + 分页卡片 + 详情/表单半屏。
+// 足迹列表页（地图页右下「列表」入口进）：顶部 列表/日历 两态 + 总览文案 + 搜索 + 分页卡片 + 详情/表单半屏。
 // 列表态：搜索 + 月/年/全部时间筛选 + 按月分组卡片；日历态：月历打点 + 当月（或点选的某天）卡片列表。
 const api = require('../../services/api');
+const config = require('../../config/index');
 const { RANGES, PICKER_COUNT, periodRange, periodLabelOf } = require('../../utils/footprint-period.js');
 const cal = require('../../utils/footprint-calendar.js');
 
@@ -24,6 +25,8 @@ function toCard(r) {
     monthNum: ymd[1] ? `${Number(ymd[1])}月` : '',
     metaText: [place || '未知地点', people.length ? `和${people.join('、')}` : ''].filter(Boolean).join(' · '),
     descText: r.description || '',
+    categoryLabel: config.footprintCategoryLabel(r.category),
+    categoryIcon: config.footprintCategoryIcon(r.category),
     photoThumbs,
   });
 }

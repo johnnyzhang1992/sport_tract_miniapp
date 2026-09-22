@@ -10,7 +10,13 @@
         <text class="fp-card-title">{{card.title}}</text>
         <text class="fp-card-chevron">›</text>
       </view>
-      <view class="fp-card-meta">{{card.metaText}}</view>
+      <view class="fp-card-metarow">
+        <view class="fp-card-meta">{{card.metaText}}</view>
+        <view wx:if="{{card.categoryLabel}}" class="fp-card-cat">
+          <image class="fp-card-cat-icon" src="{{card.categoryIcon}}" mode="aspectFit" />
+          <text>{{card.categoryLabel}}</text>
+        </view>
+      </view>
       <view wx:if="{{card.descText}}" class="fp-card-desc">{{card.descText}}</view>
       <view wx:if="{{card.photoThumbs.length}}" class="fp-photos">
         <image

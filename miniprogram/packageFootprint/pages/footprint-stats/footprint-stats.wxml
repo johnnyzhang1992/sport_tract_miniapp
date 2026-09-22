@@ -75,6 +75,47 @@
       <view class="stat-label">城市</view>
     </view>
   </view>
+
+  <!-- 省市明细：省份按足迹数倒序一行一条，城市默认收起（可多省同时展开）。
+       没有城市的省不给箭头（早期直连库灌的数据有省无市，展开是空列表） -->
+  <view class="card region-card" wx:if="{{regionRows.length}}">
+    <view class="region-head">
+      <text class="region-title">省市明细</text>
+      <text class="region-summary">{{regionSummary}}</text>
+    </view>
+    <view class="region-row region-head-row">
+      <text class="region-name">省份 / 城市</text>
+      <text class="region-count">足迹数</text>
+      <view class="region-caret"></view>
+    </view>
+    <view wx:for="{{regionRows}}" wx:key="name" class="region-group">
+      <view
+        class="region-row"
+        hover-class="{{item.expandable ? 'region-row-hover' : ''}}"
+        data-name="{{item.name}}"
+        bindtap="onToggleRegion"
+      >
+        <view class="region-dot {{item.expanded ? 'region-dot-on' : ''}}"></view>
+        <text class="region-name">{{item.name}}</text>
+        <text class="region-count">{{item.count}}</text>
+        <view class="region-caret">
+          <image
+            wx:if="{{item.expandable}}"
+            class="region-caret-icon {{item.expanded ? 'region-caret-icon-up' : ''}}"
+            src="/assets/icons/lucide-chevron-down.svg"
+            mode="aspectFit"
+          />
+        </view>
+      </view>
+      <view wx:if="{{item.expanded}}" class="region-cities">
+        <view wx:for="{{item.cities}}" wx:for-item="city" wx:key="name" class="region-row region-city">
+          <text class="region-name">{{city.name}}</text>
+          <text class="region-count region-count-city">{{city.count}}</text>
+          <view class="region-caret"></view>
+        </view>
+      </view>
+    </view>
+  </view>
 </view>
 
 <!-- 周期选择弹窗（底部抽屉，对齐运动报告页） -->
