@@ -88,7 +88,7 @@
     <view class="card" wx:if="{{milestones.length}}">
       <view class="section-title">今年新解锁（{{milestones.length}}）</view>
       <view class="ms-row" wx:for="{{milestones}}" wx:key="index" hover-class="ms-row-hover">
-        <text class="ms-icon">{{item.icon}}</text>
+        <image class="ms-icon" src="{{item.iconImg}}" mode="aspectFit" />
         <view class="ms-info">
           <view class="ms-text">{{item.text}}</view>
         </view>
