@@ -9,6 +9,7 @@
 const drawGeoMap = require('../../utils/map-draw');
 const loading = require('../../utils/loading');
 const { applyTypeCounts } = require('../../utils/leaderboard-types.js');
+const { formatDuration } = require('../../utils/format.js');
 
 const ACTIVITY_TYPES = require('../../config/index').ACTIVITY_TYPES;
 
@@ -50,6 +51,9 @@ const GENDER_ICONS = {
   2: '/assets/icons/gender-female.png',
 };
 
+/** 三张 canvas 的选择器：点击/捏合前要按它现量位置（缓存值会随页面滚动过期） */
+const MAP_SELECTORS = { china: '#chinaMap', fs: '#fsMap', prov: '#provMap' };
+
 /** 本榜最佳指标：key → 展示名（顺序后端定，前端只负责文案与格式化） */
 const BEST_LABELS = {
   farthest: '最长距离',
@@ -73,6 +77,12 @@ function fmtBestValue(key, v) {
   if (key === 'fastestAvg') return `${v.toFixed(1)} km/h`; // 后端直接回均速 km/h
   if (key === 'maxClimb') return `${Math.round(v)} m`;
   return String(v);
+}
+
+/** 最长距离条目补上这条纪录的运动时长：光看距离不知道跑了多久（后端只在 farthest 上下发 durationSec） */
+function withDuration(row) {
+  if (row.key !== 'farthest' || !(row.durationSec > 0)) return row;
+  return { ...row, valueText: `${row.valueText} · ${formatDuration(row.durationSec)}` };
 }
 
 /** 头像：OSS 签名 URL 优先 → 预设头像本地资源 → 昵称首字（由 WXML 兒底展示） */
@@ -101,7 +111,7 @@ function decorateRows(board) {
       label: BEST_LABELS[b.key] || b.key,
       valueText: fmtBestValue(b.key, b.value),
       ...avatarOf(b),
-    })),
+    })).map(withDuration),
   };
 }
 
@@ -270,6 +280,29 @@ Page({
     return this._mapRts ? this._mapRts[key] : null;
   },
 
+  /** 现量一次画布视口位置并写回 rt。
+   *  地图卡排在运动排行下面之后，用户要滚动才看到地图，而 bindMapCanvas 只在绑定时量过位置——
+   *  滚动后那份 left/top 就过期了，tap/捏合的坐标换算（clientX - rt.left）整体错位，
+   *  表现就是「点省份没反应」。所以每次手势开始与点击前都重新量一次。 */
+  refreshMapRect(key) {
+    const rt = this.mapRt(key);
+    const selector = MAP_SELECTORS[key];
+    if (!rt || !selector) return Promise.resolve(rt);
+    return new Promise((resolve) => {
+      this.createSelectorQuery()
+        .select(selector)
+        .fields({ rect: true })
+        .exec((res) => {
+          const r = res && res[0];
+          if (r && typeof r.top === 'number') {
+            rt.left = r.left;
+            rt.top = r.top;
+          }
+          resolve(rt);
+        });
+    });
+  },
+
   /** 按当前视图（缩放/平移）重绘地图 */
   renderMap(key) {
     const rt = this.mapRt(key);
@@ -333,6 +366,7 @@ Page({
   onMapTouchStart(e) {
     const key = e.currentTarget.dataset.map;
     if (!key) return;
+    this.refreshMapRect(key); // 顺手校准画布位置，捏合锚点不用过期值（见方法注释）
     this._gestures[key] = {
       touches: e.touches.map((t) => ({ x: t.clientX, y: t.clientY })),
       dist: 0, // 单指累计位移，超过阈值视为拖拽（抑制随后的 tap）
@@ -394,14 +428,14 @@ Page({
     // 保留手势记录（dist 供 tap 抑制判断），下次 touchstart 重置
   },
 
-  onMapTap(e) {
+  async onMapTap(e) {
     const key = e.currentTarget.dataset.map;
-    const rt = this.mapRt(key);
+    const rt = await this.refreshMapRect(key);
     const g = this._gestures[key];
     if (!rt || !rt.tester || (g && g.dist > 6)) return; // 拖拽/缩放后不触发省份点击
     const t = e.changedTouches && e.changedTouches[0];
     if (!t) return;
-    // tap 的 clientX/Y 是视口坐标，减去画布视口位置才是画布内坐标
+    // tap 的 clientX/Y 是视口坐标，减去画布视口位置才是画布内坐标（位置必须是现量的，见 refreshMapRect）
     const name = rt.tester.hitTest(t.clientX - rt.left, t.clientY - rt.top);
     if (name && (key === 'china' || key === 'fs')) this.openProvinceModal(name);
   },

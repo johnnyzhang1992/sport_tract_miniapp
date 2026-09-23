@@ -141,6 +141,35 @@
   color: rgba(255, 255, 255, 0.9);
 }
 
+/* 卡内接口失败提示：卡片整块消失只会让人以为「功能没了」，所以留一行点名接口 + 实际原因 */
+.card-fail {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-top: 12rpx;
+  padding: 12rpx 16rpx;
+  border-radius: 12rpx;
+  background: #fdf0ef;
+}
+.card-fail-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 22rpx;
+  line-height: 32rpx;
+  color: #e54d42;
+}
+.card-fail-retry {
+  flex: none;
+  padding: 8rpx 24rpx;
+  border-radius: 999rpx;
+  font-size: 22rpx;
+  color: #fff;
+  background: #e54d42;
+}
+.card-fail-retry-hover {
+  opacity: 0.8;
+}
+
 /* 运动日历卡片：底部内边距 */
 .heat-card {
   padding-bottom: 16rpx;

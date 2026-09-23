@@ -755,3 +755,24 @@ test('P17 进页读回上次图层：存过卫星即开卫星；没存过/读写
 
   resetStorage();
 });
+
+test('P18 POI 标注开关（左下角「标志」）：默认关，点一下翻转且只翻这一项，不落盘不重拉数据', () => {
+  resetCanvasQueue();
+  resetStorage();
+  const page = makePage();
+  page.onLoad();
+  assert.equal(page.data.enablePoi, false, 'POI 标注默认关闭（与轨迹页口径一致）');
+
+  // 记录 setData 调用，确保切换只翻 enablePoi（别顺手动 markers 触发重绘）
+  const patches = [];
+  const origSetData = page.setData;
+  page.setData = (patch) => { patches.push(patch); return origSetData(patch); };
+
+  page.togglePoi();
+  assert.equal(page.data.enablePoi, true, '点一下要打开');
+  assert.deepEqual(patches, [{ enablePoi: true }], '一次 setData 只翻 enablePoi');
+  assert.deepEqual(Object.keys(storage), [], 'POI 开关不持久化，与轨迹页同口径');
+
+  page.togglePoi();
+  assert.equal(page.data.enablePoi, false, '再点一下关回去');
+});

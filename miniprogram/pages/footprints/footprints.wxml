@@ -7,6 +7,7 @@
     markers="{{markers}}"
     show-location
     enable-satellite="{{mapType === 'satellite'}}"
+    enable-poi="{{enablePoi}}"
     bindload="onMapLoad"
     bindmarkertap="onMarkerTap"
     bindcallouttap="onMarkerTap"
@@ -38,6 +39,14 @@
     <view class="tool-btn {{filterCount ? 'tool-btn-on' : ''}}" hover-class="tool-btn-hover" bindtap="openFilter">
       <image class="tool-icon" src="/assets/icons/lucide-sliders-horizontal.png" mode="aspectFit" />
       <view wx:if="{{filterCount}}" class="tool-badge">{{filterCount}}</view>
+    </view>
+  </view>
+
+  <!-- 左下：标志（底图 POI 标注 地名/道路名）开关，图标与行为同轨迹页的 track-map
+       （选中＝蓝底白字形，同 .poi-btn-active）；单独一列，不跟搜索展开的左上列一起淡出 -->
+  <view class="tool-col tool-col-left-bottom">
+    <view class="tool-btn {{enablePoi ? 'tool-btn-poi-on' : ''}}" hover-class="tool-btn-hover" bindtap="togglePoi">
+      <image class="tool-icon" src="{{enablePoi ? '/assets/icons/lucide-signpost-white.png' : '/assets/icons/lucide-signpost.png'}}" mode="aspectFit" />
     </view>
   </view>
 
