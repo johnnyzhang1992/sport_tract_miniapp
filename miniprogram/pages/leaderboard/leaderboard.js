@@ -3,9 +3,12 @@
  * - 地图：canvas 2d 直绘 GeoJSON（utils/map-draw），点亮省按轨迹数上色，点击省份弹窗下钻城市
  *   支持单指拖拽平移、双指捏合缩放（主图与省份弹窗地图均可），缩放后出现"重置地图"
  * - 排行：类型 chips + 省份选择，TOP10 昵称模糊（服务端处理，不可点击），底部当前用户真实排名
+ *   chips 顺序按 /stats/leaderboard-type-counts 的上榜轨迹数降序（同数保持 config 顺序），
+ *   仅首次进入拉取：重拉会让用户选到一半的 chips 跳位；拉取失败则退回 config 顺序
  */
 const drawGeoMap = require('../../utils/map-draw');
 const loading = require('../../utils/loading');
+const { applyTypeCounts } = require('../../utils/leaderboard-types.js');
 
 const ACTIVITY_TYPES = require('../../config/index').ACTIVITY_TYPES;
 
@@ -168,9 +171,16 @@ Page({
 
     try {
       const api = app.globalData.api;
-      const [regions, boardRaw] = await Promise.all([
+      const [regions, boardRaw, typeCounts] = await Promise.all([
         api.get('/stats/leaderboard-regions'),
         api.get(`/stats/leaderboard?type=${this.curType()}&province=${encodeURIComponent(this.curProvince())}&period=${this.curPeriod()}`),
+        // chips「有数据的排前面」只在首次拉：之后重拉会让用户选到一半的 chips 跳位
+        this._typeOrderLoaded
+          ? Promise.resolve(null)
+          : api.get('/stats/leaderboard-type-counts').catch((e) => {
+              console.warn('[leaderboard] 类型计数拉取失败，chips 保持 config 顺序', e);
+              return null;
+            }),
       ]);
       const board = decorateRows(boardRaw);
       this._regions = regions;
@@ -183,6 +193,12 @@ Page({
         board,
         loading: false,
       });
+      if (typeCounts && typeCounts.types) {
+        this._typeOrderLoaded = true;
+        this.setData(
+          applyTypeCounts({ types: this.data.types, counts: typeCounts.types, currentType: this.curType() }),
+        );
+      }
       this._loaded = true;
       // 中国地图数据（省界 GeoJSON）加载后绘制
       const geo = await this.ensureChinaMap();
