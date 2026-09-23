@@ -320,6 +320,29 @@
 .empty-filtered {
   padding-bottom: 40rpx;
 }
+
+/* 空态文案加深：app.wxss 的全局 .empty 是 #bbb，直接落在 page 背景 #f6f7f9 上只有 1.79:1
+   （正文下限 4.5:1），就是「灰看不清」。就地覆盖成 #777（≈4.2:1），不动全局——.empty 被
+   轨迹页等共用，改动面另议。仍比可点的游客引导（.login-empty #666）浅一档，保住层级。 */
+.empty {
+  color: #777;
+}
+
+/* 游客态引导：比普通空态文案更实一点（可点），但仍是列表里的一段文字，不做成按钮抢注意力 */
+.login-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10rpx;
+  color: #666;
+}
+.login-empty-hover {
+  opacity: 0.7;
+}
+.login-empty-link {
+  color: #2b6cf6;
+  font-weight: 600;
+}
 .empty-reset {
   display: flex;
   justify-content: center;

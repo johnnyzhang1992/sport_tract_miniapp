@@ -117,7 +117,12 @@
   <view wx:if="{{loading}}" class="list-state">加载中…</view>
   <view wx:elif="{{error}}" class="list-state">{{error}} <text class="retry" bindtap="loadAll">重试</text></view>
   <block wx:else>
-    <view wx:if="{{items.length === 0}}" class="empty {{filtered ? 'empty-filtered' : ''}}">{{emptyText || '还没有足迹，点右上角 ＋ 记录第一个去过的地方'}}</view>
+    <!-- 游客态（只可能从分享链接直达）：列表与总览都没请求，先给可点的登录引导 -->
+    <view wx:if="{{notLoggedIn}}" class="empty login-empty" hover-class="login-empty-hover" hover-stay-time="80" bindtap="onLoginTap">
+      <text>登录后记录你去过的每个地方</text>
+      <text class="login-empty-link">去登录 ›</text>
+    </view>
+    <view wx:elif="{{items.length === 0}}" class="empty {{filtered ? 'empty-filtered' : ''}}">{{emptyText || '还没有足迹，点右上角 ＋ 记录第一个去过的地方'}}</view>
     <view wx:if="{{items.length === 0 && filtered}}" class="empty-reset">
       <view class="empty-reset-btn" hover-class="empty-reset-btn-hover" bindtap="onClearFilter">清空筛选</view>
     </view>

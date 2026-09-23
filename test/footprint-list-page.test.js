@@ -31,16 +31,38 @@ require.cache[apiPath] = { id: apiPath, filename: apiPath, loaded: true, exports
 
 const toasts = [];
 const navs = [];
+const modals = []; // 登录闸门调起的 wx.showModal（用例自己决定用户点了确认还是取消）
 let stopPullDownCalls = 0;
 global.wx = {
   showToast: (o) => toasts.push(o && o.title),
   navigateTo: (o) => navs.push(o && o.url),
   nextTick: (cb) => cb(),
   stopPullDownRefresh: () => { stopPullDownCalls++; },
+  showModal: (o) => modals.push(o),
 };
 let pageDef = null;
 global.Page = (def) => { pageDef = def; };
-global.getApp = () => ({ globalData: {} });
+
+/**
+ * getApp 桩：默认「已登录」（本页正常只能从地图页进来，是个已登录流程；分享链接直达才会是游客），
+ * 登录态相关的用例自己调到游客档。hasSession = 本地有 token 的老用户，与 loggedIn 不同轴。
+ */
+let loginCalls = 0;
+const appStub = {
+  globalData: { loggedIn: true },
+  hasSession: () => true,
+  login() {
+    loginCalls++;
+    appStub.globalData.loggedIn = true;
+    return Promise.resolve({});
+  },
+};
+function resetAppStub(over = {}) {
+  loginCalls = 0;
+  appStub.globalData.loggedIn = over.loggedIn !== undefined ? over.loggedIn : true;
+  appStub.hasSession = () => (over.hasSession !== undefined ? over.hasSession : true);
+}
+global.getApp = () => appStub;
 
 require('../miniprogram/pages/footprint-list/footprint-list.js');
 assert.ok(pageDef, 'footprint-list.js 应通过 Page() 交出页面对象');
@@ -87,9 +109,11 @@ function resetEnv() {
   apiCalls.length = 0;
   toasts.length = 0;
   navs.length = 0;
+  modals.length = 0;
   stopPullDownCalls = 0;
   respond = () => Promise.resolve({ items: [], total: 0 });
   calendarRespond = () => Promise.resolve({ total: 0, placeCount: 0, photoCount: 0, days: [] });
+  resetAppStub();
 }
 
 /* ---------------------------------- 用例 ---------------------------------- */
@@ -201,11 +225,12 @@ test('L5 下拉刷新：重拉第一页并收起下拉指示器', async () => {
   const page = makePage();
   await page.loadAll();
   page.setData({ page: 2 });
-  page.onPullDownRefresh(); // 页面方法自己不返回 promise，收尾在 loadAll().finally 里
+  page.onPullDownRefresh(); // 页面方法自己不返回 promise，收尾在 syncData().finally 里
   await flush();
   assert.equal(page.data.page, 1, '下拉刷新回第一页');
-  assert.equal(stopPullDownCalls, 1, 'loadAll 完成后必须 stopPullDownRefresh');
-  assert.equal(apiCalls[apiCalls.length - 1].params.page, 1);
+  assert.equal(stopPullDownCalls, 1, 'syncData 完成后必须 stopPullDownRefresh');
+  // 用列表口径筛，不取 apiCalls 末条：syncData 里 list 与 /calendar 的先后顺序不是本用例的契约
+  assert.equal(listCalls()[listCalls().length - 1].params.page, 1);
 });
 
 test('L6 详情/表单接线：点卡片走完整 DTO 快路径；保存与删除后都重拉第一页', async () => {
@@ -568,4 +593,111 @@ test('L18 分类标签：卡片带中文名与透明底图标，未分类给空�
   assert.equal(page.data.items[0].categoryIcon, '/assets/icons/fp-cat-museum.png');
   assert.equal(page.data.items[1].categoryLabel, '', '未分类不显示标签');
   assert.equal(page.data.items[1].categoryIcon, '');
+});
+
+test('L20 分享：文案走全局口径（/calendar 的 total/placeCount），不被列表筛选带偏', async () => {
+  resetEnv();
+  calendarRespond = () => Promise.resolve({ total: 70, placeCount: 68, photoCount: 3, days: [] });
+  respond = () => Promise.resolve({ items: [rec('a')], total: 1 }); // 列表被筛成 1 条
+  const page = makePage();
+  page.onLoad();
+  await flush();
+
+  const msg = page.onShareAppMessage();
+  assert.equal(msg.path, '/pages/footprint-list/footprint-list', '转发的就是足迹列表页');
+  assert.match(msg.title, /70 条足迹/, `总览口径要写进文案：${msg.title}`);
+  assert.match(msg.title, /68 个地方/);
+  assert.equal(page.onShareTimeline().title, msg.title, '朋友圈与转发文案一致');
+});
+
+test('L21 分享：没有记录时不报数字', async () => {
+  resetEnv();
+  calendarRespond = () => Promise.resolve({ total: 0, placeCount: 0, photoCount: 0, days: [] });
+  respond = () => Promise.resolve({ items: [], total: 0 });
+  const page = makePage();
+  page.onLoad();
+  await flush();
+
+  const msg = page.onShareAppMessage();
+  assert.doesNotMatch(msg.title, /0 条/, `没记录过就别报数字：${msg.title}`);
+  assert.ok(msg.title.length > 0);
+});
+
+/* ---------------- 登录态闸门（2026-09-23：游客别再撞 401） ----------------
+ * 本页正常只能从地图页进来（已登录流程），游客只可能从分享链接直达；但一旦是游客，
+ * 列表与总览两个接口都会 401，所以同样一个请求都不发，只摆登录引导。 */
+
+test('L22 游客进页：列表与总览一个都不请求，只摆登录引导（不是错误态）', async () => {
+  resetEnv();
+  resetAppStub({ loggedIn: false, hasSession: false });
+  respond = () => Promise.reject(new Error('未授权，请先登录')); // 真发出去就是这个结果
+  const page = makePage();
+  page.onLoad();
+  await flush();
+  assert.equal(apiCalls.length, 0, '游客两个接口都不该发（发出去只会落成整页错误态）');
+  assert.equal(page.data.notLoggedIn, true);
+  assert.equal(page.data.error, '', '游客不是失败态');
+  assert.equal(page.data.loading, false, '别停在「加载中…」');
+  assert.equal(page.data.items.length, 0);
+  assert.equal(page.data.summaryText, '', '总览文案不该凭空说数');
+  assert.equal(page.data.hasMore, false, '压掉触底翻页，否则游客一触底就白挨一个 401');
+});
+
+test('L23 游客触底/下拉：都不发请求，也不把登录引导顶成整页错误态', async () => {
+  resetEnv();
+  resetAppStub({ loggedIn: false, hasSession: false });
+  const page = makePage();
+  page.onLoad();
+  await flush();
+
+  page.onReachBottom();
+  await flush();
+  assert.equal(apiCalls.length, 0, '触底不翻页');
+
+  // 本页 enablePullDownRefresh: true，游客下拉同样会触发（唯一的入口是分享链接直达）
+  page.onPullDownRefresh();
+  await flush();
+  assert.equal(apiCalls.length, 0, '下拉也不能发：两个接口都 401，首屏失败会把登录引导顶成整页错误态');
+  assert.equal(page.data.error, '', '仍是游客态，不是错误态');
+  assert.equal(page.data.notLoggedIn, true);
+  assert.equal(stopPullDownCalls, 1, '下拉指示器要收起，否则一直转');
+});
+
+test('L24 游客点 ＋：取消不开表单；确认登录后开表单并把页面数据补上', async () => {
+  resetEnv();
+  resetAppStub({ loggedIn: false, hasSession: false });
+  respond = pagedRespond([rec('a')]);
+  const page = makePage();
+  page.openAdd();
+  assert.equal(page.data.formVisible, false, '游客不能直接开表单：填完整张表才被告知未登录是 bug');
+  assert.equal(modals.length, 1);
+  modals[0].success({ confirm: false });
+  await flush();
+  assert.equal(loginCalls, 0);
+  assert.equal(page.data.formVisible, false);
+
+  page.openAdd();
+  modals[1].success({ confirm: true });
+  await flush();
+  assert.equal(loginCalls, 1);
+  assert.equal(page.data.formVisible, true, '登录成功接着把表单打开');
+  assert.equal(page.data.formRecord, null, '仍是新增态');
+  assert.equal(page.data.notLoggedIn, false);
+  assert.ok(listCalls().length >= 1, '登录后顺手把游客态缺的列表补上');
+  assert.equal(calCalls().length, 1, '总览/打点也要补（分享文案与日历打点都靠它）');
+});
+
+test('L25 老用户（本地有会话）进页：静默恢复后照常拉列表与总览', async () => {
+  resetEnv();
+  resetAppStub({ loggedIn: false, hasSession: true });
+  respond = pagedRespond([rec('a')]);
+  calendarRespond = () => Promise.resolve({ total: 1, placeCount: 1, photoCount: 0, days: [] });
+  const page = makePage();
+  page.onLoad();
+  await flush();
+  assert.equal(loginCalls, 1, '本地有 token 就静默恢复，不让老用户重登一次');
+  assert.equal(page.data.notLoggedIn, false);
+  assert.equal(listCalls().length, 1);
+  assert.equal(calCalls().length, 1);
+  assert.equal(page.data.summaryText, '1 条记录 · 1 个地方 · 0 张照片');
 });

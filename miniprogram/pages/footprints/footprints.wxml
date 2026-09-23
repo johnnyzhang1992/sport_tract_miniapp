@@ -29,9 +29,21 @@
 
   <view wx:if="{{loading}}" class="center-tip veil">加载中…</view>
   <view wx:elif="{{error}}" class="center-tip veil">{{error}} <text class="retry" bindtap="loadAll">重试</text></view>
+  <!-- 游客态：一个请求都不发（/geo 必 401），空地图上给可点的登录引导；与 ＋ 同一道闸门。
+       与下面的空账号引导共用 .fp-tip 白胶囊外观（底图上裸文字读不清）。 -->
+  <view
+    wx:elif="{{notLoggedIn}}"
+    class="fp-tip fp-tip-login"
+    hover-class="fp-tip-hover"
+    hover-stay-time="80"
+    bindtap="onLoginTap"
+  >
+    <text>登录后记录你去过的每个地方</text>
+    <text class="fp-tip-link">去登录 ›</text>
+  </view>
   <!-- 筛选/搜索无命中不再摆这里：地图上不盖浮层文本，改由页面 toast（见 footprints.js noMatchToast）。
        条件必须带「无筛选且无关键词」，否则查不到东西时这条引导会漏出来盖在地图上（模拟器实测踩过）。 -->
-  <view wx:elif="{{records.length === 0 && !filterCount && !keyword}}" class="center-tip empty">还没有足迹，点右下角 ＋ 记录第一个去过的地方</view>
+  <view wx:elif="{{records.length === 0 && !filterCount && !keyword}}" class="fp-tip">还没有足迹，点右下角 ＋ 记录第一个去过的地方</view>
 
   <!-- 浮层按钮统一规格：白底圆形 + 黑色 lucide 字形（对标参考图，不再是白底蓝字胶囊） -->
   <!-- 左上：只有筛选（带生效角标）；搜索展开时整列淡出。统计入口在列表页顶部栏 -->

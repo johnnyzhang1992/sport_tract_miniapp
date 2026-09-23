@@ -4,6 +4,7 @@ const api = require('../../services/api');
 const geo = require('../../utils/footprint-geo');
 const config = require('../../config/index');
 const ffilter = require('../../utils/footprint-filter');
+const { ensureLogin } = require('../../utils/login-gate');
 
 /** 分类 chips 与候选项的展示顺序跟着 config 的分类盘走 */
 const CATEGORY_KEYS = config.FOOTPRINT_CATEGORIES.map((c) => c.key);
@@ -199,6 +200,8 @@ Page({
     scale: 12,
     mapType: 'standard', // 底图图层：standard / satellite，翻给 <map> 的 enable-satellite
     enablePoi: false, // 底图 POI 标注（地名/道路名）：翻给 <map> 的 enable-poi，默认关闭
+    totalCount: 0, // 记录总数（未过滤口径）：分享文案用
+    notLoggedIn: false, // 游客态：空地图 + 可点的登录引导（不发任何请求）
     detailVisible: false, // 详情半屏（components/footprint-detail）
     detailRecord: null, // 轻量 DTO 即可，缺字段由组件补拉
     clusterSheet: { visible: false, records: [] }, // 最大缩放兜底：同处多条足迹的成员列表
@@ -208,7 +211,56 @@ Page({
   onLoad() {
     // 首帧渲染前把图层读回来：写在 data 字面量里只能给默认值，读库必须赶在 onLoad
     this.setData({ mapType: readLayer() });
-    this.loadAll();
+    this.syncData();
+  },
+
+  /** tab 页可能在「我的」里登录/登出后切回来：只有登录态变了才重对齐，
+   *  否则每次切 tab 都白跑一趟 /geo（_loginSynced 由 syncData 维护） */
+  onShow() {
+    if (this._loginSynced === undefined || this._loginSynced === !!getApp().globalData.loggedIn) return;
+    this.syncData();
+  },
+
+  /**
+   * 登录态与页面数据对齐（onLoad / 登录成功后 / onShow 都走这里）。
+   * 本地有 token 的老用户先静默恢复；仍是游客就一个请求都不发——/geo 对游客必 401，
+   * 发出去只会把首屏落成整页错误态（文案还是后端原文「未授权，请先登录」），
+   * 而这里该给的是空地图 + 登录引导。
+   */
+  async syncData() {
+    const app = getApp();
+    if (app.hasSession() && !app.globalData.loggedIn) {
+      try {
+        await app.login();
+      } catch (e) {
+        // 静默恢复失败就按游客处理，别在进页时甩一个错误弹窗
+      }
+    }
+    this._loginSynced = !!app.globalData.loggedIn;
+    if (!this._loginSynced) {
+      // 清干净：上一次登录留下的点与筛选候选不能继续摆在屏上
+      this.setData({
+        loading: false,
+        error: '',
+        notLoggedIn: true,
+        records: [],
+        markers: [],
+        callouts: [],
+        totalCount: 0,
+        options: { provinces: [], years: [], categories: [] },
+        filterCount: 0,
+      });
+      return;
+    }
+    this.setData({ notLoggedIn: false });
+    return this.loadAll();
+  },
+
+  /** 空地图上的登录引导：与 ＋ 走同一道闸门 */
+  onLoginTap() {
+    ensureLogin().then((ok) => {
+      if (ok) this.syncData();
+    });
   },
 
   /** 标准 ⇄ 卫星：切的是底图，数据与聚合一律不重建（重建会让 marker 闪一下） */
@@ -228,6 +280,21 @@ Page({
     this.setData({ enablePoi: !this.data.enablePoi });
   },
 
+  /** 转发文案：没记录过就别报数字（「0 条足迹」发出去很尴尬） */
+  shareTitle() {
+    const n = this.data.totalCount;
+    return n > 0 ? `我记录了 ${n} 条足迹，来看看我去过哪儿` : '在小迹一下记录去过的每个地方';
+  },
+
+  onShareAppMessage() {
+    return { title: this.shareTitle(), path: '/pages/footprints/footprints' };
+  },
+
+  /** 分享到朋友圈 */
+  onShareTimeline() {
+    return { title: this.shareTitle() };
+  },
+
   async loadAll() {
     // 请求序号守卫：只应用最后一次结果，防竞态
     const seq = (this._seq = (this._seq || 0) + 1);
@@ -245,6 +312,8 @@ Page({
       this.setData({
         loading: false,
         records: shown.items,
+        // 记录总数取未过滤快照：筛选态下屏上只是一部分，分享文案不能说成全部
+        totalCount: snapshot.length,
         options: ffilter.buildFilterOptions(snapshot, CATEGORY_KEYS),
         filterCount: ffilter.activeFilterCount(this.data.filter),
       });
@@ -535,7 +604,19 @@ Page({
 
   /** 全屏地图上的浮层入口：列表页（统计入口在列表页顶部栏） */
   goList() { wx.navigateTo({ url: '/pages/footprint-list/footprint-list' }); },
-  openAdd() { this.setData({ formVisible: true, formRecord: null }); },
+  /**
+   * 右下 ＋：新增态表单（record 传 null 即新增）。写操作前过登录闸门——游客填完整张表
+   * 才在保存时挨一句「未授权，请先登录」是 bug，而且照片已经白传到 OSS 了。
+   * 已登录走同帧直开（不绕微任务），别让常见路径多等一帧。
+   */
+  openAdd() {
+    if (getApp().globalData.loggedIn) return this.setData({ formVisible: true, formRecord: null });
+    ensureLogin().then((ok) => {
+      if (!ok) return;
+      this.syncData();
+      this.setData({ formVisible: true, formRecord: null });
+    });
+  },
   closeForm() { this.setData({ formVisible: false, formRecord: null }); },
   /** 表单保存成功：关弹层 + 重拉地图数据（列表页数据在其自身页面内加载） */
   onFormSaved() {

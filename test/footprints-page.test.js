@@ -22,13 +22,15 @@ const CLUSTER_ID_BASE = 100000; // 与 footprints.js 的 id 分段约定一致
 
 const apiCalls = [];
 const apiQueries = []; // /geo 第二次参数（筛选/搜索 query）单独记，apiCalls 仍是纯路径供旧断言用
-const apiGeo = { items: [] }; // P7 用：loadAll 时 /geo 返回这批点
+const apiGeo = { items: [], filteredItems: null }; // P7 用：loadAll 时 /geo 返回这批点（带 query 那趟走 filteredItems）
 const fakeApi = {
   get(p, query) {
     apiCalls.push(p);
     if (p === '/footprint-records/geo') {
       apiQueries.push(query || {});
-      return Promise.resolve({ items: apiGeo.items.slice(), total: apiGeo.items.length });
+      const hasQuery = query && Object.keys(query).length > 0;
+      const src = hasQuery && apiGeo.filteredItems ? apiGeo.filteredItems : apiGeo.items;
+      return Promise.resolve({ items: src.slice(), total: src.length });
     }
     if (p === '/footprint-records') return Promise.resolve({ items: [], total: 0 });
     return Promise.reject(new Error('unexpected GET ' + p)); // 详情补拉走快路径时不该被调用（P4 断言）
@@ -62,6 +64,8 @@ let centerMode = 'ok';
 let pendingCenter = [];
 /** 页面 toast 记录（无匹配结果的提示走 toast，不再在地图上摆浮层文本） */
 const toasts = [];
+/** 页面调起的 wx.showModal 记录（登录闸门用；用例自己决定用户点了确认还是取消） */
+const modals = [];
 /** wx storage 桩：底图图层的选择记在这张表里 */
 let storage = {};
 function resetStorage() { storage = {}; }
@@ -79,7 +83,7 @@ global.wx = {
   hideToast() {},
   getStorageSync: (k) => storage[k],
   setStorageSync: (k, v) => { storage[k] = v; },
-  showModal() {},
+  showModal: (o) => modals.push(o),
   navigateTo() {},
   previewImage() {},
   createMapContext: () => ({
@@ -107,7 +111,27 @@ global.wx = {
 };
 let pageDef = null;
 global.Page = (def) => { pageDef = def; };
-global.getApp = () => ({ globalData: {} });
+
+/**
+ * getApp 桩：登录态由用例控制。默认「已登录」（地图页的绝大多数用例都在测有数据的渲染路径），
+ * 登录态相关的用例自己调到游客档。hasSession 单独给（= 本地有 token 的老用户，与 loggedIn 不同轴）。
+ */
+let loginCalls = 0;
+const appStub = {
+  globalData: { loggedIn: true },
+  hasSession: () => true,
+  login() {
+    loginCalls++;
+    appStub.globalData.loggedIn = true;
+    return Promise.resolve({});
+  },
+};
+function resetAppStub(over = {}) {
+  loginCalls = 0;
+  appStub.globalData.loggedIn = over.loggedIn !== undefined ? over.loggedIn : true;
+  appStub.hasSession = () => (over.hasSession !== undefined ? over.hasSession : true);
+}
+global.getApp = () => appStub;
 
 require('../miniprogram/pages/footprints/footprints.js');
 assert.ok(pageDef, 'footprints.js 应通过 Page() 交出页面对象');
@@ -156,6 +180,9 @@ function resetCanvasQueue() {
   pendingCanvas = [];
   canvasCalls = 0;
   toasts.length = 0;
+  modals.length = 0;
+  apiGeo.filteredItems = null; // 别让上一个用例的筛选态数据漏进下一个
+  resetAppStub();
 }
 
 /** 放行在途的 getCenterLocation 回读（FIFO，各自读放行时刻的 mapCameraCenter） */
@@ -775,4 +802,147 @@ test('P18 POI 标注开关（左下角「标志」）：默认关，点一下翻
 
   page.togglePoi();
   assert.equal(page.data.enablePoi, false, '再点一下关回去');
+});
+
+test('P19 分享：转发文案用未过滤总数（筛选态下不能把筛出的几条说成全部）', async () => {
+  resetCanvasQueue();
+  resetStorage();
+  const mk = (id) => ({ id, title: '足迹' + id, visitDate: '2026-09-05', location: { province: '浙江省', city: '杭州市', name: '西湖' } });
+  apiGeo.items = [mk('a'), mk('b'), mk('c')];
+  const page = makePage();
+  page.onLoad();
+  await page.loadAll();
+
+  const msg = page.onShareAppMessage();
+  assert.equal(msg.path, '/pages/footprints/footprints', '转发的就是足迹页');
+  assert.match(msg.title, /3 条足迹/, `总数 3 条要写进文案：${msg.title}`);
+
+  // 筛选生效：屏上只剩 1 条，但文案仍说 3（那条 query 请求由 filteredItems 桩接管）
+  apiGeo.filteredItems = [mk('a')];
+  page.setData({ filter: { province: '浙江省', year: '', category: '' } });
+  await page.loadAll();
+  assert.equal(page.data.records.length, 1, '筛选后屏上只剩 1 条');
+  assert.match(page.onShareAppMessage().title, /3 条足迹/, '筛选态下文案要用未过滤快照的总数');
+});
+
+test('P20 分享：空白账号的文案不出现 0 条；朋友圈口径同转发', async () => {
+  resetCanvasQueue();
+  resetStorage();
+  apiGeo.items = [];
+  const page = makePage();
+  page.onLoad();
+  await page.loadAll();
+
+  const msg = page.onShareAppMessage();
+  assert.doesNotMatch(msg.title, /0 条/, `没记录过就别报数字：${msg.title}`);
+  assert.ok(msg.title.length > 0);
+  const tl = page.onShareTimeline();
+  assert.equal(tl.title, msg.title, '两个入口文案一致');
+});
+
+/* ---------------- 登录态闸门（2026-09-23：游客别再撞 401 / 白填一整张表单） ----------------
+ * 页面形态选的是「触点级拦截」：页面照常渲染（游客看空地图 + 可点的登录引导），
+ * 只有写操作（＋）前才弹窗征得同意。读接口一个都不发——/geo 对游客必 401，
+ * 发出去只会把首屏落成整页错误态，而这里该给的是引导。 */
+
+/** 排空「弹窗确认 → login → syncData」这条 promise 链 */
+async function drain() {
+  for (let i = 0; i < 4; i++) await tick();
+}
+
+test('P21 游客进页：一个请求都不发、不是错误态，空地图上给可点的登录引导', async () => {
+  resetCanvasQueue();
+  resetAppStub({ loggedIn: false, hasSession: false });
+  apiCalls.length = 0;
+  apiGeo.items = GEO_ONE.map((x) => Object.assign({}, x));
+
+  const page = makePage();
+  page.onLoad();
+  await tick();
+  assert.equal(apiCalls.length, 0, '游客不发 /geo：发出去只会落成整页错误态');
+  assert.equal(page.data.notLoggedIn, true);
+  assert.equal(page.data.error, '', '游客不是失败态');
+  assert.equal(page.data.loading, false, '别停在「加载中…」');
+  assert.equal(page.data.records.length, 0);
+  assert.equal(page.data.markers.length, 0);
+  assert.equal(page.data.totalCount, 0, '分享文案不该说出别人的数字');
+  apiGeo.items = [];
+});
+
+test('P22 老用户（本地有会话）进页：静默恢复登录后照常拉数据', async () => {
+  resetCanvasQueue();
+  resetAppStub({ loggedIn: false, hasSession: true });
+  apiGeo.items = GEO_ONE.map((x) => Object.assign({}, x));
+
+  const page = makePage();
+  page.onLoad();
+  await drain();
+  await settle();
+  assert.equal(loginCalls, 1, '本地有 token 就静默恢复，不让老用户重登一次');
+  assert.equal(page.data.notLoggedIn, false);
+  assert.ok(apiCalls.includes('/footprint-records/geo'), '恢复登录后照常拉数据');
+  assert.equal(page.data.records.length, 3);
+  apiGeo.items = [];
+});
+
+test('P23 游客点 ＋：弹窗取消 → 不登录、不开表单', async () => {
+  resetCanvasQueue();
+  resetAppStub({ loggedIn: false, hasSession: false });
+  const page = makePage();
+  page.openAdd();
+  assert.equal(page.data.formVisible, false, '游客不能直接开表单：填完整张表才被告知未登录是 bug');
+  assert.equal(modals.length, 1, '先弹窗问一次');
+  modals[0].success({ confirm: false });
+  await drain();
+  assert.equal(loginCalls, 0);
+  assert.equal(page.data.formVisible, false);
+});
+
+test('P24 游客点 ＋：确认后静默登录、开表单，并在后台把地图数据补上', async () => {
+  resetCanvasQueue();
+  resetAppStub({ loggedIn: false, hasSession: false });
+  apiGeo.items = GEO_ONE.map((x) => Object.assign({}, x));
+
+  const page = makePage();
+  page.openAdd();
+  modals[0].success({ confirm: true });
+  await drain();
+  assert.equal(loginCalls, 1);
+  assert.equal(page.data.formVisible, true, '登录成功接着把表单打开（用户点 ＋ 的意图要落地）');
+  assert.equal(page.data.formRecord, null, '仍是新增态');
+  await settle();
+  assert.equal(page.data.notLoggedIn, false);
+  assert.ok(apiCalls.includes('/footprint-records/geo'), '登录后顺手把游客态缺的地图数据补上');
+  assert.equal(page.data.records.length, 3);
+  apiGeo.items = [];
+});
+
+test('P25 已登录点 ＋：不弹窗，同帧开表单（不绕微任务，交互零延迟）', () => {
+  resetCanvasQueue();
+  const page = makePage();
+  page.openAdd();
+  assert.equal(modals.length, 0, '已登录不该再拦一道');
+  assert.equal(page.data.formVisible, true, '同帧生效：无需 await');
+  assert.equal(page.data.formRecord, null);
+});
+
+test('P26 onShow 只在登录态变了才重对齐（tab 页去「我的」登录后切回来要补数据）', async () => {
+  resetCanvasQueue();
+  resetAppStub({ loggedIn: false, hasSession: false });
+  apiGeo.items = GEO_ONE.map((x) => Object.assign({}, x));
+
+  const page = makePage();
+  page.onLoad();
+  await drain();
+  apiCalls.length = 0;
+  page.onShow();
+  assert.equal(apiCalls.length, 0, '登录态没变就别每次切 tab 都重拉一遍');
+
+  appStub.globalData.loggedIn = true; // 用户去「我的」登录了
+  page.onShow();
+  await settle();
+  assert.ok(apiCalls.includes('/footprint-records/geo'), '从别处登录后切回本页要补数据');
+  assert.equal(page.data.notLoggedIn, false);
+  assert.equal(page.data.records.length, 3);
+  apiGeo.items = [];
 });
