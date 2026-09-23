@@ -1,5 +1,5 @@
 // 足迹 tab 主页：全屏地图（本地网格聚合 + 自绘小圆气泡 marker）+ 详情/表单半屏；
-// 浮层只留 筛选 / 搜索 / 列表 / 新增 四个入口（统计页入口在列表页顶部栏），本页只负责地图与聚合。
+// 浮层只留 筛选 / 搜索 / 图层 / 列表 / 新增 五个入口（统计页入口在列表页顶部栏），本页只负责地图与聚合。
 const api = require('../../services/api');
 const geo = require('../../utils/footprint-geo');
 const config = require('../../config/index');
@@ -11,6 +11,8 @@ const CATEGORY_KEYS = config.FOOTPRINT_CATEGORIES.map((c) => c.key);
 const CAT_MARKER_SIZE = 26;
 
 const MAP_ID = 'footprintMap';
+/** 图层选择的本地存储 key：足迹地图常看同一档，切一次就该记住（命名口径同 tracks 页的 VIEW_MODE_KEY） */
+const MAP_LAYER_KEY = 'footprint_map_layer';
 /** map scale 上限（文档 scale: 3~20）：到顶仍同格（同坐标点本地网格也拆不开）→ 成员半屏列表兜底 */
 const MAX_SCALE = 20;
 /** 点簇气泡一次放大的层级步长（对齐原生 zoomOnClick 手感） */
@@ -166,6 +168,18 @@ function noMatchToast(keyword) {
   return `没有匹配「${kw.length > 10 ? `${kw.slice(0, 10)}…` : kw}」的足迹`;
 }
 
+/**
+ * 读回上次的图层：只认 satellite 这一个存值，其余（没存过 / 存坏 / 读失败）一律标准图。
+ * storage 读失败不能拖垮进页——地图页唯一的入口就是它自己。
+ */
+function readLayer() {
+  try {
+    return wx.getStorageSync(MAP_LAYER_KEY) === 'satellite' ? 'satellite' : 'standard';
+  } catch (e) {
+    return 'standard';
+  }
+}
+
 Page({
   data: {
     loading: true,
@@ -183,13 +197,29 @@ Page({
     callouts: [], // 叶照片卡内容（有 coverPhoto 的单点），配合 map 的 customCallout slot
     center: { latitude: 30.5, longitude: 114.3 }, // 视野由 fitBounds 覆盖，这里只是无数据时的兜底
     scale: 12,
+    mapType: 'standard', // 底图图层：standard / satellite，翻给 <map> 的 enable-satellite
     detailVisible: false, // 详情半屏（components/footprint-detail）
     detailRecord: null, // 轻量 DTO 即可，缺字段由组件补拉
     clusterSheet: { visible: false, records: [] }, // 最大缩放兜底：同处多条足迹的成员列表
     formVisible: false, // 新增/编辑半屏表单（components/footprint-form）
     formRecord: null, // 传入记录即为编辑态
   },
-  onLoad() { this.loadAll(); },
+  onLoad() {
+    // 首帧渲染前把图层读回来：写在 data 字面量里只能给默认值，读库必须赶在 onLoad
+    this.setData({ mapType: readLayer() });
+    this.loadAll();
+  },
+
+  /** 标准 ⇄ 卫星：切的是底图，数据与聚合一律不重建（重建会让 marker 闪一下） */
+  toggleLayer() {
+    const mapType = this.data.mapType === 'satellite' ? 'standard' : 'satellite';
+    try {
+      wx.setStorageSync(MAP_LAYER_KEY, mapType);
+    } catch (e) {
+      // 写失败只是下次进页回到标准档，不值得打断这次切换
+    }
+    this.setData({ mapType });
+  },
 
   async loadAll() {
     // 请求序号守卫：只应用最后一次结果，防竞态

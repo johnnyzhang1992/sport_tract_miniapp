@@ -62,6 +62,9 @@ let centerMode = 'ok';
 let pendingCenter = [];
 /** 页面 toast 记录（无匹配结果的提示走 toast，不再在地图上摆浮层文本） */
 const toasts = [];
+/** wx storage 桩：底图图层的选择记在这张表里 */
+let storage = {};
+function resetStorage() { storage = {}; }
 /** 相机中心/回读形态都是模块级状态：用完必须还原，否则漏给后面的用例 */
 function resetCameraStub() {
   centerMode = 'ok';
@@ -74,6 +77,8 @@ global.wx = {
   getSystemInfoSync: () => ({ windowWidth: 393, windowHeight: 851 }),
   showToast: (o) => toasts.push(o && o.title),
   hideToast() {},
+  getStorageSync: (k) => storage[k],
+  setStorageSync: (k, v) => { storage[k] = v; },
   showModal() {},
   navigateTo() {},
   previewImage() {},
@@ -687,4 +692,66 @@ test('P14 单点 marker 用分类图标（白圆底），未分类仍走灰色�
   const dot = page2.data.markers.find((m) => m.id === 1);
   assert.equal(dot.iconPath, '/assets/icons/marker-dot.png', '未分类保持原圆点，不硬塞「其他」图标');
   apiGeo.items = [];
+});
+
+/* ---------------- 图层切换（2026-09-23：标准 ⇄ 卫星，选择记本地） ---------------- */
+
+/** 与 footprints.js 的 MAP_LAYER_KEY 同 CLUSTER_ID_BASE 的约定：测试侧写死，页内改名就该红 */
+const MAP_LAYER_KEY = 'footprint_map_layer';
+
+test('P16 图层切换只翻 mapType：一次 setData、写进本地，不重拉数据也不动 markers', () => {
+  resetCanvasQueue();
+  resetStorage();
+  const page = makePage();
+  const markers = ['keep-me']; // 哨兵：切底图期间 markers 必须原地不动（连数组身份都不换）
+  page.setData({ markers });
+  const seqBefore = page._seq;
+  const callsBefore = apiCalls.length;
+  const { patches, stop } = recordPatches(page);
+
+  page.toggleLayer();
+  stop();
+  assert.equal(page.data.mapType, 'satellite');
+  assert.equal(storage[MAP_LAYER_KEY], 'satellite', '切换要记住，下次进页仍是这档');
+  assert.deepEqual(patches, [{ mapType: 'satellite' }], '切底图不该捎带写相机/清 markers/置 loading（会闪屏）');
+  assert.equal(page.data.markers, markers, 'markers 身份不变');
+  assert.equal(page._seq, seqBefore, '不重拉 /geo：切的是底图不是数据');
+  assert.equal(apiCalls.length, callsBefore);
+
+  const back = recordPatches(page);
+  page.toggleLayer();
+  back.stop();
+  assert.equal(page.data.mapType, 'standard');
+  assert.equal(storage[MAP_LAYER_KEY], 'standard', '切回标准也要覆盖存值');
+});
+
+test('P17 进页读回上次图层：存过卫星即开卫星；没存过/读写炸了都回落标准且不拖垮进页', () => {
+  resetCanvasQueue();
+  resetStorage();
+  storage[MAP_LAYER_KEY] = 'satellite';
+  const page = makePage();
+  page.onLoad();
+  assert.equal(page.data.mapType, 'satellite', 'onLoad 要在首帧渲染前把图层读回来（否则先闪一帧标准图）');
+
+  resetStorage();
+  const fresh = makePage();
+  fresh.onLoad();
+  assert.equal(fresh.data.mapType, 'standard', '没存过 → 默认标准图');
+
+  const origGet = global.wx.getStorageSync;
+  global.wx.getStorageSync = () => { throw new Error('storage destroyed'); };
+  const broken = makePage();
+  assert.doesNotThrow(() => broken.onLoad(), '读 storage 炸了不能把进页一起拖垮');
+  assert.equal(broken.data.mapType, 'standard');
+  global.wx.getStorageSync = origGet;
+
+  const origSet = global.wx.setStorageSync;
+  global.wx.setStorageSync = () => { throw new Error('quota exceeded'); };
+  const writer = makePage();
+  writer.onLoad();
+  assert.doesNotThrow(() => writer.toggleLayer(), '写失败只是下次回默认档，不该打断本次切换');
+  assert.equal(writer.data.mapType, 'satellite');
+  global.wx.setStorageSync = origSet;
+
+  resetStorage();
 });

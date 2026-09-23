@@ -1,11 +1,12 @@
 <view class="page">
-  <!-- 全屏地图 + 浮层入口（左上：筛选；右上：搜索；右下：列表 / ＋） -->
+  <!-- 全屏地图 + 浮层入口（左上：筛选；右上：搜索；右下：图层 / 列表 / ＋） -->
   <map
     id="footprintMap"
     class="fp-map"
     longitude="{{center.longitude}}" latitude="{{center.latitude}}" scale="{{scale}}"
     markers="{{markers}}"
     show-location
+    enable-satellite="{{mapType === 'satellite'}}"
     bindload="onMapLoad"
     bindmarkertap="onMarkerTap"
     bindcallouttap="onMarkerTap"
@@ -63,8 +64,12 @@
     <view wx:if="{{!searchOpen && keyword}}" class="tool-badge">1</view>
   </view>
 
-  <!-- 右下竖排：列表 / 新增 -->
+  <!-- 右下竖排：图层 / 列表 / 新增。图层只一个字形不表达「当前是哪张底图」，
+       卫星档沿用筛选那圈蓝环（.tool-btn-on）来表达，不另造样式 -->
   <view class="tool-col tool-col-right">
+    <view class="tool-btn {{mapType === 'satellite' ? 'tool-btn-on' : ''}}" hover-class="tool-btn-hover" bindtap="toggleLayer">
+      <image class="tool-icon" src="/assets/icons/lucide-layers.png" mode="aspectFit" />
+    </view>
     <view class="tool-btn" hover-class="tool-btn-hover" bindtap="goList">
       <image class="tool-icon" src="/assets/icons/lucide-text-align-justify.png" mode="aspectFit" />
     </view>

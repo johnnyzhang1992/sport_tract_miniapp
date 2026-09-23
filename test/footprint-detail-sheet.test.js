@@ -7,12 +7,17 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
 let apiCalls = [];
+let delCalls = []; // DELETE 调用记录（删除入口从底部按钮挪到标题行图标，契约得先钉住）
 let detailResult = null; // GET /:id 的返回（用例控制）
 let detailFails = false;
 const fakeApi = {
   get(url) {
     apiCalls.push(url);
     return detailFails ? Promise.reject(new Error('网络不给力')) : Promise.resolve(detailResult);
+  },
+  del(url) {
+    delCalls.push(url);
+    return Promise.resolve({});
   },
 };
 require.cache[require.resolve('../miniprogram/services/api.js')] = {
@@ -117,4 +122,33 @@ test('分类标签：有分类给中文名与透明底图标，未分类给空�
   const c2 = await open(LIST_CARD);
   assert.equal(c2.data.detail.categoryLabel, '', '未分类不显示标签');
   assert.equal(c2.data.detail.categoryIcon, '');
+});
+
+/**
+ * 编辑/删除入口的契约（2026-09-23 从内容末尾的两个小胶囊挪进标题行图标）：
+ * 触发点换了，抛给页面的东西不能变——编辑要带完整 DTO（页面直接回填表单，不再二次 GET），
+ * 删除必须先过二次确认，取消就一个请求都不发。
+ */
+test('编辑抛完整 DTO / 删除先过二次确认', async () => {
+  delCalls = [];
+  const c = await open(LIST_CARD);
+  const events = [];
+  c.triggerEvent = (name, detail) => events.push({ name, detail });
+  c.onEdit();
+  assert.equal(events[0].name, 'edit');
+  assert.equal(events[0].detail.id, 'r1', '抛给页面的是补拉后的完整 DTO');
+  assert.deepEqual(events[0].detail.photos, LIST_CARD.photos, '原图串也得带上（表单回填照片用）');
+
+  const origModal = global.wx.showModal;
+  let modalOpts = null;
+  global.wx.showModal = (o) => { modalOpts = o; };
+  c.onDelete();
+  assert.ok(modalOpts, '删除必须先弹确认框');
+  assert.ok(modalOpts.content.includes('西湖'), '确认文案点名是哪条足迹');
+  modalOpts.success({ confirm: false });
+  assert.deepEqual(delCalls, [], '取消确认不该删数据');
+  modalOpts.success({ confirm: true });
+  for (let i = 0; i < 6; i++) await Promise.resolve();
+  assert.deepEqual(delCalls, ['/footprint-records/r1']);
+  global.wx.showModal = origModal;
 });

@@ -27,8 +27,17 @@
   justify-content: space-between;
   padding: 28rpx 0 8rpx;
 }
-.sheet-title {
+/* 标题 + 操作图标成一组靠左（原来标题 flex:1 把图标顶到行尾、贴着 ✕）；
+   min-width:0 配 flex:0 1 auto 才让长标题该缩就缩、出省略号，图标不被挤掉 */
+.head-left {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+.sheet-title {
+  flex: 0 1 auto;
+  min-width: 0;
   font-size: 32rpx;
   font-weight: 600;
   color: #1f2329;
@@ -97,23 +106,16 @@
   border-radius: 16rpx;
   background: #f2f3f5;
 }
-.sheet-actions {
+/* 标题行右侧的操作图标（编辑 / 删除），与 ✕ 同一档基线；
+   内边距把可点区域撑到 64rpx 见方（图标本身只有 32rpx，裸图标太难点） */
+.sheet-act {
+  flex: none;
   display: flex;
-  justify-content: flex-end;
-  gap: 16rpx;
-  margin-top: 28rpx;
+  align-items: center;
+  justify-content: center;
+  padding: 16rpx 0 16rpx 28rpx;
 }
-.act-btn {
-  margin: 0 0 0 16rpx;
-  padding: 0 32rpx;
-  height: 64rpx;
-  line-height: 64rpx;
-  font-size: 26rpx;
-  color: #2b6cf6;
-  background: #eef4ff;
-  border-radius: 16rpx;
-}
-.act-btn.danger {
-  color: #e54d42;
-  background: #fdecec;
+.sheet-act-icon {
+  width: 32rpx;
+  height: 32rpx;
 }
