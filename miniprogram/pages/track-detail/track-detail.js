@@ -13,6 +13,7 @@ const { uploadPhoto } = require('../../services/oss-upload');
 const { formatDuration, formatPaceParts } = require('../../utils/format');
 const { getPaceScale } = require('../../utils/pace-scale');
 const { computeRunPaceZones } = require('../../utils/track-pace');
+const { buildAltitudeChart } = require('../../utils/track-altitude');
 
 Page({
   data: {
@@ -61,13 +62,9 @@ Page({
 
       this.activity = activity; // 保留原始数据（回放用）
 
-      // 海拔曲线数据（抽稀到 ≤ 60 点，只有有效海拔才展示）
-      const altPts = (activity.trackPoints || []).filter((p) => p.altitude != null);
-      const step = Math.max(1, Math.ceil(altPts.length / 60));
-      const altitudeChart = altPts
-        .filter((_, i) => i % step === 0)
-        .map((p, i) => ({ label: String(i), value: p.altitude }));
-
+      // 海拔曲线数据：只有徒步/爬山出（其余类型 GPS 逐点海拔基本是噪声，曲线没参考意义），
+      // 抽稀口径见 utils/track-altitude.js；空数组时 wxml 的 length>1 自然不渲染
+      const altitudeChart = buildAltitudeChart(activity.trackPoints, activity.type);
 
       const fmtTime = (ts) => {
         const d = new Date(ts);
@@ -102,12 +99,9 @@ Page({
         { label: '爬升高度', value: String(activity.elevationGain || 0), unit: '米' },
         (activity.markers || []).length > 0 && { label: '打点', value: String(activity.markers.length), unit: '个' },
       ].filter(Boolean);
-      // 轨迹线着色：徒步/爬山且有海拔数据 → 按海拔；否则按配速（绝对刻度，越快越偏黄）
-      const colorMode =
-        ['hiking', 'mountaineering'].includes(activity.type) &&
-        (activity.trackPoints || []).some((p) => p.altitude != null)
-          ? 'altitude'
-          : 'pace';
+      // 轨迹线着色：徒步/爬山且有海拔数据 → 按海拔；否则按配速（绝对刻度，越快越偏黄）。
+      // 与上面海拔曲线同一条规则：曲线非空 ⟺ 该类型在白名单里且有有效海拔点
+      const colorMode = altitudeChart.length > 0 ? 'altitude' : 'pace';
       // 最高海拔点（仅海拔着色时在图上标注坐标与海拔值）
       let peakMarker = null;
       if (colorMode === 'altitude') {
@@ -408,10 +402,10 @@ Page({
     return achievements;
   },
 
-  /** 单段明细：按每公里切分段（序号/时间/配速），最后不足 1km 记为余段 */
   /** 每公里分段
-   *  pauseGap 或相邻点间隔 >60s 视为断档：断档时间不计入段时长，距离累计保留跨档延续；
-   *  每凑满 1km 记一段（溢出滚入下一公里），仅轨迹末尾剩余标为余段（partial），最快段只在完整段中选 */
+   *  pauseGap / 服务端标出的静止时段（still）/ 相邻点间隔 >60s 视为不计时：断档时间不计入段时长，
+   *  距离累计保留跨档延续；每凑满 1km 记一段（溢出滚入下一公里），仅轨迹末尾剩余标为余段（partial）
+   *  still 与头部「运动时长」同口径（服务端 finish 时已扣除静止），否则各段用时之和会大于运动时长 */
   computeKmSegments(points) {
     if (!points || points.length < 2) return [];
     const toRad = (d) => (d * Math.PI) / 180;
@@ -445,8 +439,8 @@ Page({
     for (let i = 1; i < points.length; i++) {
       const p = points[i];
       const dt = (p.timestamp - prev.timestamp) / 1000;
-      // 暂停/断档：时间不计入，距离零头保留，恢复后继续往 1km 累计
-      if (p.pauseGap || !Number.isFinite(dt) || dt < 0 || dt > GAP_SEC) {
+      // 暂停/静止/断档：时间不计入，距离零头保留，恢复后继续往 1km 累计
+      if (p.pauseGap || p.still || !Number.isFinite(dt) || dt < 0 || dt > GAP_SEC) {
         prev = p;
         continue;
       }
