@@ -94,10 +94,11 @@ Page({
           : Math.max(activity.duration || 0, Math.round((endTime - activity.startTime) / 1000));
       const metrics = [
         { label: '运动时长', value: formatDuration(activity.duration) },
-        paceParts && { label: '平均配速', value: paceParts.value, unit: paceParts.unit },
+        // 两个配速项不带 /公里：标签已写明是配速，与单段明细列头同口径
+        paceParts && { label: '平均配速', value: paceParts.value },
         { label: '运动消耗', value: String(activity.calories || 0), unit: '千卡' },
         { label: '总时长', value: formatDuration(totalSec) },
-        fastestParts && { label: '最快 1km', value: fastestParts.value, unit: fastestParts.unit },
+        fastestParts && { label: '最快 1km', value: fastestParts.value },
         { label: '爬升高度', value: String(activity.elevationGain || 0), unit: '米' },
         (activity.markers || []).length > 0 && { label: '打点', value: String(activity.markers.length), unit: '个' },
       ].filter(Boolean);
@@ -128,9 +129,6 @@ Page({
           iconImg: meta.iconImg || '',
           label: meta.label || activity.type,
           distanceKm: (activity.distance / 1000).toFixed(2),
-          durationText: formatDuration(activity.duration),
-          paceValue: (formatPaceParts(activity.avgPace) || {}).value || '—',
-          paceUnit: (formatPaceParts(activity.avgPace) || {}).unit || '',
           startTimeText: fmtTime(activity.startTime),
           endTimeText: fmtTime(endTime),
           avgAccuracy,

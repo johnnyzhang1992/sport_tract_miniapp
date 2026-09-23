@@ -9,4 +9,4 @@
 | `marker-form` | 打点弹窗（类型 + 备注 + 拍照传 OSS + 地址） | M2/M3 |
 | `track-card` | 轨迹列表卡片 | M3（当前列表页已内联实现） |
 | `stat-chart` | 图表（柱状统计 + 折线海拔/配速），Canvas 自绘 | M4 |
-| `share-card` | 分享海报（Canvas 绘制 + 小程序码） | M4 |
+| `share-card` | 分享海报（五段式 Canvas：顶部指标 / 轨迹 / 运动数据 / 单段明细 / 底部 logo+小程序码；高度自适应） | M4 |

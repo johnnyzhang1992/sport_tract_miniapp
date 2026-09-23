@@ -2,11 +2,23 @@
  * share-card 分享海报组件（决策 F21/F22）
  * - 点击「分享海报」→ 预览弹窗内 Canvas 绘制海报 → 保存到相册 / 分享给朋友
  * - canvas 放在预览弹窗内（可见区域），canvasToTempFilePath 转换可靠
- * props: activityId, activity(指标), mapPoints, miniCodeUrl
+ * - 五段式版面：顶部（左 类型+距离 / 右 昵称+开始时间）→ 运动轨迹 → 运动数据 → 单段明细 → 底部（左 logo+小程序名 / 右 小程序码）
+ *   高度随指标行数、单段行数自适应，尺寸算法集中在 utils/poster-layout
+ * props: activity(指标), mapPoints(轨迹点), metrics(与详情页同一份), kmSegs(与详情页同一份)
  * 方法: preview()；事件: posterready({ path }) 海报临时路径
  */
-const api = require('../../services/api');
 const loading = require('../../utils/loading');
+const { computePosterLayout, POSTER } = require('../../utils/poster-layout.js');
+
+const BRAND_NAME = '小迹一下';
+const LOGO_SRC = '/assets/logo.png';
+const APP_CODE_SRC = '/assets/app_code.jpg';
+const LOGO_SIZE = 36; // 底部三件套：logo 与文案以 44 的码为基准撑住左侧
+const BRAND_FONT = 14; // 与 36 的 logo 比着走：15 偏重，12 又压不住右侧 44 的码
+const APP_CODE_SIZE = 44;
+const INK = '#1f2329'; // 与页面主文字色一致
+const LABEL = '#8a93a6'; // 与详情页 md-label 同色
+const MARGIN = 16;
 
 /** 圆角矩形路径（arcTo 手写，真机基础库无 ctx.roundRect 时兜底为直角） */
 function roundRectPath(ctx, x, y, w, h, r) {
@@ -19,11 +31,13 @@ function roundRectPath(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-/** 海拔色带（与 track-map 一致）：蓝 → 绿 → 黄 → 红 12 档 */
-const ALTITUDE_COLORS = [
-  '#2979ff', '#1e8dd2', '#14a2a6', '#09b679', '#0ac850', '#4ccb3a',
-  '#8ecf25', '#d1d20f', '#fec805', '#fb9b15', '#f76f26', '#f44336',
-];
+/** 超宽截断加省略号（调用前需已设好目标字号，measureText 才准） */
+function ellipsize(ctx, text, maxW) {
+  if (ctx.measureText(text).width <= maxW) return text;
+  let t = text;
+  while (t.length > 0 && ctx.measureText(t + '…').width > maxW) t = t.slice(0, -1);
+  return `${t}…`;
+}
 
 /** 两点间大圆距离（米），公里标定位用 */
 function distM(a, b) {
@@ -44,24 +58,35 @@ Component({
     },
   },
   properties: {
-    activityId: { type: String, value: '' },
     activity: { type: Object, value: null },
     mapPoints: { type: Array, value: [] },
-    miniCodeUrl: { type: String, value: '' },
+    metrics: { type: Array, value: [] },
+    kmSegs: { type: Array, value: [] },
   },
 
   data: {
     previewVisible: false,
     previewPath: '', // 海报临时文件（保存/分享用）
     saving: false,
-    showMiniCode: false, // 海报是否带小程序码（功能暂时下线：开关已注释，保持 false）
     showKmMarks: true, // 海报是否标注公里数（轨迹上的整公里圆点序号）
+    posterStyle: 'width: 300px; height: 400px;', // 弹窗内显示尺寸（自适应海报高度后等比缩放到放得下）
   },
 
   methods: {
     /** 打开预览弹窗并绘制海报 */
     async preview() {
-      this.setData({ previewVisible: true });
+      const info = wx.getWindowInfo ? wx.getWindowInfo() : {};
+      this._layout = computePosterLayout({
+        metricsCount: (this.data.metrics || []).length,
+        segCount: (this.data.kmSegs || []).length,
+        screenHeight: info.windowHeight,
+        pixelRatio: info.pixelRatio,
+      });
+      const L = this._layout;
+      this.setData({
+        previewVisible: true,
+        posterStyle: `width: ${L.cssWidth}px; height: ${L.cssHeight}px;`,
+      });
       loading.show('生成海报…');
       try {
         // 等弹窗渲染出 canvas
@@ -81,8 +106,8 @@ Component({
       }
     },
 
-    /** 绘制海报到预览弹窗内的 canvas（无小程序码） */
-    drawPoster() {
+    /** 取预览弹窗内的 canvas 节点 */
+    queryCanvas() {
       return new Promise((resolve, reject) => {
         wx.createSelectorQuery()
           .in(this)
@@ -93,58 +118,196 @@ Component({
               reject(new Error('canvas 不存在'));
               return;
             }
-            const canvas = res[0].node;
-            this._canvasNode = canvas;
-            const { width, height } = res[0];
-            const ctx = canvas.getContext('2d');
-            const dpr = (wx.getWindowInfo ? wx.getWindowInfo().pixelRatio : 2) || 2;
-            canvas.width = width * dpr;
-            canvas.height = height * dpr;
-            ctx.scale(dpr, dpr);
-            ctx.clearRect(0, 0, width, height);
-
-            // 背景（浅色：白底黑字）
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, width, height);
-
-            // 标题（两行，居左）：第一行运动类型，第二行 公里数（加大加粗）
-            const act = this.data.activity || {};
-            ctx.textAlign = 'left';
-            ctx.fillStyle = 'rgba(31,35,41,0.7)';
-            ctx.font = '13px sans-serif';
-            ctx.fillText(act.label || '运动', 16, 30);
-            // 数字加大加粗，"公里"保持原样（小号灰）；先测宽再切字体（避免 13px 测量 24px 数字偏窄）
-            const kmText = `${act.distanceKm || '0.00'}`;
-            ctx.fillStyle = '#1f2329';
-            ctx.font = 'bold 24px sans-serif';
-            const kmW = ctx.measureText(kmText).width;
-            ctx.fillText(kmText, 16, 58);
-            ctx.fillStyle = 'rgba(31,35,41,0.7)';
-            ctx.font = '13px sans-serif';
-            ctx.fillText('公里', 16 + kmW + 6, 58);
-
-            // 轨迹（大块完整展示）
-            this.drawTrack(ctx, width, height);
-
-            // 底部布局由小程序码是否绘出决定：带码 → 指标卡上移，底部左侧两行文字；
-            // 无码（未开启/取码失败）→ 原布局（指标卡 + 品牌行）
-            this.drawMiniCode(ctx, canvas, width, height)
-              .catch((e) => {
-                console.warn('[share-card] 小程序码绘制跳过', e);
-                return false;
-              })
-              .then((drew) => {
-                if (drew) {
-                  this.drawStatsCards(ctx, width, height, act, 292);
-                  this.drawBottomWithCode(ctx, width, height, act);
-                } else {
-                  this.drawStatsCards(ctx, width, height, act, 304);
-                  this.drawBrandRow(ctx, width, height, act);
-                }
-                resolve();
-              });
+            resolve(res[0].node);
           });
       });
+    },
+
+    /** 按自适应版面重绘海报 */
+    async drawPoster() {
+      const L = this._layout;
+      const canvas = await this.queryCanvas();
+      this._canvasNode = canvas;
+      const ctx = canvas.getContext('2d');
+      // 位图尺寸按导出缩放（弹窗里只是等比显示，存下来的图要够清晰）
+      canvas.width = L.width * L.exportScale;
+      canvas.height = L.height * L.exportScale;
+      ctx.scale(L.exportScale, L.exportScale);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, L.width, L.height);
+
+      this._images = {
+        logo: await this.loadImage(canvas, LOGO_SRC),
+        appCode: await this.loadImage(canvas, APP_CODE_SRC),
+      };
+
+      this.drawHeader(ctx, L);
+      this.drawTrack(ctx, L);
+      this.drawMetrics(ctx, L);
+      this.drawSegs(ctx, L);
+      this.drawFooter(ctx, L);
+    },
+
+    /** 读包内图片；失败只记一条带路径的日志并返回 null（海报照出，缺哪个少哪个） */
+    loadImage(canvas, src) {
+      return new Promise((resolve) => {
+        const im = canvas.createImage();
+        im.onload = () => resolve(im);
+        im.onerror = (e) => {
+          console.warn(`[share-card] 图片加载失败：${src}`, (e && e.message) || '');
+          resolve(null);
+        };
+        im.src = src;
+      });
+    },
+
+    /** 顶部：左 类型 + 距离（大数字），右 昵称 + 开始时间；两列以墨迹中心同轴 */
+    drawHeader(ctx, L) {
+      const act = this.data.activity || {};
+      const LABEL_PX = 13;
+      const NUM_PX = 24;
+      const LABEL_Y = 30;
+      const NUM_Y = 58;
+      const NICK_PX = 12;
+      const LINE_GAP = 18; // 右列两行基线间距
+      const CAP = 0.72; // 大写高/字号，估算墨迹上下沿用
+      ctx.textAlign = 'left';
+      ctx.fillStyle = LABEL;
+      ctx.font = `${LABEL_PX}px sans-serif`;
+      ctx.fillText(act.label || '运动', MARGIN, LABEL_Y);
+      // 数字加大加粗，"公里"保持原样（小号灰）；先测宽再切字体（避免 13px 测量 24px 数字偏窄）
+      const kmText = `${act.distanceKm || '0.00'}`;
+      ctx.fillStyle = INK;
+      ctx.font = `bold ${NUM_PX}px sans-serif`;
+      const kmW = ctx.measureText(kmText).width;
+      ctx.fillText(kmText, MARGIN, NUM_Y);
+      ctx.fillStyle = LABEL;
+      ctx.font = `${LABEL_PX}px sans-serif`;
+      ctx.fillText('公里', MARGIN + kmW + 6, NUM_Y);
+
+      const leftMid = (LABEL_Y - LABEL_PX * CAP + NUM_Y) / 2;
+      const nickY = leftMid - (LINE_GAP - NICK_PX * CAP) / 2;
+      const u = getApp().globalData.userInfo || {};
+      ctx.textAlign = 'right';
+      ctx.fillStyle = INK;
+      ctx.font = `600 ${NICK_PX}px sans-serif`;
+      // 左列最宽约到 MARGIN+100，右列限宽到它右侧，长昵称省略号截断
+      const nick = ellipsize(ctx, u.nickname || '运动用户', L.width - MARGIN * 2 - 100);
+      ctx.fillText(nick, L.width - MARGIN, nickY);
+      if (act.startTimeText) {
+        ctx.fillStyle = LABEL;
+        ctx.font = '10px sans-serif';
+        ctx.fillText(act.startTimeText, L.width - MARGIN, nickY + LINE_GAP);
+      }
+      ctx.textAlign = 'left';
+    },
+
+    /** 小标题（运动数据 / 单段明细） */
+    drawSectionTitle(ctx, text, top) {
+      ctx.textAlign = 'left';
+      ctx.fillStyle = INK;
+      ctx.font = '600 12px sans-serif';
+      ctx.fillText(text, MARGIN, top + 17);
+    },
+
+    /** 运动数据：三列网格，label 上 + 数值下（与详情页 md-grid 同一形态） */
+    drawMetrics(ctx, L) {
+      const items = this.data.metrics || [];
+      if (!items.length) return;
+      const r = L.regions.metrics;
+      this.drawSectionTitle(ctx, '运动数据', r.top);
+      const colW = (L.width - MARGIN * 2) / r.cols;
+      items.forEach((m, i) => {
+        const x = MARGIN + (i % r.cols) * colW;
+        const cellTop = r.top + POSTER.SECTION_TITLE_H + Math.floor(i / r.cols) * POSTER.METRIC_ROW_H;
+        ctx.textAlign = 'left';
+        ctx.fillStyle = LABEL;
+        ctx.font = '9px sans-serif';
+        ctx.fillText(m.label, x, cellTop + 12);
+        ctx.fillStyle = INK;
+        ctx.font = '600 15px sans-serif';
+        const value = String(m.value == null ? '—' : m.value);
+        ctx.fillText(value, x, cellTop + 30);
+        if (m.unit) {
+          // 单位宽度差一档，必须用数值字体测出落点后再切小字
+          const valueW = ctx.measureText(value).width;
+          ctx.fillStyle = LABEL;
+          ctx.font = '9px sans-serif';
+          ctx.fillText(m.unit, x + valueW + 2, cellTop + 30);
+        }
+      });
+    },
+
+    /** 单段明细：# / 公里 / 用时 / 配速 四列（与详情页 seg-thead 同口径，全部展开） */
+    drawSegs(ctx, L) {
+      const segs = this.data.kmSegs || [];
+      if (!segs.length) return;
+      const r = L.regions.segs;
+      this.drawSectionTitle(ctx, '单段明细（每公里）', r.top);
+      const colNo = MARGIN;
+      const colDist = MARGIN + 34;
+      const colTime = MARGIN + 96;
+      const colPace = L.width - MARGIN;
+      const headY = r.top + POSTER.SECTION_TITLE_H + 13;
+      const lineY = r.top + POSTER.SECTION_TITLE_H + POSTER.SEG_HEAD_H - 2;
+      ctx.font = '9px sans-serif';
+      ctx.fillStyle = LABEL;
+      ctx.textAlign = 'left';
+      ['#', '公里', '用时'].forEach((t, i) => ctx.fillText(t, [colNo, colDist, colTime][i], headY));
+      ctx.textAlign = 'right';
+      ctx.fillText('配速', colPace, headY);
+      ctx.textAlign = 'left';
+      ctx.strokeStyle = '#eef0f3';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(MARGIN, lineY);
+      ctx.lineTo(L.width - MARGIN, lineY);
+      ctx.stroke();
+
+      segs.forEach((s, i) => {
+        const y = lineY + (i + 1) * POSTER.SEG_ROW_H - 5;
+        ctx.font = '10px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillStyle = s.partial ? '#ff9800' : INK;
+        ctx.fillText(s.partial ? '余' : String(s.idx), colNo, y);
+        ctx.fillStyle = INK;
+        ctx.fillText(s.distText, colDist, y);
+        ctx.fillText(s.durationText, colTime, y);
+        // 配速右对齐；最快段在它左侧贴一个橙色小标签（同右对齐，直接按配速宽度让位）
+        const pace = String(s.paceText || '—');
+        ctx.textAlign = 'right';
+        ctx.fillText(pace, colPace, y);
+        const paceW = ctx.measureText(pace).width; // 10px 字体下测宽，切小字前拿好
+        if (s.fastest) {
+          ctx.font = '8px sans-serif';
+          ctx.fillStyle = '#ff6b3d';
+          ctx.fillText('最快', colPace - paceW - 4, y);
+        }
+        ctx.textAlign = 'left';
+      });
+    },
+
+    /** 底部：左 logo + 小程序名，右 小程序码（包内静态图，不依赖接口）；三者以码高为基准垂直居中 */
+    drawFooter(ctx, L) {
+      const r = L.regions.footer;
+      const midY = r.top + POSTER.FOOTER_H / 2;
+      const { logo, appCode } = this._images || {};
+      if (logo) {
+        const y = midY - LOGO_SIZE / 2;
+        ctx.save();
+        roundRectPath(ctx, MARGIN, y, LOGO_SIZE, LOGO_SIZE, 8);
+        ctx.clip();
+        ctx.drawImage(logo, MARGIN, y, LOGO_SIZE, LOGO_SIZE);
+        ctx.restore();
+      }
+      ctx.textAlign = 'left';
+      ctx.fillStyle = INK;
+      ctx.font = `600 ${BRAND_FONT}px sans-serif`;
+      ctx.fillText(BRAND_NAME, MARGIN + LOGO_SIZE + 10, midY + BRAND_FONT * 0.35);
+      if (appCode) {
+        const y = midY - APP_CODE_SIZE / 2;
+        ctx.drawImage(appCode, L.width - MARGIN - APP_CODE_SIZE, y, APP_CODE_SIZE, APP_CODE_SIZE);
+      }
     },
 
     /** 切换公里数标注（重绘海报 + 刷新临时文件） */
@@ -159,102 +322,6 @@ Component({
       }
     },
 
-    /** 切换小程序码展示（重绘海报 + 刷新临时文件） */
-    async toggleMiniCode(e) {
-      this.setData({ showMiniCode: e.detail.value });
-      if (!this.data.previewVisible) return;
-      if (e.detail.value) this._miniCodeSrc = undefined; // 重新尝试取码
-      try {
-        await this.drawPoster();
-        this.setData({ previewPath: await this.toTempFile() });
-        if (e.detail.value && this._miniCodeSrc === null) {
-          wx.showToast({ title: '小程序码获取失败', icon: 'none' });
-        }
-      } catch (err) {
-        console.error('[share-card] 重绘失败', err);
-      }
-    },
-
-    /** 取小程序码图片源（url 为签名 OSS 地址；失败降级 base64；整体失败缓存 null） */
-    async ensureMiniCodeSrc() {
-      if (this._miniCodeSrc !== undefined) return this._miniCodeSrc;
-      try {
-        const res = await api.post('/share/mini-code', { activityId: this.data.activityId });
-        this._miniCodeSrc = res.url || res.base64 || null;
-      } catch (e) {
-        console.warn('[share-card] mini-code 接口失败', e);
-        this._miniCodeSrc = null;
-      }
-      return this._miniCodeSrc;
-    },
-
-    /** 画小程序码（底部右侧）+ 原引导文案；返回是否绘出（决定底部布局，失败降级无码） */
-    async drawMiniCode(ctx, canvas, width, height) {
-      if (!this.data.showMiniCode || !this.data.activityId) return false;
-      const src = await this.ensureMiniCodeSrc();
-      if (!src) return false;
-      let img;
-      try {
-        img = await new Promise((resolve, reject) => {
-          const im = canvas.createImage();
-          im.onload = () => resolve(im);
-          im.onerror = reject;
-          im.src = src;
-        });
-      } catch (e) {
-        return false;
-      }
-      const size = 44;
-      const x = width - 14 - size;
-      const y = height - 56;
-      ctx.drawImage(img, x, y, size, size);
-      ctx.fillStyle = 'rgba(31,35,41,0.7)';
-      ctx.font = '9px sans-serif';
-      ctx.textAlign = 'right';
-      ctx.fillText('微信扫码', x - 8, y + 18);
-      ctx.fillText('查看轨迹', x - 8, y + 32);
-      ctx.textAlign = 'left';
-      return true;
-    },
-
-    /** 带码底部左侧：第一行时间，第二行 昵称（居左，超长省略） */
-    drawBottomWithCode(ctx, width, height, act) {
-      ctx.fillStyle = 'rgba(31,35,41,0.7)';
-      ctx.font = '11px sans-serif';
-      ctx.textAlign = 'left';
-      if (act.startTimeText) ctx.fillText(act.startTimeText, 24, height - 40);
-      const u = getApp().globalData.userInfo;
-      const nick = (u && u.nickname) || '';
-      let line2 = nick;
-      if (line2) {
-        // 限宽到「微信扫码」文案左缘之前，避免与码区重叠
-        const maxW = width - 14 - 44 - 8 - ctx.measureText('微信扫码').width - 12 - 24;
-        if (ctx.measureText(line2).width > maxW) {
-          while (line2.length > 0 && ctx.measureText(line2 + '…').width > maxW) {
-            line2 = line2.slice(0, -1);
-          }
-          line2 += '…';
-        }
-        ctx.fillText(line2, 24, height - 20);
-      }
-    },
-
-    /** 无码底部品牌行（原样保留）：左时间 + 右 @小迹一下 */
-    drawBrandRow(ctx, width, height, act) {
-      const brandY = height - 20;
-      if (act.startTimeText) {
-        ctx.fillStyle = 'rgba(31,35,41,0.7)';
-        ctx.font = '11px sans-serif';
-        ctx.textAlign = 'left';
-        ctx.fillText(act.startTimeText, 24, brandY);
-      }
-      ctx.fillStyle = 'rgba(31,35,41,0.7)'; // 与左侧日期一致
-      ctx.font = '11px sans-serif'; // 与左侧日期一致
-      ctx.textAlign = 'right';
-      ctx.fillText('@小迹一下', width - 14, brandY);
-      ctx.textAlign = 'left';
-    },
-
     toTempFile() {
       return new Promise((resolve, reject) => {
         wx.canvasToTempFilePath({
@@ -265,15 +332,14 @@ Component({
       });
     },
 
-    /** 轨迹绘图参数：带码时指标卡在 292，无码在 304，下边界随之前留 20 间距 */
-    drawTrack(ctx, width, height) {
+    /** 轨迹绘图参数：区域取 layout.track（固定 200 高，不随数据量变） */
+    drawTrack(ctx, L) {
       const pts = this.data.mapPoints || [];
       if (pts.length < 2) return;
       const act = this.data.activity || {};
-      // 轨迹区域：标题下到指标卡上方，尽量占满（压缩死区）
-      const pad = 24;
-      const top = 82; // 两行标题下
-      const bottom = this.data.showMiniCode ? 272 : 284;
+      const width = L.width;
+      const top = L.regions.track.top;
+      const bottom = L.regions.track.bottom;
       const lats = pts.map((p) => p.lat);
       const lngs = pts.map((p) => p.lng);
       let minLat = Math.min(...lats);
@@ -292,8 +358,8 @@ Component({
 
       // 轨迹区域（白底无卡底背景，直接画轨迹线）
       const innerPad = 12;
-      const plotLeft = pad / 2 + innerPad;
-      const plotRight = width - pad / 2 - innerPad;
+      const plotLeft = MARGIN / 2 + innerPad;
+      const plotRight = width - MARGIN / 2 - innerPad;
       const plotTop = top + innerPad;
       const plotBottom = bottom - innerPad;
 
@@ -406,60 +472,6 @@ Component({
       if (start < pts.length) segs.push(pts.slice(start));
       // 过滤掉只有1个点的段（无法绘制线段）
       return segs.filter(s => s.length >= 2);
-    },
-
-    /** 指标独立卡片：时长 / 配速 / 消耗（左贴左、中居中、右贴右；top 可调：带码时上移让出底部空间） */
-    drawStatsCards(ctx, width, height, act, top = 304) {
-      // 配速：去掉 /公里 单位（只显示数值，如 5'30"）；消耗单位移到 label
-      const paceFull = act.paceText || (act.paceValue ? `${act.paceValue}${act.paceUnit || ''}` : '—');
-      const paceText = String(paceFull).replace(/\s*\/公里.*$/, '');
-      const cards = [
-        { label: '时长', value: act.durationText || '—' },
-        { label: '配速', value: paceText },
-        { label: '消耗/千卡', value: `${act.calories || 0}` },
-      ];
-      // 锚点：左项贴左边距，中间绝对居中，右项贴右边距
-      const margin = 24;
-      const anchors = [
-        { x: margin, align: 'left' },
-        { x: width / 2, align: 'center' },
-        { x: width - margin, align: 'right' },
-      ];
-      cards.forEach((c, i) => {
-        const { x, align } = anchors[i];
-        // 配速：数值大字 + /公里 单位小字（组合按锚点整体对齐）
-        const match = c.label === '配速' ? /^(.*?)(\/.*)$/.exec(String(c.value)) : null;
-        if (match) {
-          const num = match[1];
-          const unit = match[2];
-          ctx.font = 'bold 15px sans-serif';
-          const numW = ctx.measureText(num).width;
-          ctx.font = '11px sans-serif';
-          const unitW = ctx.measureText(unit).width;
-          const totalW = numW + unitW;
-          const startX = align === 'left' ? x : align === 'right' ? x - totalW : x - totalW / 2;
-          ctx.fillStyle = 'rgba(31,35,41,0.7)';
-          ctx.textAlign = 'left';
-          ctx.textBaseline = 'middle';
-          ctx.font = '15px sans-serif';
-          ctx.fillText(num, startX, top + 22);
-          ctx.font = '11px sans-serif';
-          ctx.fillText(unit, startX + numW, top + 22);
-        } else {
-          // 值
-          ctx.fillStyle = 'rgba(31,35,41,0.7)';
-          ctx.font = '15px sans-serif';
-          ctx.textAlign = align;
-          ctx.textBaseline = 'middle';
-          ctx.fillText(c.value, x, top + 22);
-        }
-        // 标签（颜色与数值/底部一致，对齐方式随锚点）
-        ctx.fillStyle = 'rgba(31,35,41,0.7)';
-        ctx.font = '11px sans-serif';
-        ctx.textAlign = align;
-        ctx.fillText(c.label, x, top + 40);
-        ctx.textBaseline = 'alphabetic';
-      });
     },
 
     /** 保存到相册 */
