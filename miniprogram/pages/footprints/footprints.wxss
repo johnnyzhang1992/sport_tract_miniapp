@@ -55,6 +55,11 @@
   right: 24rpx;
   bottom: 40rpx;
 }
+/* 左下：标志（POI 标注）开关，与右列同一条底边基准 */
+.tool-col-left-bottom {
+  left: 24rpx;
+  bottom: 40rpx;
+}
 /* 搜索展开时左上整列淡出（输入框要占满这一行） */
 .tool-fade {
   opacity: 0;
@@ -81,6 +86,11 @@
 /* 有筛选生效时给个蓝环，收起状态下也看得出来"当前不是全量" */
 .tool-btn-on {
   box-shadow: 0 0 0 3rpx #2b6cf6, 0 2rpx 12rpx rgba(0, 0, 0, 0.14);
+}
+/* 标志（POI 标注）开关的选中态：轨迹页那枚是蓝底白字形（.poi-btn-active），
+   白图标配蓝环会白成一片看不见，故这里也走蓝底，不套用 .tool-btn-on */
+.tool-btn-poi-on {
+  background: #2b6cf6;
 }
 .tool-badge {
   position: absolute;

@@ -198,6 +198,7 @@ Page({
     center: { latitude: 30.5, longitude: 114.3 }, // 视野由 fitBounds 覆盖，这里只是无数据时的兜底
     scale: 12,
     mapType: 'standard', // 底图图层：standard / satellite，翻给 <map> 的 enable-satellite
+    enablePoi: false, // 底图 POI 标注（地名/道路名）：翻给 <map> 的 enable-poi，默认关闭
     detailVisible: false, // 详情半屏（components/footprint-detail）
     detailRecord: null, // 轻量 DTO 即可，缺字段由组件补拉
     clusterSheet: { visible: false, records: [] }, // 最大缩放兜底：同处多条足迹的成员列表
@@ -219,6 +220,12 @@ Page({
       // 写失败只是下次进页回到标准档，不值得打断这次切换
     }
     this.setData({ mapType });
+  },
+
+  /** POI 标注（底图地名/道路名）开关，与轨迹页同款：只翻 <map enable-poi>，不碰数据；
+   *  不持久化——轨迹页也没记，两页口径保持一致 */
+  togglePoi() {
+    this.setData({ enablePoi: !this.data.enablePoi });
   },
 
   async loadAll() {

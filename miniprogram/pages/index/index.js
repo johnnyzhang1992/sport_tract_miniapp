@@ -28,6 +28,10 @@ Page({
     overviewLabel: '今日概览',
     totalOverview: null, // 累计数据：轨迹数/总公里/点亮省份/城市
     heatData: [],
+    // 各接口失败原因（null=正常）：卡片不能悄悄消失，文案点名到接口与实际报错
+    overviewError: null,
+    footprintError: null,
+    heatError: null,
     notLoggedIn: false, // 游客态：展示登录引导
     loading: false,
     ongoingActivity: null, // 进行中（已暂停）运动入口
@@ -204,7 +208,15 @@ Page({
     // 游客态：不读缓存/不请求，展示登录引导（登录后 onShow 重新加载）
     if (!app.globalData.loggedIn) {
       this._loadingOverview = false;
-      this.setData({ loading: false, notLoggedIn: true, totalOverview: null, heatData: [] });
+      this.setData({
+        loading: false,
+        notLoggedIn: true,
+        totalOverview: null,
+        heatData: [],
+        overviewError: null,
+        footprintError: null,
+        heatError: null,
+      });
       return;
     }
     this.setData({ notLoggedIn: false });
@@ -214,34 +226,63 @@ Page({
       this.setData({ totalOverview: cached.totalOverview, heatData: cached.heatData || [] });
     }
     try {
+      // 每个接口自己兜住失败：原先三个请求共用一个 Promise.all，/stats/overview 一挂就把不相关的
+      // 日历一起拖没，现场只剩一句 console.error —— 用户看到的只是「日历不见了」
+      const failed = {};
+      const soft = (key, label) => (p) =>
+        p.catch((e) => {
+          failed[key] = `${label}：${(e && e.message) || String(e)}`;
+          return null;
+        });
       const [overview, footprint, heat] = await Promise.all([
-        api.get('/stats/overview'),
-        api.get('/stats/footprint').catch(() => null),
-        api.get('/stats/trend?days=365').catch(() => null),
+        soft('overview', '累计数据')(api.get('/stats/overview')),
+        soft('footprint', '点亮省市')(api.get('/stats/footprint')),
+        soft('heat', '运动日历')(api.get('/stats/trend?days=365')),
       ]);
-      const total = overview.total || { count: 0, distance: 0 };
-      // 日历热力图数据（近 365 天按天距离）
-      const heatData = heat && heat.data ? heat.data : [];
-      // 预处理：公里/千卡 K·W 缩写
-      const totalOverview = {
-        trackCount: total.count || 0,
-        totalKm: compact((total.distance || 0) / 1000),
-        provinceCount: footprint ? footprint.provinceCount : 0,
-        cityCount: footprint ? footprint.cityCount : 0,
+      const patch = {
+        overviewError: failed.overview || null,
+        footprintError: failed.footprint || null,
+        heatError: failed.heat || null,
       };
-      this.setData({ totalOverview, heatData });
-      // 成功后写缓存（下次先展示旧值）
-      try {
-        wx.setStorageSync(OVERVIEW_CACHE_KEY, { totalOverview, heatData, cachedAt: Date.now() });
-      } catch (e) {
-        // 缓存写失败不影响功能
+      if (!failed.overview) {
+        const total = overview.total || { count: 0, distance: 0 };
+        const prev = this.data.totalOverview || {};
+        patch.totalOverview = {
+          trackCount: total.count || 0,
+          totalKm: compact((total.distance || 0) / 1000), // 公里/千卡 K·W 缩写
+          // 省市来自另一个接口：它失败就留着屏上旧值，别把「3 省」刷成 0
+          provinceCount: failed.footprint ? prev.provinceCount || 0 : footprint.provinceCount,
+          cityCount: failed.footprint ? prev.cityCount || 0 : footprint.cityCount,
+        };
+      }
+      // 日历失败同理不清空：屏上留着近 365 天的旧点，比刷成空白更等得起重试
+      if (!failed.heat) patch.heatData = (heat && heat.data) || [];
+      this.setData(patch);
+      // 全绿才写缓存（下次先展示旧值）；半套数据不落盘——否则下次冷启动会把「某个接口挂了」
+      // 掩盖成「你的数据就是这些」
+      if (!patch.overviewError && !patch.footprintError && !patch.heatError) {
+        try {
+          wx.setStorageSync(OVERVIEW_CACHE_KEY, {
+            totalOverview: patch.totalOverview,
+            heatData: patch.heatData,
+            cachedAt: Date.now(),
+          });
+        } catch (e) {
+          // 缓存写失败不影响功能
+        }
       }
     } catch (e) {
-      console.error('加载概览失败', e); // 保留旧数据（不置空，避免切换 tab 后空白）
+      console.error('[index] 概览落地异常', e); // 走到这里说明是上面这段自己炸了
     } finally {
       this._loadingOverview = false;
       this.setData({ loading: false });
     }
+  },
+
+  /** 卡内「重试」：失败提示已点名是哪个接口，网络恢复后点一下即可。
+   *  不做自动重试——断网时反复打后端只会把一次失败变成几次超时等待 */
+  retryOverview() {
+    return this.loadOverview();
   },
 
   /** 开始运动 → 记录页（预检定位权限：无权限无法记录轨迹，先引导授权） */

@@ -22,25 +22,31 @@
     <view class="welcome-sub text-muted">选择类型，记录你的轨迹与风景</view>
   </view>
 
-  <!-- 运动日历热力图（GitHub 风格，近 365 天） -->
-  <view class="card heat-card" wx:if="{{heatData.length > 0}}">
+  <!-- 运动日历热力图（GitHub 风格，近 365 天）；接口挂了也要留着卡片说清原因，不能整块消失 -->
+  <view class="card heat-card" wx:if="{{heatData.length > 0 || heatError}}">
     <view class="section-title">运动日历</view>
-    <calendar-heat data="{{heatData}}" />
-    <view class="heat-legend-row">
-      <text class="heat-legend-text">颜色越深，当天运动越多</text>
-      <view class="heat-legend-colors">
-        <view class="hl-cell" style="background:#ebedf0"></view>
-        <view class="hl-cell" style="background:#c6dbff"></view>
-        <view class="hl-cell" style="background:#7ea8ff"></view>
-        <view class="hl-cell" style="background:#2b6cf6"></view>
+    <block wx:if="{{heatData.length > 0}}">
+      <calendar-heat data="{{heatData}}" />
+      <view class="heat-legend-row">
+        <text class="heat-legend-text">颜色越深，当天运动越多</text>
+        <view class="heat-legend-colors">
+          <view class="hl-cell" style="background:#ebedf0"></view>
+          <view class="hl-cell" style="background:#c6dbff"></view>
+          <view class="hl-cell" style="background:#7ea8ff"></view>
+          <view class="hl-cell" style="background:#2b6cf6"></view>
+        </view>
       </view>
+    </block>
+    <view class="card-fail" wx:if="{{heatError}}">
+      <text class="card-fail-text">{{heatError}}</text>
+      <view class="card-fail-retry" hover-class="card-fail-retry-hover" catchtap="retryOverview">重试</view>
     </view>
   </view>
 
   <!-- 累计数据概览（点击进入统计页） -->
-  <view class="card" wx:if="{{totalOverview}}" hover-class="card-hover" hover-stay-time="80" bindtap="goStats">
+  <view class="card" wx:if="{{totalOverview || overviewError}}" hover-class="card-hover" hover-stay-time="80" bindtap="goStats">
     <view class="section-title">累计数据</view>
-    <view class="stats-row">
+    <view class="stats-row" wx:if="{{totalOverview}}">
       <view class="stat-item">
         <view class="stat-num">{{totalOverview.trackCount}}</view>
         <view class="stat-label">轨迹</view>
@@ -57,6 +63,11 @@
         <view class="stat-num">{{totalOverview.cityCount}}</view>
         <view class="stat-label">点亮城市</view>
       </view>
+    </view>
+    <!-- catchtap：重试只该重发请求，不该顺带跳统计页 -->
+    <view class="card-fail" wx:if="{{overviewError || footprintError}}">
+      <text class="card-fail-text">{{overviewError || footprintError}}</text>
+      <view class="card-fail-retry" hover-class="card-fail-retry-hover" catchtap="retryOverview">重试</view>
     </view>
   </view>
 
