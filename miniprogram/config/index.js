@@ -31,7 +31,7 @@ module.exports = {
    * - 体验版 / 正式版：线上域名
    */
   API_BASE_URL: (() => {
-    let envVersion = 'develop';
+    let envVersion = "develop";
     try {
       envVersion = wx.getAccountInfoSync().miniProgram.envVersion;
     } catch {
@@ -39,9 +39,12 @@ module.exports = {
     }
     // ⚠️ 联调开关：强制走线上域名（体验版调试期保持 true；上线前评估是否保留）
     const FORCE_ONLINE = false;
-    const isOnline = FORCE_ONLINE || envVersion === 'release' || envVersion === 'trial';
+    const isOnline =
+      FORCE_ONLINE || envVersion === "release" || envVersion === "trial";
     // 路径前缀 /sport-track 与同域名其他服务区分（nginx 按前缀转发）
-    return isOnline ? 'https://api.historybook.cn/sport-track' : 'http://192.168.31.139:3004/sport-track';
+    return isOnline
+      ? "https://api.historybook.cn/sport-track"
+      : "http://192.168.31.139:3004/sport-track";
   })(),
 
   /**
@@ -49,71 +52,148 @@ module.exports = {
    * 前端 icon/文案从这里读，新增类型只需扩展
    */
   ACTIVITY_TYPES: [
-    { type: 'walking', label: '散步', icon: '🚶', iconImg: '/assets/icons/activity-walking.png', met: 3.5, color: '#FF6B6B' },
-    { type: 'running', label: '跑步', icon: '🏃', iconImg: '/assets/icons/activity-running.png', met: 9.8, color: '#2B6CF6' },
-    { type: 'hiking', label: '徒步', icon: '🏔️', iconImg: '/assets/icons/activity-hiking.png', met: 4.3, color: '#FF9800' },
-    { type: 'mountaineering', label: '爬山', icon: '⛰️', iconImg: '/assets/icons/activity-mountaineering.png', met: 8.0, color: '#8B5CF6' },
-    { type: 'cycling', label: '骑行', icon: '🚴', iconImg: '/assets/icons/activity-cycling.png', met: 7.5, color: '#07C160' },
-    { type: 'skiing', label: '滑雪', icon: '🎿', iconImg: '/assets/icons/activity-skiing.png', met: 6.0, color: '#29B6F6' },
-    { type: 'rowing', label: '划船', icon: '🚣', iconImg: '/assets/icons/activity-rowing.png', met: 7.0, color: '#26A69A' },
-    { type: 'swimming', label: '游泳', icon: '🏊', iconImg: '/assets/icons/activity-swimming.png', met: 8.0, color: '#00B8D9' },
+    {
+      type: "walking",
+      label: "散步",
+      icon: "🚶",
+      iconImg: "/assets/icons/activity-walking.png",
+      met: 3.5,
+      color: "#FF6B6B",
+    },
+    {
+      type: "running",
+      label: "跑步",
+      icon: "🏃",
+      iconImg: "/assets/icons/activity-running.png",
+      met: 9.8,
+      color: "#2B6CF6",
+    },
+    {
+      type: "hiking",
+      label: "徒步",
+      icon: "🏔️",
+      iconImg: "/assets/icons/activity-hiking.png",
+      met: 4.3,
+      color: "#FF9800",
+    },
+    {
+      type: "mountaineering",
+      label: "爬山",
+      icon: "⛰️",
+      iconImg: "/assets/icons/activity-mountaineering.png",
+      met: 8.0,
+      color: "#8B5CF6",
+    },
+    {
+      type: "cycling",
+      label: "骑行",
+      icon: "🚴",
+      iconImg: "/assets/icons/activity-cycling.png",
+      met: 7.5,
+      color: "#07C160",
+    },
+    {
+      type: "skiing",
+      label: "滑雪",
+      icon: "🎿",
+      iconImg: "/assets/icons/activity-skiing.png",
+      met: 6.0,
+      color: "#29B6F6",
+    },
+    {
+      type: "rowing",
+      label: "划船",
+      icon: "🚣",
+      iconImg: "/assets/icons/activity-rowing.png",
+      met: 7.0,
+      color: "#26A69A",
+    },
+    {
+      type: "swimming",
+      label: "游泳",
+      icon: "🏊",
+      iconImg: "/assets/icons/activity-swimming.png",
+      met: 8.0,
+      color: "#00B8D9",
+    },
   ],
 
   /** 打点类型（决策 F10：可扩展） */
   MARKER_TYPES: [
-    { type: 'checkpoint', label: '打卡点', icon: '📍', iconImg: '/assets/icons/lucide-pin.png' },
-    { type: 'rest', label: '休息点', icon: '🛋️', iconImg: '/assets/icons/lucide-coffee.png' },
-    { type: 'photo', label: '拍照点', icon: '📷', iconImg: '/assets/icons/lucide-camera.png' },
-    { type: 'note', label: '备注', icon: '📝', iconImg: '/assets/icons/lucide-note.png' },
+    {
+      type: "checkpoint",
+      label: "打卡点",
+      icon: "📍",
+      iconImg: "/assets/icons/lucide-pin.png",
+    },
+    {
+      type: "rest",
+      label: "休息点",
+      icon: "🛋️",
+      iconImg: "/assets/icons/lucide-coffee.png",
+    },
+    {
+      type: "photo",
+      label: "拍照点",
+      icon: "📷",
+      iconImg: "/assets/icons/lucide-camera.png",
+    },
+    {
+      type: "note",
+      label: "备注",
+      icon: "📝",
+      iconImg: "/assets/icons/lucide-note.png",
+    },
   ],
 
   /** 足迹分类（见文件头注释）：顺序即表单/筛选弹窗里 chips 的顺序 */
   FOOTPRINT_CATEGORIES,
   /** 未分类或未知 key → 空串，调用方自行兜底（地图退回归小圆点、表单显示「未分类」） */
-  footprintCategoryLabel: (key) => (footprintCategoryOf(key) || {}).label || '',
+  footprintCategoryLabel: (key) => (footprintCategoryOf(key) || {}).label || "",
   footprintCategoryIcon: (key, chip) =>
-    footprintCategoryOf(key) ? `/assets/icons/fp-cat-${key}${chip ? '-chip' : ''}.png` : '',
+    footprintCategoryOf(key)
+      ? `/assets/icons/fp-cat-${key}${chip ? "-chip" : ""}.png`
+      : "",
 
   /** 默认头像预设：资源放 miniprogram/assets/avatars/<key>.png（建议 200×200 png）
-   * 非空时资料编辑页头像区显示预设网格，选中存 avatarPreset（avatarUrl 为空时生效） */
+   * 非空时资料编辑页头像区显示预设网格，选中存 avatarPreset（avatarUrl 为空时生效）
+   * ⚠️ 删图必须同步删这里的 key——后端只校验 avatarPreset 长度、不校验 key，端上直接拼路径，
+   *    留死 key 就是网格里的破图且全程无报错。回归见 test/avatar-presets.test.js */
   DEFAULT_AVATARS: [
-        { key: 'cartoon-cyclist-riding' },
-    { key: 'cartoon-face-profile' },
-    { key: 'cartoon-person-swimming-outdoors' },
-    { key: 'crossing-road' },
-    { key: 'cyclist-riding' },
-    { key: 'doing-yoga' },
-    { key: 'face' },
-    { key: 'face-closed-smile' },
-    { key: 'face-profile' },
-    { key: 'hiking-up-hill' },
-    { key: 'leaving-bag' },
-    { key: 'lotus-sitting' },
-    { key: 'meditating' },
-    { key: 'paddling-canoe' },
-    { key: 'paddling-kayak' },
-    { key: 'person-climbing-coastal-path' },
-    { key: 'person-climbing-field' },
-    { key: 'person-climbing-forest-track' },
-    { key: 'person-climbing-valley' },
-    { key: 'person-leaving-depot' },
-    { key: 'person-paddling-board' },
-    { key: 'running-park' },
-    { key: 'running-player-action' },
-    { key: 'skier-going-downhill' },
-    { key: 'skiing-downhill' },
+    { key: "face" },
+    { key: "face-closed-smile" },
+    { key: "leaving-bag" },
+    { key: "person-leaving-depot" },
+    { key: "doing-yoga" },
+    { key: "lotus-sitting" },
+    { key: "meditating" },
+    { key: "running-park" },
+    { key: "running-player-action" },
+    { key: "crossing-road" },
+    { key: "cyclist-riding" },
+    { key: "cartoon-cyclist-riding" },
+    { key: "paddling-canoe" },
+    { key: "paddling-kayak" },
+    { key: "person-climbing-coastal-path" },
+    { key: "person-climbing-field" },
+    { key: "person-climbing-forest-track" },
+    { key: "person-climbing-valley" },
+    { key: "hiking-up-hill" },
+    { key: "skier-going-downhill" },
+    { key: "skiing-downhill" },
+    { key: "cartoon-person-swimming-outdoors" },
   ],
 
   /** 打点图标预设盘：用户选图标+文案（category 决定统计归类；文案可在表单里自定义） */
   MARKER_ICON_PRESETS: [
-    { icon: '📍', label: '打卡点', category: 'checkpoint' },
-    { icon: '☕', label: '休息点', category: 'rest' },
-    { icon: '📷', label: '拍照点', category: 'photo' },
-    { icon: '📝', label: '备注', category: 'note' },
-    { icon: '💧', label: '补水点', category: 'rest' },
-    { icon: '🍚', label: '补给点', category: 'rest' },
-    { icon: '⛰️', label: '风景点', category: 'photo' },
-    { icon: '⚠️', label: '注意', category: 'note' },
+    { icon: "📍", label: "打卡点", category: "checkpoint" },
+    { icon: "☕", label: "休息点", category: "rest" },
+    { icon: "📷", label: "拍照点", category: "photo" },
+    { icon: "📝", label: "备注", category: "note" },
+    { icon: "💧", label: "补水点", category: "rest" },
+    { icon: "🍚", label: "补给点", category: "rest" },
+    { icon: "⛰️", label: "风景点", category: "photo" },
+    { icon: "⚠️", label: "注意", category: "note" },
   ],
 
   /** 同步协议参数（与后端一致） */
