@@ -248,7 +248,7 @@ Component({
       const colDist = MARGIN + 34;
       const colTime = MARGIN + 96;
       const colPace = L.width - MARGIN;
-      const headY = r.top + POSTER.SECTION_TITLE_H + 13;
+      const headY = r.top + POSTER.SECTION_TITLE_H + 12;
       const lineY = r.top + POSTER.SECTION_TITLE_H + POSTER.SEG_HEAD_H - 2;
       ctx.font = '9px sans-serif';
       ctx.fillStyle = LABEL;
@@ -265,7 +265,8 @@ Component({
       ctx.stroke();
 
       segs.forEach((s, i) => {
-        const y = lineY + (i + 1) * POSTER.SEG_ROW_H - 5;
+        // 行基线从分隔线下留白起步（-3 而不是 -5：线到首行字要保持视觉留白）
+        const y = lineY + (i + 1) * POSTER.SEG_ROW_H - 3;
         ctx.font = '10px sans-serif';
         ctx.textAlign = 'left';
         ctx.fillStyle = s.partial ? '#ff9800' : INK;

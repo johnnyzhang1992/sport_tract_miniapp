@@ -15,7 +15,7 @@ const POSTER = {
   TRACK_H: 200, // 轨迹区固定，不随数据量伸缩
   SECTION_TITLE_H: 26, // 小标题 + 与上一区的间距
   METRIC_ROW_H: 40, // 指标格：label 上 + 数值下
-  SEG_HEAD_H: 18, // 单段表头
+  SEG_HEAD_H: 20, // 单段表头（含分隔线上下留白：灰线不贴表头字，也不贴首行字）
   SEG_ROW_H: 17, // 单段行
   FOOTER_H: 56, // 左 logo+小程序名 / 右 小程序码
   BOTTOM_PAD: 16,

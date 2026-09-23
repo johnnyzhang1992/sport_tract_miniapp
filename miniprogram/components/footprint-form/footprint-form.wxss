@@ -124,9 +124,11 @@
 .fadd-hover {
   opacity: 0.6;
 }
-/* 组内说明行（22rpx 次级灰，与标签同一条左基线） */
+/* 组内说明行（22rpx 次级灰，与标签同一条左基线）
+   上边距不能省：说明行的上文（chips / 已选标签 / 照片格）都没有下边距，
+   原来 padding-top 为 0 → 文案紧贴上一行内容 */
 .fnote {
-  padding: 0 24rpx 16rpx;
+  padding: 16rpx 24rpx;
   font-size: 22rpx;
   line-height: 1.5;
   color: #8a93a6;
@@ -148,25 +150,30 @@
   color: #4e5969;
   font-size: 26rpx;
 }
-/* 分类 chips：透明底黑字形（fp-cat-<key>.png），选中态换成品牌蓝底 + 白字 */
+/* 分类 chips：透明底黑字形（fp-cat-<key>.png），选中态换成品牌蓝底 + 白字。
+   左右内边距必须跟着 .fgroup 里其它块给 24rpx——这块原来漏了，chips 直接顶到卡片边框上，
+   看着像溢出内容区（同卡片的 .flabel-block/.photo-grid/.fnote 都有，筛选弹窗那套 .chips 也被
+   父容器 padding 兜住，只有这里是个例外）。尺寸同时收一档：补上 24rpx 后可用宽度从 686rpx
+   降到 638rpx，不收就换行成两行 2 个。 */
 .cat-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 16rpx;
+  gap: 12rpx;
+  padding: 0 24rpx;
 }
 .cat-chip {
   display: flex;
   align-items: center;
-  gap: 8rpx;
-  padding: 12rpx 20rpx;
+  gap: 6rpx;
+  padding: 12rpx 16rpx;
   border-radius: 999rpx;
   background: #f2f3f5;
   color: #4e5969;
-  font-size: 26rpx;
+  font-size: 24rpx;
 }
 .cat-icon {
-  width: 30rpx;
-  height: 30rpx;
+  width: 26rpx;
+  height: 26rpx;
 }
 .cat-chip-on {
   background: #2b6cf6;
