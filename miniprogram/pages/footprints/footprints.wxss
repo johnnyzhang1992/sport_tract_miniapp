@@ -27,12 +27,48 @@
 .center-tip.veil {
   background: rgba(255, 255, 255, 0.72);
 }
-.center-tip.empty {
-  color: #bbb;
-  pointer-events: none; /* 不拦截地图拖拽/缩放，也不挡 FAB（FAB z-index 更高） */
-}
 .retry {
   margin-left: 8rpx;
+  color: #2b6cf6;
+  font-weight: 600;
+}
+
+/* —— 地图上的白色提示胶囊：空账号引导（纯展示）与游客登录引导（可点）——
+   两者在同一个位置交替出现，形态必须一致，所以共用一套外观、只差文案。
+   为什么不做成裸文字：底图不可控。原来 `.center-tip.empty` 是 `#bbb` 直接压在瓦片上，
+   浅灰陆地上实测只有 1.7:1（正文下限 4.5:1），横穿省界红线/水域时基本读不出来；
+   而卫星档是深色底图，换任何灰都有一档读不清 —— 白底衬是唯一两档都成立的做法。
+   也不能复用 .center-tip：它 `inset: 0` 铺满整屏，整屏热区会连带触发地图拖动/缩放。
+   类名带 fp- 前缀：leaderboard 页另有一个同名的 .map-tip（那边是地图下方的一行操作提示），
+   跨页样式虽不串，但同名不同义会读错。 */
+.fp-tip {
+  position: absolute;
+  z-index: 5;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  max-width: 560rpx;
+  padding: 22rpx 32rpx;
+  border-radius: 999rpx;
+  background: #fff;
+  box-shadow: 0 6rpx 24rpx rgba(0, 0, 0, 0.12);
+  font-size: 26rpx;
+  line-height: 1.45;
+  color: #333;
+  text-align: center;
+  pointer-events: none; /* 纯展示：不拦截地图拖拽/缩放，也不挡右下 FAB（FAB z-index 更高） */
+}
+.fp-tip-login {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  white-space: nowrap;
+  pointer-events: auto; /* 这枚要能点 */
+}
+.fp-tip-hover {
+  background: #eef3fe;
+}
+.fp-tip-link {
   color: #2b6cf6;
   font-weight: 600;
 }

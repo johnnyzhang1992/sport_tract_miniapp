@@ -4,6 +4,7 @@ const api = require('../../services/api');
 const config = require('../../config/index');
 const { RANGES, PICKER_COUNT, periodRange, periodLabelOf } = require('../../utils/footprint-period.js');
 const cal = require('../../utils/footprint-calendar.js');
+const { ensureLogin } = require('../../utils/login-gate');
 
 const STATS_URL = '/packageFootprint/pages/footprint-stats/footprint-stats';
 
@@ -45,6 +46,8 @@ Page({
     error: '',
     items: [], // toCard 后的完整 DTO（点卡片直接开详情，不再二次请求）
     page: 1, pageSize: 20, total: 0, hasMore: true, loadingList: false,
+    totalCount: 0, // 全局记录总数（/calendar 口径）：分享文案用
+    placeCount: 0, // 全局地方数（distinct 地点名）：分享文案用
     // 筛选态：keywordInput 是输入框内容（不请求），keyword 是点「搜索」/回车后生效的词
     keywordInput: '',
     keyword: '',
@@ -59,6 +62,7 @@ Page({
     filtered: false, // 是否有生效的筛选（空态文案与「清空筛选」入口按它分档）
     detailVisible: false,
     detailRecord: null,
+    notLoggedIn: false, // 游客态（只可能从分享链接直达）：不发请求，摆登录引导
     formVisible: false,
     formRecord: null, // null = 新增态（顶部 ＋），带记录 = 编辑态（详情「编辑」带出）
   },
@@ -66,13 +70,56 @@ Page({
     this.setData({ calendarMonth: cal.currentMonth() });
     this.applyPeriod();
     this.syncSection();
-    this.loadAll();
+    this.syncData();
+  },
+
+  /**
+   * 登录态与页面数据对齐（onLoad / 登录成功后都走这里）。
+   * 本地有 token 的老用户先静默恢复；仍是游客就一个请求都不发——列表与 /calendar 都会 401。
+   * hasMore 一并压掉：否则游客触底会去翻页，白挨一个 401 toast。
+   */
+  async syncData() {
+    const app = getApp();
+    if (app.hasSession() && !app.globalData.loggedIn) {
+      try {
+        await app.login();
+      } catch (e) {
+        // 静默恢复失败就按游客处理，别在进页时甩一个错误弹窗
+      }
+    }
+    if (!app.globalData.loggedIn) {
+      this.setData({
+        loading: false,
+        error: '',
+        notLoggedIn: true,
+        items: [],
+        groups: [],
+        summaryText: '',
+        emptyText: '',
+        totalCount: 0,
+        placeCount: 0,
+        hasMore: false,
+        loadingList: false,
+      });
+      return;
+    }
+    this.setData({ notLoggedIn: false });
+    const loading = this.loadAll();
     this.loadCalendar();
+    return loading;
+  },
+
+  /** 空列表上的登录引导：与 ＋ 走同一道闸门 */
+  onLoginTap() {
+    ensureLogin().then((ok) => {
+      if (ok) this.syncData();
+    });
   },
 
   onPullDownRefresh() {
-    this.loadCalendar();
-    this.loadAll().finally(() => wx.stopPullDownRefresh());
+    // 走 syncData 而不是直接两个请求：游客（分享链接直达）下拉时两个接口都 401，
+    // loadAll 的首屏失败分支还会把登录引导顶成整页错误态
+    this.syncData().finally(() => wx.stopPullDownRefresh());
   },
 
   /** 触底翻页：不提前清空 items，追加由 fetchPage 的 page > 1 分支负责 */
@@ -114,6 +161,9 @@ Page({
         this._calLoaded = true;
         this.setData({
           calendarDays: d.days || [],
+          // 全局口径：分享文案要用它（列表此刻可能正被筛着，屏上那几行不代表全部）
+          totalCount: d.total || 0,
+          placeCount: d.placeCount || 0,
           summaryText: cal.summaryText({ total: d.total, placeCount: d.placeCount, photoCount: d.photoCount }),
         });
       })
@@ -127,9 +177,32 @@ Page({
     wx.navigateTo({ url: STATS_URL });
   },
 
-  /** 顶部 ＋：新增态表单（record 传 null 即新增），保存后 onFormSaved 统一刷新 */
+  /** 转发文案：用 /calendar 的全局口径（列表可能正被筛着，屏上那几行不代表全部） */
+  shareTitle() {
+    const n = this.data.totalCount;
+    if (!(n > 0)) return '在小迹一下记录去过的每个地方';
+    const places = this.data.placeCount;
+    return places > 0 ? `我记录了 ${n} 条足迹 · ${places} 个地方` : `我记录了 ${n} 条足迹`;
+  },
+
+  onShareAppMessage() {
+    return { title: this.shareTitle(), path: '/pages/footprint-list/footprint-list' };
+  },
+
+  /** 分享到朋友圈 */
+  onShareTimeline() {
+    return { title: this.shareTitle() };
+  },
+
+  /** 顶部 ＋：新增态表单（record 传 null 即新增），保存后 onFormSaved 统一刷新。
+   *  写操作前过登录闸门（游客只可能从分享链接直达本页）；已登录走同帧直开，不绕微任务 */
   openAdd() {
-    this.setData({ formVisible: true, formRecord: null });
+    if (getApp().globalData.loggedIn) return this.setData({ formVisible: true, formRecord: null });
+    ensureLogin().then((ok) => {
+      if (!ok) return;
+      this.syncData();
+      this.setData({ formVisible: true, formRecord: null });
+    });
   },
 
   /* ------------------------------ 日历态交互 ------------------------------ */
