@@ -2,7 +2,19 @@
 <view wx:if="{{visible}}" class="mask" bindtap="onMaskTap">
   <view class="sheet {{safeBottom ? '' : 'sheet-no-safe'}}" catchtap="noop">
     <view class="sheet-head">
-      <view class="sheet-title">{{detail.title || ''}}</view>
+      <!-- 操作图标跟着标题走（原来标题 flex:1 把它们顶到最右，离标题老远、又贴着 ✕）；
+           ✕ 仍留在行尾当整行的关闭 -->
+      <view class="head-left">
+        <view class="sheet-title">{{detail.title || ''}}</view>
+        <block wx:if="{{detail}}">
+          <view class="sheet-act" catchtap="onEdit" aria-role="button" aria-label="编辑">
+            <image class="sheet-act-icon" src="/assets/icons/lucide-pencil.png" mode="aspectFit" />
+          </view>
+          <view class="sheet-act" catchtap="onDelete" aria-role="button" aria-label="删除">
+            <image class="sheet-act-icon" src="/assets/icons/lucide-trash-2-red.png" mode="aspectFit" />
+          </view>
+        </block>
+      </view>
       <view class="sheet-close" catchtap="onClose">✕</view>
     </view>
     <block wx:if="{{detail}}">
@@ -26,10 +38,6 @@
           bindtap="previewPhoto"
         />
       </scroll-view>
-      <view class="sheet-actions">
-        <button class="act-btn" size="mini" bindtap="onEdit">编辑</button>
-        <button class="act-btn danger" size="mini" bindtap="onDelete">删除</button>
-      </view>
     </block>
     <view wx:elif="{{loading}}" class="sheet-loading">加载中…</view>
   </view>

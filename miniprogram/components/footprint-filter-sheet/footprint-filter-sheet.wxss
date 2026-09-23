@@ -15,12 +15,9 @@
   box-sizing: border-box;
   background: #fff;
   border-radius: 24rpx 24rpx 0 0;
-  padding: 0 32rpx calc(24rpx + env(safe-area-inset-bottom));
+  padding: 0 32rpx;
   max-height: 76vh;
   overflow-y: auto;
-}
-.sheet-no-safe {
-  padding-bottom: 24rpx;
 }
 .sheet-head {
   display: flex;
@@ -86,10 +83,22 @@
   color: #2b6cf6;
 }
 
+/* 按钮组贴住弹层底边（sticky）：三段候选（省份 4 行 + 年份 + 分类）实测会把内容撑过 76vh，
+   原来按钮组排在滚动内容末尾 → 直接被挤到折叠线外，不滚到底就点不到「确定」。
+   底部留白写在按钮组自己身上（不是 .sheet 的 padding），粘住时那截空白才不会被吃掉 */
 .sheet-foot {
+  position: sticky;
+  bottom: 0;
   display: flex;
   gap: 20rpx;
   margin-top: 32rpx;
+  padding-bottom: calc(40rpx + env(safe-area-inset-bottom));
+  background: #fff;
+  border-top: 1rpx solid #eef0f3; /* 贴底时内容会从按钮组下面滚过，给条发丝线交代边界 */
+}
+/* tab 页的弹层底边在 tabBar 上方，不叠加屏幕安全区 */
+.sheet-no-safe .sheet-foot {
+  padding-bottom: 40rpx;
 }
 .btn {
   flex: 1;
