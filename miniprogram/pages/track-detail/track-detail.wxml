@@ -215,12 +215,13 @@
     <t-button class="act-btn" t-class="act-btn-line" wx:if="{{activity.isOwner}}" variant="outline" size="medium" block bind:tap="reprocessTrack">纠偏</t-button>
   </view>
 
-  <!-- 分享海报（离屏绘制，无可见 UI） -->
+  <!-- 分享海报（离屏绘制，无可见 UI）；运动数据/单段明细直接复用页面算好的同一份，口径不另起炉灶 -->
   <share-card
     id="shareCard"
-    activityId="{{id}}"
     activity="{{activity}}"
     mapPoints="{{mapPoints}}"
+    metrics="{{metrics}}"
+    kmSegs="{{kmSegs}}"
     bindposterready="onPosterReady"
   />
 

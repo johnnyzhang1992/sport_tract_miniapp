@@ -49,10 +49,10 @@
   font-size: 28rpx;
 }
 .poster-canvas {
-  width: 100%;
-  height: auto;
+  /* 海报高度自适应后可能比弹窗窄，居中显示 */
+  align-self: center;
   border-radius: 12rpx;
-  background: #2b6cf6;
+  background: #fff; /* 绘制前的底色：跟着海报同色，避免弹窗里先闪一块蓝 */
 }
 .preview-actions {
   display: flex;

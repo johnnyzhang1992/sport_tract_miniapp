@@ -8,11 +8,11 @@
   height: 100%;
 }
 /* POI 切换按钮（默认：右下角，全屏按钮左边） */
-/* 默认：右下角，全屏按钮（right 24、纯图标宽约 52）左侧，间距 20rpx */
+/* 默认：右下角贴在全屏按钮左侧、间隔 16rpx（详情页全屏按钮是页面浮层：right 16 + 宽 52 → 左缘 68） */
 .poi-btn {
   position: absolute;
   bottom: 16rpx;
-  right: 96rpx;
+  right: 82rpx;
   z-index: 10;
   display: flex;
   align-items: center;
@@ -77,9 +77,9 @@
 .poi-btn-bottom-right {
   right: 24rpx;
 }
-/* overview 模式：右下角，全屏按钮（right 24）左侧，与默认同几何 */
+/* overview 模式：右下角，全屏按钮（right 24）左侧，与详情页同间距 16rpx */
 .poi-btn-overview {
-  right: 96rpx;
+  right: 90rpx;
 }
 /* 全屏地图：右上角，图层按钮（right 24，宽约 140）左侧，留足间距 */
 .poi-btn-top-right {
