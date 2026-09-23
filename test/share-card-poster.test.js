@@ -44,16 +44,26 @@ function textWidth(s, font) {
 function makeCtx() {
   const st = { font: '10px sans-serif', fillStyle: '#000', textAlign: 'left', textBaseline: 'alphabetic' };
   const ops = [];
+  let path = [];
   const ctx = {
     ops,
     texts: () => ops.filter((o) => o.op === 'text'),
     images: () => ops.filter((o) => o.op === 'image'),
+    /** 已 stroke 的直线段（用于核表头下的分隔线位置） */
+    lines: () => ops.filter((o) => o.op === 'stroke'),
     measureText: (t) => ({ width: textWidth(t, st.font) }),
     fillText: (text, x, y) =>
       ops.push({ op: 'text', text: String(text), x, y, font: st.font, fillStyle: st.fillStyle, align: st.textAlign }),
     drawImage: (img, x, y, w, h) => ops.push({ op: 'image', src: img && img.src, x, y, w, h }),
+    beginPath: () => { path = []; },
+    moveTo: (x, y) => { path = [{ x, y }]; },
+    lineTo: (x, y) => { path.push({ x, y }); },
+    stroke: () => {
+      if (path.length >= 2) ops.push({ op: 'stroke', strokeStyle: st.strokeStyle, from: path[0], to: path[path.length - 1] });
+      path = [];
+    },
   };
-  ['fillRect', 'beginPath', 'closePath', 'moveTo', 'lineTo', 'arc', 'arcTo', 'clip', 'save', 'restore', 'stroke', 'fill', 'scale'].forEach(
+  ['fillRect', 'closePath', 'arc', 'arcTo', 'clip', 'save', 'restore', 'fill', 'scale'].forEach(
     (m) => { ctx[m] = () => {}; }
   );
   ['font', 'fillStyle', 'textAlign', 'textBaseline', 'lineWidth', 'strokeStyle', 'lineJoin', 'lineCap'].forEach((k) => {
@@ -139,7 +149,8 @@ test('SC1 海报尺寸自适应：位图 = 版面 × 导出缩放，弹窗样式
   assert.equal(canvas.width, L.width * L.exportScale);
   assert.equal(canvas.height, L.height * L.exportScale);
   // 5 项指标 2 行 + 3 段单段：钉一个绝对值，改常量时这里要一起想清楚
-  assert.equal(L.height, 72 + 200 + (26 + 80) + (26 + 18 + 51) + 56 + 16);
+  // （单段表头 18→20：表头下灰线原来离字太近，两侧各放开约 2~4px）
+  assert.equal(L.height, 72 + 200 + (26 + 80) + (26 + 20 + 51) + 56 + 16);
   assert.equal(c.data.posterStyle, `width: ${L.cssWidth}px; height: ${L.cssHeight}px;`);
   assert.equal(ctx.ops.length > 0, true);
   assert.deepEqual(c.events.map((e) => e.name), ['posterready']);
@@ -262,4 +273,28 @@ test('SC8 轨迹区保持不变：公里标开关只影响画不画圆点，不�
   assert.equal(on.c.data.showKmMarks, false);
   assert.equal(layoutOf(on.c).height, h1, '关掉公里标不该改海报高度');
   assert.equal(on.canvas.height, h1 * layoutOf(on.c).exportScale, '重绘后仍是同一张版面');
+});
+
+test('SC9 单段明细：表头文字与首行文字到分隔线都要留白（灰线不贴字）', async () => {
+  const { c, ctx } = await mount();
+  const r = layoutOf(c).regions.segs;
+  const texts = ctx.texts();
+
+  const head = texts.find((t) => t.text === '#' && t.y < r.top + 60);
+  assert.ok(head, '缺表头「#」');
+  // 表头下的横向灰线：segs 区内、水平、颜色为分隔线色
+  const divider = ctx.lines().find(
+    (l) => l.strokeStyle === '#eef0f3' && l.from.y === l.to.y && l.from.y > r.top && l.from.y < r.bottom
+  );
+  assert.ok(divider, '缺表头下的分隔线');
+  const row = texts.find((t) => t.text === '1' && t.x === head.x && t.y > divider.from.y);
+  assert.ok(row, '缺第一段数据行');
+
+  // 字宽模型：9px 表头墨迹下沿 ≈ 基线 + 0.21em；10px 行首墨迹上沿 ≈ 基线 − 0.72em(cap)
+  const headInkBottom = head.y + 9 * 0.21;
+  const rowInkTouTop = row.y - 10 * 0.72;
+  const above = divider.from.y - headInkBottom;
+  const below = rowInkTouTop - divider.from.y;
+  assert.ok(above >= 3, `表头文字下沿到灰线的留白太小：${above.toFixed(2)}px`);
+  assert.ok(below >= 6, `灰线到首行文字上沿的留白太小：${below.toFixed(2)}px`);
 });

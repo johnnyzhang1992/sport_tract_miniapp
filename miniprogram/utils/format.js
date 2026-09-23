@@ -36,16 +36,19 @@ function formatDurationStat(seconds) {
 /** 秒/公里 → “7'30"/公里” */
 function formatPace(secPerKm) {
   if (!secPerKm || secPerKm <= 0) return '—';
-  const m = Math.floor(secPerKm / 60);
-  const s = Math.round(secPerKm % 60);
+  // 先取整到秒再拆分秒：先 floor 分、再 round 秒时，59.5~59.99 会舍成 60 而不是进位（10'60"）
+  const total = Math.round(secPerKm);
+  const m = Math.floor(total / 60);
+  const s = total % 60;
   return `${m}'${String(s).padStart(2, '0')}" /公里`;
 }
 
 /** 配速拆分为值 + 单位（页面可分别控制字号，如 “2'13\”” + “/公里”） */
 function formatPaceParts(secPerKm) {
   if (!secPerKm || secPerKm <= 0) return null;
-  const m = Math.floor(secPerKm / 60);
-  const s = Math.round(secPerKm % 60);
+  const total = Math.round(secPerKm);
+  const m = Math.floor(total / 60);
+  const s = total % 60;
   return { value: `${m}'${String(s).padStart(2, '0')}"`, unit: '/公里' };
 }
 
