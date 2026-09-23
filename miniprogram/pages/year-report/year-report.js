@@ -40,7 +40,7 @@ Page({
     chartData: [], // 月度距离 [{label:'1月', value:km}]
     typeSummary: [], // 分类型汇总（各类型总距离/总时长/次数）
     highlights: [], // [{ key, label, value, sub, id }]
-    milestones: [], // 今年新解锁 [{icon, text, date}]
+    milestones: [], // 今年新解锁 [{iconImg, text, date}]
     streakDays: 0, // 最长连续运动天数
     posterVisible: false,
     posterPath: '',
@@ -221,26 +221,28 @@ Page({
     };
   },
 
-  /** 里程碑合并渲染：省/市/类型按首次时间排序 */
+  /** 里程碑合并渲染：省/市/类型按首次时间排序。图标一律 PNG——emoji 在 iOS/Android 上是两套字形，
+   *  而且和站内其它 lucide 图标摆一起就是两代资产（运动类型那排早就是 PNG 了） */
   buildMilestones(m) {
     if (!m) return [];
+    const runningIcon = (config.ACTIVITY_TYPES.find((x) => x.type === 'running') || {}).iconImg || '';
     const items = [];
     (m.newProvinces || []).forEach((p) =>
-      items.push({ icon: '🗺️', text: `首次点亮 ${p.name}`, firstAt: p.firstAt }),
+      items.push({ iconImg: '/assets/icons/lucide-map-pinned.png', text: `首次点亮 ${p.name}`, firstAt: p.firstAt }),
     );
     (m.newCities || []).forEach((c) =>
-      items.push({ icon: '🏙️', text: `首次打卡 ${c.name}（${c.province}）`, firstAt: c.firstAt }),
+      items.push({ iconImg: '/assets/icons/lucide-building-2.png', text: `首次打卡 ${c.name}（${c.province}）`, firstAt: c.firstAt }),
     );
     (m.newTypes || []).forEach((t) => {
       const meta = config.ACTIVITY_TYPES.find((x) => x.type === t.name) || {};
       items.push({
-        icon: meta.icon || '🏃',
+        iconImg: meta.iconImg || runningIcon, // 未知类型回落跑步图标
         text: `首次尝试${meta.label || t.name}${t.countInYear ? ` · ${t.countInYear} 次` : ''}`,
         firstAt: t.firstAt,
       });
     });
     items.sort((a, b) => a.firstAt - b.firstAt);
-    return items.map((it) => ({ icon: it.icon, text: it.text, date: this.md(it.firstAt) }));
+    return items.map((it) => ({ iconImg: it.iconImg, text: it.text, date: this.md(it.firstAt) }));
   },
 
   md(ts) {

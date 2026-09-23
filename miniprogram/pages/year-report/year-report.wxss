@@ -228,7 +228,8 @@
   background: #f7f8fa;
 }
 .ms-icon {
-  font-size: 38rpx;
+  width: 38rpx;
+  height: 38rpx;
   flex-shrink: 0;
 }
 .ms-info {
