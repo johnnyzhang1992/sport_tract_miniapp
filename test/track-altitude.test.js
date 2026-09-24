@@ -7,7 +7,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const { ALTITUDE_TYPES, buildAltitudeChart } = require('../miniprogram/utils/track-altitude.js');
+const { ALTITUDE_TYPES, buildAltitudeChart, usesAltitudeColor } = require('../miniprogram/utils/track-altitude.js');
 
 /** n 个带海拔的点（altitude 从 base 递增） */
 function ptsWithAlt(n, base = 100) {
@@ -60,4 +60,19 @@ test('TA5 类型缺失/为空串：按「不是徒步也不是爬山」处理', 
   assert.deepEqual(buildAltitudeChart(ptsWithAlt(5), undefined), []);
   assert.deepEqual(buildAltitudeChart(ptsWithAlt(5), ''), []);
   assert.deepEqual(buildAltitudeChart(ptsWithAlt(5), 'HIKING'), [], '大小写不匹配即不放行');
+});
+
+test('TA6 按海拔着色的门槛是 ≥2 个有效海拔点（与后台 usesAltitudeColor 同口径）', () => {
+  assert.equal(usesAltitudeColor(ptsWithAlt(2), 'hiking'), true);
+  assert.equal(usesAltitudeColor(ptsWithAlt(30), 'mountaineering'), true);
+  assert.equal(
+    usesAltitudeColor(ptsWithAlt(1), 'hiking'),
+    false,
+    '只有 1 个海拔点时 track-map 的 buildAltitudePolyline 段内 <2 直接 continue，一条线都画不出',
+  );
+  assert.equal(usesAltitudeColor([{ altitude: 100 }, { altitude: null }, { altitude: undefined }], 'hiking'), false, 'null 点不计数');
+  assert.equal(usesAltitudeColor(ptsWithAlt(3), 'running'), false, '白名单外的类型一律按配速');
+  assert.equal(usesAltitudeColor(ptsWithAlt(3), undefined), false);
+  assert.equal(usesAltitudeColor([], 'hiking'), false);
+  assert.equal(usesAltitudeColor(undefined, 'hiking'), false, '缺点集不炸');
 });

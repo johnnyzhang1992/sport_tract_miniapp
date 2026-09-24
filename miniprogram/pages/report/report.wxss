@@ -354,8 +354,35 @@
   border-radius: 20rpx;
   padding: 24rpx;
   width: 340px;
-  max-height: 92vh;
-  overflow-y: auto;
+  position: relative; /* 给离屏 canvas 当定位父级 */
+}
+/* 只滚导出图：标题栏与「保存到相册」按钮固定在滚动区外（原先整块 max-height:92vh 滚动会把它们滚走） */
+.poster-scroll {
+  width: 100%;
+}
+.poster-img {
+  display: block;
+  margin: 0 auto;
+  background: #fff;
+}
+.poster-loading {
+  /* 撑满滚动视口：高度由父级 scroll-view 给，不写死 px（原先固定 120px，视口更高时下面空一片） */
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  font-size: 24rpx;
+}
+/* 只画不显示：canvas 图层不被 scroll-view 裁剪、opacity:0 也压不住，CSS 留 2px；
+   导出位图由 canvas.width/height 决定，与这里的尺寸无关 */
+.poster-canvas-off {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2px;
+  height: 2px;
+  pointer-events: none;
 }
 .poster-head {
   display: flex;
@@ -371,12 +398,6 @@
   padding: 4rpx 12rpx;
   color: #999;
   font-size: 28rpx;
-}
-.period-poster-canvas {
-  display: block;
-  margin: 0 auto;
-  width: 300px;
-  background: #fff;
 }
 .poster-save {
   margin-top: 20rpx;

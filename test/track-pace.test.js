@@ -142,3 +142,48 @@ test('formatPaceShort：秒进位到分', () => {
   assert.equal(pace.formatPaceShort(59.6), `1'00"`);
   assert.equal(pace.formatPaceShort(333.33), `5'33"`);
 });
+
+/* ---------------- 非运动段（车速段）不计入配速区间 ---------------- */
+
+/** 慢跑 40 步 → 9 m/s（32.4km/h）跑 30 步 → 再慢跑 20 步，每步 2s */
+function mixedTrack() {
+  const pts = makeTrack([
+    ...repeat(40, { sec: 2, speed: 3 }),
+    ...repeat(30, { sec: 2, speed: 9 }),
+    ...repeat(20, { sec: 2, speed: 3 }),
+  ]);
+  for (let i = 41; i <= 70; i++) pts[i].vehicle = true; // 服务端标好的车速段
+  return pts;
+}
+
+const sampleSec = (pts) => pace.paceSamples(pts).reduce((s, x) => s + x.sec, 0);
+
+test('paceSamples：vehicle 步不计入配速采样（搭车那段不该进强度分布）', () => {
+  const pts = mixedTrack();
+  assert.equal(sampleSec(pts), 120, '只该剩慢跑的 60 步 ×2s');
+  // 对照：同样的轨迹没有 vehicle 标记时全算
+  const plain = pts.map((p) => ({ ...p, vehicle: undefined }));
+  assert.equal(sampleSec(plain), 180, '对照组应含全部 90 步');
+});
+
+test('computeRunPaceZones：有效时长与配速区间都不含 vehicle 段', () => {
+  const pts = mixedTrack();
+  const r = pace.computeRunPaceZones(pts, 0);
+  assert.equal(r.hasData, true);
+  assert.equal(r.totalSec, 120, '合计时长应与 paceSamples 同口径');
+  const inZones = r.zones.reduce((s, z) => s + z.sec, 0);
+  assert.equal(inZones, 120, '各区间之和应等于有效时长（否则与头部运动时长对不上）');
+  // 32.4km/h 若混进来会出现「比世界纪录还快 3 倍」的档位，锚点也会被拉歪
+  assert.ok(r.anchorPace > 300 && r.anchorPace < 400, `锚点应是慢跑口径，实际 ${r.anchorPace}`);
+});
+
+test('平滑窗口不跨车速段回看：下车后第一步不该带着车上的速度', () => {
+  const pts = mixedTrack();
+  const segs = pace.splitByPauseGaps([pts]);
+  const paces = pace.computeSegPaces(segs)[0];
+  // 第 70 步（车段最后一步）之后紧接着的慢跑步
+  const after = paces[71];
+  assert.ok(after > 320 && after < 360, `下车后该步应≈3m/s（333s/km），实际 ${after}`);
+  const inCar = paces[50]; // 车段中间（已被标灰、不参与统计，这里只验口径不外溢）
+  assert.ok(inCar > 100 && inCar < 120, `车段内仍是 9m/s 口径，实际 ${inCar}`);
+});

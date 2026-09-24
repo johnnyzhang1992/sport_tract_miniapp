@@ -12,13 +12,15 @@
   justify-content: center;
 }
 .preview-box {
-  width: 620rpx;
+  /* 660rpx = 330px：扣掉左右 padding 才有 302px，放得下 1:1 的 300px 宽海报 */
+  width: 660rpx;
   background: #fff;
   border-radius: 24rpx;
   padding: 28rpx;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
+  position: relative; /* 给离屏 canvas 当定位父级 */
 }
 .preview-head {
   position: relative;
@@ -48,11 +50,31 @@
   justify-content: center;
   font-size: 28rpx;
 }
-.poster-canvas {
-  /* 海报高度自适应后可能比弹窗窄，居中显示 */
-  align-self: center;
+.poster-scroll {
+  /* 只滚导出图：标题栏、公里数开关、按钮、提示都在滚动区外 */
+  width: 100%;
+}
+.poster-img {
+  display: block;
   border-radius: 12rpx;
-  background: #fff; /* 绘制前的底色：跟着海报同色，避免弹窗里先闪一块蓝 */
+  background: #fff;
+}
+.poster-loading {
+  /* 撑满滚动视口：高度由父级 scroll-view 给，这里不写死 px（原先固定 120px，视口更高时下面空一片） */
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  font-size: 24rpx;
+}
+/* 只画不显示：canvas 图层既不被 scroll-view 裁剪、opacity:0 在模拟器里也压不住（实测会把整张
+   海报刷到按钮上），所以 CSS 只留 2px；导出的位图取 canvas.width/height，与这里的尺寸无关 */
+.poster-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
 }
 .preview-actions {
   display: flex;

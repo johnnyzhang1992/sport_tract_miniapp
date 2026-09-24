@@ -627,3 +627,18 @@
     #ef4444 75% 100%
   );
 }
+/* 非运动段（疑似乘车）图例：与 track-map.js 的 VEHICLE_COLOR 同色 */
+.legend-vehicle {
+  width: 32rpx;
+  height: 12rpx;
+  border-radius: 6rpx;
+  background: #c9cdd4;
+  flex-shrink: 0;
+}
+.legend-note {
+  /* 口径说明行：文字改配速档同款橙（与后台 utils/pace.ts#VEHICLE_NOTICE_COLOR 同值）跳出来；黄底色块试过，观感怪 */
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  font-weight: 500;
+  color: #f97316;
+}

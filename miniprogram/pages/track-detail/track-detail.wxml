@@ -71,12 +71,18 @@
       </view>
     </view>
     <view class="note-text" wx:if="{{activity.note}}">{{activity.note}}</view>
-    <!-- 轨迹线颜色说明（徒步/爬山按海拔，其余按配速） -->
+    <!-- 轨迹线颜色说明（徒步/爬山按海拔，其余按配速；灰色 = 服务端判出的非运动段） -->
     <view class="legend-row">
       <text class="legend-text">{{colorMode === 'altitude' ? '海拔低' : '慢 ' + paceSlowText}}</text>
       <view class="legend-bar {{colorMode === 'altitude' ? 'legend-bar-altitude' : 'legend-bar-pace'}}"></view>
       <text class="legend-text">{{colorMode === 'altitude' ? '海拔高' : paceFastText + ' 快'}}</text>
+      <block wx:if="{{activity.vehicleNotice}}">
+        <view class="legend-vehicle"></view>
+        <text class="legend-text">疑似搭车 · 未计入</text>
+      </block>
     </view>
+    <!-- 文案由接口整句下发（vehicleNotice），端上不重算：webAdmin 详情弹窗渲染同一句 -->
+    <view class="legend-note" wx:if="{{activity.vehicleNotice}}">{{activity.vehicleNotice}}</view>
     <view class="md-title">运动数据</view>
     <view class="md-grid">
       <view class="md-cell" wx:for="{{metrics}}" wx:key="label">

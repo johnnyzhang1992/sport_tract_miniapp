@@ -75,3 +75,33 @@ test('单段明细：正常轨迹每公里用时 = 各段之和，余段标 part
   assert.equal(segs[1].partial, true, '不足 1km 的尾段标 partial');
   assert.equal(segs[1].durationSec, 30);
 });
+
+/**
+ * 车速段（服务端 vehicle 标记）：明细外观不变，但数字必须与头部同源
+ * 背景：服务端 finish 已把车速段的位移与时长一起剔出 distance/duration，
+ * 单段明细若不剔同样的段，各段之和会比头部距离大出一截（4.67km 头上写着、明细加起来 5.9km）
+ */
+function mixedVehicleTrack(markVehicle) {
+  const pts = [pt(0, 0)];
+  // A：2.5 m/s 自己跑满 1km / 400s（每步 100m/40s，dt≤60s 才不被当成采样断档）
+  for (let m = 100; m <= 1000; m += 100) pts.push(pt(m, (m / 100) * 40000));
+  // B：搭车 1km / 100s（10 m/s），点上车速标记
+  for (let k = 1; k <= 5; k++) {
+    pts.push(pt(1000 + k * 200, 400000 + k * 20000, markVehicle ? { vehicle: true } : {}));
+  }
+  // C：再自己跑 500m / 200s（每步 dt ≤60s）
+  for (const [m, ts] of [[2100, 540000], [2200, 580000], [2350, 640000], [2500, 700000]]) pts.push(pt(m, ts));
+  return pts;
+}
+
+test('单段明细：车速段的位移与时长同样剔掉，各段之和与头部口径自洽', () => {
+  const sum = (segs) => segs.reduce((s, x) => s + x.distKm, 0);
+  const secs = (segs) => segs.reduce((s, x) => s + x.durationSec, 0);
+  const marked = page.computeKmSegments(mixedVehicleTrack(true));
+  assert.ok(Math.abs(sum(marked) - 1.5) < 0.01, `剔除后各段距离之和应 1.50km，实际 ${sum(marked)}`);
+  assert.equal(secs(marked), 600, `剔除后各段用时之和应 600s，实际 ${secs(marked)}`);
+  // 对照：不带标记时那 1km/100s 会整块落进明细
+  const plain = page.computeKmSegments(mixedVehicleTrack(false));
+  assert.ok(Math.abs(sum(plain) - 2.5) < 0.01, `对照组应 2.50km，实际 ${sum(plain)}`);
+  assert.equal(secs(plain), 700, `对照组应 700s，实际 ${secs(plain)}`);
+});

@@ -8,6 +8,7 @@ const api = require('../../services/api');
 const config = require('../../config/index');
 const loading = require('../../utils/loading');
 const { formatDuration } = require('../../utils/format');
+const { posterViewHeight } = require('../../utils/poster-layout');
 
 /** 圆角矩形路径 */
 function roundRect(ctx, x, y, w, h, r) {
@@ -43,6 +44,8 @@ Page({
     milestones: [], // 今年新解锁 [{iconImg, text, date}]
     streakDays: 0, // 最长连续运动天数
     posterVisible: false,
+    posterCanvasH: 420, // 海报自然高（canvas 显示尺寸 1:1，不随屏缩）
+    posterViewH: 420, // 弹窗里的滚动视口高：比它高的部分滚出，弹窗不跟着长
     posterPath: '',
     saving: false,
   },
@@ -265,7 +268,12 @@ Page({
 
   async openPoster() {
     if (!this.data.hasData) return;
-    this.setData({ posterVisible: true, posterPath: '' });
+    const win = wx.getWindowInfo ? wx.getWindowInfo() : {};
+    this.setData({
+      posterVisible: true,
+      posterPath: '',
+      posterViewH: posterViewHeight(this.data.posterCanvasH, win.windowHeight),
+    });
     loading.show('生成海报…');
     try {
       await new Promise((r) => setTimeout(r, 150)); // 等弹窗渲染出 canvas
@@ -277,7 +285,9 @@ Page({
           .exec((q) => (q && q[0] && q[0].node ? resolve(q[0]) : reject(new Error('canvas 不存在'))));
       });
       this._canvasNode = res.node;
-      const { width, height } = res;
+      // 尺寸一律用设计值，不用 res.size：canvas 只为出图存在，CSS 已缩成 2px 占位
+      const width = 300;
+      const height = this.data.posterCanvasH;
       const ctx = res.node.getContext('2d');
       const dpr = (wx.getWindowInfo ? wx.getWindowInfo().pixelRatio : 2) || 2;
       res.node.width = width * dpr;

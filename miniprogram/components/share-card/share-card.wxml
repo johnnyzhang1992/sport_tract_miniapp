@@ -6,12 +6,13 @@
         <view class="preview-title">分享海报</view>
         <view class="preview-close" bindtap="closePreview"><image src="/assets/icons/lucide-x.png" mode="aspectFit" /></view>
       </view>
-      <canvas
-        type="2d"
-        id="posterCanvas"
-        class="poster-canvas"
-        style="{{posterStyle}}"
-      ></canvas>
+      <!-- 预览滚动的是「导出图」不是 canvas：canvas 图层在 scroll-view 里既不裁剪也不随滚动位移
+           （实测弹窗下沿的按钮会被整张海报盖住），所以 canvas 只画不显示，画完转临时图再展示 -->
+      <scroll-view class="poster-scroll" scroll-y style="height: {{posterViewH}}px">
+        <image wx:if="{{previewPath}}" class="poster-img" src="{{previewPath}}" mode="widthFix" style="{{posterImgStyle}}" />
+        <!-- 占位撑满视口：只写 CSS height:100%，不重复绑一遍数值、不写死 px（待模拟器量高确认） -->
+        <view wx:else class="poster-loading">海报生成中…</view>
+      </scroll-view>
       <view class="mini-toggle">
         <text class="mini-toggle-label">公里数标注</text>
         <switch class="mini-switch" checked="{{showKmMarks}}" bindchange="toggleKmMarks" color="#2b6cf6" />
@@ -21,6 +22,12 @@
         <button class="preview-btn preview-share" open-type="share">分享</button>
       </view>
       <view class="preview-tip">朋友圈：保存后手动发布</view>
+      <canvas
+        type="2d"
+        id="posterCanvas"
+        class="poster-canvas"
+        style="{{posterStyle}}"
+      ></canvas>
     </view>
   </view>
 
