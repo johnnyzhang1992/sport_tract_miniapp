@@ -7,6 +7,7 @@ const loading = require('../../utils/loading');
 const config = require('../../config/index');
 const { formatDuration, formatPace, formatDurationStat, compact } = require('../../utils/format');
 const { calcDiff } = require('../../utils/diff');
+const { posterViewHeight } = require('../../utils/poster-layout');
 
 /** 时长带单位（分钟/小时/天） */
 const durText = (sec) => {
@@ -98,7 +99,8 @@ Page({
     periodOptions: [], // 弹窗选项 [{offset, label, selected}]
     pickerScrollInto: '', // 弹窗滚动定位到当前周期
     posterVisible: false, // 周期海报预览弹窗
-    posterCanvasH: 380, // 海报 canvas 高度（随分类汇总行数动态撑高）
+    posterCanvasH: 380, // 海报 canvas 高度（随分类汇总行数动态撑高，1:1 不缩）
+    posterViewH: 380, // 弹窗里的滚动视口高：canvas 比它高就滚出，弹窗不跟着长
     posterPath: '',
     saving: false,
   },
@@ -201,10 +203,12 @@ Page({
     const rowsCount = (this.data.typeSummary || []).length;
     const naturalH = rowsCount > 0 ? 300 + rowsCount * 26 + 38 : 260;
     const posterH = Math.max(naturalH, 400);
+    const win = wx.getWindowInfo ? wx.getWindowInfo() : {};
     this.setData({
       posterVisible: true,
       posterPath: '',
       posterCanvasH: posterH,
+      posterViewH: posterViewHeight(posterH, win.windowHeight),
     });
     loading.show('生成海报…');
     try {

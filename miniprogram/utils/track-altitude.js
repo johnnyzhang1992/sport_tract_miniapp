@@ -23,4 +23,19 @@ function buildAltitudeChart(trackPoints, type) {
   return altPts.filter((_, i) => i % step === 0).map((p, i) => ({ label: String(i), value: p.altitude }));
 }
 
-module.exports = { ALTITUDE_TYPES, buildAltitudeChart };
+/**
+ * 轨迹线要不要按海拔着色：白名单类型 + **至少 2 个有效海拔点**。
+ *
+ * 门槛不能只看「曲线非空」：track-map 的 buildAltitudePolyline 按段内 min/max 分档，
+ * 有效海拔点 <2 时整段 continue，于是图例写着「海拔低 → 海拔高」而地图上一条线都画不出。
+ * 后台 sport_track_webAdmin/src/utils/pace.ts#usesAltitudeColor 是同一条规则，改一处要改两处。
+ * @param {Array<{altitude: number|null}>} [trackPoints] 轨迹点
+ * @param {string} type 运动类型
+ * @returns {boolean} false = 退回按配速着色
+ */
+function usesAltitudeColor(trackPoints, type) {
+  if (!ALTITUDE_TYPES.includes(type)) return false;
+  return (trackPoints || []).filter((p) => p.altitude != null).length >= 2;
+}
+
+module.exports = { ALTITUDE_TYPES, buildAltitudeChart, usesAltitudeColor };

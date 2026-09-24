@@ -71,6 +71,7 @@ function computeSegPaces(segs, windowSec = WINDOW_SEC) {
       let d = haversineKm(a, b) * 1000;
       let j = i - 1;
       while (j > 0 && dt < windowSec) {
+        if (seg[j].vehicle) break; // 不跨车速段回看：否则下车后第一步会把车上的位移算进自己的配速
         const sdt = (seg[j].timestamp - seg[j - 1].timestamp) / 1000;
         if (!Number.isFinite(sdt) || sdt < 0 || sdt > MAX_BACK_GAP_SEC) break; // 不跨断档回溯
         dt += sdt;
@@ -83,7 +84,10 @@ function computeSegPaces(segs, windowSec = WINDOW_SEC) {
   });
 }
 
-/** 配速采样：[{ pace, sec }]，pauseGap 断开、断档步与原地步剔除 */
+/**
+ * 配速采样：[{ pace, sec }]，pauseGap 断开、断档步与原地步剔除
+ * vehicle 步（服务端判出的非运动段，图上灰显）一律不采：搭车的 25km/h 落进强度分布等于凭空造 PR
+ */
 function paceSamples(points) {
   const segs = splitByPauseGaps([points || []]);
   const segPaces = computeSegPaces(segs);
@@ -92,7 +96,7 @@ function paceSamples(points) {
     const paces = segPaces[si];
     for (let i = 1; i < seg.length; i++) {
       const pace = paces[i];
-      if (pace == null) continue;
+      if (pace == null || seg[i].vehicle) continue;
       const sec = (seg[i].timestamp - seg[i - 1].timestamp) / 1000;
       if (!Number.isFinite(sec) || sec <= 0 || sec > MAX_SAMPLE_GAP_SEC) continue;
       out.push({ pace, sec });

@@ -188,7 +188,13 @@
       <text class="poster-title">周期海报</text>
       <view class="poster-close" bindtap="closePoster">✕</view>
     </view>
-    <canvas type="2d" id="periodPoster" class="period-poster-canvas" style="width: 300px; height: {{posterCanvasH}}px;"></canvas>
+    <!-- 滚的是导出图：canvas 图层不被 scroll-view 裁剪，留在滚动区里会把按钮盖住（share-card 实测踩过） -->
+    <scroll-view class="poster-scroll" scroll-y style="height: {{posterViewH}}px">
+      <image wx:if="{{posterPath}}" class="poster-img" src="{{posterPath}}" mode="widthFix" style="width: 300px;" />
+      <!-- 占位撑满视口：CSS height:100%（三张海报弹窗同口径），不写死 px -->
+      <view wx:else class="poster-loading">海报生成中…</view>
+    </scroll-view>
     <button class="poster-save" loading="{{saving}}" bindtap="savePoster">保存到相册</button>
+    <canvas type="2d" id="periodPoster" class="poster-canvas-off"></canvas>
   </view>
 </view>

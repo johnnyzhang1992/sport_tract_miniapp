@@ -3,6 +3,7 @@
  * 纯逻辑模块：页面持有单例，onLocationChange 喂点，UI 读 snapshot()
  */
 const config = require('../config/index');
+const { createVehicleWatcher } = require('../utils/vehicle-live');
 
 const EARTH_RADIUS_M = 6371000;
 /** 节流：最小采点距离（米） */
@@ -93,6 +94,10 @@ class Tracker {
     this._kmWindowPauseStartedAt = 0; // 本次暂停的开始时刻（暂停中）
     this.onKilometer = null;
 
+    // 疑似乘车实时判定（阈值与服务端同口径，见 utils/vehicle-live.js）+ 回调（record 页 toast）
+    this._vehicle = createVehicleWatcher(type);
+    this.onVehicle = null;
+
     // 前后台切换：切后台时间戳 + 回前台预热窗口（冷启动漂移过滤）
     this._backgroundAt = 0;
     this._resumeWarmupUntil = 0;
@@ -176,6 +181,9 @@ class Tracker {
         this._kmWindowPauseMs = 0;
         this.onKilometer({ km, splitSec, totalSec: this.getDurationSec() });
       }
+      // 疑似乘车实时提示：与整公里同款回调出口，命中时（每段仅一次）由 record 页 toast
+      const veh = this._vehicle.step(this.lastPoint, point);
+      if (veh && this.onVehicle) this.onVehicle(veh);
     }
     // 爬升：EMA 平滑 + 滞回确认（决策 D16 v2：替换原"单步>2m 死区"——缓坡每步差值
     // 远小于阈值会整体漏计，而慢噪声单步大跳反而被累计；滞回让噪声上下抵消）。
@@ -312,6 +320,7 @@ class Tracker {
     this._climbUpSteps = 0;
     this._kmMark = { dist: 0, ts: this.startTime };
     this._kmWindowPauseMs = 0; // 历史点无法还原每个公里的暂停分布，恢复后从零累计
+    this._vehicle = createVehicleWatcher(this.type); // 观察器整块重建：重放时命中的提示值直接吞掉，不补发历史提示
     for (let i = 0; i < this.points.length; i++) {
       const p = this.points[i];
       if (p.altitude != null) {
@@ -334,6 +343,7 @@ class Tracker {
         if (Math.floor(this.distance / 1000) > Math.floor(prevDist / 1000)) {
           this._kmMark = { dist: this.distance, ts: p.timestamp };
         }
+        this._vehicle.step(prev, p); // 让观察器的连续时长与真实轨迹对齐（返回值在此不用）
       }
     }
     this.lastPoint = this.points.length ? this.points[this.points.length - 1] : null;
@@ -433,7 +443,6 @@ class Tracker {
       endAddress,
       pausedMs: this.pausedMs,
       endTime: this.paused ? this.pausedAt : this.now(),
-      weightKg: this.weightKg,
     };
   }
 

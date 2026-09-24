@@ -221,7 +221,7 @@ test('精度过滤：accuracy 超阈值（室内/弱信号）的点被丢弃', (
 });
 
 // 保留旧用例（顺序追加，避免重名）
-test('final 包：完整点集 + 地址 + 体重', () => {
+test('final 包：完整点集 + 地址；不带体重（卡路里体重只认服务端档案）', () => {
   let clock = 0;
   const t = new Tracker('running', 65, () => clock);
   t.addPoint(P(30, 120));
@@ -229,7 +229,7 @@ test('final 包：完整点集 + 地址 + 体重', () => {
   t.addPoint(P(30.0001, 120));
   const pack = t.buildFinalPack('起点', '终点');
   assert.equal(pack.trackPoints.length, 2);
-  assert.equal(pack.weightKg, 65);
+  assert.equal('weightKg' in pack, false, '体重不参与入库：端上传了就能改写卡路里口径');
   assert.equal(pack.startAddress, '起点');
   assert.equal(pack.endAddress, '终点');
   assert.ok(pack.endTime > 0);
@@ -254,4 +254,51 @@ test('尖刺回滚：短时高速来回跳的点被剔除（距离回退）', ()
   assert.ok(t.points.length < before + 2, `尖刺应被剔除, points=${t.points.length}`);
   // 距离不应虚增（尖刺的 21m + 20m 不应计入）
   assert.ok(t.distance - distBefore < 15, `距离不应含尖刺虚增, 增量=${(t.distance - distBefore).toFixed(1)}m`);
+});
+
+test('疑似乘车实时提示：tracker 每成一段回调一次（record 页据此 toast）', () => {
+  let clock = 0;
+  const t = new Tracker('running', 60, () => clock);
+  const hits = [];
+  t.onVehicle = (info) => hits.push(info);
+  let lat = 31.2304;
+  t.addPoint({ latitude: lat, longitude: 121.4737, altitude: 10, speed: 1 });
+  // 每 5s 走 40m = 8 m/s（28.8km/h，>6.5 门槛且在 18m/s 过滤线内），连喂 20 步 = 100s
+  for (let i = 0; i < 20; i++) {
+    clock += 5000;
+    lat += 40 / ((2 * Math.PI * 6371000) / 360);
+    t.addPoint({ latitude: lat, longitude: 121.4737, altitude: 10, speed: 8 });
+  }
+  assert.equal(hits.length, 1, '成段那一刻只回调一次');
+  assert.ok(hits[0].runSec >= 60 && hits[0].runSec < 66, `第 60s 前后命中，实际 ${hits[0].runSec}`);
+  assert.ok(hits[0].avgMps > 7 && hits[0].avgMps < 9, `均速应≈8m/s，实际 ${hits[0].avgMps}`);
+  // 骑行类型套这条会把自己判没，必须哑火
+  const c = new Tracker('cycling', 60, () => 0);
+  const cHits = [];
+  c.onVehicle = (i) => cHits.push(i);
+  c.addPoint({ latitude: 31.2304, longitude: 121.4737, altitude: 10, speed: 8 });
+  c.addPoint({ latitude: 31.2308, longitude: 121.4737, altitude: 10, speed: 8 });
+  assert.equal(cHits.length, 0);
+});
+
+test('恢复现场重放观察器：不把历史乘车段补提示一遍', () => {
+  let clock = 0;
+  const t = new Tracker('running', 60, () => clock);
+  const pts = [];
+  let lat = 31.2304;
+  pts.push({ seq: 1, lat, lng: 121.4737, altitude: 10, speed: 8, timestamp: clock });
+  for (let i = 0; i < 20; i++) {
+    clock += 5000;
+    lat += 40 / ((2 * Math.PI * 6371000) / 360);
+    pts.push({ seq: i + 2, lat, lng: 121.4737, altitude: 10, speed: 8, timestamp: clock });
+  }
+  const hits = [];
+  t.onVehicle = (info) => hits.push(info);
+  t.restoreFromPoints(pts, [], pts[0].timestamp, 0);
+  assert.equal(hits.length, 0, '重放只重建状态，不补发提示');
+  // 重放后状态与真实连续高速一致：再走一步（已远超 60s）不该再命中
+  clock += 5000;
+  lat += 40 / ((2 * Math.PI * 6371000) / 360);
+  t.addPoint({ latitude: lat, longitude: 121.4737, altitude: 10, speed: 8 });
+  assert.equal(hits.length, 0, '重放已把该段的提示额度用掉，恢复后继续搭车不该再吵');
 });

@@ -11,12 +11,14 @@ global.Component = (def) => { global.__def = def; };
 global.getApp = () => ({ globalData: { userInfo: { nickname: '小张' } } });
 
 const toasts = [];
+let tmpSeq = 0;
 global.wx = {
   showLoading() {},
   hideLoading() {},
   showToast: (o) => toasts.push(o.title),
   getWindowInfo: () => ({ windowHeight: 667, pixelRatio: 2 }),
-  canvasToTempFilePath: ({ success }) => success({ tempFilePath: 'wxfile://poster.jpg' }),
+  // 每次导出给不同路径：预览现在显示的是这张导出图，路径不换就等于开关没生效
+  canvasToTempFilePath: ({ success }) => success({ tempFilePath: `wxfile://poster-${(tmpSeq += 1)}.jpg` }),
   createSelectorQuery: () => ({
     in: () => ({
       select: () => ({
@@ -151,10 +153,14 @@ test('SC1 海报尺寸自适应：位图 = 版面 × 导出缩放，弹窗样式
   // 5 项指标 2 行 + 3 段单段：钉一个绝对值，改常量时这里要一起想清楚
   // （单段表头 18→20：表头下灰线原来离字太近，两侧各放开约 2~4px）
   assert.equal(L.height, 72 + 200 + (26 + 80) + (26 + 20 + 51) + 56 + 16);
-  assert.equal(c.data.posterStyle, `width: ${L.cssWidth}px; height: ${L.cssHeight}px;`);
+  // 弹窗里显示的是导出图：宽按设计 1:1，视口按屏高封顶（超出交给 scroll-view 滚出）；
+  // canvas 只负责出图，CSS 退化成 2px 占位（它不被 scroll-view 裁剪，露出来会盖住按钮）
+  assert.equal(c.data.posterImgStyle, `width: ${L.cssWidth}px;`);
+  assert.equal(c.data.posterViewH, L.viewHeight);
+  assert.equal(c.data.posterStyle, 'width: 2px; height: 2px;');
   assert.equal(ctx.ops.length > 0, true);
   assert.deepEqual(c.events.map((e) => e.name), ['posterready']);
-  assert.equal(c.data.previewPath, 'wxfile://poster.jpg');
+  assert.match(c.data.previewPath, /^wxfile:\/\/poster-\d+\.jpg$/);
 });
 
 test('SC2 运动数据：小标题 + 三项一行铺开，label 在上数值在下、单位跟数值同基线', async () => {
@@ -266,13 +272,15 @@ test('SC7 无指标无分段（旧数据/游泳未算段）：两区标题不画
   assert.deepEqual(toasts, []);
 });
 
-test('SC8 轨迹区保持不变：公里标开关只影响画不画圆点，不动版面高度', async () => {
+test('SC8 公里标开关：只影响画不画圆点、不动版面高度，且必须重导一次让预览图换掉', async () => {
   const on = await mount({});
   const h1 = layoutOf(on.c).height;
+  const before = on.c.data.previewPath;
   await on.c.toggleKmMarks({ detail: { value: false } });
   assert.equal(on.c.data.showKmMarks, false);
   assert.equal(layoutOf(on.c).height, h1, '关掉公里标不该改海报高度');
   assert.equal(on.canvas.height, h1 * layoutOf(on.c).exportScale, '重绘后仍是同一张版面');
+  assert.notEqual(on.c.data.previewPath, before, '预览显示的是导出图：不重新导出，弹窗里看到的还是带公里标那张');
 });
 
 test('SC9 单段明细：表头文字与首行文字到分隔线都要留白（灰线不贴字）', async () => {

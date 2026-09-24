@@ -13,7 +13,7 @@ const { uploadPhoto } = require('../../services/oss-upload');
 const { formatDuration, formatPaceParts } = require('../../utils/format');
 const { getPaceScale } = require('../../utils/pace-scale');
 const { computeRunPaceZones } = require('../../utils/track-pace');
-const { buildAltitudeChart } = require('../../utils/track-altitude');
+const { buildAltitudeChart, usesAltitudeColor } = require('../../utils/track-altitude');
 
 Page({
   data: {
@@ -100,8 +100,9 @@ Page({
         (activity.markers || []).length > 0 && { label: '打点', value: String(activity.markers.length), unit: '个' },
       ].filter(Boolean);
       // 轨迹线着色：徒步/爬山且有海拔数据 → 按海拔；否则按配速（绝对刻度，越快越偏黄）。
-      // 与上面海拔曲线同一条规则：曲线非空 ⟺ 该类型在白名单里且有有效海拔点
-      const colorMode = altitudeChart.length > 0 ? 'altitude' : 'pace';
+      // 门槛用 utils/track-altitude.js#usesAltitudeColor 而不是「曲线非空」：曲线 1 个点也算非空，
+      // 而那个点数画不出线，只会剩下图例骗人。
+      const colorMode = usesAltitudeColor(activity.trackPoints, activity.type) ? 'altitude' : 'pace';
       // 最高海拔点（仅海拔着色时在图上标注坐标与海拔值）
       let peakMarker = null;
       if (colorMode === 'altitude') {
@@ -140,6 +141,7 @@ Page({
           altitude: p.altitude != null ? p.altitude : null,
           timestamp: p.timestamp,
           pauseGap: !!p.pauseGap,
+          vehicle: !!p.vehicle, // 非运动段（图上灰显）；这层映射不带上字段就被丢掉，地图永远画不出灰线
         })),
         kmMarkers: this.computeKmMarkers(activity.trackPoints || []),
         markers: (activity.markers || []).map((m) => ({ id: m.id, lat: m.lat, lng: m.lng, type: m.type, icon: m.icon })),
@@ -405,7 +407,8 @@ Page({
   /** 每公里分段
    *  pauseGap / 服务端标出的静止时段（still）/ 相邻点间隔 >60s 视为不计时：断档时间不计入段时长，
    *  距离累计保留跨档延续；每凑满 1km 记一段（溢出滚入下一公里），仅轨迹末尾剩余标为余段（partial）
-   *  still 与头部「运动时长」同口径（服务端 finish 时已扣除静止），否则各段用时之和会大于运动时长 */
+   *  still 与头部「运动时长」同口径（服务端 finish 时已扣除静止），否则各段用时之和会大于运动时长
+   *  vehicle（疑似乘车段）与头部「距离」同口径：位移与时长一起剔，否则明细加起来会比头部距离大出一截 */
   computeKmSegments(points) {
     if (!points || points.length < 2) return [];
     const toRad = (d) => (d * Math.PI) / 180;
@@ -439,8 +442,8 @@ Page({
     for (let i = 1; i < points.length; i++) {
       const p = points[i];
       const dt = (p.timestamp - prev.timestamp) / 1000;
-      // 暂停/静止/断档：时间不计入，距离零头保留，恢复后继续往 1km 累计
-      if (p.pauseGap || p.still || !Number.isFinite(dt) || dt < 0 || dt > GAP_SEC) {
+      // 暂停/静止/车速段/断档：时间与距离都不计入，距离零头保留，恢复后继续往 1km 累计
+      if (p.pauseGap || p.still || p.vehicle || !Number.isFinite(dt) || dt < 0 || dt > GAP_SEC) {
         prev = p;
         continue;
       }

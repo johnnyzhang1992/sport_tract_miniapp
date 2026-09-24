@@ -135,7 +135,14 @@ Component({
       if (this.data.mode === 'overview') return; // 合集模式由 buildOverview 管理轨迹线
       // 过滤非法坐标点（undefined/NaN），空点集时传空数组避免渲染异常
       const pts = this.data.points
-        .map((p) => ({ lat: p.lat, lng: p.lng, altitude: p.altitude ?? null, timestamp: p.timestamp ?? null, pauseGap: !!p.pauseGap }))
+        .map((p) => ({
+          lat: p.lat,
+          lng: p.lng,
+          altitude: p.altitude ?? null,
+          timestamp: p.timestamp ?? null,
+          pauseGap: !!p.pauseGap,
+          vehicle: !!p.vehicle, // 服务端判出的非运动段，线画灰（不隐身删掉）
+        }))
         .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng));
       if (pts.length < 2) {
         this.setData({ polyline: [] });
@@ -219,7 +226,7 @@ Component({
             a.altitude != null || b.altitude != null
               ? (a.altitude ?? b.altitude) + ((b.altitude ?? a.altitude) - (a.altitude ?? b.altitude)) / 2
               : null;
-          const color = avgAlt != null ? ALTITUDE_COLORS[bucketIndex(avgAlt)] : null;
+          const color = b.vehicle ? VEHICLE_COLOR : avgAlt != null ? ALTITUDE_COLORS[bucketIndex(avgAlt)] : null;
           const pt = { latitude: b.lat, longitude: b.lng };
           if (color && cur && cur.color === color) {
             cur.points.push(pt);
@@ -285,7 +292,8 @@ Component({
           const b = seg[i];
           if (!Number.isFinite(a.lat) || !Number.isFinite(b.lat)) continue;
           const pace = paces[i];
-          const color = pace != null ? colorOf(pace) : PACE_COLORS[0]; // 原地/无数据按最慢档
+          // 车速段一律灰显：25km/h 若按配速档会染成最快的那一档，等于把搭车画成冲刺
+          const color = b.vehicle ? VEHICLE_COLOR : pace != null ? colorOf(pace) : PACE_COLORS[0]; // 原地/无数据按最慢档
           const pt = { latitude: b.lat, longitude: b.lng };
           if (cur && cur.color === color) {
             cur.points.push(pt);
@@ -969,3 +977,6 @@ const ALTITUDE_COLORS = (() => {
 
 /** 配速分档色：绿 → 黄 → 橙 → 红（慢→快），4 档平色不做渐变；index 0 = 最慢（绿） */
 const PACE_COLORS = ['#22c55e', '#facc15', '#f97316', '#ef4444'];
+
+/** 非运动段（服务端判出的疑似乘车段）灰：配速档与海拔档都让位给它，详情页图例同色 */
+const VEHICLE_COLOR = '#c9cdd4';

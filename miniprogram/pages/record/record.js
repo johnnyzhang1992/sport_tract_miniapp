@@ -87,6 +87,7 @@ Page({
   newTracker(type) {
     const t = new Tracker(type, this.getWeightKg());
     t.onKilometer = (info) => this.onKilometer(info);
+    t.onVehicle = (info) => this.onVehicle(info);
     return t;
   },
 
@@ -108,6 +109,16 @@ Page({
       title: `第 ${info.km} 公里 · 分段 ${this.fmtDur(info.splitSec)}`,
       icon: 'none',
       duration: 3000,
+    });
+  },
+
+  /** 疑似乘车提示：每段只响一次（watcher 内部记状态），只提示不改数据——剔除仍以服务端 finish 时为准 */
+  onVehicle(info) {
+    wx.vibrateShort({ type: 'heavy', fail: () => wx.vibrateShort({}) });
+    wx.showToast({
+      title: `已 ${this.fmtDur(info.runSec)} 保持 ${Math.round(info.avgMps * 3.6)} km/h，疑似搭车（这段未计入）`,
+      icon: 'none',
+      duration: 4000,
     });
   },
 
@@ -656,7 +667,10 @@ Page({
       clearInterval(this.statsTimer);
       this.statsTimer = null;
     }
-    if (this.tracker) this.tracker.onKilometer = null;
+    if (this.tracker) {
+      this.tracker.onKilometer = null; // 页面卸载后不许再回调到已销毁的实例上
+      this.tracker.onVehicle = null;
+    }
     wx.setKeepScreenOn({ keepScreenOn: false });
     loading.reset(); // 兜底：页面卸载时若还有 Loading 残留则清理
 

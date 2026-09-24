@@ -69,7 +69,9 @@ Component({
     previewPath: '', // 海报临时文件（保存/分享用）
     saving: false,
     showKmMarks: true, // 海报是否标注公里数（轨迹上的整公里圆点序号）
-    posterStyle: 'width: 300px; height: 400px;', // 弹窗内显示尺寸（自适应海报高度后等比缩放到放得下）
+    posterStyle: 'width: 2px; height: 2px;', // canvas 只留 2px 占位：它既不被 scroll-view 裁剪，opacity:0 在模拟器里也藏不住（实测会把海报整张刷到按钮上）；导出位图取 canvas.width/height，与这个 CSS 尺寸无关
+    posterViewH: 400, // 滚动视口高：海报比它高就滚出，弹窗本身不跟着长
+    posterImgStyle: 'width: 300px;', // 预览图按 1:1 设计宽显示（mode=widthFix 自己算高）
   },
 
   methods: {
@@ -85,7 +87,8 @@ Component({
       const L = this._layout;
       this.setData({
         previewVisible: true,
-        posterStyle: `width: ${L.cssWidth}px; height: ${L.cssHeight}px;`,
+        posterImgStyle: `width: ${L.cssWidth}px;`,
+        posterViewH: L.viewHeight,
       });
       loading.show('生成海报…');
       try {
@@ -129,7 +132,8 @@ Component({
       const canvas = await this.queryCanvas();
       this._canvasNode = canvas;
       const ctx = canvas.getContext('2d');
-      // 位图尺寸按导出缩放（弹窗里只是等比显示，存下来的图要够清晰）
+      // 位图尺寸只按设计坐标 × 导出缩放，跟弹窗里显示多大无关：
+      // 海报比视口高时弹窗只是滚出露不出来的部分，导出仍是整张
       canvas.width = L.width * L.exportScale;
       canvas.height = L.height * L.exportScale;
       ctx.scale(L.exportScale, L.exportScale);
