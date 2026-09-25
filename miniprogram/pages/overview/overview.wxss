@@ -1,68 +1,17 @@
+/* 整屏地图：页面本身不留白，浮层按钮与提示都挂在地图上（改版前上下还有时间档与数据概况两块） */
 .overview-page {
-  padding: 20rpx 24rpx 60rpx;
-  box-sizing: border-box;
-}
-.range-tabs {
-  display: flex;
-  background: #fff;
-  border-radius: 16rpx;
-  padding: 8rpx;
-  margin-bottom: 20rpx;
-}
-.range-item {
-  flex: 1;
-  text-align: center;
-  padding: 14rpx 0;
-  font-size: 26rpx;
-  color: #4e5969;
-  border-radius: 12rpx;
-}
-.range-item-active {
-  background: #2b6cf6;
-  color: #fff;
-  font-weight: 600;
-}
-
-.stats-card {
-  display: flex;
-  align-items: center;
-  background: #fff;
-  border-radius: 16rpx;
-  padding: 24rpx 0;
-  margin-bottom: 20rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
-}
-.stat-block {
-  flex: 1;
-  text-align: center;
-}
-.stat-value {
-  font-size: 36rpx;
-  font-weight: 700;
-  color: #1f2329;
-}
-.stat-label {
-  font-size: 22rpx;
-  color: #8a93a6;
-  margin-top: 6rpx;
-}
-.stat-divider {
-  width: 1rpx;
-  height: 56rpx;
-  background: #e5e6eb;
-}
-
-.map-wrap {
   position: relative;
-  height: 640rpx;
-  border-radius: 16rpx;
+  height: 100vh;
   overflow: hidden;
-  margin-bottom: 0; /* 去掉底部间距 */
 }
+.map-wrap {
+  position: absolute;
+  inset: 0;
+}
+/* 地图宿主：绝对定位铺满 map-wrap（组件宿主的百分比高度在 flex 项里不生效，只能靠定位撑满） */
 .overview-map {
-  width: 100%;
-  height: 100%;
-  display: block;
+  position: absolute;
+  inset: 0;
 }
 .btn-icon {
   width: 28rpx;
@@ -73,6 +22,34 @@
 .close-icon {
   width: 36rpx;
   height: 36rpx;
+}
+
+/* 左上角筛选：白底胶囊（页面右列同款规格）；点亮沿用足迹页「蓝环 + 蓝字」口径，
+   图标是黑色字形资产，蓝底会把字吃没，所以只加环不换底 */
+.filter-btn {
+  position: absolute;
+  top: 16rpx;
+  left: 24rpx;
+  max-width: 60%;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 999rpx;
+  padding: 12rpx 24rpx;
+  font-size: 24rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+}
+.filter-btn text {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.filter-btn-on {
+  color: #2b6cf6;
+  font-weight: 600;
+  box-shadow: 0 0 0 3rpx #2b6cf6, 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
 }
 .layer-btn {
   position: absolute;
@@ -88,200 +65,37 @@
   align-items: center;
 }
 
-.recent-title {
-  font-size: 28rpx;
-  font-weight: 600;
-  color: #1f2329;
-  margin-bottom: 14rpx;
-}
-/* 最近轨迹卡片（2 列网格，参照我的轨迹列表） */
-.recent-grid {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-}
-.recent-card {
-  width: calc(50% - 8rpx);
-  margin-bottom: 16rpx;
-  background: #fff;
-  border-radius: 16rpx;
-  overflow: hidden;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
-}
-.recent-thumb {
-  width: 100%;
-  height: 156rpx;
-  display: block;
-}
-.recent-body {
-  padding: 16rpx 20rpx 20rpx;
-}
-.recent-head-row {
-  display: flex;
-  align-items: center;
-  margin-bottom: 12rpx;
-}
-.recent-icon {
-  width: 30rpx;
-  height: 30rpx;
-  margin-right: 10rpx;
-  flex-shrink: 0;
-}
-.recent-type {
-  font-size: 24rpx;
-  font-weight: 500;
-  color: #1f2329;
-  margin-right: auto;
-}
-.recent-duration {
-  font-size: 22rpx;
-  color: #8a93a6;
-  flex-shrink: 0;
-}
-.recent-foot-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-}
-.recent-dist {
-  font-size: 28rpx;
-  font-weight: 600;
-  color: #2b6cf6;
-}
-.recent-time {
-  font-size: 22rpx;
-  color: #8a93a6;
-}
-.recent-hover {
-  opacity: 0.7;
-}
-.recent-icon {
-  font-size: 40rpx;
-  margin-right: 20rpx;
-}
-.recent-info {
-  flex: 1;
-  min-width: 0;
-}
-.recent-name {
-  font-size: 28rpx;
-  color: #1f2329;
-  margin-bottom: 6rpx;
-}
-.recent-meta {
-  font-size: 24rpx;
-  color: #8a93a6;
-}
-.recent-arrow {
-  font-size: 36rpx;
-  color: #c2c7d0;
-}
-.loading-tip {
-  text-align: center;
-  padding: 32rpx 0;
-  color: #8a93a6;
-  font-size: 24rpx;
-}
-
-/* 全屏地图弹窗 */
-.fullscreen-btn {
+/* 地图浮层提示：居中 + 白底衬，压在底图上也能看清 */
+.page-tip {
   position: absolute;
-  bottom: 16rpx;
-  right: 24rpx; /* 右下角最右 */
-  background: rgba(255, 255, 255, 0.92);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 16rpx 32rpx;
   border-radius: 999rpx;
-  padding: 12rpx 24rpx;
-  font-size: 24rpx;
+  background: rgba(255, 255, 255, 0.94);
   box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
-  z-index: 2;
-  display: flex;
-  align-items: center;
-}
-.fullscreen-mask {
-  position: fixed;
-  inset: 0;
-  background: #000;
-  z-index: 10000;
-}
-.fullscreen-map-wrap {
-  position: absolute;
-  inset: 0;
-}
-.fullscreen-map-wrap .overview-map {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-.fullscreen-close {
-  position: absolute;
-  top: calc(16rpx + env(safe-area-inset-top));
-  left: 24rpx;
-  z-index: 1001;
-  width: 64rpx;
-  height: 64rpx;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.92);
-  color: #1f2329;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 32rpx;
-}
-.fullscreen-layer {
-  position: absolute;
-  top: calc(16rpx + env(safe-area-inset-top));
-  right: 24rpx; /* 右上角（真机指南针在左侧） */
-  z-index: 1001;
-  background: rgba(255, 255, 255, 0.92);
-  border-radius: 999rpx;
-  padding: 12rpx 24rpx;
-  font-size: 24rpx;
-  display: flex;
-  align-items: center;
-}
-.traffic-btn {
-  position: absolute;
-  top: 96rpx;
-  right: 24rpx;
-  background: rgba(255, 255, 255, 0.92);
-  border-radius: 999rpx;
-  padding: 12rpx 24rpx;
-  font-size: 24rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
-  z-index: 2;
   color: #4e5969;
-}
-.traffic-btn-active {
-  background: #2b6cf6;
-  color: #fff;
+  font-size: 26rpx;
+  z-index: 2;
 }
 
-.recent-icon {
-  width: 44rpx;
-  height: 44rpx;
-  margin-right: 20rpx;
-}
-
-/* 最近轨迹行 + 分享按钮 */
-.recent-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 14rpx;
-}
+/* 地图浮层：分享（纯图标胶囊，与组件内标注按钮同款；位于「标注」左侧，right 24 + 宽 48 + 间距 16） */
 .share-btn {
+  position: absolute;
+  bottom: calc(64rpx + env(safe-area-inset-bottom)); /* 抬到地图自带比例尺（左下）之上，并避开 Home 指示条 */
+  right: 88rpx;
+  z-index: 10;
   display: flex;
   align-items: center;
-  background: #eef4ff;
+  background: rgba(255, 255, 255, 0.92);
   border-radius: 999rpx;
-  padding: 8rpx 24rpx;
-  color: #2b6cf6;
-  font-size: 24rpx;
+  padding: 12rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
 }
 .share-btn-icon {
-  width: 28rpx;
-  height: 28rpx;
-  margin-right: 6rpx;
+  width: 26rpx;
+  height: 26rpx;
 }
 
 /* 分享弹窗 */

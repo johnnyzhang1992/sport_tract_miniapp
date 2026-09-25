@@ -62,15 +62,11 @@
     <view class="link-arrow">›</view>
   </view>
 
-  <!-- 轨迹合集（点亮地图已并入数据统计页） -->
+  <!-- 菜单（轨迹合集 · 数据导入 · 设置，点亮地图已并入数据统计页） -->
   <t-cell-group class="card menu-card">
     <t-cell title="轨迹合集" arrow bind:click="goOverview">
       <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-compass.png" mode="aspectFit" />
     </t-cell>
-  </t-cell-group>
-
-  <!-- 菜单 -->
-  <t-cell-group class="card menu-card">
     <t-cell title="数据导入" arrow bind:click="goImport">
       <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-download.png" mode="aspectFit" />
     </t-cell>

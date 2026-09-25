@@ -1,0 +1,48 @@
+<view wx:if="{{visible}}" class="mask" bindtap="onClose">
+  <view class="sheet" catchtap="noop">
+    <view class="sheet-head">
+      <view class="sheet-title">筛选轨迹</view>
+      <view class="sheet-close" catchtap="onClose">✕</view>
+    </view>
+
+    <view class="sec">
+      <view class="sec-title">时间</view>
+      <view class="chips">
+        <view
+          class="chip {{item.active ? 'chip-on' : ''}}"
+          wx:for="{{timeItems}}"
+          wx:key="key"
+          data-field="period"
+          data-key="{{item.key}}"
+          catchtap="onChipTap"
+        >
+          <text>{{item.label}}</text>
+          <text wx:if="{{item.count}}" class="chip-count">{{item.count}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="sec">
+      <view class="sec-title">省份</view>
+      <view wx:if="{{noProvince}}" class="sheet-empty">这个时间段还没有带省份的轨迹</view>
+      <view class="chips">
+        <view
+          class="chip {{item.active ? 'chip-on' : ''}}"
+          wx:for="{{provinceItems}}"
+          wx:key="key"
+          data-field="province"
+          data-key="{{item.key}}"
+          catchtap="onChipTap"
+        >
+          <text>{{item.label}}</text>
+          <text wx:if="{{item.count}}" class="chip-count">{{item.count}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="sheet-foot">
+      <view class="btn btn-ghost" catchtap="onReset">重置</view>
+      <view class="btn btn-primary" catchtap="onConfirm">确定</view>
+    </view>
+  </view>
+</view>
