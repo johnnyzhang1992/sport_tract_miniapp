@@ -1,0 +1,114 @@
+/* 筛选半屏：与足迹的 footprint-filter-sheet 同一套 .mask/.sheet 观感（组件自带样式，不依赖页面） */
+.mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+}
+.sheet {
+  width: 100%;
+  box-sizing: border-box;
+  background: #fff;
+  border-radius: 24rpx 24rpx 0 0;
+  padding: 0 32rpx;
+  max-height: 76vh;
+  overflow-y: auto;
+}
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28rpx 0 8rpx;
+}
+.sheet-title {
+  flex: 1;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+.sheet-close {
+  flex: none;
+  padding: 8rpx 0 8rpx 24rpx;
+  font-size: 30rpx;
+  color: #999;
+}
+.sheet-empty {
+  padding: 24rpx 0;
+  font-size: 26rpx;
+  color: #8a9099;
+}
+
+.sec {
+  padding: 20rpx 0 4rpx;
+}
+.sec-title {
+  font-size: 24rpx;
+  color: #8a9099;
+  margin-bottom: 12rpx;
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 12rpx 20rpx;
+  border-radius: 999px;
+  background: #f2f3f5;
+  color: #1f2329;
+  font-size: 26rpx;
+}
+.chip-on {
+  background: #eef4ff;
+  color: #2b6cf6;
+  font-weight: 600;
+}
+.chip-count {
+  font-size: 22rpx;
+  color: #8a9099;
+}
+.chip-on .chip-count {
+  color: #2b6cf6;
+}
+
+/* 按钮组贴住弹层底边（sticky）：省份最多 30+ 项会把内容撑过 76vh，
+   排在滚动内容末尾会被挤到折叠线外，不滚到底就点不到「确定」。
+   底部留白写在按钮组自己身上（不是 .sheet 的 padding），粘住时那截空白才不会被吃掉 */
+.sheet-foot {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  gap: 20rpx;
+  margin-top: 32rpx;
+  padding-bottom: calc(40rpx + env(safe-area-inset-bottom));
+  background: #fff;
+  border-top: 1rpx solid #eef0f3; /* 贴底时内容会从按钮组下面滚过，给条发丝线交代边界 */
+}
+.btn {
+  flex: 1;
+  height: 84rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+}
+.btn-ghost {
+  flex: none;
+  width: 180rpx;
+  background: #f2f3f5;
+  color: #4d5565;
+}
+.btn-primary {
+  background: #2b6cf6;
+  color: #fff;
+  font-weight: 600;
+}

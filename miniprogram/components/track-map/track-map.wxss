@@ -77,9 +77,10 @@
 .poi-btn-bottom-right {
   right: 24rpx;
 }
-/* overview 模式：右下角，全屏按钮（right 24）左侧，与详情页同间距 16rpx */
+/* overview 模式：右下角最右（合集页整屏地图不渲染全屏按钮，分享按钮在它左侧） */
 .poi-btn-overview {
-  right: 90rpx;
+  right: 24rpx;
+  bottom: calc(64rpx + env(safe-area-inset-bottom)); /* 与页面分享按钮、左下角图例同一条底边基准：抬到地图自带比例尺之上并避开 Home 指示条 */
 }
 /* 全屏地图：右上角，图层按钮（right 24，宽约 140）左侧，留足间距 */
 .poi-btn-top-right {
@@ -100,10 +101,10 @@
   margin-right: 0; /* 纯图标无文案 */
 }
 
-/* 高频路线图例（与 POI 同一容器：底部对齐，POI 左边） */
+/* 高频路线图例（与 POI 同一容器：底部对齐，POI 左边；只有合集页开，同一条底边一起抬到比例尺之上） */
 .heat-legend {
   position: absolute;
-  bottom: 16rpx;
+  bottom: calc(64rpx + env(safe-area-inset-bottom));
   left: 24rpx; /* 左下角（右下角让给全屏+标注按钮组） */
   z-index: 10;
   display: flex;

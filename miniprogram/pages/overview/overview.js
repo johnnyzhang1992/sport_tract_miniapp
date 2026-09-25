@@ -1,16 +1,16 @@
 const api = require('../../services/api');
 const config = require('../../config/index');
-const { compact, formatDurationStat } = require('../../utils/format');
-
-const RANGES = [
-  { value: 'week', label: '本周' },
-  { value: 'month', label: '本月' },
-  { value: 'year', label: '本年' },
-  { value: 'all', label: '全部' },
-];
+const posterAgg = require('../../utils/poster-aggregate');
+const tf = require('../../utils/track-filter');
 
 /** 分享海报最多展示轨迹条数（防 canvas 绘制过多导致性能问题） */
 const MAX_SHARE_TRACKS = 72; // 8 列 × 9 行（高度更高，贴合 3:4）
+
+/** 聚合海报「离群轨迹贴边小格」边长（px） */
+const EDGE_BOX = 46;
+
+/** 聚合海报最多画几个区域面板（超出的只计数） */
+const MAX_PANELS = 4;
 
 /** canvas 圆角矩形路径 */
 function roundRectPath(ctx, x, y, w, h, r) {
@@ -25,27 +25,27 @@ function roundRectPath(ctx, x, y, w, h, r) {
 
 Page({
   data: {
-    ranges: RANGES,
-    activeRange: 'week',
-    data: { count: 0, totalDistanceKm: 0, durationNum: '—', durationUnit: '分钟' },
+    // 筛选：时间档（'week'|'month'|'year'|'all'|'YYYY'）+ 省份（全名，空＝全部省份）
+    filter: { period: tf.DEFAULT_PERIOD, province: '' },
+    filtered: false, // 是否处于筛选态（点亮左上角筛选按钮）
+    filterText: '', // 按钮上的条件摘要
+    filterVisible: false,
+    filterOptions: { provinces: [], years: [] },
     tracks: [],
     heat: [],
-    recentTracks: [],
-    visibleRecent: [], // 分批展示（触底加载更多，避免一次性画太多轨迹）
-    recentStep: 10,
     mapType: 'standard',
     loading: false,
-    fullscreen: false,
     shareVisible: false,
     shareTracks: [], // 分享网格：[{ id, points:[{lat,lng}], timeText, distance }]
     shareShowTime: false, // 默认不展示时间
     shareCanvasH: 200, // 海报高度（按轨迹数量动态）
-    shareTitle: '', // 弹窗头标题：我的{范围}轨迹分享
+    shareTitle: '', // 弹窗头标题：我的{条件}轨迹 · N 条
     shareMode: 'aggregate', // 分享模式：grid 网格 | aggregate 聚合地图（默认聚合）
   },
 
   onLoad() {
     this.fetch();
+    this.ensureYearOptions(); // 预取全量快照（历史年份候选），打开筛选时秒开
   },
 
   async fetch() {
@@ -59,44 +59,83 @@ Page({
       }
     }
     if (!app.globalData.loggedIn) return;
-    this.setData({ loading: true });
+    // 请求序号守卫：只应用最后一次结果，防竞态（连点切档时旧包不能盖新包）
+    const seq = (this._seq = (this._seq || 0) + 1);
+    // 仅首屏才进 loading：切档保留已画内容，防闪屏
+    if (!this.data.tracks.length) this.setData({ loading: true });
     try {
-      const res = await api.get(`/overview?range=${this.data.activeRange}`);
-      console.log('[overview] res tracks=', (res.tracks || []).length, 'heat=', (res.heat || []).length);
-      const dur = formatDurationStat(res.totalDurationSec);
-      this.setData({
-        data: {
-          count: res.count,
-          totalDistanceKm: compact(res.totalDistanceKm),
-          durationNum: dur.num,
-          durationUnit: dur.unit,
-        },
-        tracks: this.decorateTracks(res.tracks),
-        _allTracks: res.tracks || [], // 原始数据（含 startTime，分享弹窗用）
-        heat: res.heat || [],
-        recentTracks: this.decorateRecent(res.tracks),
-        visibleRecent: this.decorateRecent(res.tracks).slice(0, this.data.recentStep),
-      });
-    } catch (e) {
-      console.error('加载轨迹合集失败', e);
-      wx.showToast({ title: '加载失败', icon: 'none' });
-    } finally {
+      const res = await api.get('/overview', tf.rangeQuery(this.data.filter.period));
+      if (seq !== this._seq) return;
+      console.log('[overview] range=', this.data.filter.period, 'tracks=', (res.tracks || []).length);
+      this.applySnapshot(res.tracks || [], res.heat || []);
       this.setData({ loading: false });
-      // 只兜底视野定位（不重复 buildOverview，避免覆盖竞态）
-      setTimeout(() => {
-        const map = this.selectComponent('#overviewMap');
-        if (map && typeof map.fitOverviewView === 'function') {
-          map.fitOverviewView();
-        }
-      }, 300);
+      this.fitMap();
+    } catch (e) {
+      if (seq !== this._seq) return;
+      console.error('加载轨迹合集失败', e);
+      this.setData({ loading: false });
+      wx.showToast({ title: '加载失败', icon: 'none' });
     }
   },
 
-  onRangeChange(e) {
-    const value = e.currentTarget.dataset.value;
-    if (value === this.data.activeRange) return;
-    this.setData({ activeRange: value, tracks: [], heat: [], recentTracks: [], visibleRecent: [] });
-    this.fetch();
+  /** 拉回的当前时间档快照 → 省份候选 + 地图数据（省份候选跟随时间档：所见即所得） */
+  applySnapshot(all, heat) {
+    this._allTracks = all;
+    const provinces = tf.buildProvinceOptions(all);
+    // 切档后候选会变：已选省不在新候选里就回落「全部省份」，否则会留个筛不出东西的条件
+    const province = tf.keepProvince(provinces, this.data.filter.province);
+    this.setData({ filterOptions: Object.assign({}, this.data.filterOptions, { provinces }) });
+    this.applyFilter(province, heat);
+  },
+
+  /** 按已选省份算地图数据（纯前端过滤，不重新请求） */
+  applyFilter(province, heat) {
+    const all = this._allTracks || [];
+    const shown = tf.filterTracks(all, { province });
+    this._shownTracks = shown;
+    const filter = { period: this.data.filter.period, province };
+    this.setData(
+      Object.assign(
+        {
+          filter,
+          filtered: tf.isFiltered(filter),
+          filterText: tf.filterSummary(filter),
+          tracks: this.decorateTracks(shown),
+        },
+        heat ? { heat } : {},
+      ),
+    );
+  },
+
+  /**
+   * 历史年份候选来自「全量快照」：/overview?range=all&lean=1 只回元数据（不查轨迹点与热力），
+   * 一次请求很小；缓存 promise，失败置空下次再试。
+   */
+  ensureYearOptions() {
+    if (this._yearPromise) return this._yearPromise;
+    this._yearPromise = api
+      .get('/overview', { range: 'all', lean: '1' })
+      .then((res) => {
+        const years = tf.buildYearOptions(res.tracks || []);
+        this.setData({ filterOptions: Object.assign({}, this.data.filterOptions, { years }) });
+        return years;
+      })
+      .catch((e) => {
+        console.warn('[overview] 年份候选加载失败', e);
+        this._yearPromise = null; // 失败不留缓存，下次打开重试
+        return [];
+      });
+    return this._yearPromise;
+  },
+
+  /** 只有兜底视野定位，不重复 buildOverview（避免覆盖竞态） */
+  fitMap() {
+    setTimeout(() => {
+      const map = this.selectComponent('#overviewMap');
+      if (map && typeof map.fitOverviewView === 'function') {
+        map.fitOverviewView();
+      }
+    }, 300);
   },
 
   /** 轨迹 → 地图 polyline 数据（类型配色） */
@@ -112,51 +151,41 @@ Page({
     });
   },
 
-  /** 最近轨迹列表（取前 20 条；卡片样式与文案与"我的轨迹"列表保持一致） */
-  decorateRecent(tracks) {
-    return (tracks || []).map((t) => {
-      const meta = config.ACTIVITY_TYPES.find((x) => x.type === t.type) || {};
-      const start = new Date(t.startTime);
-      const timeText =
-        Math.floor((Date.now() - start.getTime()) / 86400000) < 7
-          ? ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'][start.getDay()]
-          : `${start.getFullYear()}/${start.getMonth() + 1}/${start.getDate()}`;
-      return {
-        id: t.id,
-        icon: meta.icon || '🏃',
-        iconImg: meta.iconImg || '',
-        label: meta.label || t.type,
-        color: '#4A5568', // 轨迹颜色统一深灰蓝（与我的轨迹一致）
-        previewPoints: t.previewPoints || t.points || [], // 卡片缩略图：后端同口径预览点（旧接口兜底用地图点）
-        timeText,
-        distanceKm: (t.distance / 1000).toFixed(2).replace(/\.?0+$/, ''),
-        durationText: (() => {
-          const d = formatDurationStat(t.duration);
-          return `${d.num}${d.unit}`;
-        })(),
-      };
-    });
+  /** —— 筛选半屏：时间（档位 + 历史年份）/ 省份 —— */
+  async openFilter() {
+    // 年份候选来自全量快照：预取过就秒开，没回来就等一下（否则弹窗里的年份会缺一段）
+    await this.ensureYearOptions();
+    this.setData({ filterVisible: true });
   },
 
-  /** 触底加载更多最近轨迹（分批渲染防性能问题） */
-  onReachBottom() {
-    const { recentTracks, visibleRecent, recentStep } = this.data;
-    if (visibleRecent.length >= recentTracks.length) return;
-    this.setData({
-      visibleRecent: recentTracks.slice(0, visibleRecent.length + recentStep),
-    });
+  closeFilter() {
+    this.setData({ filterVisible: false });
   },
 
-  /** 分享弹窗：当前 TAB 下所有轨迹 → 网格（列数按数量自动） */
-  openShare() {
-    const tracks = this.data._allTracks || this.data.tracks || [];
-    if (!tracks.length) {
-      wx.showToast({ title: '该时间段暂无轨迹', icon: 'none' });
+  onFilterConfirm(e) {
+    const next = { period: e.detail.period, province: e.detail.province };
+    const periodChanged = next.period !== this.data.filter.period;
+    this.setData({ filterVisible: false });
+    if (periodChanged) {
+      // 时间档变了：省份候选要跟着这个档重算，得重新取数；先清空地图防闪旧内容
+      this.setData({ filter: next, tracks: [], heat: [] });
+      this.fetch();
       return;
     }
-    const rangeLabel = { week: '本周', month: '本月', year: '本年', all: '全部' }[this.data.activeRange] || '当前';
+    // 只换省份：纯前端过滤
+    this.applyFilter(next.province);
+    this.fitMap();
+  },
+
+  /** 分享弹窗：当前筛选下的轨迹（与地图同集合）→ 聚合海报 */
+  openShare() {
+    const tracks = this._shownTracks || this._allTracks || [];
+    if (!tracks.length) {
+      wx.showToast({ title: '该条件下暂无轨迹', icon: 'none' });
+      return;
+    }
     const showCount = Math.min(tracks.length, MAX_SHARE_TRACKS);
-    this.setData({ shareTitle: `我的${rangeLabel}轨迹 · ${showCount} 条${tracks.length > MAX_SHARE_TRACKS ? '（部分）' : ''}` });
+    this.setData({ shareTitle: tf.shareTitle(this.data.filter, showCount, tracks.length) });
     const shareTracks = tracks.map((t) => {
       const ts = t.startTime || t.startTimeText || Date.now();
       const d = new Date(ts);
@@ -387,54 +416,22 @@ Page({
     return segs.length > 0 ? segs : [pts];
   },
 
-  /** 绘制聚合分享海报：密集区域放大居中，外围轨迹缩小偏移到对应方位 */
+  /** 绘制聚合分享海报：按区域分面板（一家独大时"主图 + 贴边小格"，多城/分散时网格拼贴） */
   drawAggregatePoster() {
     const all = this.data.shareTracks || [];
     if (!all.length) return;
 
-    // 1. 密度网格
-    const cellLat = 150 / 111320;
-    const heatMap = new Map();
-    all.forEach((t) => {
-      (t.points || []).forEach((p) => {
-        const cosLat = Math.cos((p.lat * Math.PI) / 180) || 1;
-        const cellLng = cellLat / cosLat;
-        const key = `${Math.round(p.lat / cellLat)},${Math.round(p.lng / cellLng)}`;
-        heatMap.set(key, (heatMap.get(key) || 0) + 1);
-      });
-    });
-    const maxWeight = Math.max(...heatMap.values(), 1);
-    const normWeight = (key) => (heatMap.get(key) || 0) / maxWeight;
-
-    // 2. 计算密集区域 bbox（阈值以上为高密度）
-    const threshold = 0.3;
-    let dMinLat = Infinity, dMaxLat = -Infinity, dMinLng = Infinity, dMaxLng = -Infinity;
-    let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
-    all.forEach((t) => {
-      (t.points || []).forEach((p) => {
-        if (p.lat < minLat) minLat = p.lat;
-        if (p.lat > maxLat) maxLat = p.lat;
-        if (p.lng < minLng) minLng = p.lng;
-        if (p.lng > maxLng) maxLng = p.lng;
-        const cosLat = Math.cos((p.lat * Math.PI) / 180) || 1;
-        const cellLng2 = cellLat / cosLat;
-        const key = `${Math.round(p.lat / cellLat)},${Math.round(p.lng / cellLng2)}`;
-        if (normWeight(key) >= threshold) {
-          if (p.lat < dMinLat) dMinLat = p.lat;
-          if (p.lat > dMaxLat) dMaxLat = p.lat;
-          if (p.lng < dMinLng) dMinLng = p.lng;
-          if (p.lng > dMaxLng) dMaxLng = p.lng;
-        }
-      });
-    });
-    if (!isFinite(minLat)) return;
-
-    // 4. 海报参数
+    // 1. 区域分组 + 面板布局（面板互不相交、都在画布内，超出上限的区域只报数）
+    const groups = posterAgg.groupTracks(all, { groupKm: 30 });
+    if (!groups.length) return;
     const W = 300, H = 400, pad = 16;
     const mapTop = 82, mapBottom = H - 40;
-    const mapH = mapBottom - mapTop, mapW = W - pad * 2;
-    const cx = pad + mapW / 2; // 画布中心
-    const cy = mapTop + mapH / 2;
+    const frame = { left: pad, right: W - pad, top: mapTop, bottom: mapBottom };
+    const layout = posterAgg.layoutRegions(groups, frame, {
+      insetSize: EDGE_BOX,
+      gap: 8,
+      maxPanels: MAX_PANELS,
+    });
 
     wx.createSelectorQuery()
       .in(this)
@@ -478,131 +475,51 @@ Page({
         ctx.fillText(`${all.length} 条轨迹`, pad, 74);
 
         const TRACK_COLOR = '#808080';
-
-        // 5. 分类轨迹：密集簇轨迹（有高密度点） vs 外围轨迹
-        const clusterTracks = []; // { pts, ... }
-        const outerTracks = [];
-        (all || []).forEach((t) => {
-          const pts = (t.points || []).filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng));
+        const validPts = (track) =>
+          ((track && track.points) || []).filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng));
+        /** 用给定投影器把一条轨迹画出来（按 gap 切段） */
+        const strokeTrack = (track, projector) => {
+          const pts = validPts(track);
           if (pts.length < 2) return;
-          const inDense = isFinite(dMinLat) && pts.some((p) => {
-            const cosLat = Math.cos((p.lat * Math.PI) / 180) || 1;
-            const key = `${Math.round(p.lat / cellLat)},${Math.round(p.lng / (cellLat / cosLat))}`;
-            return normWeight(key) >= threshold;
-          });
-          (inDense ? clusterTracks : outerTracks).push({ pts, id: t.id });
-        });
-        // 无密集聚类时：全部按聚类处理（整体适应画布）
-        if (clusterTracks.length === 0) {
-          clusterTracks.push(...outerTracks.splice(0));
-        }
-
-        // 6. 密集簇 bbox（用聚类轨迹完整范围，保证形状完整可见）
-        let cMinLat = Infinity, cMaxLat = -Infinity, cMinLng = Infinity, cMaxLng = -Infinity;
-        clusterTracks.forEach((tr) => {
-          tr.pts.forEach((p) => {
-            if (p.lat < cMinLat) cMinLat = p.lat;
-            if (p.lat > cMaxLat) cMaxLat = p.lat;
-            if (p.lng < cMinLng) cMinLng = p.lng;
-            if (p.lng > cMaxLng) cMaxLng = p.lng;
-          });
-        });
-        // 聚类中心（锚点，保证居中）
-        let anchorLat, anchorLng;
-        if (isFinite(cMinLat)) {
-          anchorLat = (cMinLat + cMaxLat) / 2;
-          anchorLng = (cMinLng + cMaxLng) / 2;
-        } else {
-          anchorLat = (minLat + maxLat) / 2;
-          anchorLng = (minLng + maxLng) / 2;
-        }
-        const kmPerDeg = 111 * Math.cos((anchorLat * Math.PI) / 180);
-
-        // 缩放：让密集簇完整占据画布 ~70%（形状不失真、可见）
-        const cSpanLat = cMaxLat - cMinLat || 0.002;
-        const cSpanLng = cMaxLng - cMinLng || 0.002;
-        const cLatKm = cSpanLat * 111;
-        const cLngKm = cSpanLng * kmPerDeg;
-        const denseScale = Math.min((mapW * 0.7) / cLngKm, (mapH * 0.7) / cLatKm);
-
-        // 裁剪到地图区域
-        ctx.save();
-        ctx.beginPath();
-        ctx.rect(pad, mapTop, mapW, mapH);
-        ctx.clip();
-
-        // 7. 绘制密集簇轨迹（同一比例，居中，形状完整；正常线宽不加粗）
-        ctx.strokeStyle = TRACK_COLOR;
-        ctx.lineWidth = 1.5;
-        ctx.lineJoin = 'round';
-        ctx.lineCap = 'round';
-        clusterTracks.forEach((tr) => {
-          this.splitByGap(tr.pts).forEach((seg) => {
+          this.splitByGap(pts).forEach((seg) => {
             if (seg.length < 2) return;
             ctx.beginPath();
             seg.forEach((p, i) => {
-              const x = cx + (p.lng - anchorLng) * kmPerDeg * denseScale;
-              const y = cy - (p.lat - anchorLat) * 111 * denseScale;
-              if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+              if (i === 0) ctx.moveTo(projector.x(p.lng), projector.y(p.lat));
+              else ctx.lineTo(projector.x(p.lng), projector.y(p.lat));
             });
             ctx.stroke();
           });
-        });
+        };
 
-        // 8. 绘制外围轨迹：缩小后按方位摆放在外围（不重叠密集区域）
-        //    轨迹尺寸：适配到小包络，保证形状可辨认且不喧宾夺主
-        const maxFit = 50; // 外围轨迹最大适配跨度（px）
-        const outerHalf = maxFit / 2;
-        // 外圈半径：必须落在密集区域渲染范围之外 + 轨迹自身半宽 + 间距
-        const denseHalfW = (cSpanLng * kmPerDeg * denseScale) / 2;
-        const denseHalfH = (cSpanLat * 111 * denseScale) / 2;
-        const maxDenseHalf = Math.max(denseHalfW, denseHalfH);
-        const maxRadius = Math.min(mapW, mapH) / 2;
-        const ringRadius = Math.min(maxDenseHalf + outerHalf + 14, maxRadius * 0.92);
-        outerTracks.forEach((tr) => {
-          let tMinLat = Infinity, tMaxLat = -Infinity, tMinLng = Infinity, tMaxLng = -Infinity;
-          tr.pts.forEach((p) => {
-            if (p.lat < tMinLat) tMinLat = p.lat;
-            if (p.lat > tMaxLat) tMaxLat = p.lat;
-            if (p.lng < tMinLng) tMinLng = p.lng;
-            if (p.lng > tMaxLng) tMaxLng = p.lng;
-          });
-          const tSpanLat = tMaxLat - tMinLat || 0.001;
-          const tSpanLng = tMaxLng - tMinLng || 0.001;
-          // 每个外围轨迹等比例适配到 maxFit 包络内（形状不失真）
-          const tScale = Math.min(maxFit / (tSpanLng * kmPerDeg), maxFit / (tSpanLat * 111));
-          const tCenterLat = (tMinLat + tMaxLat) / 2;
-          const tCenterLng = (tMinLng + tMaxLng) / 2;
-
-          // 方位：密集簇中心 → 轨迹中心（km 单位）
-          const dLatKm = (tCenterLat - anchorLat) * 111;
-          const dLngKm = (tCenterLng - anchorLng) * kmPerDeg;
-          const dist = Math.hypot(dLngKm, dLatKm) || 1e-6;
-          const dirX = dLngKm / dist; // 东=+x
-          const dirY = dLatKm / dist; // 北=+y
-          // 目标位置：中心 + 方向 × 半径（保持真实方位）
-          const targetX = cx + dirX * ringRadius;
-          const targetY = cy - dirY * ringRadius; // y 轴翻转
-
+        // 3. 逐面板绘制：每个面板用自己区域的等比投影；带白底衬 + 细边的面板互相隔开
+        layout.panels.forEach((panel) => {
+          const rect = panel.rect;
+          let box = rect;
+          if (panel.bordered) {
+            roundRectPath(ctx, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, 6);
+            ctx.fillStyle = 'rgba(255,255,255,0.94)';
+            ctx.fill();
+            ctx.strokeStyle = '#e5e6eb';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            box = { left: rect.left + 5, right: rect.right - 5, top: rect.top + 5, bottom: rect.bottom - 5 };
+          }
+          // 用「核心活动区」决定缩放：按性价比累进覆盖九成活动量，少数远途轨迹不会把主图主角拉散；
+          // 核心外的轨迹仍按真实相对位置画、超出画布的部分被裁掉（见 utils/poster-aggregate.js coreBbox）。
+          const zoomBbox = posterAgg.coreBbox(panel.group.items) || panel.group.bbox;
+          const project = posterAgg.makeProjector(zoomBbox, box);
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(box.left, box.top, box.right - box.left, box.bottom - box.top);
+          ctx.clip();
           ctx.strokeStyle = TRACK_COLOR;
-          ctx.lineWidth = 1.2;
-          ctx.globalAlpha = 0.75;
-          this.splitByGap(tr.pts).forEach((seg) => {
-            if (seg.length < 2) return;
-            ctx.beginPath();
-            seg.forEach((p, i) => {
-              const relLng = (p.lng - tCenterLng) * kmPerDeg * tScale;
-              const relLat = -(p.lat - tCenterLat) * 111 * tScale;
-              const x = targetX + relLng;
-              const y = targetY + relLat;
-              if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-            });
-            ctx.stroke();
-          });
-          ctx.globalAlpha = 1;
+          ctx.lineWidth = panel.bordered ? 1 : 1.2;
+          ctx.lineJoin = 'round';
+          ctx.lineCap = 'round';
+          panel.group.items.forEach((item) => strokeTrack(item.track, project));
+          ctx.restore();
         });
-
-        ctx.restore();
 
         // 底部品牌行
         const app = getApp();
@@ -613,6 +530,14 @@ Page({
         ctx.fillText(nickname, pad, H - 12);
         ctx.textAlign = 'right';
         ctx.fillText('@小迹一下', W - pad, H - 12);
+
+        // 超出面板上限的区域：只报个数
+        if (layout.dropped) {
+          ctx.fillStyle = '#bbb';
+          ctx.font = '10px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(`另有 ${layout.dropped} 个区域未展示`, W / 2, H - 28);
+        }
       });
   },
 
@@ -620,33 +545,6 @@ Page({
     this.setData({
       mapType: this.data.mapType === 'standard' ? 'satellite' : 'standard',
     });
-  },
-
-  /** 全屏展示合集地图 */
-  openFullscreen() {
-    this.setData({ fullscreen: true });
-    // 全屏组件刚创建（wx:if），ready 已画线；这里只兜底视野
-    setTimeout(() => {
-      const map = this.selectComponent('#fsOverviewMap');
-      if (map && typeof map.fitOverviewView === 'function') {
-        map.fitOverviewView();
-      }
-    }, 300);
-  },
-
-  closeFullscreen() {
-    this.setData({ fullscreen: false });
-  },
-
-  /** 全屏内图层切换 */
-  fsSwitchLayer() {
-    this.switchLayer();
-  },
-
-  onTapTrack(e) {
-    const id = e.currentTarget.dataset.id;
-    if (!id) return;
-    wx.navigateTo({ url: `/pages/track-detail/track-detail?id=${id}` });
   },
 
   /** 分享给朋友 */
