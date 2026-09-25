@@ -9,8 +9,29 @@ const MAX_SHARE_TRACKS = 72; // 8 列 × 9 行（高度更高，贴合 3:4）
 /** 聚合海报「离群轨迹贴边小格」边长（px） */
 const EDGE_BOX = 46;
 
-/** 聚合海报最多画几个区域面板（超出的只计数） */
-const MAX_PANELS = 4;
+/** 聚合海报画布：基准高度（贴边小格/单区域形态固定用它，与轨迹网格海报同尺寸） */
+const BASE_H = 400;
+
+/** 聚合海报网格形态每行区域的最小高度（px）：区域越多画布越长，格子不被压扁 */
+const ROW_MIN_H = 140;
+
+/**
+ * 聚合海报「主图范围外轨迹」小卡片：主图按核心活动区放大，离群轨迹会被裁掉，
+ * 这些轨迹改在主图下方各出一张卡片（卡内按自己的 bbox 铺满所以一定是完整的一条线）。
+ * 版面：默认一行 3 张，卡片多到 4 行装不下才加列（最宽 5 列）；20 张封顶，其余末尾报数。
+ * minPoints：三五个点的碎片（误录/瞬移）没形状可言，既不上主图也不出卡。
+ */
+const CARD = {
+  perRow: 3,
+  maxPerRow: 5,
+  maxRows: 4,
+  minPoints: 8,
+  cardH: 80,
+  captionH: 14,
+  gap: 12,
+  labelH: 24,
+  noteH: 24,
+};
 
 /** canvas 圆角矩形路径 */
 function roundRectPath(ctx, x, y, w, h, r) {
@@ -416,22 +437,58 @@ Page({
     return segs.length > 0 ? segs : [pts];
   },
 
-  /** 绘制聚合分享海报：按区域分面板（一家独大时"主图 + 贴边小格"，多城/分散时网格拼贴） */
+  /**
+   * 绘制聚合分享海报：按区域分面板（一家独大时"主图 + 贴边小格"，多城/分散时网格拼贴）；
+   * 主图放大到核心区后被裁掉的轨迹，另在主图下方逐条补小卡片（一行 2 张）。
+   */
   drawAggregatePoster() {
     const all = this.data.shareTracks || [];
     if (!all.length) return;
 
-    // 1. 区域分组 + 面板布局（面板互不相交、都在画布内，超出上限的区域只报数）
+    // 1. 区域分组 + 面板布局（面板互不相交、都在画布内；区域一个都不丢，放不下贴边小格就整张改网格）
     const groups = posterAgg.groupTracks(all, { groupKm: 30 });
     if (!groups.length) return;
-    const W = 300, H = 400, pad = 16;
-    const mapTop = 82, mapBottom = H - 40;
-    const frame = { left: pad, right: W - pad, top: mapTop, bottom: mapBottom };
-    const layout = posterAgg.layoutRegions(groups, frame, {
-      insetSize: EDGE_BOX,
-      gap: 8,
-      maxPanels: MAX_PANELS,
+    const W = 300, pad = 16;
+    const mapTop = 82, mapBottomGap = 40;
+    const frameOf = (h) => ({ left: pad, right: W - pad, top: mapTop, bottom: h - mapBottomGap });
+    // 先用基准高度量一次拿到形态：只有网格形态（多区域拼贴）才按行数加高，贴边小格形态仍是 400
+    const probe = posterAgg.layoutRegions(groups, frameOf(BASE_H), { insetSize: EDGE_BOX, gap: 8 });
+    const regionRows = probe.mode === 'grid' ? Math.ceil(probe.panels.length / 2) : 1;
+    const mapH = Math.max(BASE_H, mapTop + regionRows * ROW_MIN_H + (regionRows - 1) * 8 + mapBottomGap);
+    const layout = posterAgg.layoutRegions(groups, frameOf(mapH), { insetSize: EDGE_BOX, gap: 8 });
+    const mapBottom = mapH - mapBottomGap;
+
+    // 2. 逐面板算投影与裁剪：主图放大到核心区后，「一个点都落不进面板」的轨迹在主图上完全看不见
+    const clipped = [];
+    const panels = layout.panels.map((panel) => {
+      const rect = panel.rect;
+      const box = panel.bordered
+        ? { left: rect.left + 5, right: rect.right - 5, top: rect.top + 5, bottom: rect.bottom - 5 }
+        : rect;
+      // 用「核心活动区」决定缩放：按性价比累进覆盖九成活动量，少数远途轨迹不会把主图主角拉散；
+      // 核心外的轨迹仍按真实相对位置画、超出面板被裁掉（见 utils/poster-aggregate.js coreBbox）。
+      const zoomBbox = posterAgg.coreBbox(panel.group.items) || panel.group.bbox;
+      const project = posterAgg.makeProjector(zoomBbox, box);
+      posterAgg
+        .splitClippedItems(panel.group.items, project, box, { minPoints: CARD.minPoints })
+        .clipped.forEach((it) => clipped.push(it.track));
+      return { panel, box, project };
     });
+
+    // 3. 被裁掉的轨迹在主图下方各出一张小卡片：地图区不动，只是画布往下长高（弹窗滚动承载）
+    const cards = posterAgg.layoutCards(clipped, {
+      left: pad,
+      right: W - pad,
+      top: mapBottom + CARD.labelH,
+      perRow: CARD.perRow,
+      maxPerRow: CARD.maxPerRow,
+      maxRows: CARD.maxRows,
+      cardH: CARD.cardH,
+      captionH: CARD.captionH,
+      gap: CARD.gap,
+    });
+    const noteH = cards.overflow ? CARD.noteH : 0;
+    const H = cards.rows ? mapH + CARD.labelH + cards.height + noteH : mapH;
 
     wx.createSelectorQuery()
       .in(this)
@@ -469,10 +526,12 @@ Page({
         ctx.fillText(totalKm, pad, 58);
         ctx.fillStyle = 'rgba(31,35,41,0.7)';
         ctx.font = '13px sans-serif';
+        const unitW = ctx.measureText('公里').width;
         ctx.fillText('公里', pad + kmW + 6, 58);
+        // 轨迹条数并到同一行（原来单独起一行，标题区白占一行高）
         ctx.fillStyle = '#8a93a6';
         ctx.font = '11px sans-serif';
-        ctx.fillText(`${all.length} 条轨迹`, pad, 74);
+        ctx.fillText(`${all.length} 条轨迹`, pad + kmW + 6 + unitW + 10, 58);
 
         const TRACK_COLOR = '#808080';
         const validPts = (track) =>
@@ -492,23 +551,17 @@ Page({
           });
         };
 
-        // 3. 逐面板绘制：每个面板用自己区域的等比投影；带白底衬 + 细边的面板互相隔开
-        layout.panels.forEach((panel) => {
-          const rect = panel.rect;
-          let box = rect;
+        // 4. 逐面板绘制：面板框与投影在排版阶段已量好（要和裁剪判定同一口径），这里只画
+        panels.forEach(({ panel, box, project }) => {
           if (panel.bordered) {
+            const rect = panel.rect;
             roundRectPath(ctx, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, 6);
             ctx.fillStyle = 'rgba(255,255,255,0.94)';
             ctx.fill();
             ctx.strokeStyle = '#e5e6eb';
             ctx.lineWidth = 1;
             ctx.stroke();
-            box = { left: rect.left + 5, right: rect.right - 5, top: rect.top + 5, bottom: rect.bottom - 5 };
           }
-          // 用「核心活动区」决定缩放：按性价比累进覆盖九成活动量，少数远途轨迹不会把主图主角拉散；
-          // 核心外的轨迹仍按真实相对位置画、超出画布的部分被裁掉（见 utils/poster-aggregate.js coreBbox）。
-          const zoomBbox = posterAgg.coreBbox(panel.group.items) || panel.group.bbox;
-          const project = posterAgg.makeProjector(zoomBbox, box);
           ctx.save();
           ctx.beginPath();
           ctx.rect(box.left, box.top, box.right - box.left, box.bottom - box.top);
@@ -521,6 +574,43 @@ Page({
           ctx.restore();
         });
 
+        // 5. 主图范围外的轨迹：逐条补一张小卡片，卡内按该轨迹自己的 bbox 铺满（所以是完整的一条线）
+        if (cards.cards.length) {
+          ctx.fillStyle = 'rgba(31,35,41,0.5)';
+          ctx.font = '10px sans-serif';
+          ctx.textAlign = 'left';
+          ctx.fillText(`以下 ${cards.cards.length} 条轨迹在主图范围外`, pad, mapBottom + 15);
+          cards.cards.forEach((card) => {
+            const rect = card.rect;
+            const bbox = posterAgg.trackBbox(card.item);
+            if (!bbox) return;
+            // 不画边框：卡片就是「一条完整轨迹 + 下面一行公里数」，靠行列间距分组
+            const box = { left: rect.left + 2, right: rect.right - 2, top: rect.top + 2, bottom: rect.bottom - 2 };
+            const project = posterAgg.makeProjector(bbox, box);
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(box.left, box.top, box.right - box.left, box.bottom - box.top);
+            ctx.clip();
+            ctx.strokeStyle = TRACK_COLOR;
+            ctx.lineWidth = 1;
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+            strokeTrack(card.item, project);
+            ctx.restore();
+            ctx.fillStyle = '#8a93a6';
+            ctx.font = '9px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(`${((card.item.distance || 0) / 1000).toFixed(1)}公里`, (rect.left + rect.right) / 2, card.captionY);
+          });
+          if (cards.overflow) {
+            ctx.fillStyle = '#bbb';
+            ctx.font = '10px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(`另有 ${cards.overflow} 条未展示`, W / 2, mapBottom + CARD.labelH + cards.height + 16);
+          }
+          ctx.textAlign = 'left';
+        }
+
         // 底部品牌行
         const app = getApp();
         const nickname = (app.globalData.userInfo && app.globalData.userInfo.nickname) || '运动爱好者';
@@ -530,14 +620,6 @@ Page({
         ctx.fillText(nickname, pad, H - 12);
         ctx.textAlign = 'right';
         ctx.fillText('@小迹一下', W - pad, H - 12);
-
-        // 超出面板上限的区域：只报个数
-        if (layout.dropped) {
-          ctx.fillStyle = '#bbb';
-          ctx.font = '10px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText(`另有 ${layout.dropped} 个区域未展示`, W / 2, H - 28);
-        }
       });
   },
 

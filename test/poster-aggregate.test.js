@@ -18,6 +18,8 @@ const {
   coreBbox,
   fitScale,
   makeProjector,
+  splitClippedItems,
+  layoutCards,
 } = require('../miniprogram/utils/poster-aggregate.js');
 
 /** 聚合海报地图区（与 overview.js 里 W300/H400/pad16/mapTop82/mapBottom360 一致） */
@@ -220,7 +222,6 @@ test('RL1 单区域：一块面板铺满整帧，不做分块', () => {
   assert.equal(out.mode, 'single');
   assert.equal(out.panels.length, 1);
   assert.deepEqual(out.panels[0].rect, FRAME);
-  assert.equal(out.dropped, 0);
 });
 
 test('RL2 一家独大（主区域占比 ≥55%）：主面板铺满 + 其余贴边小格', () => {
@@ -262,17 +263,36 @@ test('RL4 三区域：首行主面板通栏、次行两块并排；全都不相�
   }
 });
 
-test('RL5 分散多区域：面板数封顶，其余只计数（不出现碎屑小格）', () => {
+test('RL5 分散多区域：8 个区域全部画出来，不再封顶丢弃', () => {
   const gs = [];
   for (let i = 0; i < 8; i++) gs.push(groupAt(20 + i * 2, 100 + i * 3, 2, 10));
-  const out = layoutRegions(gs, FRAME, { maxPanels: 4, gap: 8 });
-  assert.equal(out.panels.length, 4);
-  assert.equal(out.dropped, 4, '8 个区域只画 4 块，其余报数');
+  const out = layoutRegions(gs, FRAME, { gap: 8 });
+  assert.equal(out.panels.length, 8, '8 个区域就该有 8 块面板');
   assert.equal(out.mode, 'grid');
+  const shown = new Set(out.panels.map((p) => p.group));
+  gs.forEach((g) => assert.ok(shown.has(g), '每个区域都必须有一块面板（引用相等）'));
+});
+
+test('RL7 一家独大但远端超过锚点数：整张退化为网格，10 个区域一个不丢', () => {
+  const main = groupAt(30.5, 114.4, 5, 40); // 200 点，占比 92%，本该走「主图 + 贴边小格」
+  const gs = [main];
+  for (let i = 0; i < 9; i++) gs.push(groupAt(20 + i * 2, 100 + i * 3, 1, 2)); // 9 个远端，锚点只有 8 个
+  const out = layoutRegions(gs, FRAME, { gap: 8, insetSize: 46 });
+  assert.equal(out.panels.length, 10, '锚点放不下时改网格，不能丢区域');
+  assert.equal(out.mode, 'grid');
+  for (const p of out.panels) {
+    assert.ok(p.rect.left >= FRAME.left - 1e-6 && p.rect.right <= FRAME.right + 1e-6, '面板出帧左右');
+    assert.ok(p.rect.top >= FRAME.top - 1e-6 && p.rect.bottom <= FRAME.bottom + 1e-6, '面板出帧上下');
+  }
+  for (let i = 0; i < out.panels.length; i++) {
+    for (let j = i + 1; j < out.panels.length; j++) {
+      assert.ok(!rectHit(out.panels[i].rect, out.panels[j].rect), `面板 ${i} 与 ${j} 相交`);
+    }
+  }
 });
 
 test('RL6 通用不变式：任何区域数下面板都互不相交、都在帧内', () => {
-  for (let n = 1; n <= 8; n++) {
+  for (let n = 1; n <= 12; n++) {
     const gs = [];
     for (let i = 0; i < n; i++) gs.push(groupAt(20 + i * 2, 100 + i * 3, 2, 10));
     const out = layoutRegions(gs, FRAME, { gap: 8, insetSize: 46 });
@@ -385,4 +405,154 @@ test('CB6 核心区：跨度代价相同时优先要活动量大的那团，不�
 test('CB4 核心区：无有效点返回 null', () => {
   assert.equal(coreBbox([]), null);
   assert.equal(coreBbox([{ track: { points: [] } }, { track: { points: [{ lat: NaN, lng: 1 }] } }]), null);
+});
+
+/* ----------------------------- splitClippedItems ---------------------------- */
+/**
+ * 主图按「核心活动区」放大后，核心外的轨迹会被 clip 掉（线上账号「全部」52 条实测 5 条
+ * 一个点都不在画面里）。这 5 条要在主图下方补小卡片，所以先要把它们挑出来。
+ * 判定口径必须和绘制口径一致：拿面板实际用的投影器 + 实际 clip 的框来量，
+ * 否则「测试认为丢了」和「画布上真丢了」会分叉。
+ */
+const ZOOM = { minLat: 30.5, maxLat: 30.52, minLng: 114.4, maxLng: 114.44 };
+const BOX = { left: 16, right: 284, top: 82, bottom: 360 };
+const item = (lat, lng) => ({ track: { points: [{ lat, lng }, { lat: lat + 0.0002, lng: lng + 0.0002 }] } });
+
+test('CL1 裁剪挑选：全部落在可视框内 → clipped 为空', () => {
+  const pr = makeProjector(ZOOM, BOX);
+  const items = [item(30.505, 114.41), item(30.51, 114.42), item(30.515, 114.43)];
+  const { kept, clipped } = splitClippedItems(items, pr, BOX);
+  assert.equal(clipped.length, 0);
+  assert.equal(kept.length, 3);
+  items.forEach((it, i) => assert.equal(kept[i], it, 'kept 要保持原引用与顺序'));
+});
+
+test('CL2 裁剪挑选：整条都在框外（北 / 东两个方向）才进 clipped', () => {
+  const pr = makeProjector(ZOOM, BOX);
+  const north = item(31.2, 114.42); // 远在核心以北
+  const east = item(30.51, 116.0); // 远在核心以东
+  const inside = item(30.505, 114.41);
+  const { kept, clipped } = splitClippedItems([inside, north, east], pr, BOX);
+  assert.deepEqual(clipped, [north, east], '两条离群轨迹都应被挑出');
+  assert.deepEqual(kept, [inside]);
+});
+
+test('CL3 裁剪挑选：只有一个点在框内（部分被裁）算 kept，不出卡片', () => {
+  const pr = makeProjector(ZOOM, BOX);
+  const partly = { track: { points: [{ lat: 31.5, lng: 114.42 }, { lat: 30.505, lng: 114.42 }] } };
+  const { kept, clipped } = splitClippedItems([partly], pr, BOX);
+  assert.deepEqual(kept, [partly], '主图上已看得见一部分，重复展示是噪音');
+  assert.equal(clipped.length, 0);
+});
+
+test('CL4 裁剪挑选：点恰好压在框四条边上都算可见（闭区间，与 clip 口径一致）', () => {
+  const pr = makeProjector(ZOOM, BOX);
+  const corners = [
+    [ZOOM.minLat, ZOOM.minLng],
+    [ZOOM.minLat, ZOOM.maxLng],
+    [ZOOM.maxLat, ZOOM.minLng],
+    [ZOOM.maxLat, ZOOM.maxLng],
+  ].map(([lat, lng]) => ({ lat, lng }));
+  const xs = corners.map((p) => pr.x(p.lng));
+  const ys = corners.map((p) => pr.y(p.lat));
+  // 夹具：框取这四个投影点的紧边界 → 四条边各至少被一个点恰好压在（不靠猜 frame 形状）
+  const tight = { left: Math.min(...xs), right: Math.max(...xs), top: Math.min(...ys), bottom: Math.max(...ys) };
+  assert.ok(Math.min(...xs.map((x) => Math.min(Math.abs(x - tight.left), Math.abs(x - tight.right)))) < 1e-9);
+  assert.ok(Math.min(...ys.map((y) => Math.min(Math.abs(y - tight.top), Math.abs(y - tight.bottom)))) < 1e-9);
+
+  const onEdges = corners.map((p) => ({ track: { points: [p] } }));
+  const { kept, clipped } = splitClippedItems(onEdges, pr, tight);
+  assert.deepEqual(kept, onEdges, '贴边轨迹在主图上看得见，不该出卡片');
+  assert.equal(clipped.length, 0);
+});
+
+test('CL5 裁剪挑选：空 items 返回两个空数组', () => {
+  const pr = makeProjector(ZOOM, BOX);
+  assert.deepEqual(splitClippedItems([], pr, BOX), { kept: [], clipped: [] });
+});
+
+test('CL6 裁剪挑选：点数不足 minPoints 的碎片不进 clipped（没形状可言，出卡只是噪音）', () => {
+  const pr = makeProjector(ZOOM, BOX);
+  const frag = { track: { points: [{ lat: 31.5, lng: 114.42 }, { lat: 31.51, lng: 114.43 }] } }; // 2 点离群碎片
+  const edge = { track: { points: Array.from({ length: 8 }, (_, k) => ({ lat: 31.6 + k * 0.001, lng: 114.42 })) } }; // 恰好卡门槛
+  const out = splitClippedItems([frag, edge], pr, BOX, { minPoints: 8 });
+  assert.deepEqual(out.clipped, [edge], '点数恰等于门槛的该出卡（边界含）');
+  assert.deepEqual(out.kept, [], '碎片既不上主图也不出卡，两边都不计');
+  // 不传门槛时不设限（碎片照旧算离群）
+  assert.equal(splitClippedItems([frag, edge], pr, BOX).clipped.length, 2);
+});
+
+/* -------------------------------- layoutCards ------------------------------- */
+/** 两个矩形是否相交（相切不算）—— 卡片块沿用面板的判定口径 */
+function rectsOverlap(a, b) {
+  return !(a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top);
+}
+const CARD_OPTS = { left: 16, right: 284, top: 372, perRow: 2, cardH: 80, captionH: 14, gap: 12 };
+const itemsOf = (n) => Array.from({ length: n }, (_, i) => ({ id: i }));
+
+test('LC1 卡片排布：一行最多两张，5 张排成 3 行', () => {
+  const { cards, rows } = layoutCards(itemsOf(5), CARD_OPTS);
+  assert.equal(cards.length, 5, '一张都不能丢');
+  assert.equal(rows, 3);
+  const rowCount = {};
+  cards.forEach((c) => {
+    assert.ok(c.rect.top >= CARD_OPTS.top - 1e-6, `第 ${c.row} 行不能顶到地图区`);
+    rowCount[c.row] = (rowCount[c.row] || 0) + 1;
+  });
+  assert.deepEqual(rowCount, { 0: 2, 1: 2, 2: 1 });
+});
+
+test('LC2 卡片排布：等宽两列、互不相交、不越出可用宽度', () => {
+  const { cards } = layoutCards(itemsOf(4), CARD_OPTS);
+  const expectW = (CARD_OPTS.right - CARD_OPTS.left - CARD_OPTS.gap) / 2;
+  cards.forEach((c) => {
+    assert.ok(Math.abs(c.rect.right - c.rect.left - expectW) < 1e-6, `卡宽应为 ${expectW}，实际 ${c.rect.right - c.rect.left}`);
+    assert.ok(Math.abs(c.rect.bottom - c.rect.top - CARD_OPTS.cardH) < 1e-6);
+    assert.ok(c.rect.left >= CARD_OPTS.left - 1e-6 && c.rect.right <= CARD_OPTS.right + 1e-6, '卡片越出左右');
+  });
+  for (let i = 0; i < cards.length; i++) {
+    for (let j = i + 1; j < cards.length; j++) {
+      assert.ok(!rectsOverlap(cards[i].rect, cards[j].rect), `卡片 ${i}/${j} 相交`);
+    }
+  }
+});
+
+test('LC3 卡片排布：落单卡片与首列左对齐（不做行内居中）', () => {
+  const { cards } = layoutCards(itemsOf(3), CARD_OPTS);
+  const firstCol = cards.find((c) => c.row === 0);
+  const lone = cards.find((c) => cards.filter((x) => x.row === c.row).length === 1);
+  assert.ok(lone, '3 张两列应有落单的一行');
+  assert.equal(lone.rect.left, firstCol.rect.left, '落单卡片要跟首列对齐，右侧留白');
+});
+
+test('LC4 卡片排布：块高等于行数×(卡高+文字行+间距)−末行间距，供画布长高用', () => {
+  const pitch = CARD_OPTS.cardH + CARD_OPTS.captionH + CARD_OPTS.gap;
+  assert.equal(layoutCards(itemsOf(5), CARD_OPTS).height, 3 * pitch - CARD_OPTS.gap);
+  assert.equal(layoutCards(itemsOf(1), CARD_OPTS).height, pitch - CARD_OPTS.gap);
+});
+
+test('LC5 卡片排布：无离群轨迹 → 零张卡、块高 0（海报高度不受影响）', () => {
+  const { cards, rows, height } = layoutCards([], CARD_OPTS);
+  assert.deepEqual(cards, []);
+  assert.equal(rows, 0);
+  assert.equal(height, 0);
+});
+
+test('LC6 卡片排布：默认每行 perRow 张，行数超上限才加列（加到 maxPerRow 仍装不下才报 overflow）', () => {
+  const opts = Object.assign({}, CARD_OPTS, { perRow: 3, maxPerRow: 5, maxRows: 4 });
+  const colsOf = (n) => {
+    const out = layoutCards(itemsOf(n), opts);
+    return { cols: out.cards.filter((c) => c.row === 0).length, rows: out.rows, overflow: out.overflow };
+  };
+  assert.deepEqual(colsOf(8), { cols: 3, rows: 3, overflow: 0 }, '8 张 3 列 3 行装得下，不加列');
+  assert.deepEqual(colsOf(12), { cols: 3, rows: 4, overflow: 0 }, '12 张恰好 3×4');
+  assert.deepEqual(colsOf(13), { cols: 4, rows: 4, overflow: 0 }, '13 张 3 列要 5 行 → 加到 4 列');
+  assert.deepEqual(colsOf(17), { cols: 5, rows: 4, overflow: 0 }, '17 张 4 列要 5 行 → 加到 5 列');
+  assert.deepEqual(colsOf(20), { cols: 5, rows: 4, overflow: 0 }, '20 张恰好 5×4');
+
+  const over = layoutCards(itemsOf(27), opts);
+  assert.equal(over.cards.length, 20, '5 列是上限，再多只能报数');
+  assert.equal(over.rows, 4);
+  assert.equal(over.overflow, 7, '多出的 7 条要报出来，不能默默吞掉');
+  assert.equal(over.height, layoutCards(itemsOf(20), opts).height, '封顶后块高不再长');
 });

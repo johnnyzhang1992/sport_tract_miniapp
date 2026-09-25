@@ -24,20 +24,27 @@
   height: 36rpx;
 }
 
-/* 左上角筛选：白底胶囊（页面右列同款规格）；点亮沿用足迹页「蓝环 + 蓝字」口径，
-   图标是黑色字形资产，蓝底会把字吃没，所以只加环不换底 */
-.filter-btn {
+/* 右上角一排：筛选 + 图层。容器只占内容宽（不铺满整行），否则会吃掉顶部的地图手势 */
+.top-tools {
   position: absolute;
   top: 16rpx;
-  left: 24rpx;
-  max-width: 60%;
+  right: 24rpx;
+  max-width: calc(100% - 48rpx);
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  z-index: 2;
+}
+/* 筛选胶囊：白底（页面右列同款规格）；点亮沿用足迹页「蓝环 + 蓝字」口径，
+   图标是黑色字形资产，蓝底会把字吃没，所以只加环不换底 */
+.filter-btn {
+  min-width: 0; /* 条件摘要过长时收缩自己，把省略号让给内部 text */
   box-sizing: border-box;
   background: rgba(255, 255, 255, 0.92);
   border-radius: 999rpx;
   padding: 12rpx 24rpx;
   font-size: 24rpx;
   box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
-  z-index: 2;
   display: flex;
   align-items: center;
 }
@@ -52,15 +59,12 @@
   box-shadow: 0 0 0 3rpx #2b6cf6, 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
 }
 .layer-btn {
-  position: absolute;
-  top: 16rpx;
-  right: 24rpx; /* 右上角（真机指南针在左侧） */
+  flex-shrink: 0;
   background: rgba(255, 255, 255, 0.92);
   border-radius: 999rpx;
   padding: 12rpx 24rpx;
   font-size: 24rpx;
   box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
-  z-index: 2;
   display: flex;
   align-items: center;
 }
@@ -80,22 +84,26 @@
   z-index: 2;
 }
 
-/* 地图浮层：分享（纯图标胶囊，与组件内标注按钮同款；位于「标注」左侧，right 24 + 宽 48 + 间距 16） */
+/* 地图浮层：分享（与组件内「标注」同规格的 88rpx 白圆底 + 40rpx 图标；
+   位于「标注」左侧：right 24 + 标注宽 88 + 间距 8 = 120） */
 .share-btn {
   position: absolute;
   bottom: calc(64rpx + env(safe-area-inset-bottom)); /* 抬到地图自带比例尺（左下）之上，并避开 Home 指示条 */
-  right: 88rpx;
+  right: 120rpx;
   z-index: 10;
   display: flex;
   align-items: center;
+  justify-content: center;
+  width: 88rpx;
+  height: 88rpx;
+  box-sizing: border-box;
   background: rgba(255, 255, 255, 0.92);
-  border-radius: 999rpx;
-  padding: 12rpx;
+  border-radius: 50%;
   box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
 }
 .share-btn-icon {
-  width: 26rpx;
-  height: 26rpx;
+  width: 40rpx;
+  height: 40rpx;
 }
 
 /* 分享弹窗 */
@@ -143,8 +151,13 @@
   height: 28rpx;
 }
 .share-scroll {
-  height: 400px; /* 固定高度：内容超出时在滚动容器内滚动 */
+  /* 高度随海报走（不写死）：海报比视口矮时不留空档，比视口高时封顶 72vh 再滚 */
+  height: auto;
+  max-height: 72vh;
+  box-sizing: border-box;
   min-height: 0;
+  padding: 24rpx 0; /* 灰底四周都留边，只有左右会显得突兀 */
+  background: #f7f8fa; /* 浅灰衬底：海报（白底）边界一眼读得出，不会误看成没画完 */
 }
 .share-canvas {
   display: block;

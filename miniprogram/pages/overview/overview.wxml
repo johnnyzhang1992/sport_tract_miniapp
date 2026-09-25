@@ -10,14 +10,16 @@
       mapType="{{mapType}}"
       showHeatLegend
     />
-    <!-- 左上角：筛选（有筛选时蓝环点亮 + 显示条件摘要，与足迹页筛选按钮同一套口径） -->
-    <view class="filter-btn {{filtered ? 'filter-btn-on' : ''}}" bindtap="openFilter">
-      <image class="btn-icon" src="/assets/icons/lucide-sliders-horizontal.png" mode="aspectFit" />
-      <text>{{filtered ? filterText : '筛选'}}</text>
-    </view>
-    <view class="layer-btn" bindtap="switchLayer">
-      <image class="btn-icon" src="{{mapType === 'standard' ? '/assets/icons/lucide-satellite.png' : '/assets/icons/lucide-map.png'}}" mode="aspectFit" />
-      <text>{{mapType === 'standard' ? '卫星' : '标准'}}</text>
+    <!-- 右上角一排：筛选 + 图层（有筛选时蓝环点亮 + 显示条件摘要，与足迹页筛选按钮同一套口径） -->
+    <view class="top-tools">
+      <view class="filter-btn {{filtered ? 'filter-btn-on' : ''}}" bindtap="openFilter">
+        <image class="btn-icon" src="/assets/icons/lucide-sliders-horizontal.png" mode="aspectFit" />
+        <text>{{filtered ? filterText : '筛选'}}</text>
+      </view>
+      <view class="layer-btn" bindtap="switchLayer">
+        <image class="btn-icon" src="{{mapType === 'standard' ? '/assets/icons/lucide-satellite.png' : '/assets/icons/lucide-map.png'}}" mode="aspectFit" />
+        <text>{{mapType === 'standard' ? '卫星' : '标准'}}</text>
+      </view>
     </view>
     <!-- 分享：右下角，组件内「标注」按钮左侧（与标注同款纯图标胶囊） -->
     <view class="share-btn" bindtap="openShare">
