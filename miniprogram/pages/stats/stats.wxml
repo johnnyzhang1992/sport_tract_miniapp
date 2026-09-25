@@ -114,4 +114,7 @@
     </view>
     <stat-chart data="{{chartData}}" type="bar" unit="km" height="{{230}}" empty-text="暂无运动数据" />
   </view>
+
+  <!-- 点亮地图 + 点亮城市（分包组件，主包页面按异步化引用） -->
+  <lit-map id="litMap" />
 </view>

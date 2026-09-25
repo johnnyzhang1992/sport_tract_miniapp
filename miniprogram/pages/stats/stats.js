@@ -29,7 +29,11 @@ Page({
   },
 
   onPullDownRefresh() {
-    this.loadAll().finally(() => wx.stopPullDownRefresh());
+    // 点亮地图是分包异步组件：占位期 selectComponent 拿到 null，跳过即可（它 ready 时会自己拉）
+    const lit = this.selectComponent('#litMap');
+    const tasks = [this.loadAll()];
+    if (lit) tasks.push(lit.load());
+    Promise.all(tasks).finally(() => wx.stopPullDownRefresh());
   },
 
   async loadAll() {

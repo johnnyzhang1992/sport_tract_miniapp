@@ -77,7 +77,6 @@
     {
       "root": "packageFootprint",
       "pages": [
-        "pages/footprint/footprint",
         "pages/footprint-stats/footprint-stats"
       ]
     }

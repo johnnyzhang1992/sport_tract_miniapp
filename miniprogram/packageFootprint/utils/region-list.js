@@ -1,5 +1,7 @@
 /**
- * 统计页「省份 → 城市」列表的纯函数：把接口返回的 provinces（含 cities）换算成可渲染的行视图。
+ * 「省份 → 城市」列表的纯函数：把接口返回的 provinces（含 cities）换算成可渲染的行视图。
+ * 两个接口形态不同：/footprint-records/stats 的 provinces[].cities 已是数组，
+ * /stats/footprint 的是市个数 + 一份扁平 cities，先经 attachCities 挂回去。
  *
  * 为什么要抽出来：WXML 既算不出「这一行是否展开」，也没法给缺失字段兜底，
  * 而展开态是页面 data 里的一份省份名集合，每次切换都要整表重算——留在页面里就成了不可测的胶水。
@@ -41,4 +43,19 @@ function regionSummaryText(provinces) {
   return `共 ${list.length} 省 ${cityCount} 城`;
 }
 
-module.exports = { buildRegionRows, toggleRegion, regionSummaryText };
+/**
+ * 把 /stats/footprint 的扁平 cities 挂回 provinces：该接口的 provinces[].cities 是「市个数」（数字），
+ * 而 buildRegionRows 要的是城市数组。两边都不在前端重排——后端已按足迹数倒序，与地图着色同一口径。
+ * @param provinces [{name, count, cities:number}]；@param cities [{name, province, count}]
+ * @returns [{name, count, cities:[{name, count}]}]
+ */
+function attachCities(provinces, cities) {
+  const list = Array.isArray(provinces) ? provinces : [];
+  const flat = Array.isArray(cities) ? cities : [];
+  return list.map((p) => ({
+    ...p,
+    cities: flat.filter((c) => c && c.province === p.name).map((c) => ({ name: c.name, count: c.count })),
+  }));
+}
+
+module.exports = { buildRegionRows, toggleRegion, regionSummaryText, attachCities };
