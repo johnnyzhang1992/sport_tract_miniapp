@@ -8,6 +8,8 @@
  *   - 主区域 = 轨迹条数最多的那一簇，按真实经纬度等比铺满画布；
  *   - 其余远端区域各缩成一张贴边小格（格内仍按该区域的真实相对位置画），按方位就近落位，
  *     方框之间用精确碰撞检测保证不重叠。
+ * 主图按「核心活动区」放大，核心外的离群轨迹会被裁掉；这些完全看不见的轨迹由
+ * splitClippedItems 挑出、layoutCards 排成主图下方的小卡片（一行两张）补展。
  *
  * 坐标约定：bearing 以正东为 0、逆时针为正（与屏幕 y 轴向下相配：y = cy - sin(bearing) * r）。
  */
@@ -176,58 +178,58 @@ function layoutEdgeBoxes(extras, opts) {
 /**
  * 区域 → 画布面板。三种形态：
  *   - single：只有一个区域 → 一块铺满整帧。
- *   - insets：主区域占比 ≥ dominantShare（一家独大）→ 主面板铺满 + 其余区域贴边小格。
- *   - grid  ：多城/分散 → 首行主区域通栏、其余按两列网格铺，每块都是该区域的真实地图，
- *             因此「轨迹分散时海报全是碎屑小格」不会再出现；面板总数封顶 maxPanels，超出只报数。
- * 三种形态都保证：面板互不相交、全部落在 frame 内。
+ *   - insets：主区域占比 ≥ dominantShare（一家独大）且远端区域放得下贴边小格 →
+ *             主面板铺满 + 其余区域贴边小格。
+ *   - grid  ：其余情况 → 首行主区域通栏、其余按两列网格铺，每块都是该区域的真实地图，
+ *             因此「轨迹分散时海报全是碎屑小格」不会出现。
+ * 区域一个都不丢：贴边小格的方位锚点只有 EDGE_ANCHORS 个，放不下就整张退化为网格
+ * （区域多时格子变小，但不丢内容）。三种形态都保证：面板互不相交、全部落在 frame 内。
  */
 function layoutRegions(groups, frame, opts) {
   const list = (Array.isArray(groups) ? groups : []).filter((g) => g && g.bbox);
   const gap = opts && opts.gap != null ? opts.gap : 8;
   const insetSize = (opts && opts.insetSize) || 46;
-  const maxPanels = (opts && opts.maxPanels) || 4;
   const dominantShare = opts && opts.dominantShare != null ? opts.dominantShare : 0.55;
 
-  if (!list.length) return { mode: 'single', panels: [], dropped: 0 };
+  if (!list.length) return { mode: 'single', panels: [] };
 
-  const keep = list.slice(0, Math.max(1, maxPanels));
-  const droppedRegions = list.length - keep.length;
-
-  if (keep.length === 1) {
-    return { mode: 'single', panels: [{ group: keep[0], rect: { ...frame }, bordered: false }], dropped: droppedRegions };
+  if (list.length === 1) {
+    return { mode: 'single', panels: [{ group: list[0], rect: { ...frame }, bordered: false }] };
   }
 
-  const totalPoints = keep.reduce((s, g) => s + (g.points || 0), 0) || 1;
-  const mainShare = (keep[0].points || 0) / totalPoints;
+  const totalPoints = list.reduce((s, g) => s + (g.points || 0), 0) || 1;
+  const mainShare = (list[0].points || 0) / totalPoints;
 
   if (mainShare >= dominantShare) {
-    const { main, extras } = splitGroups(keep);
+    const { main, extras } = splitGroups(list);
     const edge = layoutEdgeBoxes(extras, { frame, size: insetSize });
-    const panels = [{ group: main, rect: { ...frame }, bordered: false }];
-    edge.placed.forEach((slot) => {
-      panels.push({
-        group: slot,
-        bordered: true,
-        rect: {
-          left: slot.x - insetSize / 2,
-          right: slot.x + insetSize / 2,
-          top: slot.y - insetSize / 2,
-          bottom: slot.y + insetSize / 2,
-        },
+    if (!edge.dropped.length) {
+      const panels = [{ group: main, rect: { ...frame }, bordered: false }];
+      edge.placed.forEach((slot) => {
+        panels.push({
+          group: slot,
+          bordered: true,
+          rect: {
+            left: slot.x - insetSize / 2,
+            right: slot.x + insetSize / 2,
+            top: slot.y - insetSize / 2,
+            bottom: slot.y + insetSize / 2,
+          },
+        });
       });
-    });
-    return { mode: 'insets', panels, dropped: droppedRegions + edge.dropped.length };
+      return { mode: 'insets', panels };
+    }
   }
 
   // 网格：每行两块；数量为奇数时首行留给主区域通栏（避免末行空半边）
   const rows = [];
   let idx = 0;
-  if (keep.length % 2 === 1) {
-    rows.push([keep[0]]);
+  if (list.length % 2 === 1) {
+    rows.push([list[0]]);
     idx = 1;
   }
-  while (idx < keep.length) {
-    rows.push(keep.slice(idx, idx + 2));
+  while (idx < list.length) {
+    rows.push(list.slice(idx, idx + 2));
     idx += 2;
   }
 
@@ -241,7 +243,7 @@ function layoutRegions(groups, frame, opts) {
       panels.push({ group: g, bordered: true, rect: { left, right: left + cellW, top, bottom: top + rowH } });
     });
   });
-  return { mode: 'grid', panels, dropped: droppedRegions };
+  return { mode: 'grid', panels };
 }
 
 /** 把 bbox 围绕中心撑到至少 minKm（两个方向都撑），但不超出 allow 的范围 */
@@ -360,6 +362,79 @@ function makeProjector(bbox, frame) {
   };
 }
 
+/**
+ * 面板内轨迹按「投影后可见性」分类。
+ * 主图缩放用的是 coreBbox（覆盖九成活动量的核心），核心外的离群轨迹会被 clip 掉——
+ * 实测线上账号「全部」档 52 条里有 5 条一个点都不在画面里。clipped 就是这些「完全看不见」的轨迹，
+ * 由调用方在主图下方补小卡片；只要有一个点可见就留在 kept（部分出框仍在主图上被裁，不再重复展示）。
+ * 判定用面板实际使用的投影器和 clip 框，保证「挑出来的」与「画布上真丢的」同一口径。
+ * opts.minPoints：出卡门槛。三五个点的碎片（误录、瞬移）本来就没形状，画成卡片只是噪音，
+ * 于是既不上主图也不出卡（真实数据里这类占 8/52）。
+ */
+function splitClippedItems(items, projector, box, opts) {
+  const minPoints = (opts && opts.minPoints) || 0;
+  const kept = [];
+  const clipped = [];
+  (items || []).forEach((it) => {
+    const pts = ((it && it.track && it.track.points) || []).filter(
+      (p) => p && Number.isFinite(p.lat) && Number.isFinite(p.lng),
+    );
+    const visible = pts.some((p) => {
+      const x = projector.x(p.lng);
+      const y = projector.y(p.lat);
+      return x >= box.left && x <= box.right && y >= box.top && y <= box.bottom;
+    });
+    if (visible) kept.push(it);
+    else if (pts.length >= minPoints) clipped.push(it);
+  });
+  return { kept, clipped };
+}
+
+/**
+ * 离群轨迹小卡片排布：默认一行 perRow 张，等宽、从可用区左边界起排（落单的与首列对齐）。
+ * 卡片多到 maxRows 行装不下时先加列（最宽 maxPerRow 列）；加到最宽还装不下就只画
+ * cols×maxRows 张，其余计入 overflow 交调用方在末尾报数——海报不能无限长高。
+ * rect 是卡片图区（轨迹按自己的 bbox 等比铺满这块），captionY 是其下方说明文字的基线。
+ * height 是整个卡片块占高（不含末行下方间距），调用方据此把画布往下长高。
+ */
+function layoutCards(items, opts) {
+  const list = Array.isArray(items) ? items : [];
+  const gap = opts.gap != null ? opts.gap : 12;
+  const perRow = Math.max(opts.perRow || 3, 1);
+  const maxPerRow = Math.max(opts.maxPerRow || perRow, perRow);
+  const maxRows = opts.maxRows > 0 ? opts.maxRows : Infinity;
+  const cardH = opts.cardH || 80;
+  const captionH = opts.captionH != null ? opts.captionH : 14;
+  const avail = opts.right - opts.left;
+
+  if (!list.length) return { cards: [], rows: 0, cols: perRow, height: 0, overflow: 0 };
+
+  let cols = maxPerRow;
+  for (let c = perRow; c <= maxPerRow; c++) {
+    cols = c;
+    if (Math.ceil(list.length / c) <= maxRows) break;
+  }
+  const shown = Math.min(list.length, cols * maxRows);
+  const rows = Math.ceil(shown / cols);
+  const pitch = cardH + captionH + gap;
+  const cardW = (avail - gap * (cols - 1)) / cols;
+
+  const cards = [];
+  for (let r = 0; r < rows; r++) {
+    const top = opts.top + r * pitch;
+    list.slice(r * cols, (r + 1) * cols).forEach((item, c) => {
+      const left = opts.left + c * (cardW + gap);
+      cards.push({
+        item,
+        row: r,
+        rect: { left, right: left + cardW, top, bottom: top + cardH },
+        captionY: top + cardH + 10,
+      });
+    });
+  }
+  return { cards, rows, cols, height: rows * pitch - gap, overflow: list.length - shown };
+}
+
 module.exports = {
   groupTracks,
   splitGroups,
@@ -369,6 +444,8 @@ module.exports = {
   fitScale,
   makeProjector,
   trackBbox,
+  splitClippedItems,
+  layoutCards,
   kmPerDegLng,
   EDGE_ANCHORS,
   DEFAULT_GROUP_KM,

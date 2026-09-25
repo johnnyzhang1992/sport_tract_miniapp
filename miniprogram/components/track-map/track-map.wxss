@@ -77,10 +77,21 @@
 .poi-btn-bottom-right {
   right: 24rpx;
 }
-/* overview 模式：右下角最右（合集页整屏地图不渲染全屏按钮，分享按钮在它左侧） */
+/* overview 模式：右下角最右（合集页整屏地图不渲染全屏按钮，分享按钮在它左侧）
+   尺寸对齐足迹地图页的浮层按钮口径：88rpx 白圆底 + 40rpx 图标（触摸面积 ≈46pt） */
 .poi-btn-overview {
   right: 24rpx;
   bottom: calc(64rpx + env(safe-area-inset-bottom)); /* 与页面分享按钮、左下角图例同一条底边基准：抬到地图自带比例尺之上并避开 Home 指示条 */
+  width: 88rpx;
+  height: 88rpx;
+  box-sizing: border-box;
+  padding: 0;
+  border-radius: 50%;
+  justify-content: center;
+}
+.poi-btn-overview .poi-icon {
+  width: 40rpx;
+  height: 40rpx;
 }
 /* 全屏地图：右上角，图层按钮（right 24，宽约 140）左侧，留足间距 */
 .poi-btn-top-right {
