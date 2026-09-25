@@ -1,6 +1,0 @@
-{
-  "navigationBarTitleText": "点亮地图",
-  "usingComponents": {
-    "ec-canvas": "../../components/ec-canvas/ec-canvas"
-  }
-}

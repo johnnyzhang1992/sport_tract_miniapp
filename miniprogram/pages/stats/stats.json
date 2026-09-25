@@ -5,6 +5,10 @@
   "usingComponents": {
     "stat-chart": "/components/stat-chart/stat-chart",
     "t-tabs": "tdesign-miniprogram/tabs/tabs",
-    "t-tab-panel": "tdesign-miniprogram/tab-panel/tab-panel"
+    "t-tab-panel": "tdesign-miniprogram/tab-panel/tab-panel",
+    "lit-map": "/packageFootprint/components/lit-map/lit-map"
+  },
+  "componentPlaceholder": {
+    "lit-map": "view"
   }
 }
