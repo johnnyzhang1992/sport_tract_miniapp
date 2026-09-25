@@ -5,6 +5,7 @@
  * - 排行：类型 chips + 省份选择，TOP10 昵称模糊（服务端处理，不可点击），底部当前用户真实排名
  *   chips 顺序按 /stats/leaderboard-type-counts 的上榜轨迹数降序（同数保持 config 顺序），
  *   仅首次进入拉取：重拉会让用户选到一半的 chips 跳位；拉取失败则退回 config 顺序
+ *   默认选中排第一的那个类型；用户点过之后（_typeTouched）重排才保住他选的那一个
  */
 const drawGeoMap = require('../../utils/map-draw');
 const loading = require('../../utils/loading');
@@ -135,7 +136,7 @@ Page({
     periods: PERIODS,
     periodIndex: 0, // 默认周榜
     types: ACTIVITY_TYPES,
-    typeIndex: 0, // 默认散步（config 顺序：0散步 1跑步）
+    typeIndex: 0, // 计数没回来前的兜底：config 首位（散步）；回来后会挪到排第一的类型
     provinceOptions: ['全国'],
     provinceIndex: 0,
     board: null, // { players, top, me }
@@ -181,16 +182,29 @@ Page({
 
     try {
       const api = app.globalData.api;
-      const [regions, boardRaw, typeCounts] = await Promise.all([
+      let typeCounts = null;
+      // chips「有数据的排前面」只在首次拉：之后重拉会让用户选到一半的 chips 跳位
+      if (!this._typeOrderLoaded) {
+        typeCounts = await api.get('/stats/leaderboard-type-counts').catch((e) => {
+          console.warn('[leaderboard] 类型计数拉取失败，chips 保持 config 顺序', e);
+          return null;
+        });
+      }
+      if (typeCounts && typeCounts.types) {
+        this._typeOrderLoaded = true;
+        this.setData(
+          applyTypeCounts({
+            types: this.data.types,
+            counts: typeCounts.types,
+            // 只有用户真点过才算"已有选择"；没点过时 applyTypeCounts 会退到第 1 格（= 计数最多的那个）
+            currentType: this._typeTouched ? this.curType() : null,
+          }),
+        );
+      }
+      // 顺序和默认类型先定下来再发榜单：并发发会让榜面停在重排前的兜底默认值（散步）上
+      const [regions, boardRaw] = await Promise.all([
         api.get('/stats/leaderboard-regions'),
         api.get(`/stats/leaderboard?type=${this.curType()}&province=${encodeURIComponent(this.curProvince())}&period=${this.curPeriod()}`),
-        // chips「有数据的排前面」只在首次拉：之后重拉会让用户选到一半的 chips 跳位
-        this._typeOrderLoaded
-          ? Promise.resolve(null)
-          : api.get('/stats/leaderboard-type-counts').catch((e) => {
-              console.warn('[leaderboard] 类型计数拉取失败，chips 保持 config 顺序', e);
-              return null;
-            }),
       ]);
       const board = decorateRows(boardRaw);
       this._regions = regions;
@@ -203,12 +217,6 @@ Page({
         board,
         loading: false,
       });
-      if (typeCounts && typeCounts.types) {
-        this._typeOrderLoaded = true;
-        this.setData(
-          applyTypeCounts({ types: this.data.types, counts: typeCounts.types, currentType: this.curType() }),
-        );
-      }
       this._loaded = true;
       // 中国地图数据（省界 GeoJSON）加载后绘制
       const geo = await this.ensureChinaMap();
@@ -665,6 +673,7 @@ Page({
 
   onTypeTap(e) {
     const index = Number(e.currentTarget.dataset.index);
+    this._typeTouched = true; // 从这一刻起，chips 重排要保住的是"用户选的"而不是页面默认值
     if (index === this.data.typeIndex) return;
     this.setData({ typeIndex: index });
     this.fetchBoard();
