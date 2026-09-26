@@ -10,7 +10,7 @@
     <view class="privacy-p">4. <text class="strong">相册与照片</text>：用于打点上传照片、设置头像。仅在您主动选择时读取。</view>
     <view class="privacy-p">5. <text class="strong">昵称与头像</text>：由您主动填写昵称、从相册选择头像图片，仅用于展示个人资料（不通过微信接口自动获取）。</view>
     <view class="privacy-p">6. <text class="strong">运动数据</text>：轨迹点、距离、时长、配速、消耗、海拔等，用于生成运动记录与统计图表。</view>
-    <view class="privacy-p">7. <text class="strong">位置选择（wx.chooseLocation 接口）</text>：在记录足迹时，您可主动点击"选点"打开地图选择界面（微信官方能力，自带搜索与地图点选），选定地点后我们读取您所选的位置名称、地址与经纬度，仅用于保存并展示该条足迹的地点信息。该接口仅在您主动触发时调用一次，不会持续定位，也不后台采集。</view>
+    <view class="privacy-p">7. <text class="strong">位置选择</text>：在记录足迹时，您可主动点击"选点"打开地图选择界面，选定地点后我们读取您所选的位置名称、地址与经纬度，仅用于保存并展示该条足迹的地点信息。位置选择仅在您主动触发时执行一次，不会持续定位，也不后台采集。</view>
   </view>
 
   <view class="privacy-section">
