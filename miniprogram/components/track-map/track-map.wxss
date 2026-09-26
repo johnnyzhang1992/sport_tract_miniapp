@@ -18,18 +18,16 @@
   align-items: center;
   background: rgba(255, 255, 255, 0.92);
   border-radius: 999rpx;
-  padding: 12rpx; /* 纯图标（标注/公里均已去文案） */
-  font-size: 24rpx;
+  padding: 14rpx; /* 纯图标（标注/公里均已去文案）；与卫星按钮同档大小 */
+  font-size: 26rpx;
   color: #4e5969;
   box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
 }
 /* record 模式：右上角（图层按钮下方），避开底部操作栏 */
-.poi-btn-top {
-  bottom: auto;
-  top: 16rpx; /* 右上角同一行：精度|标注|卫星 */
-  right: 160rpx; /* 卫星按钮（right 24）左侧 */
-  left: auto !important;
-}
+
+/* —— record 右上角一行：图层切换按钮（组件内，最右） —— */
+
+/* —— record 右上角一行：实时精度徽章（最左，弱信号橙色） —— */
 /* 全屏关闭按钮（左上角，组件内统一） */
 .map-fullscreen-close {
   position: absolute;
@@ -107,8 +105,8 @@
 }
 /* 右下角贴右（无全屏按钮的页面，如 summary） */
 .poi-icon {
-  width: 26rpx;
-  height: 26rpx;
+  width: 34rpx;
+  height: 34rpx;
   margin-right: 0; /* 纯图标无文案 */
 }
 
@@ -147,3 +145,61 @@
   margin-right: 14rpx;
 }
 
+/* —— record 右上角按钮组：flex 容器（精度徽章 | 标注 | 图层），间距统一由 gap 控制 —— */
+.top-actions {
+  position: absolute;
+  top: 16rpx;
+  right: 24rpx;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+}
+.top-actions .acc-badge {
+  position: static; /* 容器内 flex 排布，不再各自绝对定位 */
+  display: flex;
+  align-items: center;
+  background: rgba(44, 187, 110, 0.92);
+  color: #fff;
+  border-radius: 999rpx;
+  padding: 12rpx 24rpx;
+  font-size: 24rpx;
+}
+.top-actions .acc-badge-weak {
+  background: rgba(255, 152, 0, 0.92);
+}
+.top-actions .acc-dot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 50%;
+  background: #fff;
+  margin-right: 10rpx;
+}
+.top-actions .poi-btn {
+  position: static;
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 999rpx;
+  padding: 14rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
+}
+.top-actions .poi-icon {
+  width: 34rpx;
+  height: 34rpx;
+}
+.top-actions .layer-btn {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 999rpx;
+  padding: 12rpx 24rpx;
+  font-size: 26rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
+}
+.top-actions .btn-icon {
+  width: 34rpx;
+  height: 34rpx;
+  margin-right: 8rpx;
+  flex-shrink: 0;
+}

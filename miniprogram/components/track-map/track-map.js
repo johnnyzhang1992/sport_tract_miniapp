@@ -52,6 +52,11 @@ Component({
     heading: { type: Number, value: -1 },
     /** 是否启用地图旋转手势（record 模式禁用，避免与自动朝向冲突） */
     enableRotate: { type: Boolean, value: true },
+    /** 右上角显示图层切换按钮（record 模式；切换由组件内部 switchLayer 处理并触发 layerchange） */
+    showLayerBtn: { type: Boolean, value: false },
+    /** 实时精度徽章（米，null 不显示）；weakSignal 时橙色提醒 */
+    accuracy: { type: Number, value: null },
+    weakSignal: { type: Boolean, value: false },
   },
 
   data: {
@@ -658,11 +663,12 @@ Component({
       }
     },
 
-    /** 图层切换 */
+    /** 图层切换（组件内部按钮用；同步通知页面，页面无需再自己维护 mapType） */
     switchLayer() {
       this.setData({
         mapType: this.data.mapType === 'standard' ? 'satellite' : 'standard',
       });
+      this.triggerEvent('layerchange', { mapType: this.data.mapType });
     },
 
     /** 全屏（触发页面方法） */
