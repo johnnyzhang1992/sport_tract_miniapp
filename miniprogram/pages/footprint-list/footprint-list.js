@@ -438,8 +438,13 @@ Page({
     this.setData({ formVisible: false, formRecord: null });
     this.reloadAll();
   },
-  /** 数据变了：列表与总览/打点都要重取（新增、编辑、删除后共用） */
+  /**
+   * 数据变了：列表与总览/打点都要重取（新增、编辑、删除后共用）。
+   * 顺带打跨页脏标记——本页是从地图 tab 上 navigateTo 推上来的，返回时地图页只走 onShow，
+   * 靠这个标记才知道要补拉，否则删掉的点会一直挂在地图上。
+   */
   reloadAll() {
+    getApp().globalData.fpDirty = true;
     this.loadCalendar();
     this.loadAll();
   },

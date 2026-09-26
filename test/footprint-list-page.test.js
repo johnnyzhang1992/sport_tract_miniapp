@@ -60,6 +60,7 @@ const appStub = {
 function resetAppStub(over = {}) {
   loginCalls = 0;
   appStub.globalData.loggedIn = over.loggedIn !== undefined ? over.loggedIn : true;
+  appStub.globalData.fpDirty = over.fpDirty === true; // 跨页脏标记：默认干净，别让上一个用例漏过来
   appStub.hasSession = () => (over.hasSession !== undefined ? over.hasSession : true);
 }
 global.getApp = () => appStub;
@@ -700,4 +701,27 @@ test('L25 老用户（本地有会话）进页：静默恢复后照常拉列表�
   assert.equal(listCalls().length, 1);
   assert.equal(calCalls().length, 1);
   assert.equal(page.data.summaryText, '1 条记录 · 1 个地方 · 0 张照片');
+});
+
+/* --------- 跨页脏标记（2026-09-25：本页改动要让地图 tab 的打点跟上） --------- */
+/**
+ * 地图页是 tabBar 页，本页用 navigateTo 推在它上面 → 返回时地图页只走 onShow，
+ * 而 onShow 原本只在登录态变化时重对齐，删掉的点会一直挂在地图上。
+ * 消费方断言见 footprints-page.test.js 的 P29/P30。
+ */
+test('L26 保存/删除都打跨页脏标记，供地图页 onShow 补拉', async () => {
+  resetEnv();
+  respond = pagedRespond([rec('a'), rec('b')]);
+  const page = makePage();
+  await page.loadAll();
+  appStub.globalData.fpDirty = false;
+
+  page.onFormSaved();
+  assert.equal(appStub.globalData.fpDirty, true, '存完新记录，地图页还挂着旧点，要标脏');
+  appStub.globalData.fpDirty = false;
+
+  page.setData({ detailVisible: true, detailRecord: rec('a') });
+  page.onDetailDeleted();
+  assert.equal(appStub.globalData.fpDirty, true, '删除后同理');
+  await flush();
 });

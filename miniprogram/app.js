@@ -8,6 +8,7 @@ App({
     loggedIn: false,
     loginPromise: null,
     profileGuideAsked: false, // 完善资料引导本次会话是否已弹过
+    fpDirty: false, // 足迹数据被别的页改过（列表页新增/编辑/删除）：tab 页 onShow 据此补拉
     api, // 网络层挂全局（分包页面无法 require 主包 JS，经 getApp() 访问）
   },
 
