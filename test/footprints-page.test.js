@@ -129,6 +129,7 @@ const appStub = {
 function resetAppStub(over = {}) {
   loginCalls = 0;
   appStub.globalData.loggedIn = over.loggedIn !== undefined ? over.loggedIn : true;
+  appStub.globalData.fpDirty = over.fpDirty === true; // 跨页脏标记：默认干净，别让上一个用例漏过来
   appStub.hasSession = () => (over.hasSession !== undefined ? over.hasSession : true);
 }
 global.getApp = () => appStub;
@@ -945,4 +946,98 @@ test('P26 onShow 只在登录态变了才重对齐（tab 页去「我的」登�
   assert.equal(page.data.notLoggedIn, false);
   assert.equal(page.data.records.length, 3);
   apiGeo.items = [];
+});
+
+/* ---------- 增删改的相机口径 + 跨页脏刷新（2026-09-25 用户要求「尽量少变化」） ---------- */
+/**
+ * loadAll 会走 buildMarkers → geo.fitBounds 覆写 center/scale。用户手动缩放到某个角落再
+ * 新增/删除一条，视野被弹回「全部点的 fit」是很跳的；筛选/搜索换的是另一批点，重排才是预期。
+ * 所以 fit 要按调用方区分：进页与筛选/搜索重排，增删改与跨页脏刷新只换点。
+ */
+const camWrites = (patches) => patches.filter((p) => p.center || p.scale).length;
+
+test('P27 增删改只换点不重排视野；进页与换筛选仍按 fit 定视野', async () => {
+  resetCanvasQueue();
+  apiGeo.items = GEO_ONE.map((x) => Object.assign({}, x));
+  const page = makePage();
+  const { patches, stop } = recordPatches(page);
+
+  await page.loadAll();
+  await settle();
+  assert.ok(camWrites(patches) >= 1, '进页要按全部点的 bbox 定一次视野');
+
+  let n = camWrites(patches);
+  page.onFormSaved(); // 新增/编辑保存
+  await settle();
+  await settle();
+  assert.equal(camWrites(patches), n, '保存后重拉不该把用户视野弹回 fit 档');
+
+  page.onDetailDeleted(); // 本页详情里删除
+  await settle();
+  await settle();
+  assert.equal(camWrites(patches), n, '删除后同理：被删的点不在屏上时，视野不该跟着变');
+
+  page.onFilterConfirm({ detail: { province: '浙江省' } });
+  await settle();
+  await settle();
+  assert.ok(camWrites(patches) > n, '换筛选＝换一批点，该重排视野');
+  stop();
+  apiGeo.items = [];
+});
+
+test('P28 空地图上首次新增仍要定视野（不然新点根本不在屏上）', async () => {
+  resetCanvasQueue();
+  apiGeo.items = [];
+  const page = makePage();
+  await page.loadAll();
+  await settle();
+  assert.equal(page.data.records.length, 0, '夹具：屏上一个点都没有');
+
+  apiGeo.items = [Object.assign({}, GEO_ONE[0])];
+  const { patches, stop } = recordPatches(page);
+  page.onFormSaved();
+  await settle();
+  await settle();
+  assert.ok(camWrites(patches) >= 1, '原本没有内容 → 新增后必须 fit，否则用户看不到刚存的点');
+  stop();
+  apiGeo.items = [];
+});
+
+test('P29 列表页删过足迹 → 地图页 onShow 重拉一次且不动视野；消费后复位，再切 tab 不重拉', async () => {
+  resetCanvasQueue();
+  apiGeo.items = GEO_ONE.map((x) => Object.assign({}, x));
+  const page = makePage();
+  await page.loadAll();
+  await settle();
+  page._loginSynced = true; // onLoad 已对齐过登录态
+
+  const { patches, stop } = recordPatches(page);
+  apiCalls.length = 0;
+  appStub.globalData.fpDirty = true;
+  page.onShow();
+  await settle();
+  await settle();
+  assert.ok(apiCalls.includes('/footprint-records/geo'), '别的页改过数据，切回来要补上');
+  assert.equal(appStub.globalData.fpDirty, false, '消费即复位，否则每次切 tab 都白拉一遍');
+  assert.equal(camWrites(patches), 0, '跨页刷新只换点，别弹视野');
+
+  apiCalls.length = 0;
+  page.onShow();
+  await settle();
+  assert.equal(apiCalls.length, 0, '没新变化就一个请求都不发（保住 P26 的防白跑守卫）');
+  stop();
+  apiGeo.items = [];
+});
+
+test('P30 游客态带着脏标记：不发请求，但标记照样消费掉', async () => {
+  resetCanvasQueue();
+  resetAppStub({ loggedIn: false, hasSession: false, fpDirty: true });
+  const page = makePage();
+  page.onLoad();
+  await drain();
+  apiCalls.length = 0;
+  page.onShow();
+  await settle();
+  assert.equal(apiCalls.length, 0, '/geo 对游客必 401，脏了也没得刷');
+  assert.equal(appStub.globalData.fpDirty, false, '标记别留给下一次，否则登录后会莫名多拉一趟');
 });

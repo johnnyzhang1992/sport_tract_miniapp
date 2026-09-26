@@ -214,10 +214,20 @@ Page({
     this.syncData();
   },
 
-  /** tab 页可能在「我的」里登录/登出后切回来：只有登录态变了才重对齐，
-   *  否则每次切 tab 都白跑一趟 /geo（_loginSynced 由 syncData 维护） */
+  /** tab 页可能在「我的」里登录/登出后切回来：登录态变了就整体重对齐；
+   *  没变时只在别的页（列表页）改过数据后补拉一次，且不动视野。
+   *  _loginSynced 由 syncData 维护，否则每次切 tab 都白跑一趟 /geo */
   onShow() {
-    if (this._loginSynced === undefined || this._loginSynced === !!getApp().globalData.loggedIn) return;
+    const app = getApp();
+    const dirty = !!app.globalData.fpDirty;
+    app.globalData.fpDirty = false; // 消费即复位：留着会让下一次切 tab 也白拉一趟
+    const loggedIn = !!app.globalData.loggedIn;
+    if (this._loginSynced === undefined) return; // onLoad 还没跑，交给它自己拉
+    if (this._loginSynced === loggedIn) {
+      // 用户可能正缩在某个角落看，补拉只换打点、不弹视野
+      if (dirty && loggedIn) this.loadAll({ fit: false });
+      return;
+    }
     this.syncData();
   },
 
@@ -295,7 +305,13 @@ Page({
     return { title: this.shareTitle() };
   },
 
-  async loadAll() {
+  /**
+   * 重拉 /geo 并重建打点。opts.fit=false 只换点、不动相机（增删改后与跨页补拉用）；
+   * 默认按全部点的 bbox 重排视野（进页、换筛选/搜索——换的是另一批点，重排才是预期）。
+   * 屏上原本一个点都没有时强制 fit：否则刚存的点可能根本不在视野里。
+   */
+  async loadAll(opts) {
+    const fitView = !opts || opts.fit !== false;
     // 请求序号守卫：只应用最后一次结果，防竞态
     const seq = (this._seq = (this._seq || 0) + 1);
     // 仅首屏才进 loading 态；刷新保留已渲染内容，防闪屏
@@ -320,7 +336,7 @@ Page({
       // 查不到只 toast，不在地图上摆浮层文本；空白账号（无筛选无关键词）不走这里，留给地图上的新增引导
       if (shown.items.length === 0 && !plain) wx.showToast({ title: noMatchToast(this.data.keyword), icon: 'none' });
       // return 出去：markers 与 loading:false 落在同一帧（否则首屏会先闪一帧无 marker 的空图）
-      return this.buildMarkers();
+      return this.buildMarkers({ fit: fitView || firstLoad });
     } catch (e) {
       if (seq !== this._seq) return;
       this.setData({ loading: false });
@@ -583,10 +599,10 @@ Page({
   onDetailEdit(e) {
     this.setData({ detailVisible: false, detailRecord: null, formVisible: true, formRecord: e.detail });
   },
-  /** 详情里删除成功：关详情并整页刷新 */
+  /** 详情里删除成功：关详情并重拉打点（不动视野，用户可能正看着被删点附近） */
   onDetailDeleted() {
     this.setData({ detailVisible: false, detailRecord: null });
-    this.loadAll();
+    this.loadAll({ fit: false });
   },
 
   /** 最大缩放仍并簇的兜底：成员列表半屏（标题+日期，点行 → 详情弹窗） */
@@ -618,10 +634,10 @@ Page({
     });
   },
   closeForm() { this.setData({ formVisible: false, formRecord: null }); },
-  /** 表单保存成功：关弹层 + 重拉地图数据（列表页数据在其自身页面内加载） */
+  /** 表单保存成功：关弹层 + 重拉打点，不动视野（列表页数据在其自身页面内加载） */
   onFormSaved() {
     this.setData({ formVisible: false, formRecord: null });
-    this.loadAll();
+    this.loadAll({ fit: false });
   },
   /** —— 筛选半屏（省份/年份/分类，候选来自未过滤快照）—— */
   openFilter() { this.setData({ filterVisible: true }); },
