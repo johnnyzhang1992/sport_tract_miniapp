@@ -474,12 +474,10 @@ Page({
 
   // ==================== 暂停/继续/结束 ====================
 
-  /** 图层切换（转发给 track-map 组件） */
-  switchLayer() {
-    const map = this.selectComponent('#trackMap');
-    if (map && typeof map.switchLayer === 'function') {
-      map.switchLayer();
-    }
+  /** 图层切换（按钮已收进 track-map 组件，页面只同步状态） */
+  onLayerChange(e) {
+    const mt = e && e.detail && e.detail.mapType;
+    if (mt && mt !== this.data.mapType) this.setData({ mapType: mt });
   },
 
   cancelEnd() {

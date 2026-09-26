@@ -1,5 +1,5 @@
 <view class="record-page">
-  <!-- 全屏地图 -->
+  <!-- 全屏地图（图层/精度/标注按钮统一收进组件右上角） -->
   <view class="map-wrap">
     <track-map
       id="trackMap"
@@ -12,16 +12,11 @@
       heading="{{heading}}"
       enable-rotate="{{false}}"
       mode="record"
+      show-layer-btn="{{true}}"
+      accuracy="{{currentAccuracy}}"
+      weak-signal="{{weakSignal}}"
+      bind:layerchange="onLayerChange"
     />
-    <!-- 图层切换 -->
-    <view class="layer-btn" bindtap="switchLayer">
-      <image class="btn-icon" src="{{mapType === 'standard' ? '/assets/icons/lucide-satellite.png' : '/assets/icons/lucide-map.png'}}" mode="aspectFit" />
-      <text>{{mapType === 'standard' ? '卫星' : '标准'}}</text>
-    </view>
-    <!-- 实时精度徽章（常驻；弱信号时橙色） -->
-    <view class="acc-badge {{weakSignal ? 'acc-badge-weak' : ''}}" wx:if="{{currentAccuracy != null}}">
-      <text class="acc-dot"></text> 精度 {{currentAccuracy}}m
-    </view>
   </view>
 
   <!-- 实时数据面板（点击贴左收齐/展开） -->
