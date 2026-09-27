@@ -46,6 +46,11 @@
   <view wx:if="{{mode !== 'record'}}" class="poi-btn {{mode === 'overview' ? 'poi-btn-overview' : ''}} {{poiTopRight ? 'poi-btn-top-right' : ''}} {{poiBottomRight ? 'poi-btn-bottom-right' : ''}} {{enablePoi ? 'poi-btn-active' : ''}}" bindtap="togglePoi">
     <image class="poi-icon" src="{{enablePoi ? '/assets/icons/lucide-signpost-white.png' : '/assets/icons/lucide-signpost.png'}}" mode="aspectFit" />
   </view>
+  <!-- 非 record 模式：图层切换按钮（右上角独立；record 在 top-actions 组内） -->
+  <view class="layer-btn" wx:if="{{showLayerBtn && mode !== 'record'}}" bindtap="switchLayer">
+    <image class="btn-icon" src="{{mapType === 'standard' ? '/assets/icons/lucide-satellite.png' : '/assets/icons/lucide-map.png'}}" mode="aspectFit" />
+    <text>{{mapType === 'standard' ? '卫星' : '标准'}}</text>
+  </view>
   <!-- 高频路线图例（四档频率配色：黑→黄→橙→红；与 POI 同容器，底部基准一致） -->
   <view class="heat-legend" wx:if="{{showHeatLegend}}">
     <view class="heat-legend-dot heat-legend-dot-0"></view>

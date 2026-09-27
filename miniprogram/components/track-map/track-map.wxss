@@ -145,6 +145,27 @@
   margin-right: 14rpx;
 }
 
+/* —— 非 record 模式：独立图层切换按钮（右上角，安全区适配） —— */
+.layer-btn {
+  position: absolute;
+  top: calc(16rpx + env(safe-area-inset-top));
+  right: 24rpx;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 999rpx;
+  padding: 12rpx 24rpx;
+  font-size: 26rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
+}
+.layer-btn .btn-icon {
+  width: 34rpx;
+  height: 34rpx;
+  margin-right: 8rpx;
+  flex-shrink: 0;
+}
+
 /* —— record 右上角按钮组：flex 容器（精度徽章 | 标注 | 图层），间距统一由 gap 控制 —— */
 .top-actions {
   position: absolute;
@@ -189,6 +210,9 @@
   height: 34rpx;
 }
 .top-actions .layer-btn {
+  position: static; /* 组内 flex 排布，覆盖独立定位 */
+  top: auto;
+  right: auto;
   display: flex;
   align-items: center;
   background: rgba(255, 255, 255, 0.9);

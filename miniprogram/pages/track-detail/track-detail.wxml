@@ -12,26 +12,21 @@
       activity-type="{{activityType}}"
       peak-marker="{{peakMarker}}"
       showStartEnd
+      show-layer-btn
+      show-fullscreen
+      bind:layerchange="onLayerChange"
+      bind:fullscreen="openFullscreen"
       bindmarkertap="onMarkerTap"
       bindreplayend="onReplayEnd"
     />
-    <view class="layer-btn" bindtap="switchLayer">
-      <image class="btn-icon" src="{{mapType === 'standard' ? '/assets/icons/lucide-satellite.png' : '/assets/icons/lucide-map.png'}}" mode="aspectFit" />
-      <text>{{mapType === 'standard' ? '卫星' : '标准'}}</text>
-    </view>
     <view class="replay-btn {{replaying ? 'replay-btn-active' : ''}}" bindtap="startReplay">
       <image class="btn-icon" src="{{replaying ? '/assets/icons/lucide-stop-white.png' : '/assets/icons/lucide-circle-play.png'}}" mode="aspectFit" />
       <text>{{replaying ? '停止' : '动态轨迹'}}</text>
     </view>
-    <view class="fullscreen-btn" bindtap="openFullscreen"><image class="btn-icon fullscreen-icon" src="/assets/icons/lucide-maximize.png" mode="aspectFit" /></view>
   </view>
 
   <!-- 全屏地图弹窗（不拦截 touch：map 手势需要 touchmove 做缩放/拖动） -->
   <view class="fullscreen-mask" wx:if="{{fullscreen}}">
-    <view class="fullscreen-layer" bindtap="fsSwitchLayer">
-      <image class="btn-icon" src="{{mapType === 'standard' ? '/assets/icons/lucide-satellite.png' : '/assets/icons/lucide-map.png'}}" mode="aspectFit" />
-      <text>{{mapType === 'standard' ? '卫星' : '标准'}}</text>
-    </view>
     <view class="fullscreen-map-wrap">
       <track-map
         id="fullscreenMap"
@@ -44,7 +39,9 @@
         peak-marker="{{peakMarker}}"
         showStartEnd
         poi-top-right
+        show-layer-btn
         show-fullscreen-close
+        bind:layerchange="onLayerChange"
         bind:close-fullscreen="closeFullscreen"
       />
     </view>

@@ -6,7 +6,6 @@
   margin-bottom: 56rpx; /* 头像上浮 48rpx 悬浮其中，避免与地图底部按钮重叠 */
   background: #eef1f5;
 }
-.layer-btn,
 .replay-btn {
   position: absolute;
   background: rgba(255, 255, 255, 0.92);
@@ -16,10 +15,6 @@
   box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
   display: flex;
   align-items: center;
-}
-.layer-btn {
-  top: 16rpx;
-  right: 24rpx; /* 右上角（真机指南针在左侧） */
 }
 .replay-btn {
   bottom: 16rpx;
@@ -38,23 +33,6 @@
 .close-icon {
   width: 36rpx;
   height: 36rpx;
-}
-.fullscreen-btn {
-  position: absolute;
-  right: 16rpx; /* 与动态轨迹按钮距左边缘等距，左右对称 */
-  bottom: 16rpx;
-  background: rgba(255, 255, 255, 0.92);
-  border-radius: 999rpx;
-  padding: 14rpx; /* 仅图标；与 track-map 标注按钮同档 */
-  font-size: 26rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
-  display: flex;
-  align-items: center;
-}
-.fullscreen-icon {
-  width: 34rpx;
-  height: 34rpx;
-  margin-right: 0; /* 无文案时去掉图标右边距 */
 }
 /* 全屏地图弹窗 */
 .fullscreen-mask {

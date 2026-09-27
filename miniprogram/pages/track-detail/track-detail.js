@@ -191,12 +191,10 @@ Page({
 
   // ==================== 地图 ====================
 
-  switchLayer() {
-    const map = this.selectComponent('#detailMap');
-    if (map && typeof map.switchLayer === 'function') {
-      map.switchLayer();
-    }
-    this.setData({ mapType: this.data.mapType === 'standard' ? 'satellite' : 'standard' });
+  /** 图层切换（按钮已收进 track-map 组件，普通/全屏实例共用 mapType 状态） */
+  onLayerChange(e) {
+    const mt = e && e.detail && e.detail.mapType;
+    if (mt && mt !== this.data.mapType) this.setData({ mapType: mt });
   },
 
   // ==================== 轨迹回放 ====================
@@ -576,12 +574,6 @@ Page({
   },
 
   /** 全屏地图图层切换（与页面 mapType 同步） */
-  fsSwitchLayer() {
-    this.setData({ mapType: this.data.mapType === 'standard' ? 'satellite' : 'standard' });
-    const map = this.selectComponent('#fullscreenMap');
-    if (map && typeof map.switchLayer === 'function') map.switchLayer();
-  },
-
   noop() {},
 
   /** 重新纠偏：对轨迹重跑 清洗→纠偏→平滑→重算指标（清理历史脏数据） */
