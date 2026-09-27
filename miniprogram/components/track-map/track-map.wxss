@@ -12,7 +12,7 @@
 .poi-btn {
   position: absolute;
   bottom: 16rpx;
-  right: 110rpx; /* 与右侧全屏按钮拉开间距 */
+  right: 96rpx; /* 与右侧全屏按钮保持 10~18rpx 间距 */
   z-index: 10;
   display: flex;
   align-items: center;
