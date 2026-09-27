@@ -45,13 +45,15 @@
   bottom: 16rpx;
   background: rgba(255, 255, 255, 0.92);
   border-radius: 999rpx;
-  padding: 12rpx; /* 仅图标 */
-  font-size: 24rpx;
+  padding: 14rpx; /* 仅图标；与 track-map 标注按钮同档 */
+  font-size: 26rpx;
   box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
   display: flex;
   align-items: center;
 }
 .fullscreen-icon {
+  width: 34rpx;
+  height: 34rpx;
   margin-right: 0; /* 无文案时去掉图标右边距 */
 }
 /* 全屏地图弹窗 */

@@ -55,10 +55,6 @@ Page({
     }
   },
 
-  onUnitChange(e) {
-    this.setData({ 'settings.unit': e.currentTarget.dataset.value });
-  },
-
   onDefaultTypeChange(e) {
     this.setData({ 'settings.defaultType': e.currentTarget.dataset.type });
   },

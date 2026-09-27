@@ -12,7 +12,7 @@
 .poi-btn {
   position: absolute;
   bottom: 16rpx;
-  right: 82rpx;
+  right: 110rpx; /* 与右侧全屏按钮拉开间距 */
   z-index: 10;
   display: flex;
   align-items: center;
@@ -60,14 +60,14 @@
   align-items: center;
   background: rgba(255, 255, 255, 0.92);
   border-radius: 999rpx;
-  padding: 12rpx; /* 纯图标 */
-  font-size: 24rpx;
+  padding: 14rpx; /* 纯图标；与标注按钮同档大小 */
+  font-size: 26rpx;
   color: #4e5969;
   box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
 }
 .map-fullscreen-icon {
-  width: 28rpx;
-  height: 28rpx;
+  width: 34rpx;
+  height: 34rpx;
   margin-right: 0; /* 纯图标无文案 */
 }
 
