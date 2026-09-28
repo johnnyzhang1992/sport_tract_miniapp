@@ -8,6 +8,7 @@
  * 方法: preview()；事件: posterready({ path }) 海报临时路径
  */
 const loading = require('../../utils/loading');
+const { splitByUnreliableLinks } = require('../../utils/track-pace.js');
 const { computePosterLayout, POSTER } = require('../../utils/poster-layout.js');
 
 const BRAND_NAME = '小迹一下';
@@ -385,8 +386,8 @@ Component({
       ctx.lineCap = 'round';
       ctx.strokeStyle = '#808080';
       ctx.lineWidth = 1.5;
-      // 按 pauseGap 分段绘制，暂停间隙断开连线；沿途累计真实移动距离用于公里标定位
-      const segs = this.splitByPauseGaps(pts);
+      // 按断开标记分段绘制（暂停间隙 + 采样断档连线），沿途累计真实移动距离用于公里标定位
+      const segs = this.splitByLineBreaks(pts);
       for (const seg of segs) {
         if (seg.length < 2) continue;
         ctx.beginPath();
@@ -464,19 +465,9 @@ Component({
       }
     },
 
-    /** 按 pauseGap 标记将点集切分为多段 */
-    splitByPauseGaps(pts) {
-      const segs = [];
-      let start = 0;
-      for (let i = 0; i < pts.length; i++) {
-        if (pts[i].pauseGap && i > start) {
-          segs.push(pts.slice(start, i));
-          start = i;
-        }
-      }
-      if (start < pts.length) segs.push(pts.slice(start));
-      // 过滤掉只有1个点的段（无法绘制线段）
-      return segs.filter(s => s.length >= 2);
+    /** 断开标记切段（pauseGap 暂停间隙 / gapJump 采样断档连线都不画线），与详情页地图共用同一份口径 */
+    splitByLineBreaks(pts) {
+      return splitByUnreliableLinks([pts]);
     },
 
     /** 保存到相册 */

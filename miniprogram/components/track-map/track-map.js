@@ -6,7 +6,7 @@
 // 合集模式"密集区域"半径（km）：轨迹中心距核心在此范围内即视为同一密集簇
 const DENSE_REGION_KM = 50;
 const { getPaceScale } = require('../../utils/pace-scale.js');
-const { haversineKm, splitByPauseGaps, computeSegPaces } = require('../../utils/track-pace.js');
+const { haversineKm, splitByUnreliableLinks, computeSegPaces } = require('../../utils/track-pace.js');
 
 Component({
   properties: {
@@ -146,6 +146,7 @@ Component({
           altitude: p.altitude ?? null,
           timestamp: p.timestamp ?? null,
           pauseGap: !!p.pauseGap,
+          gapJump: !!p.gapJump, // 服务端判出的采样断档连线：线在此断开，点与指标都保留
           vehicle: !!p.vehicle, // 服务端判出的非运动段，线画灰（不隐身删掉）
         }))
         .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng));
@@ -169,16 +170,16 @@ Component({
       this.buildDefaultPolyline(pts);
     },
 
-    /** 默认配色：按打点 + pauseGap 分段轮换颜色 */
+    /** 默认配色：按打点 + 断开标记（暂停间隙 / 断档连线）分段轮换颜色 */
     buildDefaultPolyline(pts) {
-      // 按打点 + pauseGap 分段
-      const segsWithGap = splitByPauseGaps(this.splitByMarkers(pts));
+      // 按打点 + 断开标记分段
+      const segsWithGap = splitByUnreliableLinks(this.splitByMarkers(pts));
 
-      // 计算每段是否由 pauseGap 产生（用于保持同色）
+      // 计算每段是否由断开标记产生（用于保持同色）
       const isGapSeg = segsWithGap.map((seg, i) => {
         if (i === 0) return false;
-        // 如果当前段的第一个点是 pauseGap 标记，说明这是暂停恢复后的段
-        return seg[0]?.pauseGap === true;
+        // 段首带 pauseGap / gapJump：这条线不可信，断开但不换色
+        return seg[0]?.pauseGap === true || seg[0]?.gapJump === true;
       });
 
       const colors = ['#2B6CF6', '#34A853', '#FF9800', '#9C27B0'];
@@ -207,8 +208,8 @@ Component({
         return;
       }
 
-      // 先按 pauseGap 分段，每段独立着色（暂停间隙断开）
-      const segs = splitByPauseGaps([pts]);
+      // 先按断开标记分段，每段独立着色（暂停间隙与断档连线都不跨）
+      const segs = splitByUnreliableLinks([pts]);
       const allPolylines = [];
 
       for (const seg of segs) {
@@ -261,7 +262,7 @@ Component({
      * - 暂停间隙断开不跨段；累计距离过小（原地）按最慢档处理
      */
     buildPacePolyline(pts) {
-      const segs = splitByPauseGaps([pts]);
+      const segs = splitByUnreliableLinks([pts]);
       if (segs.length === 0) {
         this.setData({ polyline: [] });
         return;
@@ -746,11 +747,11 @@ Component({
           color = '#1F2329'; // 低频：黑
           width = this.overviewLineWidth(3);
         }
-        // 按 pauseGap 切段（暂停间隙断开连线），同色同宽多段 polyline
+        // 按断开标记切段（暂停间隙 + 断档连线都不画线），同色同宽多段 polyline
         const segs = [];
         let start = 0;
         for (let i = 0; i < raw.length; i++) {
-          if (raw[i].pauseGap && i > start) {
+          if ((raw[i].pauseGap || raw[i].gapJump) && i > start) {
             segs.push(raw.slice(start, i));
             start = i;
           }

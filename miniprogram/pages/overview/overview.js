@@ -2,6 +2,7 @@ const api = require('../../services/api');
 const config = require('../../config/index');
 const posterAgg = require('../../utils/poster-aggregate');
 const tf = require('../../utils/track-filter');
+const { splitByUnreliableLinks } = require('../../utils/track-pace.js');
 
 /** 分享海报最多展示轨迹条数（防 canvas 绘制过多导致性能问题） */
 const MAX_SHARE_TRACKS = 72; // 8 列 × 9 行（高度更高，贴合 3:4）
@@ -410,7 +411,7 @@ Page({
     ctx.lineWidth = 1.5;
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
-    // 按 pauseGap 切段（暂停间隙断开连线，与详情页地图一致）
+    // 按断开标记切段（暂停间隙 + 采样断档连线都不画线，与详情页地图一致）
     const segs = this.splitByGap(pts);
     for (const seg of segs) {
       if (seg.length < 2) continue;
@@ -423,18 +424,9 @@ Page({
     }
   },
 
-  /** 按 pauseGap 切段（暂停间隙断开连线） */
+  /** 断开标记切段（pauseGap 暂停间隙 / gapJump 采样断档连线都不画线），与详情页地图共用同一份口径 */
   splitByGap(pts) {
-    const segs = [];
-    let start = 0;
-    for (let i = 0; i < pts.length; i++) {
-      if (pts[i].pauseGap && i > start) {
-        segs.push(pts.slice(start, i));
-        start = i;
-      }
-    }
-    if (start < pts.length) segs.push(pts.slice(start));
-    return segs.length > 0 ? segs : [pts];
+    return splitByUnreliableLinks([pts]);
   },
 
   /**

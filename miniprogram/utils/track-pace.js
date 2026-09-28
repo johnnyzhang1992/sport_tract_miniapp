@@ -39,13 +39,13 @@ function haversineKm(a, b) {
   return 2 * R * Math.asin(Math.sqrt(s));
 }
 
-/** 按 pauseGap 标记切分段（暂停间隙断开）：前一段不含 pauseGap 点，后一段从该点开始 */
-function splitByPauseGaps(segs) {
+/** 按标记切分段：前一段不含标记点，后一段从该点开始 */
+function splitByFlags(segs, isBreak) {
   const result = [];
   for (const seg of segs) {
     let start = 0;
     for (let i = 0; i < seg.length; i++) {
-      if (seg[i].pauseGap && i > start) {
+      if (isBreak(seg[i]) && i > start) {
         result.push(seg.slice(start, i));
         start = i;
       }
@@ -53,6 +53,19 @@ function splitByPauseGaps(segs) {
     if (start < seg.length) result.push(seg.slice(start));
   }
   return result.filter((s) => s.length >= 2);
+}
+
+/** 按 pauseGap 标记切分段（暂停间隙断开）——指标（配速/采样）口径，只认暂停 */
+function splitByPauseGaps(segs) {
+  return splitByFlags(segs, (p) => !!p.pauseGap);
+}
+
+/**
+ * 渲染切段：pauseGap（暂停间隙）+ gapJump（服务端判出的采样断档连线）都断开
+ * gapJump 只影响画不画这条线，距离/配速等指标一律不接此标记
+ */
+function splitByUnreliableLinks(segs) {
+  return splitByFlags(segs, (p) => !!(p.pauseGap || p.gapJump));
 }
 
 /**
@@ -195,6 +208,7 @@ module.exports = {
   RUN_PACE_ZONES,
   haversineKm,
   splitByPauseGaps,
+  splitByUnreliableLinks,
   computeSegPaces,
   paceSamples,
   computeRunPaceZones,

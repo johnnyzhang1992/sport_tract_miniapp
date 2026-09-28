@@ -1,3 +1,5 @@
+const { splitByUnreliableLinks } = require('../../utils/track-pace.js');
+
 Component({
   options: { styleIsolation: 'apply-shared' },
 
@@ -69,16 +71,8 @@ Component({
           ctx.lineWidth = 1.5;
           ctx.lineJoin = 'round';
           ctx.lineCap = 'round';
-          // 按 pauseGap 切段（暂停间隙断开连线，与详情页地图一致）
-          const segs = [];
-          let segStart = 0;
-          for (let i = 0; i < points.length; i++) {
-            if (points[i].pauseGap && i > segStart) {
-              segs.push(points.slice(segStart, i));
-              segStart = i;
-            }
-          }
-          if (segStart < points.length) segs.push(points.slice(segStart));
+          // 断开标记切段（pauseGap 暂停间隙 / gapJump 采样断档连线都不画线），与详情页地图共用同一份口径
+          const segs = splitByUnreliableLinks([points]);
           for (const seg of segs) {
             if (seg.length < 2) continue;
             const pts = seg.map((p) => ({ x: x(p.lng), y: y(p.lat) }));

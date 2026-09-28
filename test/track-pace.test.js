@@ -20,7 +20,13 @@ function makeTrack(steps) {
   for (const s of steps) {
     lat += (s.speed * s.sec) / M_PER_DEG_LAT;
     t += s.sec * 1000;
-    pts.push({ lat, lng: 120, timestamp: t, pauseGap: !!s.pauseGap });
+    pts.push({
+      lat,
+      lng: 120,
+      timestamp: t,
+      pauseGap: !!s.pauseGap,
+      ...(s.gapJump ? { gapJump: true } : {}),
+    });
   }
   return pts;
 }
@@ -44,6 +50,30 @@ test('splitByPauseGaps：按 pauseGap 断开，且丢弃不足 2 点的段', () 
   assert.equal(segs[1][0].pauseGap, true);
   // 孤点段（首点即 pauseGap）不参与绘制
   assert.equal(pace.splitByPauseGaps([[{ lat: 30, lng: 120, timestamp: T0, pauseGap: true }]]).length, 0);
+});
+
+// 渲染断开 vs 指标口径：gapJump 是服务端判出的「采样断档连线」（丢锁后重定位超前，线斜穿内场），
+// 只让线在此处断开，距离/配速/区间统计一律照旧计入 —— 一个数字都不能动。
+test('splitByUnreliableLinks：gapJump 点同样断开（渲染口径）', () => {
+  const pts = makeTrack([...repeat(3, { sec: 1, speed: 3 }), { sec: 8, speed: 9, gapJump: true }, ...repeat(3, { sec: 1, speed: 3 })]);
+  const segs = pace.splitByUnreliableLinks([pts]);
+  assert.equal(segs.length, 2, 'pauseGap 与 gapJump 都要断开');
+  assert.equal(segs[1][0].gapJump, true, 'gapJump 点是新段首（其前一条线不画）');
+  assert.equal(segs[0].length, 4);
+  assert.equal(segs[1].length, 4);
+  // 无标记的轨迹两种口径结果一致
+  const plain = makeTrack(repeat(6, { sec: 1, speed: 3 }));
+  assert.deepEqual(pace.splitByUnreliableLinks([plain]), pace.splitByPauseGaps([plain]));
+});
+
+test('splitByPauseGaps 不看 gapJump：指标口径不受渲染标记影响', () => {
+  const pts = makeTrack([...repeat(3, { sec: 1, speed: 3 }), { sec: 8, speed: 9, gapJump: true }, ...repeat(3, { sec: 1, speed: 3 })]);
+  const segs = pace.splitByPauseGaps([pts]);
+  assert.equal(segs.length, 1, '断档连线不该切断配速统计的连续性');
+  assert.equal(segs[0].length, pts.length);
+  // paceSamples 同样只认 pauseGap：断档步的位移/用时照常参与统计
+  const untagged = pts.map(({ gapJump, ...rest }) => rest);
+  assert.deepEqual(pace.paceSamples(pts), pace.paceSamples(untagged), '打标记不该改变任何配速采样');
 });
 
 test('computeSegPaces：匀速 3m/s → 各点平滑配速恒为 333.3 秒/公里，起步位移不足为 null', () => {

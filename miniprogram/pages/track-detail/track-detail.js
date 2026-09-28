@@ -141,6 +141,7 @@ Page({
           altitude: p.altitude != null ? p.altitude : null,
           timestamp: p.timestamp,
           pauseGap: !!p.pauseGap,
+          gapJump: !!p.gapJump, // 采样断档连线（图上在此断开）；这层映射不带上字段就被丢掉
           vehicle: !!p.vehicle, // 非运动段（图上灰显）；这层映射不带上字段就被丢掉，地图永远画不出灰线
         })),
         kmMarkers: this.computeKmMarkers(activity.trackPoints || []),

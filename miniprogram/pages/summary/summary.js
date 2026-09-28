@@ -57,6 +57,7 @@ Page({
         lat: p.lat,
         lng: p.lng,
         pauseGap: !!p.pauseGap,
+        gapJump: !!p.gapJump, // 采样断档连线（缩略图在此断开）
       })),
       markers: (finalPack.markers || []).map((m) => ({
         id: m.id,
