@@ -394,7 +394,7 @@ function splitClippedItems(items, projector, box, opts) {
  * 离群轨迹小卡片排布：默认一行 perRow 张，等宽、从可用区左边界起排（落单的与首列对齐）。
  * 卡片多到 maxRows 行装不下时先加列（最宽 maxPerRow 列）；加到最宽还装不下就只画
  * cols×maxRows 张，其余计入 overflow 交调用方在末尾报数——海报不能无限长高。
- * rect 是卡片图区（轨迹按自己的 bbox 等比铺满这块），captionY 是其下方说明文字的基线。
+ * rect 是卡片图区（轨迹按自己的 bbox 等比铺满这块）；卡片下方不放任何文字，行距只剩卡高+间距。
  * height 是整个卡片块占高（不含末行下方间距），调用方据此把画布往下长高。
  */
 function layoutCards(items, opts) {
@@ -404,7 +404,6 @@ function layoutCards(items, opts) {
   const maxPerRow = Math.max(opts.maxPerRow || perRow, perRow);
   const maxRows = opts.maxRows > 0 ? opts.maxRows : Infinity;
   const cardH = opts.cardH || 80;
-  const captionH = opts.captionH != null ? opts.captionH : 14;
   const avail = opts.right - opts.left;
 
   if (!list.length) return { cards: [], rows: 0, cols: perRow, height: 0, overflow: 0 };
@@ -416,7 +415,7 @@ function layoutCards(items, opts) {
   }
   const shown = Math.min(list.length, cols * maxRows);
   const rows = Math.ceil(shown / cols);
-  const pitch = cardH + captionH + gap;
+  const pitch = cardH + gap;
   const cardW = (avail - gap * (cols - 1)) / cols;
 
   const cards = [];
@@ -428,7 +427,6 @@ function layoutCards(items, opts) {
         item,
         row: r,
         rect: { left, right: left + cardW, top, bottom: top + cardH },
-        captionY: top + cardH + 10,
       });
     });
   }

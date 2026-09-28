@@ -28,9 +28,9 @@ const CARD = {
   maxRows: 4,
   minPoints: 8,
   cardH: 80,
-  captionH: 14,
   gap: 12,
-  labelH: 24,
+  /** 主图与小卡片区的间距：卡片区没有说明文案，分组全靠这段留白 */
+  mapGap: 36,
   noteH: 24,
 };
 
@@ -471,16 +471,15 @@ Page({
     const cards = posterAgg.layoutCards(clipped, {
       left: pad,
       right: W - pad,
-      top: mapBottom + CARD.labelH,
+      top: mapBottom + CARD.mapGap,
       perRow: CARD.perRow,
       maxPerRow: CARD.maxPerRow,
       maxRows: CARD.maxRows,
       cardH: CARD.cardH,
-      captionH: CARD.captionH,
       gap: CARD.gap,
     });
     const noteH = cards.overflow ? CARD.noteH : 0;
-    const H = cards.rows ? mapH + CARD.labelH + cards.height + noteH : mapH;
+    const H = cards.rows ? mapH + CARD.mapGap + cards.height + noteH : mapH;
 
     wx.createSelectorQuery()
       .in(this)
@@ -568,10 +567,6 @@ Page({
 
         // 5. 主图范围外的轨迹：逐条补一张小卡片，卡内按该轨迹自己的 bbox 铺满（所以是完整的一条线）
         if (cards.cards.length) {
-          ctx.fillStyle = 'rgba(31,35,41,0.5)';
-          ctx.font = '10px sans-serif';
-          ctx.textAlign = 'left';
-          ctx.fillText(`以下 ${cards.cards.length} 条轨迹在主图范围外`, pad, mapBottom + 15);
           cards.cards.forEach((card) => {
             const rect = card.rect;
             const bbox = posterAgg.trackBbox(card.item);
@@ -589,16 +584,12 @@ Page({
             ctx.lineCap = 'round';
             strokeTrack(card.item, project);
             ctx.restore();
-            ctx.fillStyle = '#8a93a6';
-            ctx.font = '9px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText(`${((card.item.distance || 0) / 1000).toFixed(1)}公里`, (rect.left + rect.right) / 2, card.captionY);
           });
           if (cards.overflow) {
             ctx.fillStyle = '#bbb';
             ctx.font = '10px sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText(`另有 ${cards.overflow} 条未展示`, W / 2, mapBottom + CARD.labelH + cards.height + 16);
+            ctx.fillText(`另有 ${cards.overflow} 条未展示`, W / 2, mapBottom + CARD.mapGap + cards.height + 16);
           }
           ctx.textAlign = 'left';
         }

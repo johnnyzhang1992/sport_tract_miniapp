@@ -487,7 +487,7 @@ test('CL6 裁剪挑选：点数不足 minPoints 的碎片不进 clipped（没形
 function rectsOverlap(a, b) {
   return !(a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top);
 }
-const CARD_OPTS = { left: 16, right: 284, top: 372, perRow: 2, cardH: 80, captionH: 14, gap: 12 };
+const CARD_OPTS = { left: 16, right: 284, top: 372, perRow: 2, cardH: 80, gap: 12 };
 const itemsOf = (n) => Array.from({ length: n }, (_, i) => ({ id: i }));
 
 test('LC1 卡片排布：一行最多两张，5 张排成 3 行', () => {
@@ -525,8 +525,9 @@ test('LC3 卡片排布：落单卡片与首列左对齐（不做行内居中）'
   assert.equal(lone.rect.left, firstCol.rect.left, '落单卡片要跟首列对齐，右侧留白');
 });
 
-test('LC4 卡片排布：块高等于行数×(卡高+文字行+间距)−末行间距，供画布长高用', () => {
-  const pitch = CARD_OPTS.cardH + CARD_OPTS.captionH + CARD_OPTS.gap;
+test('LC4 卡片排布：块高等于行数×(卡高+间距)−末行间距，供画布长高用', () => {
+  // 卡片下方不再有公里数文字行，行距只剩「卡高 + 间距」
+  const pitch = CARD_OPTS.cardH + CARD_OPTS.gap;
   assert.equal(layoutCards(itemsOf(5), CARD_OPTS).height, 3 * pitch - CARD_OPTS.gap);
   assert.equal(layoutCards(itemsOf(1), CARD_OPTS).height, pitch - CARD_OPTS.gap);
 });
