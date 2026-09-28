@@ -62,8 +62,8 @@
         </view>
       </view>
 
-      <!-- TOP10 -->
-      <view class="rank-list" wx:if="{{board && board.top.length > 0}}">
+      <!-- TOP10（空态也放在这个容器里，好共用下面那条 min-height） -->
+      <view class="rank-list" wx:if="{{board}}">
         <view class="rank-row" wx:for="{{board.top}}" wx:key="rank">
           <view class="rank-no">
             <image wx:if="{{item.medalIcon}}" class="medal-img" src="{{item.medalIcon}}" mode="aspectFit" />
@@ -78,9 +78,9 @@
           <view class="rank-meta">{{item.count}} 条</view>
           <view class="rank-dist">{{item.distanceKm}} km</view>
         </view>
-      </view>
-      <view class="rank-empty" wx:if="{{board && board.top.length === 0}}">
-        {{periods[periodIndex].label}}{{provinceIndex > 0 ? ' · ' + provinceOptions[provinceIndex] : ''}}还没有{{types[typeIndex].label}}轨迹，快来抢占第一名的位置！
+        <view class="rank-empty" wx:if="{{board.top.length === 0}}">
+          <text>{{periods[periodIndex].label}}{{provinceIndex > 0 ? ' · ' + provinceOptions[provinceIndex] : ''}}还没有{{types[typeIndex].label}}轨迹，快来抢占第一名的位置！</text>
+        </view>
       </view>
     </view>
 

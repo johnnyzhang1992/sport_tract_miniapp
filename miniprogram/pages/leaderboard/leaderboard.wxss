@@ -544,15 +544,18 @@
   font-size: 24rpx;
   color: #8a93a6;
 }
-/* TOP10 列表：约 5 行的最小高度，入榜人数少时不显拥挤 */
+/* TOP10 列表：入榜人数少时不显拥挤留的下限。空态就在同一个容器里，共用这一条 */
 .rank-list {
-  min-height: 460rpx;
+  min-height: 250rpx;
 }
 .rank-empty {
+  min-height: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   color: #8a93a6;
   font-size: 24rpx;
-  padding: 40rpx 0;
 }
 
 /* 省份弹窗 */
