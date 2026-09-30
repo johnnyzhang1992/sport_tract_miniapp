@@ -22,3 +22,6 @@ miniprogram/config/*.local.js
 
 # Mimosa 安全扫描产物
 .mimosa/
+
+# 项目文档仅本地保留，不入仓库
+docs/
