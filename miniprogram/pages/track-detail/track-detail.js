@@ -579,10 +579,14 @@ Page({
 
   /** 重新纠偏：对轨迹重跑 清洗→纠偏→平滑→重算指标（清理历史脏数据） */
   async reprocessTrack() {
+    // 已纠偏的轨迹再次纠偏意义不大（输入已是清洗后的点），确认文案区分
+    const corrected = this.data.activity && this.data.activity.corrected;
     const res = await new Promise((resolve) => {
       wx.showModal({
-        title: '重新纠偏',
-        content: '将重新清洗轨迹（剔除 GPS 偏移点）并重算距离/配速等指标，是否继续？',
+        title: corrected ? '重新纠偏' : '轨迹纠偏',
+        content: corrected
+          ? '将基于当前轨迹重新清洗并重算距离/配速等指标，是否继续？'
+          : '将剔除 GPS 偏移点并重算距离/配速等指标，距离可能略微变小，是否继续？',
         confirmText: '纠偏',
         success: resolve,
         fail: () => resolve({ confirm: false }),

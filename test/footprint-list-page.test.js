@@ -479,7 +479,8 @@ test('L13 点某天：区间收成那一天，再点同一天取消回整月', a
   assert.equal(last.to, `${page.data.calendarMonth}-21`, '右开到次日');
   assert.equal(page.data.calendarSelected, day);
   assert.equal(page.data.filtered, true, '点选某天算筛选态');
-  assert.equal(page.data.sectionTitle, `9月20日 · ${page.data.total} 条`);
+  const dayM = Number(page.data.calendarMonth.split('-')[1]);
+  assert.equal(page.data.sectionTitle, `${dayM}月20日 · ${page.data.total} 条`);
 
   page.onCalendarDayTap({ detail: { date: day } });
   await flush();
