@@ -90,6 +90,7 @@ Page({
     t.onVehicle = (info) => this.onVehicle(info);
     t.onStandstillNotify = (info) => this.onStandstillNotify(info);
     t.onStandstillAutoPause = (info) => this.onStandstillAutoPause(info);
+    t.onPointsCap = () => this.onPointsCap();
     return t;
   },
 
@@ -121,6 +122,18 @@ Page({
       title: `已 ${this.fmtDur(info.runSec)} 保持 ${Math.round(info.avgMps * 3.6)} km/h，疑似搭车（这段未计入，可在详情页纠偏）`,
       icon: 'none',
       duration: 4000,
+    });
+  },
+
+  /** 轨迹点数达到上限（20000，约 11~17 小时连续记录）：提示尽快结束保存，此后不再采点 */
+  onPointsCap() {
+    wx.vibrateShort({ type: 'heavy', fail: () => wx.vibrateShort({}) });
+    wx.showModal({
+      title: '轨迹点已达上限',
+      content: '本次记录时间较长，轨迹数据已达存储上限。为避免数据丢失，建议尽快结束并保存本次运动。',
+      confirmText: '知道了',
+      showCancel: false,
+      success: () => {},
     });
   },
 

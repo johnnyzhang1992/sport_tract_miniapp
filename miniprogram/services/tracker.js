@@ -35,6 +35,10 @@ const TYPE_TRACKER_CONFIG = {
 const DEFAULT_TRACKER_CONFIG = TYPE_TRACKER_CONFIG.running;
 /** 反转漂移过滤：新点相对上一有效点的方向与上一段方向夹角超过该角度（°）且移动缓慢 → 视为 GPS 乱跳丢弃 */
 const REVERSE_TURN_DEG = 120;
+/** 轨迹点数硬上限：与服务器 MAX_TRACK_POINTS(20000) 对齐。
+ * 达到后停止追加新点（记录继续、时长照算），并触发一次 onPointsCap 回调提示用户结束保存 */
+const MAX_POINTS = 20000;
+
 /** 反转漂移过滤：判定为“移动缓慢”的速度上限（m/s） */
 const REVERSE_SLOW_SPEED_MPS = 2;
 
@@ -106,6 +110,8 @@ class Tracker {
     });
     this.onStandstillNotify = null;
     this.onStandstillAutoPause = null;
+    // 轨迹点数封顶回调（达到 MAX_POINTS 后触发一次，页面提示用户结束保存）
+    this.onPointsCap = null;
 
     // 前后台切换：切后台时间戳 + 回前台预热窗口（冷启动漂移过滤）
     this._backgroundAt = 0;
@@ -119,6 +125,15 @@ class Tracker {
    */
   addPoint(loc) {
     if (this.paused || !loc) return null;
+    // 点数封顶：超长挂机会让点数逼近服务器 20000 上限（超限 finish 会被拒）。
+    // 达到后停止追加（记录/时长继续），一次性触发页面提示「建议结束并保存」
+    if (this.points.length >= MAX_POINTS) {
+      if (!this._pointsCapped) {
+        this._pointsCapped = true;
+        if (this.onPointsCap) this.onPointsCap({ count: this.points.length });
+      }
+      return null;
+    }
 
     // 精度过滤：accuracy 超阈值（按类型，室内/弱信号）直接丢弃，避免轨迹乱跳
     if (typeof loc.accuracy === 'number' && loc.accuracy > this._typeCfg.maxAccuracyM) return null;
