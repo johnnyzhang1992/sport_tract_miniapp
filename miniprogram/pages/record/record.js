@@ -112,11 +112,11 @@ Page({
     });
   },
 
-  /** 疑似乘车提示：每段只响一次（watcher 内部记状态），只提示不改数据——剔除仍以服务端 finish 时为准 */
+  /** 疑似乘车提示：每段只响一次（watcher 内部记状态），只提示不改数据——是否剔除由用户在轨迹详情「纠偏」决定 */
   onVehicle(info) {
     wx.vibrateShort({ type: 'heavy', fail: () => wx.vibrateShort({}) });
     wx.showToast({
-      title: `已 ${this.fmtDur(info.runSec)} 保持 ${Math.round(info.avgMps * 3.6)} km/h，疑似搭车（这段未计入）`,
+      title: `已 ${this.fmtDur(info.runSec)} 保持 ${Math.round(info.avgMps * 3.6)} km/h，疑似搭车（可在详情页纠偏剔除）`,
       icon: 'none',
       duration: 4000,
     });
