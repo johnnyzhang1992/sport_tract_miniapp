@@ -217,9 +217,9 @@
     <t-button class="act-btn" theme="primary" size="medium" block bind:tap="sharePoster">分享运动</t-button>
     <t-button
       class="act-btn"
-      t-class="{{activity.corrected ? 'act-btn-line' : 'act-btn-highlight'}}"
+      t-class="{{activity.corrected ? 'act-btn-line' : 'act-btn-warn'}}"
       wx:if="{{activity.isOwner}}"
-      variant="{{activity.corrected ? 'outline' : 'primary'}}"
+      variant="outline"
       size="medium"
       block
       bind:tap="reprocessTrack"
