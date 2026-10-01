@@ -4,6 +4,7 @@
  */
 const config = require('../config/index');
 const { createVehicleWatcher } = require('../utils/vehicle-live');
+const { createStandstillWatcher } = require('../utils/standstill-live');
 
 const EARTH_RADIUS_M = 6371000;
 /** 节流：最小采点距离（米） */
@@ -98,6 +99,14 @@ class Tracker {
     this._vehicle = createVehicleWatcher(type);
     this.onVehicle = null;
 
+    // 静止挂机观察器（utils/standstill-live.js）：连续静止提醒（10min）+ 自动暂停（>1/3 且 >15min）+ 回调
+    this._standstill = createStandstillWatcher({
+      onNotify: (info) => { if (this.onStandstillNotify) this.onStandstillNotify(info); },
+      onAutoPause: (info) => { if (this.onStandstillAutoPause) this.onStandstillAutoPause(info); },
+    });
+    this.onStandstillNotify = null;
+    this.onStandstillAutoPause = null;
+
     // 前后台切换：切后台时间戳 + 回前台预热窗口（冷启动漂移过滤）
     this._backgroundAt = 0;
     this._resumeWarmupUntil = 0;
@@ -184,6 +193,8 @@ class Tracker {
       // 疑似乘车实时提示：与整公里同款回调出口，命中时（每段仅一次）由 record 页 toast
       const veh = this._vehicle.step(this.lastPoint, point);
       if (veh && this.onVehicle) this.onVehicle(veh);
+      // 静止挂机观察：提醒（10min）与自动暂停（>1/3 且 >15min）；自动暂停直接调 pause()
+      this._standstill.step(this.lastPoint, point, this.getDurationSec());
     }
     // 爬升：EMA 平滑 + 滞回确认（决策 D16 v2：替换原"单步>2m 死区"——缓坡每步差值
     // 远小于阈值会整体漏计，而慢噪声单步大跳反而被累计；滞回让噪声上下抵消）。

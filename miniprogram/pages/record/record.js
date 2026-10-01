@@ -88,6 +88,8 @@ Page({
     const t = new Tracker(type, this.getWeightKg());
     t.onKilometer = (info) => this.onKilometer(info);
     t.onVehicle = (info) => this.onVehicle(info);
+    t.onStandstillNotify = (info) => this.onStandstillNotify(info);
+    t.onStandstillAutoPause = (info) => this.onStandstillAutoPause(info);
     return t;
   },
 
@@ -116,7 +118,30 @@ Page({
   onVehicle(info) {
     wx.vibrateShort({ type: 'heavy', fail: () => wx.vibrateShort({}) });
     wx.showToast({
-      title: `已 ${this.fmtDur(info.runSec)} 保持 ${Math.round(info.avgMps * 3.6)} km/h，疑似搭车（可在详情页纠偏剔除）`,
+      title: `已 ${this.fmtDur(info.runSec)} 保持 ${Math.round(info.avgMps * 3.6)} km/h，疑似搭车（这段未计入，可在详情页纠偏）`,
+      icon: 'none',
+      duration: 4000,
+    });
+  },
+
+  /** 连续静止 10 分钟：震动 + toast 提醒用户考虑暂停（每段一次） */
+  onStandstillNotify(info) {
+    wx.vibrateShort({ type: 'heavy', fail: () => wx.vibrateShort({}) });
+    wx.showToast({
+      title: `已静止 ${Math.round(info.stillSec / 60)} 分钟，若已停止运动可暂停或结束`,
+      icon: 'none',
+      duration: 4000,
+    });
+  },
+
+  /** 连续静止超过运动时长 1/3 且 >15 分钟：自动暂停（保护时长数据，恢复走动不会自动继续） */
+  onStandstillAutoPause(info) {
+    if (!this.data.paused) {
+      this.togglePause();
+    }
+    wx.vibrateShort({ type: 'heavy', fail: () => wx.vibrateShort({}) });
+    wx.showToast({
+      title: `已静止 ${Math.round(info.stillSec / 60)} 分钟，超过本次运动时长三分之一，已自动暂停`,
       icon: 'none',
       duration: 4000,
     });
