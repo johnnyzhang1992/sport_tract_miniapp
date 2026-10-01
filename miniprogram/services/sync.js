@@ -6,7 +6,9 @@ const api = require('./api');
 const config = require('../config/index');
 
 class SyncService {
-  constructor() {
+  /** @param {object} [page] 宿主页面：被服务端判定"这场已在别处结束"时要把整句文案交给页面显示 */
+  constructor(page) {
+    this.page = page || null;
     this.activityId = null;
     this.tracker = null;
     this.lastUploadedSeq = 0;
@@ -62,6 +64,10 @@ class SyncService {
         this.stop();
         this.pending = [];
         console.warn('[sync] 活动已结束/作废，停止同步', e.message);
+        // 只 console 的话页面还在计时计距，用户完全看不出已经停了
+        if (this.page && typeof this.page.onSyncKilled === 'function') {
+          this.page.onSyncKilled(e.message || '');
+        }
         return;
       }
       // 断网/服务异常：新点入待同步队列，下次补传

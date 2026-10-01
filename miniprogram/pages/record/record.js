@@ -51,6 +51,7 @@ Page({
       calories: 0,
     },
     paused: false,
+    killed: false, // 服务端已判定这场结束（如另一台设备开了新运动），页面停止采集与计时
     statsCollapsed: false, // 数据面板是否贴左收齐
     _collapsed: false,
 
@@ -78,7 +79,7 @@ Page({
     this.setData({ type, typeLabel: meta.label || type, typeIcon: meta.icon || '🏃', typeIconImg: meta.iconImg || '' });
 
     this.tracker = this.newTracker(type);
-    this.sync = new SyncService();
+    this.sync = new SyncService(this);
 
     this.init();
   },
@@ -696,6 +697,46 @@ Page({
     });
   },
 
+  /**
+   * 被服务端判定"这场已在别处结束"（另一台设备开了新运动 → 这条被自动收尾）时由 SyncService 回调。
+   * 页面必须当场停手：采集与计时继续跑的话，用户看到的就是一个还在跳的假录像，
+   * 而他最后点「结束」提交的那次会被 finish 的幂等早退静默丢掉。
+   */
+  onSyncKilled(message) {
+    this._killed = true;
+    if (this.statsTimer) {
+      clearInterval(this.statsTimer);
+      this.statsTimer = null;
+    }
+    if (this.tracker && !this.tracker.paused) {
+      this.tracker.pause();
+    }
+    if (locationListenerOn) {
+      wx.stopLocationUpdate();
+      locationListenerOn = false;
+    }
+    // 现场不能留：首页会按这条 storage 给出「继续上次运动」入口，而活动已经不在进行中了
+    wx.removeStorageSync('ongoingActivity');
+    this.setData({
+      starting: false,
+      paused: true,
+      killed: true,
+      // 整句由服务端下发（含结束时间与本次被丢弃的点数），页面只渲染不自己拼
+      error: message || '这场运动已在其他设备结束，后续点不再入库',
+      errorHint: '已保存的部分可在详情页查看、纠偏或删除',
+    });
+  },
+
+  /** 被踢态的唯一出路：去看已经存下来的那半程（替换当前页，返回键不该再落回一个停掉的录像机） */
+  viewSaved() {
+    const id = this.sync && this.sync.activityId;
+    if (!id) {
+      wx.navigateBack({ fail: () => wx.switchTab({ url: '/pages/index/index' }) });
+      return;
+    }
+    wx.redirectTo({ url: `/pages/track-detail/track-detail?id=${id}` });
+  },
+
   onUnload() {
     wx.stopLocationUpdate();
     if (this.sync) this.sync.stop();
@@ -711,7 +752,7 @@ Page({
     loading.reset(); // 兜底：页面卸载时若还有 Loading 残留则清理
 
     // 运动进行中退出（非结束跳摘要、非放弃）：自动暂停并保留现场，首页可“继续”
-    if (!this._ending && !this._canceled && this.tracker && this.sync && this.sync.activityId) {
+    if (!this._ending && !this._canceled && !this._killed && this.tracker && this.sync && this.sync.activityId) {
       if (!this.tracker.paused) {
         this.tracker.pause();
       }
@@ -748,7 +789,7 @@ Page({
       const meta = config.ACTIVITY_TYPES.find((t) => t.type === type) || {};
       this.setData({ type, typeLabel: meta.label || type, typeIcon: meta.icon || '🏃', typeIconImg: meta.iconImg || '' });
       this.tracker = this.newTracker(type);
-      this.sync = new SyncService();
+      this.sync = new SyncService(this);
       this.init();
     }
   },
@@ -776,7 +817,7 @@ Page({
       this.tracker.paused = true;
       this.tracker.pausedAt = Date.now();
 
-      this.sync = new SyncService();
+      this.sync = new SyncService(this);
       this.sync.activityId = activityId;
       this.sync.lastUploadedSeq = this.tracker.seq; // 已上传到后端的点
 

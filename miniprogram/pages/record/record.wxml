@@ -79,7 +79,9 @@
       <block wx:if="{{error}}">
         <view>{{error}}</view>
         <view class="error-hint" wx:if="{{errorHint}}">{{errorHint}}</view>
-        <button class="auth-btn" wx:if="{{error429}}" bindtap="goHome">回首页</button>
+        <!-- 被踢下线（这场已在别处结束）时不能给"重新授权"：授权完还是录不进去，出路只有一个 -->
+        <button class="auth-btn" wx:if="{{killed}}" bindtap="viewSaved">查看已保存的运动</button>
+        <button class="auth-btn" wx:elif="{{error429}}" bindtap="goHome">回首页</button>
         <button class="auth-btn" wx:else bindtap="retryAuth">重新授权</button>
       </block>
       <view wx:else><image class="title-icon" src="{{typeIconImg}}" mode="aspectFit"></image> {{typeLabel}} · 定位中…</view>
