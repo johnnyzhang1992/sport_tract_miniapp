@@ -38,19 +38,30 @@
     />
   </view>
 
-  <!-- 底部操作栏 -->
-  <view class="action-bar">
-    <view class="action-item" bindtap="openMarkerForm">
-      <image class="action-icon" src="/assets/icons/lucide-pin.png" mode="aspectFit" />
-      <view class="action-label">打点</view>
+  <!-- 底部：后台定位提示条 + 操作栏（包一层，提示条出现/收起时不用另算按钮组的偏移） -->
+  <view class="bottom-stack">
+    <view class="bg-loc-hint" wx:if="{{bgLocHintVisible}}">
+      <view class="blh-text">暂未开启「使用小程序时和离开后」定位，切后台会暂停记录哦</view>
+      <view class="blh-btn" bindtap="openBgLocationSetting">去开启 ›</view>
+      <view class="blh-close" bindtap="dismissBgLocHint">
+        <image class="blh-close-icon" src="/assets/icons/lucide-x.png" mode="aspectFit" />
+      </view>
     </view>
-    <view class="action-item" bindtap="togglePause">
-      <image class="action-icon big" src="{{paused ? '/assets/icons/lucide-play.png' : '/assets/icons/lucide-pause.png'}}" mode="aspectFit" />
-      <view class="action-label">{{paused ? '继续' : '暂停'}}</view>
-    </view>
-    <view class="action-item" bindtap="openEndConfirm">
-      <image class="action-icon big danger" src="/assets/icons/lucide-stop-red.png" mode="aspectFit" />
-      <view class="action-label">结束</view>
+
+    <!-- 底部操作栏 -->
+    <view class="action-bar">
+      <view class="action-item" bindtap="openMarkerForm">
+        <image class="action-icon" src="/assets/icons/lucide-pin.png" mode="aspectFit" />
+        <view class="action-label">打点</view>
+      </view>
+      <view class="action-item" bindtap="togglePause">
+        <image class="action-icon big" src="{{paused ? '/assets/icons/lucide-play.png' : '/assets/icons/lucide-pause.png'}}" mode="aspectFit" />
+        <view class="action-label">{{paused ? '继续' : '暂停'}}</view>
+      </view>
+      <view class="action-item" bindtap="openEndConfirm">
+        <image class="action-icon big danger" src="/assets/icons/lucide-stop-red.png" mode="aspectFit" />
+        <view class="action-label">结束</view>
+      </view>
     </view>
   </view>
 

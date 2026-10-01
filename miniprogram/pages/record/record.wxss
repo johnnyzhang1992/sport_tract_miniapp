@@ -50,16 +50,62 @@
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.action-bar {
+/* 底部一摞：提示条在上、操作栏在下（原来由 action-bar 自己 absolute 贴底，
+   提示条出现/收起时得跟着挪，包一层就不用写死偏移量） */
+.bottom-stack {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
+  z-index: 10;
+}
+.action-bar {
   padding: 24rpx 0 calc(24rpx + env(safe-area-inset-bottom));
   background: linear-gradient(transparent, rgba(255, 255, 255, 0.8) 30%);
   display: flex;
   justify-content: space-around;
-  z-index: 10;
+}
+/* 未开启后台定位的常驻提醒：白底衬浮在地图上，可关（只对当次进页面有效） */
+.bg-loc-hint {
+  display: flex;
+  align-items: center;
+  margin: 0 24rpx 12rpx;
+  padding: 16rpx 20rpx;
+  background: rgba(255, 255, 255, 0.94);
+  border-radius: 16rpx;
+  box-shadow: 0 4rpx 16rpx rgba(31, 35, 41, 0.12);
+}
+.blh-text {
+  flex: 1;
+  font-size: 24rpx;
+  line-height: 34rpx;
+  color: #5c6470;
+}
+/* 两个可点区都拉满提示条高度（≈50px）：原来 24px 高、X 只有 14px，
+   比本页其它按钮（88rpx 见方）小一圈，跑动中基本点不准 */
+.blh-btn {
+  display: flex;
+  align-items: center;
+  /* 显式撑到整条高度并用负外边距吃掉提示条内边距：只靠 align-self:stretch 会被
+     文字行高（34px）限住，点击区仍然偏小 */
+  height: 100rpx;
+  margin: -16rpx 0 -16rpx 16rpx;
+  padding: 0 24rpx;
+  font-size: 24rpx;
+  color: #2b6cf6;
+}
+.blh-close {
+  width: 72rpx;
+  height: 100rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: -16rpx -12rpx -16rpx 0;
+}
+.blh-close-icon {
+  width: 28rpx;
+  height: 28rpx;
+  opacity: 0.55;
 }
 .action-item {
   display: flex;

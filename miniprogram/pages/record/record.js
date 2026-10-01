@@ -52,6 +52,7 @@ Page({
     },
     paused: false,
     killed: false, // 服务端已判定这场结束（如另一台设备开了新运动），页面停止采集与计时
+    bgLocHintVisible: false, // 未开启「使用小程序时和离开后」定位时的提示条（关闭只对当次有效）
     statsCollapsed: false, // 数据面板是否贴左收齐
     _collapsed: false,
 
@@ -660,6 +661,9 @@ Page({
   },
 
   onShow() {
+    // 权限复查排在 tracker 早退之前：首次进入时 tracker 还没建，也要把这条提示算出来；
+    // 从设置页开完后台定位回来，同样靠这里把提示收掉
+    this.refreshBgLocHint();
     if (!this.tracker) return;
     // 回前台：后台较久则开启预热窗口（丢弃回前台后几秒内的漂移点）
     this.tracker.onForeground();
@@ -673,6 +677,31 @@ Page({
       this._bgPaused = false;
       wx.showToast({ title: '后台已暂停运动，点击继续', icon: 'none' });
     }
+  },
+
+  /**
+   * 复查后台定位授权：只有 scope.userLocationBackground === true 才算给了"使用小程序时和离开后"。
+   * undefined（从没问过）也提示 —— 对用户来说和"没开"是同一个结果：一退后台/息屏就断。
+   */
+  refreshBgLocHint() {
+    if (this._bgLocHintDismissed) return; // 这一场里已被手动关掉，不再弹回来
+    wx.getSetting({
+      success: (res) => {
+        const bg = res.authSetting && res.authSetting['scope.userLocationBackground'];
+        this.setData({ bgLocHintVisible: bg !== true });
+      },
+    });
+  },
+
+  /** 关闭只对当前页面实例生效（不写 storage）：下次进这一页还要提醒 */
+  dismissBgLocHint() {
+    this._bgLocHintDismissed = true;
+    this.setData({ bgLocHintVisible: false });
+  },
+
+  /** 去设置页开；开完回来由 onShow 的复查负责收起提示 */
+  openBgLocationSetting() {
+    wx.openSetting({});
   },
 
   /** 用 tracker 全量重建地图数据（后台累积的轨迹一次性渲染，与逐点渲染结果一致） */
