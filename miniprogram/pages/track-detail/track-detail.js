@@ -129,6 +129,7 @@ Page({
           avgAccuracy,
         },
         metrics,
+        posterMetrics: this.posterMetricsOf(metrics),
         // 轨迹线着色：徒步/爬山且有海拔数据 → 按海拔；否则按配速（绝对刻度，越快越偏黄）
         colorMode,
         activityType: activity.type,
@@ -345,6 +346,11 @@ Page({
     } else {
       wx.showToast({ title: '组件未就绪', icon: 'none' });
     }
+  },
+
+  /** 海报用的运动数据：剔掉打点——详情页那张网格能点进打点编辑，分享出去对看的人没意义 */
+  posterMetricsOf(metrics) {
+    return (metrics || []).filter((m) => m.label !== '打点');
   },
 
   /** 判断当前轨迹是否为该类型的个人最佳纪录（用纪录 id 对比） */

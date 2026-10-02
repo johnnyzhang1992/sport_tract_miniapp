@@ -226,12 +226,13 @@
     >{{activity.corrected ? '已纠偏' : '纠偏'}}</t-button>
   </view>
 
-  <!-- 分享海报（离屏绘制，无可见 UI）；运动数据/单段明细直接复用页面算好的同一份，口径不另起炉灶 -->
+  <!-- 分享海报（离屏绘制，无可见 UI）；运动数据/单段明细直接复用页面算好的同一份，口径不另起炉灶。
+       只有运动数据传 posterMetrics（剔掉打点），详情页那张网格读的仍是完整 metrics -->
   <share-card
     id="shareCard"
     activity="{{activity}}"
     mapPoints="{{mapPoints}}"
-    metrics="{{metrics}}"
+    metrics="{{posterMetrics}}"
     kmSegs="{{kmSegs}}"
     bindposterready="onPosterReady"
   />
