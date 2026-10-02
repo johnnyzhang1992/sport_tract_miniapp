@@ -205,6 +205,11 @@
   padding: 14rpx;
   box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
 }
+/* 开启标注时图标换成白色版，这里必须把组内白底改回蓝底：
+   .top-actions .poi-btn 的特异度高于 .poi-btn-active，少了这条就是白底压白图标（图标"消失"） */
+.top-actions .poi-btn.poi-btn-active {
+  background: #2b6cf6;
+}
 .top-actions .poi-icon {
   width: 34rpx;
   height: 34rpx;
