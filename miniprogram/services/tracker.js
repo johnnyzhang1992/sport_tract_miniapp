@@ -4,7 +4,7 @@
  */
 const config = require('../config/index');
 const { createVehicleWatcher } = require('../utils/vehicle-live');
-const { createStandstillWatcher } = require('../utils/standstill-live');
+const { createStandstillWatcher, createMovementWatcher } = require('../utils/standstill-live');
 
 const EARTH_RADIUS_M = 6371000;
 /** 节流：最小采点距离（米） */
@@ -82,6 +82,13 @@ class Tracker {
     this._typeCfg = TYPE_TRACKER_CONFIG[type] || DEFAULT_TRACKER_CONFIG;
     this.pausedAt = 0;
     this.pausedMs = 0;
+    /** 静止累计（毫秒）：判"要不要自动暂停"的那个量，走动即归零，触发后也归零 */
+    this.autoPausedMs = 0;
+    /** 自动暂停触发时回拨并进 pausedMs 的那段静止时长——上传时要减掉，服务端仍按 still 段扣 */
+    this._backdatedMs = 0;
+    /** 这一次暂停是谁按的：auto=系统（静止挂机/切后台）→ 走动可自动接回；manual=用户 → 只能用户接回 */
+    this._pausedBy = 'manual';
+    this._resumeMove = createMovementWatcher();
     this._pendingGap = false; // 暂停恢复后待标记的 pauseGap（打到恢复后首个有效点）
 
     this.distance = 0; // 米
@@ -103,12 +110,10 @@ class Tracker {
     this._vehicle = createVehicleWatcher(type);
     this.onVehicle = null;
 
-    // 静止挂机观察器（utils/standstill-live.js）：连续静止提醒（10min）+ 自动暂停（>1/3 且 >15min）+ 回调
+    // 静止挂机观察器（utils/standstill-live.js）：连续静止 >5 分钟 → 自动暂停，回调出去由页面 toast
     this._standstill = createStandstillWatcher({
-      onNotify: (info) => { if (this.onStandstillNotify) this.onStandstillNotify(info); },
       onAutoPause: (info) => { if (this.onStandstillAutoPause) this.onStandstillAutoPause(info); },
     });
-    this.onStandstillNotify = null;
     this.onStandstillAutoPause = null;
     // 轨迹点数封顶回调（达到 MAX_POINTS 后触发一次，页面提示用户结束保存）
     this.onPointsCap = null;
@@ -208,8 +213,10 @@ class Tracker {
       // 疑似乘车实时提示：与整公里同款回调出口，命中时（每段仅一次）由 record 页 toast
       const veh = this._vehicle.step(this.lastPoint, point);
       if (veh && this.onVehicle) this.onVehicle(veh);
-      // 静止挂机观察：提醒（10min）与自动暂停（>1/3 且 >15min）；自动暂停直接调 pause()
-      this._standstill.step(this.lastPoint, point, this.getDurationSec());
+      // 静止挂机观察：连续静止 >5 分钟 → 自动暂停；命中回调由页面执行 autoPause()
+      const stillSec = this._standstill.step(this.lastPoint, point);
+      // 触发那一步里 autoPause() 已把明细归零，别再按返回值写回去
+      if (!this.paused) this.autoPausedMs = stillSec * 1000;
     }
     // 爬升：EMA 平滑 + 滞回确认（决策 D16 v2：替换原"单步>2m 死区"——缓坡每步差值
     // 远小于阈值会整体漏计，而慢噪声单步大跳反而被累计；滞回让噪声上下抵消）。
@@ -329,13 +336,17 @@ class Tracker {
   /**
    * 恢复现场（退出页面后重新进入）：从后端已上传的点重建状态
    * @param {Array} points 后端 trackPoints [{seq,lat,lng,altitude,speed,accuracy,timestamp}]
+   * @param {number} pausedMs 屏幕口径的累计暂停（含历次回拨进来的静止段）
+   * @param {number} backdatedMs 其中"回拨的静止段"合计——不带上的话恢复后上传会把它当暂停重复扣
    */
-  restoreFromPoints(points, markers, startTime, pausedMs) {
+  restoreFromPoints(points, markers, startTime, pausedMs, backdatedMs) {
     this.points = (points || []).map((p) => ({ ...p }));
     this.markers = markers || [];
     this.seq = this.points.length ? this.points.reduce((m, p) => Math.max(m, p.seq || 0), 0) : 0;
     this.startTime = startTime || this.startTime;
     this.pausedMs = pausedMs || 0;
+    this._backdatedMs = backdatedMs || 0;
+    this.autoPausedMs = 0; // 静止累计是当场的事，跨恢复不延续
     // 指标从点重算（比信任旧值更准）
     this.distance = 0;
     this.elevationGain = 0;
@@ -401,13 +412,53 @@ class Tracker {
     if (!this.paused) {
       this.paused = true;
       this.pausedAt = this.now();
+      this._pausedBy = 'manual';
+      // 走动判断从"暂停前最后一点"起算，暂停期间第一个定位点就能算一步
+      this._resumeMove.reset();
+      if (this.lastPoint) {
+        this._resumeMove.step({ lat: this.lastPoint.lat, lng: this.lastPoint.lng, timestamp: this.lastPoint.timestamp });
+      }
       this._kmWindowPauseStartedAt = this.pausedAt; // 当前公里窗口的暂停起点
     }
   }
 
+  /**
+   * 静止挂机自动暂停：把触发前那段静止一起算进暂停——暂停起点回拨到静止开始的那一刻
+   * 目的：屏幕上的"时长"当场就不再往上涨，不必等用户发现、也不必等服务端纠偏才看出来。
+   * stillMs 来自 utils/standstill-live.js 的静止累计（就是判阈值用的那个量），触发后归零。
+   * 回拨这段只进屏幕的 pausedMs；上传给服务端的那份要减掉（见 buildFinalPack）——
+   * 那段静止是有轨迹点可考的，服务端纠偏会按 still 段扣一次，两边都扣就是双扣。
+   */
+  autoPause(stillMs) {
+    this.pause();
+    this._pausedBy = 'auto'; // 系统按的这一次，走动时允许自动接回
+    const backdate = Math.max(0, Math.min(stillMs || 0, this.now() - this.startTime));
+    if (!backdate) return;
+    this.pausedAt -= backdate;
+    this._backdatedMs += backdate;
+    this.autoPausedMs = 0;
+  }
+
+  /**
+   * 暂停期间喂定位：只判断"是不是真的在走动"（不入库、不累加里程），判够就自动接回记录。
+   * 只认系统按的暂停——用户自己点「暂停」后要恢复必须由用户点「继续」。
+   * @returns {boolean} true = 已自动恢复
+   */
+  onLocationWhilePaused(loc) {
+    if (!this.paused || this._pausedBy !== 'auto' || !loc) return false;
+    const moved = this._resumeMove.step({
+      lat: loc.latitude,
+      lng: loc.longitude,
+      timestamp: Number(loc.timestamp) || this.now(),
+    });
+    if (!moved) return false;
+    this.resume();
+    return true;
+  }
+
   resume() {
     if (this.paused) {
-      this.pausedMs += this.now() - this.pausedAt;
+      this.pausedMs += this.now() - this.pausedAt; // 合计：手动 + 自动（含回拨进来的那段静止）
       if (this._kmWindowPauseStartedAt) {
         this._kmWindowPauseMs += this.now() - this._kmWindowPauseStartedAt;
         this._kmWindowPauseStartedAt = 0;
@@ -448,10 +499,15 @@ class Tracker {
   /** UI 轮询快照 */
   snapshot() {
     const s = this.getStats();
+    // 暂停中的这一段还没进合计（合计在 resume 时落账），屏幕上要按"含在途"显示
+    const inFlight = this.paused ? this.now() - this.pausedAt : 0;
     return {
       ...s,
       distanceKm: (s.distance / 1000).toFixed(2),
       durationText: formatDuration(s.durationSec),
+      pausedMs: this.pausedMs + inFlight,
+      // 静止累计（判自动暂停的那个量）：走动/触发暂停后都归零
+      autoPausedMs: this.autoPausedMs,
     };
   }
 
@@ -467,7 +523,9 @@ class Tracker {
       markers: this.markers,
       startAddress,
       endAddress,
-      pausedMs: this.pausedMs,
+      // 屏幕上的 pausedMs 含「自动暂停时回拨进来的静止段」；那段有轨迹点可考，服务端纠偏会按
+      // still 段扣一次，所以交出去的只算真暂停（手动 + 触发后没点的空窗），否则同一段时间两头各扣
+      pausedMs: Math.max(0, this.pausedMs - this._backdatedMs),
       endTime: this.paused ? this.pausedAt : this.now(),
     };
   }

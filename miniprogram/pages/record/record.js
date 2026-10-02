@@ -90,7 +90,6 @@ Page({
     const t = new Tracker(type, this.getWeightKg());
     t.onKilometer = (info) => this.onKilometer(info);
     t.onVehicle = (info) => this.onVehicle(info);
-    t.onStandstillNotify = (info) => this.onStandstillNotify(info);
     t.onStandstillAutoPause = (info) => this.onStandstillAutoPause(info);
     t.onPointsCap = () => this.onPointsCap();
     return t;
@@ -139,24 +138,16 @@ Page({
     });
   },
 
-  /** 连续静止 10 分钟：震动 + toast 提醒用户考虑暂停（每段一次） */
-  onStandstillNotify(info) {
-    wx.vibrateShort({ type: 'heavy', fail: () => wx.vibrateShort({}) });
-    wx.showToast({
-      title: `已静止 ${Math.round(info.stillSec / 60)} 分钟，若已停止运动可暂停或结束`,
-      icon: 'none',
-      duration: 4000,
-    });
-  },
-
-  /** 连续静止超过运动时长 1/3 且 >15 分钟：自动暂停（保护时长数据，恢复走动不会自动继续） */
+  /** 连续静止 >5 分钟：自动暂停（把这段静止回拨成暂停，走动够 3 步会自动接回） */
   onStandstillAutoPause(info) {
     if (!this.data.paused) {
-      this.togglePause();
+      // 把触发前那段静止一起算进暂停：屏幕上的时长当场就不再涨
+      this.tracker.autoPause(info.stillSec * 1000);
+      this.updateStats();
     }
     wx.vibrateShort({ type: 'heavy', fail: () => wx.vibrateShort({}) });
     wx.showToast({
-      title: `已静止 ${Math.round(info.stillSec / 60)} 分钟，超过本次运动时长三分之一，已自动暂停`,
+      title: `已静止 ${Math.round(info.stillSec / 60)} 分钟，已自动暂停，走动会自动继续`,
       icon: 'none',
       duration: 4000,
     });
@@ -296,7 +287,10 @@ Page({
 
   /** 定位回调：喂给 tracker + 更新地图 */
   onLocation(loc) {
-    if (this.data.paused) return;
+    if (this.data.paused) {
+      this.tryAutoResume(loc);
+      return;
+    }
     console.log('[record] loc accuracy=', loc.accuracy, 'lat=', loc.latitude, 'lng=', loc.longitude, 'dist=', this.tracker ? this.tracker.distance : '-');
     if (!this._firstLoc) {
       this._firstLoc = true;
@@ -539,6 +533,18 @@ Page({
     this.updateStats();
   },
 
+  /**
+   * 暂停期间收到定位：只有系统按的暂停（静止挂机 / 切后台无后台定位）才允许自动接回，
+   * 用户自己点「暂停」的必须由用户点「继续」——判据在 tracker.onLocationWhilePaused 里
+   */
+  tryAutoResume(loc) {
+    if (!this.tracker || !this.tracker.onLocationWhilePaused(loc)) return;
+    this.setData({ paused: false });
+    this.updateStats();
+    wx.vibrateShort({ type: 'heavy', fail: () => wx.vibrateShort({}) });
+    wx.showToast({ title: '检测到运动，已自动继续', icon: 'none', duration: 3000 });
+  },
+
   openEndConfirm() {
     // 随时可结束，不做轨迹点数限制
     this.setData({ endConfirmVisible: true });
@@ -653,7 +659,8 @@ Page({
     this._hidden = true;
     // 无后台定位权限：切后台自动暂停（后台无法采点，暂停避免轨迹缺失/跳变）
     if (!this._hasBackgroundAuth && !this.data.paused) {
-      this.tracker.pause();
+      // 也是"系统替用户按的"→ 回前台后走动会自动接回；静止回拨传 0（最后一点到切后台之间没有可回拨的静止段）
+      this.tracker.autoPause(0);
       this._bgPaused = true;
       this.setData({ paused: true });
       this.updateStats();
@@ -675,7 +682,7 @@ Page({
     // 因无后台权限被自动暂停：保持暂停，提示用户点击「继续」再次开始记录
     if (this._bgPaused) {
       this._bgPaused = false;
-      wx.showToast({ title: '后台已暂停运动，点击继续', icon: 'none' });
+      wx.showToast({ title: '后台曾暂停记录，走动会自动继续', icon: 'none' });
     }
   },
 
@@ -791,6 +798,11 @@ Page({
         startTime: this.tracker.startTime,
         pausedAt: this.tracker.pausedAt || Date.now(),
         pausedMs: this.tracker.pausedMs,
+        // 回拨段要一起存：只存合计的话，恢复后上传时会把它当普通暂停交给服务端，与 still 段重复扣
+        backdatedMs: this.tracker._backdatedMs,
+        // 谁按的暂停也要存：系统按的（静止/切后台）恢复后走动才允许自动接回，
+        // 而"退出页面"这次是程序替用户按的，恢复后仍等用户点「继续」
+        pausedBy: this.tracker._pausedBy,
       });
     }
   },
@@ -837,14 +849,21 @@ Page({
         return;
       }
       this.tracker = this.newTracker(type);
-      this.tracker.restoreFromPoints(activity.trackPoints, activity.markers, activity.startTime, activity.pausedMs);
-      // 退出时已暂停：退出→现在的时长也算暂停（补进 pausedMs），恢复后保持暂停
+      // 整场录制期间 sync 只上传轨迹点，pausedMs 要等结束那次 final 包才进服务端 —— in_progress 活动
+      // 读回来的 pausedMs 恒为 0，直接用它会把之前所有暂停（含自动暂停）回流成运动时长。累计值只有本地现场有
       const ongoing = wx.getStorageSync('ongoingActivity');
+      this.tracker.restoreFromPoints(
+        activity.trackPoints, activity.markers, activity.startTime,
+        ongoing ? ongoing.pausedMs || 0 : 0,
+        ongoing ? ongoing.backdatedMs || 0 : 0,
+      );
+      // 退出时已暂停：退出→现在的时长也算暂停（补进 pausedMs），恢复后保持暂停
       if (ongoing && ongoing.pausedAt) {
         this.tracker.pausedMs += Math.max(0, Date.now() - ongoing.pausedAt);
       }
-      this.tracker.paused = true;
-      this.tracker.pausedAt = Date.now();
+      this.tracker.pause(); // 恢复后保持暂停：起点=现在，走动判断也从最后一点起算
+      // 系统按过的暂停（静止挂机/切后台）才允许走动自动接回；退出页面这次算程序替用户按的，等用户点「继续」
+      if (ongoing && ongoing.pausedBy === 'auto') this.tracker._pausedBy = 'auto';
 
       this.sync = new SyncService(this);
       this.sync.activityId = activityId;
