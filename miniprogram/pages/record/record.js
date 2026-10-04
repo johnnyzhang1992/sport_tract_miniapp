@@ -783,6 +783,8 @@ Page({
     if (this.tracker) {
       this.tracker.onKilometer = null; // 页面卸载后不许再回调到已销毁的实例上
       this.tracker.onVehicle = null;
+      this.tracker.onStandstillAutoPause = null;
+      this.tracker.onPointsCap = null;
     }
     wx.setKeepScreenOn({ keepScreenOn: false });
     loading.reset(); // 兜底：页面卸载时若还有 Loading 残留则清理

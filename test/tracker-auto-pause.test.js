@@ -93,6 +93,77 @@ test('AP5 自动暂停后不继续、直接结束：上传值不得为负', () =
  * → 第 5 分钟：静止整 300s，不算"超过 5 分钟" → 不触发
  * → 第 6 分钟：静止 360s > 300s → 触发（与墙钟 1560s 无关）
  */
+/**
+ * 真实步速不误判：端上 3m/3s 节流后，走路每步 3.6~7.2m——都小于静止半径 8m。
+ * 若静止判据拿「相邻点位移」比 8m，匀速走就会被当静止，5 分钟后误触发自动暂停。
+ */
+test('AP7 匀速慢走 10 分钟不自动暂停（静止判据要按锚点半径算，不是相邻点位移）', () => {
+  let clock = T0;
+  const t = new Tracker('running', 60, () => clock);
+  t.onStandstillAutoPause = (info) => t.autoPause(info.stillSec * 1000);
+  const LAT0 = 31.23;
+
+  for (let k = 1; k <= 200; k++) {
+    clock = T0 + k * 3 * 1000;
+    // 1.2 m/s × 3s = 3.6m/步
+    t.addPoint({ latitude: LAT0 + (1.2 * k * 3) / 111320, longitude: 121.47, accuracy: 10, timestamp: clock });
+  }
+
+  assert.equal(t.paused, false, '匀速慢走不该被自动暂停');
+  // 走路时「当前静止窗口」最多攒到「离新锚点两小步」= 6s，远达不到 300s 的线
+  assert.ok(t.autoPausedMs < 30 * 1000, `静止累计该远低于自动暂停线，实际 ${t.autoPausedMs}ms`);
+});
+
+/** 用户报的场景：暂停（<5 分钟）→ 继续行走 → 又被自动暂停；且总时长被这段误判吃掉 */
+test('AP8 暂停后继续行走：暂停处断档，走动不再被误判为静止', () => {
+  let clock = T0;
+  const t = new Tracker('running', 60, () => clock);
+  t.onStandstillAutoPause = (info) => t.autoPause(info.stillSec * 1000);
+  const LAT0 = 31.23;
+  let tSec = 0;
+  let distM = 0;
+  const walk = (sec) => {
+    for (let i = 0; i < sec / 3; i++) {
+      tSec += 3;
+      distM += 1.2 * 3;
+      clock = T0 + tSec * 1000;
+      t.addPoint({ latitude: LAT0 + distM / 111320, longitude: 121.47, accuracy: 10, timestamp: clock });
+    }
+  };
+
+  walk(120);      // 先正常走 2 分钟
+  t.pause();
+  tSec += 120;    // 暂停 2 分钟（不采点，墙钟照走）
+  clock = T0 + tSec * 1000;
+  t.resume();
+  walk(300);      // 继续走 5 分钟
+
+  assert.equal(t.paused, false, '暂停后继续行走 5 分钟不该被自动暂停');
+  assert.ok(t.autoPausedMs < 30 * 1000, `静止累计该远低于自动暂停线，实际 ${t.autoPausedMs}ms`);
+});
+
+/** 暂停那段墙钟不能算进静止：不采点，但恢复后首个点的 dt 跨着整段暂停 */
+test('AP9 暂停后原地不动：静止累计只算恢复之后那段，不把暂停时长算进来', () => {
+  let clock = T0;
+  const t = new Tracker('running', 60, () => clock);
+  t.onStandstillAutoPause = (info) => t.autoPause(info.stillSec * 1000);
+  const stillStanding = (sec) => {
+    for (let i = 0; i < sec / 30; i++) {
+      clock += 30 * 1000;
+      t.addPoint({ latitude: 31.23, longitude: 121.47, accuracy: 10, timestamp: clock });
+    }
+  };
+
+  stillStanding(120); // 暂停前已静止 2 分钟
+  t.pause();
+  clock += 120 * 1000; // 暂停 2 分钟（墙钟照走）
+  t.resume();
+  stillStanding(120); // 恢复后再静止 2 分钟
+
+  assert.equal(t.paused, false, '恢复后静止 2 分钟（含暂停那段共 4 分钟）不该越过 5 分钟的线');
+  assert.ok(t.autoPausedMs <= 120 * 1000, `只该算恢复之后那 120s，实际 ${t.autoPausedMs}ms`);
+});
+
 test('AP6 走点喂进 tracker：静止累计随点增长，触发那一步不把它写回去', () => {
   let clock = T0;
   const t = new Tracker('running', 60, () => clock);

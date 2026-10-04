@@ -90,6 +90,8 @@ class Tracker {
     this._pausedBy = 'manual';
     this._resumeMove = createMovementWatcher();
     this._pendingGap = false; // 暂停恢复后待标记的 pauseGap（打到恢复后首个有效点）
+    /** 恢复后首个被接受的点：观察器不跨暂停（与 _pendingGap 解耦，标记丢了复位也不能丢） */
+    this._gapSinceResume = false;
 
     this.distance = 0; // 米
     this.elevationGain = 0;
@@ -210,11 +212,16 @@ class Tracker {
         this._kmWindowPauseMs = 0;
         this.onKilometer({ km, splitSec, totalSec: this.getDurationSec() });
       }
-      // 疑似乘车实时提示：与整公里同款回调出口，命中时（每段仅一次）由 record 页 toast
-      const veh = this._vehicle.step(this.lastPoint, point);
+      // 疑似乘车 / 静止挂机观察：暂停是硬边界，恢复后首个被接受的点不让它们跨过去
+      // （prev 传 null → 下一点重新立锚）。与上传用的 _pendingGap 解耦——真机库里 pauseGap
+      // 会整体缺失（0/4186 条），观察器复位不能押在它身上。
+      const crossPause = this._gapSinceResume;
+      this._gapSinceResume = false;
+      const prevForWatchers = crossPause ? null : this.lastPoint;
+      const veh = this._vehicle.step(prevForWatchers, point);
       if (veh && this.onVehicle) this.onVehicle(veh);
       // 静止挂机观察：连续静止 >5 分钟 → 自动暂停；命中回调由页面执行 autoPause()
-      const stillSec = this._standstill.step(this.lastPoint, point);
+      const stillSec = this._standstill.step(prevForWatchers, point);
       // 触发那一步里 autoPause() 已把明细归零，别再按返回值写回去
       if (!this.paused) this.autoPausedMs = stillSec * 1000;
     }
@@ -388,6 +395,7 @@ class Tracker {
     this.paused = false;
     this.pausedAt = 0;
     this._pendingGap = false;
+    this._gapSinceResume = false;
   }
 
   /** 切后台标记（页面 onHide 调用） */
@@ -413,6 +421,9 @@ class Tracker {
       this.paused = true;
       this.pausedAt = this.now();
       this._pausedBy = 'manual';
+      // 静止/乘车观察器不跨暂停：暂停是硬边界，就地清空（不依赖恢复首点有没有带上 pauseGap）
+      this._standstill.reset();
+      this._vehicle.reset();
       // 走动判断从"暂停前最后一点"起算，暂停期间第一个定位点就能算一步
       this._resumeMove.reset();
       if (this.lastPoint) {
@@ -437,6 +448,11 @@ class Tracker {
     this.pausedAt -= backdate;
     this._backdatedMs += backdate;
     this.autoPausedMs = 0;
+    // 回拨的静止同样要算进当前公里窗口的暂停时长：否则实时整公里分段用时把它当成运动时间
+    // （夹到上次整公里标记，不越出本窗口）
+    if (this._kmWindowPauseStartedAt) {
+      this._kmWindowPauseStartedAt = Math.max(this._kmMark.ts, this._kmWindowPauseStartedAt - backdate);
+    }
   }
 
   /**
@@ -466,6 +482,8 @@ class Tracker {
       this.paused = false;
       // 恢复后的首个有效点带 pauseGap 标记（入库 + 渲染断开连线）
       this._pendingGap = true;
+      // 观察器复位用（与 _pendingGap 解耦：标记可能丢，复位不能跟着丢）
+      this._gapSinceResume = true;
     }
   }
 

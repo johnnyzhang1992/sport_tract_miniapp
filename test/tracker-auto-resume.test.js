@@ -85,13 +85,10 @@ test('AR1 自动暂停后连走 3 步：自动恢复，恢复首点打 pauseGap�
   assert.ok(t.pausedMs >= 6 * MIN, `静止那 6 分钟要留在合计里，实际 ${(t.pausedMs / MIN).toFixed(2)} 分钟`);
 });
 
-test('AR2 只走 2 步就停下：不恢复', () => {
+test('AR2 离暂停点只挪一步（不足 3 步）就停下：不恢复', () => {
   const { t } = autoPausedTracker();
-  feed(t, AT_REST_M + 22, 16 * 60 + 30);
-  feed(t, AT_REST_M + 44, 16 * 60 + 60);
-  const still = t.onLocationWhilePaused({ latitude: latAt(AT_REST_M + 44), longitude: LNG0, accuracy: 10, timestamp: T0 + 16 * 60 * 1000 + 90000 });
-
-  assert.equal(still, false);
+  assert.equal(feed(t, AT_REST_M + 40, 16 * 60 + 30), false, '第 1 步即使离暂停点 40m，也不足 3 步');
+  assert.equal(feed(t, AT_REST_M + 40, 16 * 60 + 60), false, '第 2 步仍不足 3 步，不恢复');
   assert.equal(t.paused, true, '仍应是暂停态');
 });
 
@@ -133,6 +130,52 @@ test('AR6 抖一步又原地不动：不恢复（"连续"这条在生效）', ()
   feed(t, AT_REST_M + 12, 16 * 60 + 60); // 又回到原地
   feed(t, AT_REST_M + 13, 16 * 60 + 90);
   assert.equal(t.paused, true);
+});
+
+/**
+ * 真机节奏（原始定位 ~1Hz，不经 3m/3s 节流）下的走动判定：
+ * 走路每步才 1.2~3.6m，旧判据「每步 ≥8m」永远凑不满 3 步 → 走动了却接不回。
+ */
+test('AR7 原始 1Hz、1.2 m/s 走动：离暂停点走出 30m 后自动接回', () => {
+  const { t } = autoPausedTracker();
+  let resumedAt = -1;
+  for (let s = 1; s <= 60; s++) {
+    if (feed(t, AT_REST_M + 1.2 * s, 16 * 60 + s)) { resumedAt = s; break; }
+  }
+  assert.ok(resumedAt > 0, '1Hz 原始节奏下走路必须能接回（旧判据要每步 ≥8m，永远 false）');
+  assert.ok(resumedAt <= 40, `走出 30m（约 25s）内该接回，实际第 ${resumedAt}s`);
+});
+
+test('AR8 站着 GPS 抖动：不误判为走动（净位移这条在生效）', () => {
+  const { t } = autoPausedTracker();
+  for (let s = 1; s <= 90; s++) {
+    // 0/5m 之间来回：每步都 5m/s 的假速度，但净位移一直 ≤5m
+    assert.equal(feed(t, AT_REST_M + (s % 2 ? 5 : 0), 16 * 60 + s), false, `站着抖第 ${s}s 不该接回`);
+  }
+  assert.equal(t.paused, true);
+});
+
+test('AR9 长时间原地停留后再走：走出 30m 就接回（暂停/停留时长不混进判据）', () => {
+  const { t } = autoPausedTracker();
+  // 先原地停留 10 分钟（±3m 抖动），一直不该接回
+  for (let s = 1; s <= 600; s++) {
+    assert.equal(feed(t, AT_REST_M + (s % 2 ? 3 : 0), 16 * 60 + s), false, `停留第 ${s}s 不该接回`);
+  }
+  // 再按 1Hz、1.2 m/s 走：约 25s 后离暂停点 30m → 接回
+  let resumedAt = -1;
+  for (let s = 601; s <= 700; s++) {
+    if (feed(t, AT_REST_M + 1.2 * (s - 600), 16 * 60 + s)) { resumedAt = s - 600; break; }
+  }
+  assert.ok(resumedAt > 0 && resumedAt <= 40, `停留 10 分钟后开走，仍应在走出 30m 内接回，实际第 ${resumedAt}s`);
+});
+
+test('AR10 单步瞬移 200m/1s：不可信，不接回（单步速度上限这条在生效）', () => {
+  const { t } = autoPausedTracker();
+  feed(t, AT_REST_M + 5, 16 * 60 + 1); // 先走一小步，让"上一点"是刚喂的点（种子点的时间戳在暂停前）
+  assert.equal(feed(t, AT_REST_M + 205, 16 * 60 + 2), false, '200m/1s 的瞬移那一步不可信');
+  assert.equal(feed(t, AT_REST_M + 205, 16 * 60 + 3), false);
+  assert.equal(feed(t, AT_REST_M + 205, 16 * 60 + 4), false);
+  assert.equal(t.paused, true, 'GPS 瞬移不该把记录接回来');
 });
 
 /** 暂停态的页面上下文（updateStats 里那些刷新与"接回"无关，桩掉） */
