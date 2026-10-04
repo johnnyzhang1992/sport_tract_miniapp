@@ -42,6 +42,21 @@ const MAX_POINTS = 20000;
 /** 反转漂移过滤：判定为“移动缓慢”的速度上限（m/s） */
 const REVERSE_SLOW_SPEED_MPS = 2;
 
+/**
+ * 【临时探针｜真机复现后整块删除】定位 pauseGap 为什么没落库（真机库 0/4186 条带该标记）。
+ * 只在微信运行时打印（getAccountInfoSync 是只有运行时装了的接口），跑单测时静音。
+ * 开发者工具 console 过滤 `[pauseGap-probe]`：
+ *  - 有 `resume` 无 `stamp` → 客户端压根没打上标（端上链路问题）
+ *  - 有 `stamp` 而库内无标记 → 丢在服务端/落库链路上
+ *  - `final` 行给出本轮 resume 次数 / 打标次数 / 最终点集里带标记的点数 / 是否还有未落标的 resume
+ */
+const PAUSE_GAP_PROBE = true;
+const gapProbe = (...args) => {
+  if (!PAUSE_GAP_PROBE) return;
+  if (typeof wx === 'undefined' || typeof wx.getAccountInfoSync !== 'function') return; // 非微信运行时静音
+  console.log('[pauseGap-probe]', ...args);
+};
+
 /** Haversine 球面距离（米），兼容 {lat,lng} 与 {latitude,longitude} 两种字段 */
 function haversine(a, b) {
   const toRad = (deg) => (deg * Math.PI) / 180;
@@ -92,6 +107,8 @@ class Tracker {
     this._pendingGap = false; // 暂停恢复后待标记的 pauseGap（打到恢复后首个有效点）
     /** 恢复后首个被接受的点：观察器不跨暂停（与 _pendingGap 解耦，标记丢了复位也不能丢） */
     this._gapSinceResume = false;
+    this._probeResumes = 0; // 【临时探针】resume 次数
+    this._probeStamps = 0; // 【临时探针】真正打上 pauseGap 的点数
 
     this.distance = 0; // 米
     this.elevationGain = 0;
@@ -196,6 +213,8 @@ class Tracker {
     if (this._pendingGap) {
       point.pauseGap = true;
       this._pendingGap = false;
+      this._probeStamps += 1;
+      gapProbe('stamp pauseGap', { seq: point.seq, gapMs: point.timestamp - this.lastSampleTime, stamps: this._probeStamps });
     }
 
     if (this.lastPoint) {
@@ -484,6 +503,8 @@ class Tracker {
       this._pendingGap = true;
       // 观察器复位用（与 _pendingGap 解耦：标记可能丢，复位不能跟着丢）
       this._gapSinceResume = true;
+      this._probeResumes += 1;
+      gapProbe('resume', { resumes: this._probeResumes, pausedBy: this._pausedBy });
     }
   }
 
@@ -536,6 +557,14 @@ class Tracker {
 
   /** 生成 final 包（结束运动时） */
   buildFinalPack(startAddress = '', endAddress = '') {
+    // 【临时探针】本轮 resume 次数 / 打标次数 / 最终点集里带标记的点数 / 是否还有没落标的 resume
+    gapProbe('final', {
+      resumes: this._probeResumes,
+      stamps: this._probeStamps,
+      flaggedPoints: this.points.filter((p) => p.pauseGap).length,
+      totalPoints: this.points.length,
+      pendingGapLeftover: this._pendingGap,
+    });
     return {
       trackPoints: this.points,
       markers: this.markers,
