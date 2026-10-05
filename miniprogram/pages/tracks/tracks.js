@@ -48,6 +48,7 @@ Page({
     provinceFilter: '', // 省份筛选（足迹地图跳转带入）
     viewMode: 'list', // 展示模式：list 单行列表（默认，按月分组）/ grid 图片（轨迹缩略图卡片）
     items: [],
+    totalCount: 0, // 当前筛选命中的总条数（接口 total，非已加载条数）
     groups: [], // 列表模式按月分组：[{ key: '2026-9', label: '2026年9月', items }]
     monthlyStats: {}, // 后端按月聚合（整月全量）：key '2026-9' → { count, distance, duration, calories }
     page: 1,
@@ -138,6 +139,7 @@ Page({
       const monthly = mergeMonthly({}, data.monthlyStats); // 列表响应附带页内月份的全量聚合
       this.setData({
         items,
+        totalCount: data.total || 0,
         groups: this.buildGroups(items, monthly),
         monthlyStats: monthly,
         hasMore: data.items.length >= PAGE_SIZE,
@@ -174,6 +176,7 @@ Page({
       const monthly = mergeMonthly(this.data.monthlyStats, data.monthlyStats); // 新出现月份增量并入
       this.setData({
         items,
+        totalCount: data.total || 0,
         groups: this.buildGroups(items, monthly),
         monthlyStats: monthly,
         page: next,
@@ -299,7 +302,11 @@ Page({
     try {
       await api.del(`/activities/${id}`);
       const items = this.data.items.filter((i) => i.id !== id);
-      this.setData({ items, groups: this.buildGroups(items) });
+      this.setData({
+        items,
+        totalCount: Math.max(0, this.data.totalCount - 1),
+        groups: this.buildGroups(items),
+      });
       this.syncMonthlyStats(); // 删除影响整月累计，重新拉取聚合
       wx.showToast({ title: '已删除', icon: 'success' });
     } catch (err) {

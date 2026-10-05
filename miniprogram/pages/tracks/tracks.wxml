@@ -22,23 +22,23 @@
 
   <!-- 展示模式切换：列表（text-align-justify）/ 图片（layout-grid） -->
   <view class="mode-bar">
-    <text class="mode-bar-title">轨迹列表</text>
+    <text class="mode-bar-title">{{totalCount}} 条轨迹</text>
     <view class="mode-btns">
     <view
-      class="mode-btn {{viewMode === 'list' ? 'mode-btn-active' : 'mode-btn-dim'}}"
+      class="mode-btn {{viewMode === 'list' ? '' : 'mode-btn-dim'}}"
       hover-class="mode-btn-hover"
       data-mode="list"
       bindtap="onToggleMode"
     >
-      <image class="mode-icon" src="/assets/icons/lucide-text-align-justify.png" mode="aspectFit" />
+      <image class="mode-icon" src="/assets/icons/lucide-text-align-justify{{viewMode === 'list' ? '-blue' : ''}}.png" mode="aspectFit" />
     </view>
     <view
-      class="mode-btn {{viewMode === 'grid' ? 'mode-btn-active' : 'mode-btn-dim'}}"
+      class="mode-btn {{viewMode === 'grid' ? '' : 'mode-btn-dim'}}"
       hover-class="mode-btn-hover"
       data-mode="grid"
       bindtap="onToggleMode"
     >
-      <image class="mode-icon" src="/assets/icons/lucide-layout-grid.png" mode="aspectFit" />
+      <image class="mode-icon" src="/assets/icons/lucide-layout-grid{{viewMode === 'grid' ? '-blue' : ''}}.png" mode="aspectFit" />
     </view>
     </view>
   </view>

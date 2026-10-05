@@ -7,7 +7,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8rpx 24rpx 12rpx;
+  padding: 8rpx 0 12rpx;
 }
 .mode-bar-title {
   font-size: 30rpx;
@@ -27,9 +27,7 @@
   justify-content: center;
   background: #f2f3f5;
 }
-.mode-btn-active {
-  background: #eef4ff;
-}
+/* 选中态不加底色：只把图标换成蓝色版（-blue 资产），未选中降透明度 */
 .mode-btn-dim {
   opacity: 0.45;
 }
