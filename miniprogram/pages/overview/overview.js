@@ -88,7 +88,6 @@ Page({
     try {
       const res = await api.get('/overview', tf.rangeQuery(this.data.filter.period));
       if (seq !== this._seq) return;
-      console.log('[overview] range=', this.data.filter.period, 'tracks=', (res.tracks || []).length);
       this.applySnapshot(res.tracks || [], res.heat || []);
       this.setData({ loading: false });
       this.fitMap();

@@ -702,7 +702,6 @@ Component({
       const heat = this.data.heat || [];
       // 记录当前线宽档位（缩放后对比是否需要重建）
       this._ovWidthKey = `${this.overviewLineWidth(4)}-${this.overviewLineWidth(3)}`;
-      console.log('[track-map] buildOverview tracks=', tracks.length, 'heat=', heat.length);
       // 热力网格索引（与后端 gridHeat 同算法：150m）
       const cellLat = 150 / 111320;
       const heatMap = new Map();
@@ -767,7 +766,6 @@ Component({
           });
         });
       });
-      console.log('[track-map] polylines=', polylines.length);
 
       // 热力不再用 circles（map circles 与 polyline 渲染冲突），改由轨迹线粗细/颜色表达
       this.setData({ polyline: polylines });

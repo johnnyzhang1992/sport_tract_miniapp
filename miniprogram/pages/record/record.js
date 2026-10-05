@@ -291,7 +291,6 @@ Page({
       this.tryAutoResume(loc);
       return;
     }
-    console.log('[record] loc accuracy=', loc.accuracy, 'lat=', loc.latitude, 'lng=', loc.longitude, 'dist=', this.tracker ? this.tracker.distance : '-');
     if (!this._firstLoc) {
       this._firstLoc = true;
       wx.showToast({ title: '已获取定位', icon: 'success' });
