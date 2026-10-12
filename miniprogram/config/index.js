@@ -38,7 +38,7 @@ module.exports = {
       // 非小程序环境（如 Node 测试）降级为开发版
     }
     // ⚠️ 联调开关：强制走线上域名（体验版调试期保持 true；上线前评估是否保留）
-    const FORCE_ONLINE = false;
+    const FORCE_ONLINE = true;
     const isOnline =
       FORCE_ONLINE || envVersion === "release" || envVersion === "trial";
     // 路径前缀 /sport-track 与同域名其他服务区分（nginx 按前缀转发）
