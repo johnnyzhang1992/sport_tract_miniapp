@@ -11,6 +11,14 @@
     <view class="state-text">加载中…</view>
   </view>
 
+  <!-- 游客态（扫码 / 分享卡落地的新用户）：未登录时一个请求都不发（GET /campaigns/:id 必 401）——
+       给专门的登录引导（不是错误态）；登录弹窗只由「登录后查看」触点拉起，进页不自动弹 -->
+  <view wx:elif="{{!loggedIn}}" class="login-hint">
+    <image class="login-hint-icon" src="/assets/icons/lucide-user.png" mode="aspectFit" />
+    <view class="login-hint-text">登录后即可查看并加入该活动</view>
+    <button class="login-hint-btn" bindtap="guestLogin">登录后查看</button>
+  </view>
+
   <block wx:else>
     <!-- 顶部：标题 / 时间 / 状态 / 可见性（所有身份都看得到） -->
     <view class="card">
@@ -26,8 +34,8 @@
       </view>
       <view class="head-desc" wx:if="{{head.description}}">{{head.description}}</view>
 
-      <!-- 发起人专属区 / 邀请（Task 11）：发起人＝待审批徽标 + 解散；成员＝邀请好友
-           徽标只在有待审批时出现（pendingCount > 0），点开审核抽屉 -->
+      <!-- 发起人专属区 / 邀请 / 退出（Task 11 + 终审 M2）：发起人＝待审批徽标 + 解散；成员＝邀请好友；
+           退出活动仅「非发起人成员」（canLeave）渲染——发起人的出路是解散 -->
       <view class="act-row" wx:if="{{isMember}}">
         <view
           class="act-pill act-pill-badge"
@@ -37,6 +45,13 @@
           bindtap="openReview"
         >待审批 {{pendingCount}}</view>
         <view class="act-pill" hover-class="act-pill-hover" hover-stay-time="80" bindtap="onInvite">邀请好友</view>
+        <view
+          class="act-pill act-pill-danger"
+          wx:if="{{canLeave}}"
+          hover-class="act-pill-hover"
+          hover-stay-time="80"
+          bindtap="onLeave"
+        >退出活动</view>
         <view
           class="act-pill act-pill-danger"
           wx:if="{{isCreator}}"
@@ -107,7 +122,7 @@
         <view class="rank-name-wrap">
           <text class="rank-name">{{item.name}}</text>
         </view>
-        <view class="rank-meta">{{item.countText}} 条 · {{item.durationText}}</view>
+        <view class="rank-meta">{{item.countText}} 次 · {{item.durationText}}</view>
         <view class="rank-dist">{{item.distanceText}} km</view>
         <!-- 移出：仅发起人、且非自己（canKick）；catchtap 不冒泡到整行的 openMember -->
         <view

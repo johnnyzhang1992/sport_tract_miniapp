@@ -9,9 +9,16 @@
  * 另外守住两条外部输入的边界：畸形 `scene`（decodeURIComponent 抛 URIError）不能崩页面；
  * 并发刷新（onShow 与下拉重叠）要有 `_seq` 守卫，晚到的旧响应必须丢弃（R25）。
  *
+ * 终审收尾（M1/M2）：
+ *   - 无 token 的游客（扫码 / 分享卡落地的新用户）一个请求都不发（GET /campaigns/:id 必 401）——
+ *     屏上出**游客态**（登录引导 + 按钮），不是错误态；登录闸门走触点级（点按钮才 ensureLogin），
+ *     游客态本身安静渲染；
+ *   - 非发起人成员有「退出活动」：先 wx.showModal 二次确认（取消＝零请求），确认后 POST /:id/leave，
+ *     刷新即转「你已退出该活动」+「重新加入」；发起人看不到该入口。
+ *
  * 运行：npm test（node --test 自动发现）；依赖：仅 node 内置模块。
- * 桩：wx / Page / getApp 就地 stub；services/api 用 require.cache 注入假实现（绕开 config/storage 的真实
- *     wx 依赖），respond 钩子按需改写这一轮返回什么。
+ * 桩：wx / Page / getApp 就地 stub；services/api 与 utils/login-gate 用 require.cache 注入假实现
+ *     （绕开 config/storage 的真实 wx 依赖），respond 钩子按需改写这一轮返回什么。
  */
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -35,13 +42,52 @@ const apiPath = require.resolve('../miniprogram/services/api.js');
 require.cache[apiPath] = { id: apiPath, filename: apiPath, loaded: true, exports: fakeApi, children: [], paths: [] };
 
 const toasts = [];
+const modals = []; // 每次 showModal 的入参（核对「退出活动」的二次确认）
+let modalResult = { confirm: true }; // 用例控制的用户选择
 global.wx = {
   showToast: (o) => toasts.push(o && o.title),
+  showModal: (o) => {
+    modals.push(o);
+    if (o && typeof o.success === 'function') o.success(modalResult);
+  },
   stopPullDownRefresh: () => {},
 };
 
-const appStub = { globalData: { loggedIn: true } };
+const appStub = {
+  globalData: { loggedIn: true, userInfo: null },
+  _session: false, // 本地是否有 token（用例改 true 模拟「老用户会话待恢复」）
+  hasSession() {
+    return !!appStub._session;
+  },
+  login() {
+    appStub.globalData.loggedIn = true;
+    if (!appStub.globalData.userInfo) appStub.globalData.userInfo = { id: 'u-viewer' };
+    return Promise.resolve({});
+  },
+};
 global.getApp = () => appStub;
+
+/* 「登录后查看」按钮必须走 utils/login-gate 的 ensureLogin（触点级闸门，不在 onLoad 自动弹）。
+   这里用 require.cache 注入 spy：通过（true）时模拟真实闸门的效果 —— app.login() 落地。 */
+const gateCalls = [];
+let gateResult = true; // 用例控制：true＝用户确认且登录成功；false＝取消/失败
+const gatePath = require.resolve('../miniprogram/utils/login-gate.js');
+require.cache[gatePath] = {
+  id: gatePath,
+  filename: gatePath,
+  loaded: true,
+  exports: {
+    ensureLogin() {
+      gateCalls.push(1);
+      if (!gateResult) return Promise.resolve(false);
+      appStub.globalData.loggedIn = true;
+      appStub.globalData.userInfo = { id: 'u-viewer' };
+      return Promise.resolve(true);
+    },
+  },
+  children: [],
+  paths: [],
+};
 
 let pageDef = null;
 global.Page = (def) => { pageDef = def; };
@@ -71,8 +117,14 @@ function makePage() {
 function resetEnv() {
   apiCalls.length = 0;
   toasts.length = 0;
+  modals.length = 0;
+  modalResult = { confirm: true };
+  gateCalls.length = 0;
+  gateResult = true;
   respond = () => Promise.resolve({});
   appStub.globalData.loggedIn = true;
+  appStub.globalData.userInfo = null;
+  appStub._session = false;
 }
 
 /** 让挂起的 Promise 链跑完（setImmediate 在微任务队列排空之后执行） */
@@ -399,4 +451,127 @@ test('CDP11 加入按钮：可点时 POST /campaigns/:id/join 并刷新，禁用
   assert.equal(apiCalls[0].path, '/campaigns/c1/join');
   assert.equal(page2.data.isMember, true, '加入成功后要刷新成成员视角');
   assert.equal(toasts.length, 1, '用户主动点击：成功后给一次提示');
+});
+
+/* ------------------------------ 终端收尾：游客登录闸门（M1） ------------------------------ */
+
+test('CDP14 无 token 游客：渲染游客态（不是错误态），一个请求都不发', async () => {
+  resetEnv();
+  appStub.globalData.loggedIn = false; // 全新用户：本地无 token（hasSession() 为 false）
+  mockDetail(nonMember()); // 误发请求会拿到 200 —— 断言「零请求」才说明真的没发
+  const page = makePage();
+  await page.onLoad({ id: 'c1' });
+  await flush();
+
+  assert.equal(apiCalls.length, 0, '游客一个请求都不发（GET /campaigns/:id 必 401）');
+  assert.equal(page.data.loading, false);
+  assert.equal(page.data.error, '', '游客态不是错误态（不许出「未授权 + 重试」死屏）');
+  assert.equal(page.data.notFound, false);
+  assert.equal(page.data.loggedIn, false, 'WXML 据此渲染游客态（登录引导 + 「登录后查看」按钮）');
+  assert.equal(page.data.head, null, '游客没有详情数据');
+  assert.equal(gateCalls.length, 0, '进页不自动弹登录：闸门只走触点级（用户点按钮才拉）');
+});
+
+test('CDP15 老用户（本地有 token）：refresh 补一次静默登录后照常渲染，不弹登录弹窗', async () => {
+  resetEnv();
+  appStub.globalData.loggedIn = false; // 会话恢复在途/失败
+  appStub._session = true; // 本地有 token
+  mockDetail(nonMember());
+  const page = makePage();
+  await page.onLoad({ id: 'c1' });
+  await flush();
+
+  assert.equal(appStub.globalData.loggedIn, true, '有 token 的老用户：refresh 应补一次静默登录（同列表页口径）');
+  assert.equal(apiCalls.length, 1, '恢复后照常请求详情');
+  assert.equal(page.data.head.title, '周末一起去徒步');
+  assert.equal(modals.length, 0, '静默恢复不弹登录弹窗');
+});
+
+test('CDP16 游客点「登录后查看」→ ensureLogin：取消零请求留在游客态；通过后重新拉详情', async () => {
+  resetEnv();
+  appStub.globalData.loggedIn = false;
+  mockDetail(nonMember());
+  const page = makePage();
+  await page.onLoad({ id: 'c1' });
+  await flush();
+  assert.equal(page.data.loggedIn, false, '先处在游客态');
+
+  // ① 闸门未过（用户取消 / 登录失败）：零请求、留在游客态
+  gateResult = false;
+  await page.guestLogin();
+  await flush();
+  assert.equal(gateCalls.length, 1, '点按钮必须走 utils/login-gate 的 ensureLogin');
+  assert.equal(apiCalls.length, 0, '闸门未过：一个请求都不发');
+  assert.equal(page.data.loggedIn, false, '留在游客态（按钮可再点）');
+
+  // ② 闸门通过：重新请求详情，页面转正常内容态
+  gateResult = true;
+  await page.guestLogin();
+  await flush();
+  assert.equal(gateCalls.length, 2);
+  assert.equal(apiCalls.length, 1, '登录成功后重新请求详情');
+  assert.equal(apiCalls[0].path, '/campaigns/c1');
+  assert.equal(page.data.head.title, '周末一起去徒步');
+  assert.equal(page.data.loggedIn, true, '渲染路径翻到内容态');
+});
+
+/* ------------------------------ 终端收尾：退出活动（M2） ------------------------------ */
+
+test('CDP17 非发起人成员：退出活动二次确认；取消零请求；确认 POST /leave 后转「已退出 + 重新加入」', async () => {
+  resetEnv();
+  appStub.globalData.userInfo = { id: 'u-viewer' }; // 普通成员（≠ creatorId u-owner）
+  let state = member();
+  respond = (path) => {
+    if (path === '/campaigns/c1/leave') {
+      state = nonMember({ myState: 'left', canJoin: true, visibility: 'public' });
+      return Promise.resolve({});
+    }
+    if (/\/leaderboard$/.test(path)) return Promise.resolve(BOARD);
+    return Promise.resolve(state);
+  };
+  const page = makePage();
+  await page.onLoad({ id: 'c1' });
+  await flush();
+  assert.equal(page.data.isMember, true);
+  assert.equal(page.data.canLeave, true, '非发起人成员：WXML 渲染「退出活动」入口');
+
+  // ① 取消：零请求
+  modalResult = { confirm: false };
+  page.onLeave();
+  await flush();
+  assert.equal(modals.length, 1, '必须先弹二次确认');
+  assert.equal(modals[0].title, '退出活动');
+  assert.equal(modals[0].content, '确定退出该活动？退出后可重新加入。');
+  assert.equal(apiCalls.filter((c) => c.path === '/campaigns/c1/leave').length, 0, '点取消不能发请求');
+
+  // ② 确认：POST /leave → refresh(true) → 「你已退出该活动」+「重新加入」
+  modalResult = { confirm: true };
+  page.onLeave();
+  await flush();
+  const leaves = apiCalls.filter((c) => c.path === '/campaigns/c1/leave');
+  assert.equal(leaves.length, 1);
+  assert.equal(leaves[0].method, 'POST');
+  assert.deepEqual(toasts, ['已退出活动']);
+  assert.equal(page.data.isMember, false);
+  assert.equal(page.data.stateNote, '你已退出该活动');
+  assert.deepEqual(page.data.cta, { text: '重新加入', disabled: false });
+  assert.equal(page.data.canLeave, false, '退出后入口消失');
+  assert.equal(page.data.panel, null, '退出后不能再有「我的贡献」面板');
+});
+
+test('CDP18 发起人：没有「退出活动」入口，onLeave 点了也不弹窗不请求', async () => {
+  resetEnv();
+  appStub.globalData.userInfo = { id: 'u-owner' }; // == creatorId：发起人
+  mockDetail(member());
+  const page = makePage();
+  await page.onLoad({ id: 'c1' });
+  await flush();
+  assert.equal(page.data.isCreator, true, '先确认处在发起人视角');
+  assert.equal(page.data.canLeave, false, '发起人不能退出自己的活动（出路是解散）');
+
+  const calls = apiCalls.length;
+  page.onLeave();
+  await flush();
+  assert.equal(modals.length, 0, '发起人没有入口：连确认弹窗都不出现');
+  assert.equal(apiCalls.length, calls, '发起人点不出任何请求');
 });

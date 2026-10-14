@@ -17,8 +17,17 @@
 //   小程序码（POST /campaigns/mini-code，仅 joined）两条分支：{url}（签名 OSS 地址）与
 //   OSS 失败降级 {url:'', base64}——都落成「可预览（长按识别/保存）」的图，远程 url 无本地路径时
 //   保存走 downloadFile（需域名在后台白名单，取不到就引导长按保存，不假装成功）。
+//
+// 终审收尾（M1/M2）：
+//   游客闸门：无 token / 未登录时一个请求都不发（GET /campaigns/:id 必 401），屏上渲染**游客态**
+//   （登录引导 + 「登录后查看」按钮），不是错误态 —— 扫码 / 分享卡落地的新用户不能死在「未授权 + 重试」。
+//   闸门走触点级（照 campaign-list 的游客 / 登录引导写法）：进页安静渲染游客态，用户点按钮才 ensureLogin，
+//   通过后照常 refresh。
+//   退出活动：仅非发起人成员（canLeave）有入口；wx.showModal 二次确认（取消＝零请求）→ POST /:id/leave
+//   → refresh(true) 落「你已退出该活动」+「重新加入」（joined→left 可再入，§1.3/§11.2）。
 const api = require('../../services/api');
 const config = require('../../config/index');
+const { ensureLogin } = require('../../utils/login-gate');
 const { statusLabel, visibilityLabel, fmtRange, joinCta, fmtPanel } = require('../../utils/campaign.js');
 
 /** 运动类型 key → 中文名（与创建页 / 服务端白名单同一集合，取 config 这一份） */
@@ -121,13 +130,37 @@ function toDetailItem(t) {
   };
 }
 
+/**
+ * 成员 / 发起人专属视图的一键清空（错误态与游客态共用）：非成员屏上不得残留上一场的成员数据
+ * （蓝色「我的贡献」条带着旧数字、开着的成员抽屉、审核 / 小程序码弹窗）。
+ */
+function viewerCleanPatch() {
+  return {
+    isMember: false,
+    canLeave: false,
+    totals: null,
+    members: [],
+    panel: null,
+    sheetVisible: false, // 抽屉必须同时关掉
+    sheetMember: null,
+    sheetDetail: null,
+    isCreator: false,
+    pendingRows: [],
+    pendingCount: 0,
+    reviewVisible: false,
+    codeVisible: false,
+  };
+}
+
 Page({
   data: {
     loading: true,
+    loggedIn: false, // 登录态（游客态据此渲染；进页时 refresh 会先对齐真实会话）
     notFound: false, // 活动不存在（id 解不出 / 服务端 404）
     error: '', // 首屏加载失败原因（屏上错误态 + 重试）
     head: null, // 顶部信息
     isMember: false, // myState === 'joined'
+    canLeave: false, // 非发起人成员才有的「退出活动」入口（isMember && !isCreator）
     cta: null, // joinCta 结果（成员为 null）
     ctaHint: '', // 按钮下方的显式提示（可点 / 不可点）
     stateNote: '', // 身份说明行
@@ -188,6 +221,27 @@ Page({
     if (!app.globalData.userInfo && app.globalData.loginPromise) {
       await app.globalData.loginPromise.catch(() => {});
     }
+    // 老用户（本地有 token）但会话恢复没落地：补一次静默登录（与 campaign-list.refresh 同口径）。
+    // 全新用户（无 token）**不**自动登录 —— 交给游客态里的显式按钮走 ensureLogin（触点级闸门）。
+    if (!app.globalData.loggedIn && app.hasSession()) {
+      try {
+        await app.login();
+      } catch (e) {
+        console.warn('[campaign-detail] 静默登录失败', e);
+      }
+    }
+    // 游客闸门（M1）：未登录一个请求都不发（GET /campaigns/:id 必 401），屏上渲染**游客态**（不是错误态）——
+    // 扫码 / 分享卡落地的新用户必须有登录出路，不能死在「未授权 + 重试」的死屏里。
+    if (!app.globalData.loggedIn) {
+      this.setData(Object.assign({
+        loggedIn: false,
+        loading: false,
+        notFound: false,
+        error: '',
+      }, viewerCleanPatch()));
+      return;
+    }
+    if (!this.data.loggedIn) this.setData({ loggedIn: true });
     // 请求序号守卫（R25）：onShow 与下拉刷新可能并发，只允许最后一次的响应落地
     const seq = (this._seq = (this._seq || 0) + 1);
     if (!this.data.head) this.setData({ loading: !silent });
@@ -208,18 +262,7 @@ Page({
       // 违反本页成功路径的数据卫生约定（applyDetail 对非成员硬清零成员字段）。
       // 发起人专属视图（审批抽屉 / 小程序码弹窗）同一理由一并收掉。
       if (notFound || error) {
-        patch.isMember = false;
-        patch.totals = null;
-        patch.members = [];
-        patch.panel = null;
-        patch.sheetVisible = false; // 抽屉必须同时关掉
-        patch.sheetMember = null;
-        patch.sheetDetail = null;
-        patch.isCreator = false;
-        patch.pendingRows = [];
-        patch.pendingCount = 0;
-        patch.reviewVisible = false;
-        patch.codeVisible = false;
+        Object.assign(patch, viewerCleanPatch());
       }
       this.setData(patch);
       return;
@@ -273,6 +316,7 @@ Page({
       error: '',
       head: toHead(detail),
       isMember,
+      canLeave: isMember && !isCreator, // 退出活动：我不是发起人（发起人出路是解散）
       isCreator,
       cta,
       ctaHint: cta ? (cta.disabled ? '当前不可加入' : `点击「${cta.text}」`) : '',
@@ -293,6 +337,16 @@ Page({
   /** 首屏失败重试 */
   retry() {
     this.setData({ loading: true, error: '' });
+    return this.refresh();
+  },
+
+  /**
+   * 游客态「登录后查看」：触点级登录闸门（照 campaign-list 的游客引导；用户点了才弹，不在 onLoad 自动弹）。
+   * 取消 / 登录失败 → 留在游客态（按钮可再点），一个请求都不发；通过 → 照常拉详情。
+   */
+  async guestLogin() {
+    const ok = await ensureLogin();
+    if (!ok) return;
     return this.refresh();
   },
 
@@ -443,6 +497,36 @@ Page({
       wx.showToast({ title: (e && e.message) || '操作失败', icon: 'none' });
     } finally {
       this._kicking = false;
+    }
+  },
+
+  /**
+   * 退出活动（仅非发起人成员，canLeave 才渲染入口）。二次确认后才 POST —— 取消＝零请求
+   * （同踢人 / 解散口径）。需求 §1.3/§11.2：成员可随时离开，joined→left 可再入。
+   */
+  onLeave() {
+    if (!this.data.canLeave || this._leaving) return;
+    wx.showModal({
+      title: '退出活动',
+      content: '确定退出该活动？退出后可重新加入。',
+      success: (res) => {
+        if (!res.confirm) return; // 取消：不发请求、不改状态
+        this.doLeave();
+      },
+    });
+  },
+
+  async doLeave() {
+    this._leaving = true;
+    try {
+      await api.post(`/campaigns/${this._id}/leave`);
+      wx.showToast({ title: '已退出活动', icon: 'success' });
+      // 服务端 myState→left：刷新即转「你已退出该活动」+「重新加入」（渲染路径在 applyDetail，端上不自己拼状态）
+      await this.refresh(true);
+    } catch (e) {
+      wx.showToast({ title: (e && e.message) || '操作失败', icon: 'none' });
+    } finally {
+      this._leaving = false;
     }
   },
 

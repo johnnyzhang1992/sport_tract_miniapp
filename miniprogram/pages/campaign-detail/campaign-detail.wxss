@@ -29,6 +29,32 @@
   opacity: 0.85;
 }
 
+/* 游客登录引导（照 campaign-list.wxss 的 .login-hint 同套观感；页面样式隔离，需在本页复刻） */
+.login-hint {
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 80rpx 40rpx;
+  text-align: center;
+}
+.login-hint-icon {
+  width: 96rpx;
+  height: 96rpx;
+  opacity: 0.6;
+}
+.login-hint-text {
+  color: #4e5969;
+  font-size: 26rpx;
+  margin: 24rpx 0 32rpx;
+  line-height: 1.6;
+}
+.login-hint-btn {
+  background: #2b6cf6;
+  color: #fff;
+  border-radius: 999rpx;
+  font-size: 28rpx;
+  width: 320rpx;
+}
+
 /* 卡片（照 leaderboard.wxss 的 .card） */
 .card {
   background: #fff;
