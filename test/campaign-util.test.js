@@ -63,3 +63,12 @@ test('CU6 汇总格式化：列表 DTO 的 myStats 没有 streak 也不炸（只
     durationText: '0min',
   });
 });
+
+test('CU7 已退出且可再参加 → 「重新加入」/「重新申请」', () => {
+  assert.deepEqual(joinCta({ myState: 'left', canJoin: true, status: 'active', visibility: 'public' }), { text: '重新加入', disabled: false });
+  assert.deepEqual(joinCta({ myState: 'left', canJoin: true, status: 'active', visibility: 'private' }), { text: '重新申请', disabled: false });
+});
+
+test('CU8 已退出但不可再参加（人数已满）→ 仍落「人数已满」，不放行', () => {
+  assert.deepEqual(joinCta({ myState: 'left', canJoin: false, status: 'active', visibility: 'public' }), { text: '人数已满', disabled: true });
+});

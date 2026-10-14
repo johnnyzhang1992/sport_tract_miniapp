@@ -32,6 +32,8 @@ function fmtRange(startAt, endAt) {
 /**
  * 加入按钮文案与禁用态：按「我的状态 → 活动状态 → 可否加入」依次判。
  * 已加入（myState='joined'，含发起人）不显示按钮，返回 null。
+ * 主动退出过（myState='left'）只是**措辞**不同（重新加入 / 重新申请），可参加性完全由 `canJoin` 决定——
+ * 所以这条分支必须待在 `canJoin` 为真的分支里：人数已满 / 已结束 / 已解散时仍落到既有文案，不会误放行（R27）。
  */
 function joinCta({ myState, canJoin, status, visibility }) {
   if (myState === 'joined') return null;
@@ -39,7 +41,11 @@ function joinCta({ myState, canJoin, status, visibility }) {
   if (status === 'ended') return { text: '活动已结束', disabled: true };
   if (myState === 'pending') return { text: '等待发起人同意', disabled: true };
   if (myState === 'removed') return { text: '你已被移出该活动', disabled: true };
-  if (canJoin) return { text: visibility === 'private' ? '申请加入' : '加入活动', disabled: false };
+  if (canJoin) {
+    const again = myState === 'left';
+    if (again) return { text: visibility === 'private' ? '重新申请' : '重新加入', disabled: false };
+    return { text: visibility === 'private' ? '申请加入' : '加入活动', disabled: false };
+  }
   return { text: '人数已满', disabled: true };
 }
 

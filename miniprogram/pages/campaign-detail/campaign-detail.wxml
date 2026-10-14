@@ -1,2 +1,117 @@
-<!-- Task 10 填充 -->
-<view class="empty">活动详情（建设中）</view>
+<view class="page">
+  <!-- 活动不存在 / 首屏失败 / 首屏加载中（三态互斥，避免白屏） -->
+  <view wx:if="{{notFound}}" class="state-box">
+    <view class="state-text">活动不存在或已被删除</view>
+  </view>
+  <view wx:elif="{{error}}" class="state-box">
+    <view class="state-text">{{error}}</view>
+    <view class="state-btn" hover-class="state-btn-hover" bindtap="retry">重试</view>
+  </view>
+  <view wx:elif="{{loading}}" class="state-box">
+    <view class="state-text">加载中…</view>
+  </view>
+
+  <block wx:else>
+    <!-- 顶部：标题 / 时间 / 状态 / 可见性（所有身份都看得到） -->
+    <view class="card">
+      <view class="head-row">
+        <text class="head-title">{{head.title}}</text>
+        <text class="head-tag">{{head.statusText}}</text>
+      </view>
+      <view class="head-range">{{head.rangeText}}</view>
+      <view class="head-meta">
+        <text class="head-meta-item">{{head.visibilityText}}</text>
+        <text class="head-meta-item">{{head.limitText}}</text>
+        <text class="head-meta-item">{{head.typesText}}</text>
+      </view>
+      <view class="head-desc" wx:if="{{head.description}}">{{head.description}}</view>
+    </view>
+
+    <!-- 非成员（未加入 / 待审批 / 已退出 / 已被移出）：身份说明行 + 加入入口 -->
+    <view class="card" wx:if="{{!isMember}}">
+      <view class="note-row" wx:if="{{stateNote}}">
+        <text class="note-text">{{stateNote}}</text>
+      </view>
+      <view
+        class="join-btn {{cta.disabled ? 'join-btn-off' : ''}}"
+        hover-class="{{cta.disabled ? 'none' : 'join-btn-hover'}}"
+        hover-stay-time="80"
+        bindtap="onJoin"
+      >{{cta.text}}</view>
+      <view class="join-tip">{{ctaHint}}</view>
+    </view>
+
+    <!-- 成员：全队汇总三格 -->
+    <view class="card" wx:if="{{isMember}}">
+      <view class="card-head">
+        <view class="card-title">全队汇总</view>
+        <view class="card-sub">加入后开始统计</view>
+      </view>
+      <view class="sum-row">
+        <view class="sum-cell">
+          <view class="sum-value">{{totals.countText}}</view>
+          <view class="sum-label">次数</view>
+        </view>
+        <view class="sum-cell">
+          <view class="sum-value">{{totals.distanceText}}</view>
+          <view class="sum-label">距离 (km)</view>
+        </view>
+        <view class="sum-cell">
+          <view class="sum-value">{{totals.durationText}}</view>
+          <view class="sum-label">时长</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 成员：成员列表＝活动内排行榜（按距离降序，点行看该成员汇总） -->
+    <view class="card" wx:if="{{isMember}}">
+      <view class="card-head">
+        <view class="card-title">成员排行</view>
+        <view class="card-sub">按距离降序 · 点成员看汇总</view>
+      </view>
+      <view
+        class="rank-row"
+        wx:for="{{members}}"
+        wx:key="userId"
+        hover-class="rank-row-hover"
+        hover-stay-time="80"
+        data-idx="{{index}}"
+        bindtap="openMember"
+      >
+        <view class="rank-no">
+          <image wx:if="{{item.medalIcon}}" class="medal-img" src="{{item.medalIcon}}" mode="aspectFit" />
+          <text wx:else>{{item.rank}}</text>
+        </view>
+        <image wx:if="{{item.avatarSrc}}" class="rank-avatar" src="{{item.avatarSrc}}" mode="aspectFill" />
+        <view wx:else class="rank-avatar rank-avatar-text">{{item.avatarText}}</view>
+        <view class="rank-name-wrap">
+          <text class="rank-name">{{item.name}}</text>
+        </view>
+        <view class="rank-meta">{{item.countText}} 条 · {{item.durationText}}</view>
+        <view class="rank-dist">{{item.distanceText}} km</view>
+      </view>
+      <view class="rank-empty" wx:if="{{members.length === 0}}">暂无成员数据</view>
+    </view>
+  </block>
+
+  <!-- 底部悬浮：我的贡献（照运动榜 .me-card 形态；数据＝详情 myPanel） -->
+  <view class="me-card" wx:if="{{isMember && panel}}">
+    <view class="me-body">
+      <view class="me-name-wrap">
+        <text class="me-name">我的贡献</text>
+      </view>
+      <view class="me-sub">{{head.rangeText}} · 本活动内</view>
+    </view>
+    <view class="me-stats">
+      <view class="me-dist">{{panel.distanceText}} km</view>
+      <view class="me-count">{{panel.countText}} 次 · 连续 {{panel.streakText}} 天 · {{panel.durationText}}</view>
+    </view>
+  </view>
+
+  <!-- 成员信息半屏（非发起人视角＝只读汇总三项；发起人视角由 Task 11 补） -->
+  <campaign-member-sheet
+    visible="{{sheetVisible}}"
+    member="{{sheetMember}}"
+    bind:close="closeMemberSheet"
+  />
+</view>

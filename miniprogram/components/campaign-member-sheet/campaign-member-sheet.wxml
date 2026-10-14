@@ -1,0 +1,32 @@
+<!-- 成员信息半屏（非发起人视角：只读，只有汇总三项；无任何明细请求，见 JS 头注释） -->
+<view wx:if="{{visible && member}}" class="mask" bindtap="onClose">
+  <view class="sheet" catchtap="noop">
+    <view class="sheet-head">
+      <view class="sheet-title">成员信息</view>
+      <view class="sheet-close" catchtap="onClose">✕</view>
+    </view>
+
+    <view class="member-head">
+      <image wx:if="{{member.avatarSrc}}" class="member-avatar" src="{{member.avatarSrc}}" mode="aspectFill" />
+      <view wx:else class="member-avatar member-avatar-text">{{member.avatarText}}</view>
+      <view class="member-name">{{member.name}}</view>
+    </view>
+
+    <view class="stat-row">
+      <view class="stat-cell">
+        <view class="stat-value">{{member.countText}}</view>
+        <view class="stat-label">次数</view>
+      </view>
+      <view class="stat-cell">
+        <view class="stat-value">{{member.distanceText}}</view>
+        <view class="stat-label">距离 (km)</view>
+      </view>
+      <view class="stat-cell">
+        <view class="stat-value">{{member.durationText}}</view>
+        <view class="stat-label">时长</view>
+      </view>
+    </view>
+
+    <view class="member-tip">这里是 TA 在本活动内的汇总（加入后统计）</view>
+  </view>
+</view>

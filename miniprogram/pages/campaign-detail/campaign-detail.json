@@ -1,3 +1,7 @@
 {
-  "navigationBarTitleText": "活动详情"
+  "navigationBarTitleText": "活动详情",
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "campaign-member-sheet": "/components/campaign-member-sheet/campaign-member-sheet"
+  }
 }
