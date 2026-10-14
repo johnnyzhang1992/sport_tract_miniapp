@@ -58,7 +58,10 @@
     </view>
     <view class="fnote">不选＝全部类型都算；点已选中的可取消</view>
 
-    <!-- 人数上限：可选，1–500，不填＝不限制 -->
+    <!-- 人数上限：可选，1–500，不填＝不限制。
+         注意：不要在这里加 maxlength —— 实测 maxlength=3 会把 type="number" 的输入静默截断
+         （输入 1000 得到 100），用户意图被悄悄改掉且 ≤500 的校验永远看不到原值；改为原样保留、
+         由 onSubmit 明确拒绝（提示含对象+实际值+上限）。 -->
     <view class="frow">
       <view class="flabel">人数上限</view>
       <input
@@ -68,7 +71,6 @@
         placeholder-class="fph"
         value="{{memberLimit}}"
         bindinput="onMemberLimit"
-        maxlength="3"
       />
     </view>
     <view class="fnote">可选，1–{{maxMembers}} 的整数，不填＝不限制，当前 {{memberLimit || '不限制'}}</view>

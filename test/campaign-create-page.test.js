@@ -190,3 +190,31 @@ test('CCP7 提交失败 → toast e.message 且不跳转', async () => {
   assert.equal(navs.length, 0, '失败不跳详情');
   assert.equal(toasts[toasts.length - 1], '标题含违规内容');
 });
+
+test('CCP8 成功后复位 submitting：返回创建页按钮不再锁死，可再次提交', async () => {
+  resetEnv();
+  respond = () => Promise.resolve({ id: 'cmp-resubmit' });
+  const page = makePage();
+  Object.assign(page.data, legal());
+  await page.onSubmit();
+  assert.equal(apiCalls.length, 1, '首次提交发一次请求');
+  // 成功分支走的是 wx.navigateTo（推送详情页），创建页仍留在栈里；
+  // 若不复位 submitting，用户返回后按钮会永久 disabled/loading，onSubmit 被守卫短路。
+  assert.equal(page.data.submitting, false, '成功后必须复位 submitting，否则从详情页返回后按钮永久锁死');
+
+  // 模拟用户从详情页返回创建页后再次点击提交
+  await page.onSubmit();
+  assert.equal(apiCalls.length, 2, '复位后第二次 onSubmit 应能再次发出请求（不锁死）');
+  assert.equal(page.data.submitting, false, '第二次成功后同样复位');
+});
+
+test('CCP9 登录闸门未通过（早退）也复位 submitting，不锁死', async () => {
+  resetEnv();
+  appStub.globalData.loggedIn = false;
+  modalConfirm = false;
+  const page = makePage();
+  Object.assign(page.data, legal());
+  await page.onSubmit();
+  assert.equal(apiCalls.length, 0, '登录闸门未通过 → 一个请求都不发');
+  assert.equal(page.data.submitting, false, '早退分支必须复位 submitting，否则本页没有任何等价的重置路径');
+});

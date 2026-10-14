@@ -124,11 +124,18 @@ Page({
       }
     }
 
-    // 登录闸门：通过后才允许提交（游客取消 → 一个请求都不发）
-    const ok = await ensureLogin();
-    if (!ok) return;
-
+    // 先在 await 之前置位 submitting：
+    // 连点两下时第二下会被顶部 `if (this.data.submitting) return` 短路，不会两次过登录闸门、发两次 POST
+    // 建出两个活动（Important-2 双提交窗口，根因是原实现在 await 之后才置位）。
     this.setData({ submitting: true });
+
+    // 登录闸门：通过后才允许提交（游客取消 → 一个请求都不发；早退分支必须复位，否则同样锁死）
+    const ok = await ensureLogin();
+    if (!ok) {
+      this.setData({ submitting: false });
+      return;
+    }
+
     try {
       const created = await api.post('/campaigns', {
         title,
@@ -139,6 +146,10 @@ Page({
         startDate,
         endDate,
       });
+      // 成功分支必须复位：wx.navigateTo 是「推送」详情页，本页仍留在导航栈里；
+      // 若 submitting 仍为 true，用户从详情页返回后按钮会永久 disabled/loading、文案停在「创建中…」，
+      // 且 onSubmit 被守卫短路，页面上没有任何重置路径 → 真用户被锁死（Critical-1）。
+      this.setData({ submitting: false });
       wx.showToast({ title: '活动已创建', icon: 'success' });
       const id = created && created.id;
       wx.navigateTo({ url: `/pages/campaign-detail/campaign-detail?id=${id}` });
