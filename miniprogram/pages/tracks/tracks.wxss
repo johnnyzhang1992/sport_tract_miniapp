@@ -58,6 +58,73 @@
   color: #1f2329;
 }
 
+/* 首次加载骨架屏（列表模式）：模拟「月份标题 + 卡片行」结构，呼吸闪烁 */
+.sk-wrap {
+  padding-top: 8rpx;
+}
+.sk-title {
+  width: 180rpx;
+  height: 34rpx;
+  border-radius: 8rpx;
+  margin: 24rpx 4rpx 16rpx;
+}
+.sk-card {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 24rpx 28rpx;
+  margin-bottom: 16rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+.sk-icon {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 50%;
+  margin-right: 24rpx;
+  flex-shrink: 0;
+}
+.sk-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+}
+.sk-line {
+  border-radius: 8rpx;
+}
+.sk-line-type {
+  width: 160rpx;
+  height: 26rpx;
+}
+.sk-line-dist {
+  width: 220rpx;
+  height: 34rpx;
+}
+.sk-line-time {
+  width: 96rpx;
+  height: 24rpx;
+  margin-left: 16rpx;
+  flex-shrink: 0;
+}
+.sk-title,
+.sk-icon,
+.sk-line {
+  background: #eef0f3;
+  animation: sk-pulse 1.2s ease-in-out infinite;
+}
+@keyframes sk-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
 /* 当月统计（选中运动类型时）：累计 / 平均 */
 .month-stats {
   margin: 0 4rpx 12rpx;
@@ -128,12 +195,43 @@
   font-weight: 600;
   color: #2b6cf6;
 }
-.list-time {
-  align-self: flex-end;
+.list-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 8rpx;
   margin-left: 16rpx;
+  flex-shrink: 0;
+}
+.list-time {
   font-size: 24rpx;
   color: #8a93a6;
+}
+/* 个人最佳角标：金色月桂穗枝（公共背景图在 app.wxss 的 .laurel-ear），左右枝环抱文本 */
+.list-best {
+  display: flex;
+  align-items: center;
+  max-width: 300rpx;
+}
+.list-best-ear {
+  width: 18rpx;
+  height: 32rpx;
   flex-shrink: 0;
+}
+.list-best-text {
+  font-size: 18rpx;
+  font-weight: 600;
+  color: #c08e2e;
+  letter-spacing: 1rpx;
+  margin: 0 3rpx;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* 前纪录（已被刷新）：文字灰金降调（穗枝灰显走全局 .laurel-ear-grey） */
+.list-best-former .list-best-text {
+  color: #a89e86;
 }
 
 /* 卡片（缩略图在上，信息在下） */

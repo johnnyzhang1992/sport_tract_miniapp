@@ -11,6 +11,7 @@ const { getBestCache, setBestCache } = require('../../services/storage');
 const storage = require('../../services/storage');
 const { uploadPhoto } = require('../../services/oss-upload');
 const { formatDuration, formatPaceParts } = require('../../utils/format');
+const { matchBest } = require('../../utils/best-records');
 const { getPaceScale } = require('../../utils/pace-scale');
 const { computeRunPaceZones } = require('../../utils/track-pace');
 const { buildAltitudeChart, usesAltitudeColor } = require('../../utils/track-altitude');
@@ -42,7 +43,7 @@ Page({
     // 运动数据网格（Keep 风：标签在上、数值 + 单位在下）
     metrics: [],
 
-    // 特别成就（个人最佳）
+    // 最佳记录（个人最佳）
     achievements: [],
 
     // 跑步配速区间（自锚定：边界 = 本次平均配速 × 比例）
@@ -159,19 +160,18 @@ Page({
         })),
         altitudeChart,
       });
-      // 个人最佳徽章：先取本地缓存，无则拉取一次 /stats/best 并缓存
+      // 个人最佳徽章：每次进详情都重新拉取 /stats/best（本地缓存不失效，
+      // 新轨迹不在旧缓存列表里会导致徽章漏判），拉到后回写缓存供其它页面使用
       const app = getApp();
       const uid = app.globalData.user ? app.globalData.user.id : '';
-      let best = getBestCache(uid);
-      if (!best) {
-        try {
-          best = await api.get('/stats/best');
-          if (best) {
-            setBestCache(uid, best);
-          }
-        } catch (err) {
-          best = null;
+      let best = null;
+      try {
+        best = await api.get('/stats/best');
+        if (best) {
+          setBestCache(uid, best);
         }
+      } catch (err) {
+        best = null;
       }
       this.setData({ achievements: this.computeBestBadges(activity, best) });
       // 单段明细（每公里分段；默认展示前 10）
@@ -381,32 +381,15 @@ Page({
   },
 
   /**
-   * 特别成就：本轨迹在所属运动类型中持有的个人最佳（最远距离/最快配速/最长时长/最大爬升）
-   * 口径与 /stats/best 一致：最快配速取 fastestKm、最长时长取 duration（运动时长）；数值取本轨迹自身的成绩
+   * 最佳记录：本轨迹在所属运动类型中持有的个人最佳（最远距离/最快配速/最长时长/最大爬升）
+   * 匹配口径收口在 utils/best-records.js（轨迹列表角标共用）；best 缺省时回退本地缓存
    */
-  computeBestBadges(activity) {
-    const app = getApp();
-    const best = getBestCache(app.globalData.user ? app.globalData.user.id : '');
-    if (!best) return [];
-    const id = String(activity.id || this.data.id);
-    const paceParts = formatPaceParts(activity.fastestKm);
-    const rows = [
-      { list: best.maxDistanceByType, label: '最远距离', value: (activity.distance / 1000).toFixed(2), unit: '公里' },
-      paceParts && { list: best.minPaceByType, label: '最快配速', value: paceParts.value, unit: paceParts.unit },
-      { list: best.maxDurationByType, label: '最长时长', value: formatDuration(activity.duration), unit: '' },
-      activity.elevationGain > 0 && {
-        list: best.maxElevationByType,
-        label: '最大爬升',
-        value: String(activity.elevationGain),
-        unit: '米',
-      },
-    ].filter(Boolean);
-    const achievements = [];
-    for (const { list, label, value, unit } of rows) {
-      const rec = (list || []).find((r) => r.type === activity.type);
-      if (rec && String(rec.id) === id) achievements.push({ label, value, unit });
+  computeBestBadges(activity, best) {
+    if (!best) {
+      const app = getApp();
+      best = getBestCache(app.globalData.user ? app.globalData.user.id : '');
     }
-    return achievements;
+    return matchBest(activity, best);
   },
 
   /** 每公里分段

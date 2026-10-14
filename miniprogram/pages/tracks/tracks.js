@@ -1,5 +1,7 @@
 const api = require('../../services/api');
 const { formatDuration, formatPace, formatDurationStat } = require('../../utils/format');
+const { getBestCache, setBestCache } = require('../../services/storage');
+const { matchBest } = require('../../utils/best-records');
 const config = require('../../config/index');
 
 const PAGE_SIZE = 20;
@@ -134,8 +136,10 @@ Page({
     if (!app.globalData.loggedIn) return;
     try {
       this.setData({ loading: true, page: 1, monthlyStats: {} }); // 重置聚合缓存，防上一次筛选的数据串味
-      const data = await api.get('/activities', this.buildParams(1));
-      const items = data.items.map(this.decorate);
+      // 个人最佳与列表并行拉取：每次刷新都取实时值（缓存不失效，新纪录要立刻在卡片亮出）
+      const [data, best] = await Promise.all([api.get('/activities', this.buildParams(1)), this.loadBest()]);
+      this._best = best;
+      const items = data.items.map((it) => this.decorate(it, best));
       const monthly = mergeMonthly({}, data.monthlyStats); // 列表响应附带页内月份的全量聚合
       this.setData({
         items,
@@ -167,12 +171,25 @@ Page({
     }
   },
 
+  /** 拉取个人最佳（/stats/best），成功后回写本地缓存供详情页等复用；失败返回 null（卡片不亮徽章） */
+  async loadBest() {
+    const app = getApp();
+    const uid = app.globalData.user ? app.globalData.user.id : '';
+    try {
+      const best = await api.get('/stats/best');
+      if (best) setBestCache(uid, best);
+      return best || null;
+    } catch (e) {
+      return getBestCache(uid); // 实时拉取失败退回缓存，角标宁可有旧数据也不闪没
+    }
+  },
+
   async loadMore() {
     const next = this.data.page + 1;
     try {
       this.setData({ loading: true });
       const data = await api.get('/activities', this.buildParams(next));
-      const items = this.data.items.concat(data.items.map(this.decorate));
+      const items = this.data.items.concat(data.items.map((it) => this.decorate(it, this._best)));
       const monthly = mergeMonthly(this.data.monthlyStats, data.monthlyStats); // 新出现月份增量并入
       this.setData({
         items,
@@ -243,7 +260,7 @@ Page({
   },
 
   /** 列表项装饰：原始聚合数据 → 展示字段（后端返回 _id，补 id 映射） */
-  decorate(item) {
+  decorate(item, best) {
     const meta = config.ACTIVITY_TYPES.find((t) => t.type === item.type) || {};
     const start = new Date(item.startTime);
     // 时间展示：一周内显示星期几，超过一周显示年月日
@@ -252,7 +269,7 @@ Page({
       diffDays < 7
         ? ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'][start.getDay()]
         : `${start.getFullYear()}/${start.getMonth() + 1}/${start.getDate()}`;
-    return {
+    const out = {
       ...item,
       id: String(item._id || item.id || ''),
       icon: meta.icon || '🏃',
@@ -271,6 +288,13 @@ Page({
       paceText: item.avgPace ? formatPace(item.avgPace) : '—',
       timeText,
     };
+    // 个人最佳角标（列表卡片右侧）：命中多项时展示第一项 + 等N项；
+    // 前纪录（已被刷新）优先级靠后，全为前纪录时角标灰显；无命中时不亮角标
+    const hits = matchBest(out, best);
+    const chosen = hits.find((h) => !h.former) || hits[0] || null;
+    out.bestText = chosen ? (hits.length > 1 ? `${chosen.label} 等${hits.length}项` : chosen.label) : '';
+    out.bestFormer = !!(chosen && chosen.former);
+    return out;
   },
 
   /** 进入轨迹详情 */

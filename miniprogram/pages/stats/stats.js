@@ -128,33 +128,34 @@ Page({
     return [rows(o.week, o.prevWeek, '本周 vs 上周'), rows(o.month, o.prevMonth, '本月 vs 上月')];
   },
 
-  /** 个人最佳装饰：距离/配速/时长格式化 + 日期 */
+  /** 个人最佳：横滑卡片（距离PB在前、其后按类型列 4 项指标），每张卡 = 一条纪录 */
   decorateBest(b) {
     if (!b) return null;
     const { formatDuration, formatPace } = require('../../utils/format');
     const TYPE_META = require('../../config/index').ACTIVITY_TYPES || [];
-    const typeMeta = (t) => TYPE_META.find((x) => x.type === t) || {};
-    const dayText = (t) => {
-      const d = new Date(t);
-      return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
-    };
-    // 合并为一张表格：行=运动类型，列=最远距离/最快配速/最长时长/最大爬升
-    const rowsMap = {};
-    const put = (rows, key, valFn) => {
+    const iconOf = (t) => (TYPE_META.find((x) => x.type === t) || {}).iconImg || '';
+    const cards = [];
+    // 距离里程碑 PB（服务端只下发当前纪录）：5公里PB / 10公里PB …
+    (b.fastestDistanceByKm || [])
+      .slice()
+      .sort((a, b2) => a.km - b2.km || a.type.localeCompare(b2.type))
+      .forEach((r) => cards.push({ key: `pb${cards.length}`, label: `${r.km} 公里 PB`, value: formatDuration(r.sec), icon: iconOf(r.type) }));
+    // 各类型 4 项指标
+    const byType = {};
+    const put = (rows, label, valFn) => {
       (rows || []).forEach((r) => {
-        if (!rowsMap[r.type]) {
-          const meta = typeMeta(r.type);
-          rowsMap[r.type] = { type: r.type, typeLabel: meta.label || r.type, typeIcon: meta.iconImg || '', maxDistance: '—', minPace: '—', maxDuration: '—', maxElevation: '—' };
-        }
-        rowsMap[r.type][key] = valFn(r);
+        if (!byType[r.type]) byType[r.type] = [];
+        byType[r.type].push({ label, value: valFn(r) });
       });
     };
-    put(b.maxDistanceByType, 'maxDistance', (r) => `${(r.distance / 1000).toFixed(1)}km`);
-    put(b.minPaceByType, 'minPace', (r) => formatPace(r.fastestKm));
-    put(b.maxDurationByType, 'maxDuration', (r) => formatDuration(r.duration));
-    put(b.maxElevationByType, 'maxElevation', (r) => `${r.elevationGain}m`);
-    const bestTable = Object.keys(rowsMap).sort().map((t) => rowsMap[t]);
-    return { bestTable };
+    put(b.maxDistanceByType, '最远距离', (r) => `${(r.distance / 1000).toFixed(1)}km`);
+    put(b.minPaceByType, '最快配速', (r) => formatPace(r.fastestKm));
+    put(b.maxDurationByType, '最长时长', (r) => formatDuration(r.duration));
+    put(b.maxElevationByType, '最大爬升', (r) => `${r.elevationGain}m`);
+    Object.keys(byType)
+      .sort()
+      .forEach((t) => byType[t].forEach((c) => cards.push({ key: `m${cards.length}`, ...c, icon: iconOf(t) })));
+    return { bestCards: cards };
   },
 
   /** 趋势维度切换 */

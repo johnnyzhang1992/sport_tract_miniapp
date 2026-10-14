@@ -131,28 +131,22 @@
     </view>
   </view>
 
-  <!-- 个人最佳纪录（表格） -->
-  <view class="card" wx:if="{{best}}">
-    <view class="section-title">个人最佳</view>
-    <view class="best-table">
-      <view class="bt-head">
-        <view class="bt-th bt-col-type">类型</view>
-        <view class="bt-th">最远距离</view>
-        <view class="bt-th">最快配速</view>
-        <view class="bt-th">最长时长</view>
-        <view class="bt-th">最大爬升</view>
-      </view>
-      <view class="bt-row" wx:for="{{best.bestTable}}" wx:key="type">
-        <view class="bt-td bt-col-type">
-          <image class="bt-icon" src="{{item.typeIcon}}" mode="aspectFit" />
-          <text class="bt-type-label">{{item.typeLabel}}</text>
+  <!-- 最佳记录：横滑卡片（穗枝环住类型图标 + 名称 + 数值），距离PB在前、其后按类型列指标 -->
+  <view class="best-section" wx:if="{{best && best.bestCards.length}}">
+    <view class="section-title">最佳记录</view>
+    <scroll-view class="best-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+      <view class="best-cards">
+        <view class="best-card" wx:for="{{best.bestCards}}" wx:key="key">
+          <view class="bc-badge">
+            <view class="laurel-ear bc-ear"></view>
+            <image class="bc-icon" src="{{item.icon}}" mode="aspectFit" />
+            <view class="laurel-ear bc-ear laurel-ear-r"></view>
+          </view>
+          <text class="bc-label">{{item.label}}</text>
+          <text class="bc-value">{{item.value}}</text>
         </view>
-        <view class="bt-td">{{item.maxDistance}}</view>
-        <view class="bt-td">{{item.minPace}}</view>
-        <view class="bt-td">{{item.maxDuration}}</view>
-        <view class="bt-td">{{item.maxElevation}}</view>
       </view>
-    </view>
+    </scroll-view>
   </view>
 
   <view wx:if="{{!loading && summary && summary.count === 0}}" class="loading-tip">该时间段还没有运动记录</view>

@@ -98,16 +98,22 @@
     </view>
   </view>
 
-  <!-- 特别成就（本轨迹在所属运动类型中持有的个人最佳） -->
+  <!-- 最佳记录（本轨迹在所属运动类型中持有的个人最佳） -->
   <view class="card" wx:if="{{achievements.length}}">
     <view class="ach-head">
-      <text class="ach-title">特别成就</text>
+      <text class="ach-title">最佳记录</text>
       <text class="ach-count">共 {{achievements.length}} 个</text>
     </view>
     <view class="ach-row" wx:for="{{achievements}}" wx:key="label">
-      <text class="ach-medal">🏆</text>
-      <text class="ach-label">{{item.label}}</text>
-      <text class="ach-value">{{item.value}}<text class="ach-unit" wx:if="{{item.unit}}">{{item.unit}}</text></text>
+      <view class="ach-name">
+        <view class="laurel-ear ach-ear {{item.former ? 'laurel-ear-grey' : ''}}"></view>
+        <text class="ach-label {{item.former ? 'ach-label-former' : ''}}">{{item.label}}{{item.former ? '·曾保持' : ''}}</text>
+        <view class="laurel-ear ach-ear laurel-ear-r {{item.former ? 'laurel-ear-grey' : ''}}"></view>
+      </view>
+      <view class="ach-value-wrap">
+        <text class="ach-value {{item.former ? 'ach-value-former' : ''}}">{{item.value}}<text class="ach-unit" wx:if="{{item.unit}}">{{item.unit}}</text></text>
+        <text class="ach-held" wx:if="{{item.heldText}}">{{item.heldText}}</text>
+      </view>
     </view>
   </view>
 

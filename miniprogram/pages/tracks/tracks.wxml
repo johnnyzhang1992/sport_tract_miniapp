@@ -46,8 +46,22 @@
   <!-- 轨迹列表 -->
   <view wx:if="{{items.length === 0 && !loading}}">
     <view class="empty" wx:if="{{initialized}}">还没有运动记录，去开始第一次吧</view>
-    <view class="empty" wx:else>加载中…</view>
   </view>
+
+  <!-- 骨架屏：列表模式首次加载，模拟卡片结构 -->
+  <view class="sk-wrap" wx:if="{{loading && !initialized && viewMode === 'list'}}">
+    <view class="sk-title"></view>
+    <view class="sk-card" wx:for="{{[1, 2, 3, 4, 5]}}" wx:key="*this">
+      <view class="sk-icon"></view>
+      <view class="sk-main">
+        <view class="sk-line sk-line-type"></view>
+        <view class="sk-line sk-line-dist"></view>
+      </view>
+      <view class="sk-line sk-line-time"></view>
+    </view>
+  </view>
+  <!-- 非列表模式首次加载：文字占位 -->
+  <view class="empty" wx:if="{{loading && !initialized && viewMode !== 'list'}}">加载中…</view>
 
   <!-- 列表模式：按月分组的单行卡片 -->
   <block wx:if="{{viewMode === 'list'}}">
@@ -104,7 +118,14 @@
                 <text class="list-type">{{item.label}}</text>
                 <text class="list-dist">{{item.distanceKm}}公里</text>
               </view>
-              <text class="list-time">{{item.timeText}}</text>
+              <view class="list-right">
+                <view class="list-best {{item.bestFormer ? 'list-best-former' : ''}}" wx:if="{{item.bestText}}">
+                  <view class="laurel-ear list-best-ear {{item.bestFormer ? 'laurel-ear-grey' : ''}}"></view>
+                  <text class="list-best-text">{{item.bestText}}</text>
+                  <view class="laurel-ear list-best-ear laurel-ear-r {{item.bestFormer ? 'laurel-ear-grey' : ''}}"></view>
+                </view>
+                <text class="list-time">{{item.timeText}}</text>
+              </view>
             </view>
           </view>
         </t-swipe-cell>
@@ -144,6 +165,6 @@
     </view>
   </view>
 
-  <view wx:if="{{loading}}" class="text-muted loading-tip">加载中…</view>
+  <view wx:if="{{loading && items.length > 0}}" class="text-muted loading-tip">加载中…</view>
   <view wx:if="{{!hasMore && items.length > 0}}" class="text-muted loading-tip">没有更多了</view>
 </view>
