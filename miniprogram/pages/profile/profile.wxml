@@ -43,7 +43,7 @@
     <view class="field-label">身高（cm）</view>
     <input class="field-input" type="number" value="{{heightCm}}" bindinput="onHeightInput" placeholder="请输入身高" />
     <view class="field-label">体重（kg）</view>
-    <input class="field-input" type="number" value="{{weightKg}}" bindinput="onWeightInput" placeholder="请输入体重" />
+    <input class="field-input" type="digit" value="{{weightKg}}" bindinput="onWeightInput" placeholder="请输入体重" />
     <view class="text-muted body-tip">身高体重用于更准确地估算运动卡路里消耗</view>
   </view>
 
