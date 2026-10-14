@@ -98,3 +98,81 @@
   font-size: 22rpx;
   color: #8a93a6;
 }
+
+/* 发起人视角：计入的轨迹明细（分页列表 + 加载更多） */
+.detail-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 24rpx;
+}
+.detail-title {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+.detail-total {
+  font-size: 22rpx;
+  color: #8a93a6;
+}
+/* 列表本体可滚动：明细最多一页 20 条，超出由列表内部消化，不把整张半屏顶穿 */
+.detail-list {
+  max-height: 44vh;
+}
+.detail-row {
+  display: flex;
+  align-items: center;
+  padding: 18rpx 0;
+  border-bottom: 1rpx solid #f2f3f5;
+}
+.detail-row:last-child {
+  border-bottom: none;
+}
+.detail-main {
+  flex: 1;
+  min-width: 0;
+}
+.detail-name {
+  font-size: 26rpx;
+  color: #1f2329;
+}
+.detail-sub {
+  margin-top: 4rpx;
+  font-size: 22rpx;
+  color: #8a93a6;
+}
+.detail-right {
+  flex-shrink: 0;
+  text-align: right;
+}
+.detail-dist {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #1f2329;
+  font-variant-numeric: tabular-nums;
+}
+.detail-empty {
+  padding: 40rpx 0;
+  text-align: center;
+  font-size: 24rpx;
+  color: #8a93a6;
+}
+.detail-error {
+  padding: 20rpx 0 0;
+  text-align: center;
+  font-size: 22rpx;
+  color: #e5484d;
+}
+.detail-more {
+  margin-top: 20rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+  text-align: center;
+  font-size: 26rpx;
+  color: #2b6cf6;
+  background: #eaf1ff;
+  border-radius: 999rpx;
+}
+.detail-more-hover {
+  opacity: 0.85;
+}

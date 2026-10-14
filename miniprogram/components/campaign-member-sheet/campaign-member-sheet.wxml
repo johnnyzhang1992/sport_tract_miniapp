@@ -1,8 +1,9 @@
-<!-- 成员信息半屏（非发起人视角：只读，只有汇总三项；无任何明细请求，见 JS 头注释） -->
+<!-- 成员信息半屏：非发起人＝只读汇总三项（无明细请求）；发起人＝额外展示该成员计入的轨迹明细（分页）。
+     明细数据（detail）与翻页都由页面负责，组件只渲染 + 抛 loadmore / close 事件（见 JS 头注释）。 -->
 <view wx:if="{{visible && member}}" class="mask" catchtouchmove="noop" bindtap="onClose">
   <view class="sheet" catchtap="noop">
     <view class="sheet-head">
-      <view class="sheet-title">成员信息</view>
+      <view class="sheet-title">{{isCreator ? '成员明细' : '成员信息'}}</view>
       <view class="sheet-close" catchtap="onClose">✕</view>
     </view>
 
@@ -12,21 +13,55 @@
       <view class="member-name">{{member.name}}</view>
     </view>
 
+    <!-- 汇总三项：发起人视角优先用明细接口的 stats（与排行榜同源，数值应当一致） -->
     <view class="stat-row">
       <view class="stat-cell">
-        <view class="stat-value">{{member.countText}}</view>
+        <view class="stat-value">{{detail.stats ? detail.stats.countText : member.countText}}</view>
         <view class="stat-label">次数</view>
       </view>
       <view class="stat-cell">
-        <view class="stat-value">{{member.distanceText}}</view>
+        <view class="stat-value">{{detail.stats ? detail.stats.distanceText : member.distanceText}}</view>
         <view class="stat-label">距离 (km)</view>
       </view>
       <view class="stat-cell">
-        <view class="stat-value">{{member.durationText}}</view>
+        <view class="stat-value">{{detail.stats ? detail.stats.durationText : member.durationText}}</view>
         <view class="stat-label">时长</view>
       </view>
     </view>
 
-    <view class="member-tip">这里是 TA 在本活动内的汇总（加入后统计）</view>
+    <!-- 非发起人：只有汇总三项（他人明细不外泄） -->
+    <view class="member-tip" wx:if="{{!isCreator}}">这里是 TA 在本活动内的汇总（加入后统计）</view>
+
+    <!-- 发起人视角：TA 在本活动内计入的轨迹（GET /:id/members/:uid，分页） -->
+    <block wx:if="{{isCreator && detail}}">
+      <view class="detail-head">
+        <text class="detail-title">计入的轨迹</text>
+        <text class="detail-total" wx:if="{{detail.total}}">共 {{detail.total}} 条</text>
+      </view>
+      <view class="detail-empty" wx:if="{{detail.loading}}">加载中…</view>
+      <block wx:else>
+        <scroll-view scroll-y class="detail-list" wx:if="{{detail.items.length > 0}}">
+          <view class="detail-row" wx:for="{{detail.items}}" wx:key="id">
+            <view class="detail-main">
+              <view class="detail-name">{{item.typeText}}</view>
+              <view class="detail-sub">{{item.timeText}}{{item.elevationText}}</view>
+            </view>
+            <view class="detail-right">
+              <view class="detail-dist">{{item.distanceText}} km</view>
+              <view class="detail-sub">{{item.durationText}}</view>
+            </view>
+          </view>
+        </scroll-view>
+        <view class="detail-empty" wx:elif="{{!detail.error}}">暂无计入的轨迹</view>
+        <view class="detail-error" wx:if="{{detail.error}}">明细加载失败，请稍后重试</view>
+        <view
+          class="detail-more"
+          wx:if="{{detail.hasMore}}"
+          hover-class="detail-more-hover"
+          hover-stay-time="80"
+          catchtap="onLoadMore"
+        >{{detail.loadingMore ? '加载中…' : '加载更多'}}</view>
+      </block>
+    </block>
   </view>
 </view>

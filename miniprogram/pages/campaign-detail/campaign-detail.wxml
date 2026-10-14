@@ -25,6 +25,26 @@
         <text class="head-meta-item">{{head.typesText}}</text>
       </view>
       <view class="head-desc" wx:if="{{head.description}}">{{head.description}}</view>
+
+      <!-- 发起人专属区 / 邀请（Task 11）：发起人＝待审批徽标 + 解散；成员＝邀请好友
+           徽标只在有待审批时出现（pendingCount > 0），点开审核抽屉 -->
+      <view class="act-row" wx:if="{{isMember}}">
+        <view
+          class="act-pill act-pill-badge"
+          wx:if="{{isCreator && pendingCount > 0}}"
+          hover-class="act-pill-hover"
+          hover-stay-time="80"
+          bindtap="openReview"
+        >待审批 {{pendingCount}}</view>
+        <view class="act-pill" hover-class="act-pill-hover" hover-stay-time="80" bindtap="onInvite">邀请好友</view>
+        <view
+          class="act-pill act-pill-danger"
+          wx:if="{{isCreator}}"
+          hover-class="act-pill-hover"
+          hover-stay-time="80"
+          bindtap="onDissolve"
+        >解散活动</view>
+      </view>
     </view>
 
     <!-- 非成员（未加入 / 待审批 / 已退出 / 已被移出）：身份说明行 + 加入入口 -->
@@ -89,6 +109,15 @@
         </view>
         <view class="rank-meta">{{item.countText}} 条 · {{item.durationText}}</view>
         <view class="rank-dist">{{item.distanceText}} km</view>
+        <!-- 移出：仅发起人、且非自己（canKick）；catchtap 不冒泡到整行的 openMember -->
+        <view
+          class="rank-kick"
+          wx:if="{{item.canKick}}"
+          hover-class="rank-kick-hover"
+          hover-stay-time="80"
+          data-idx="{{index}}"
+          catchtap="onKickTap"
+        >移出</view>
       </view>
       <view class="rank-empty" wx:if="{{members.length === 0}}">暂无成员数据</view>
     </view>
@@ -109,12 +138,50 @@
     </view>
   </view>
 
-  <!-- 成员信息半屏（非发起人视角＝只读汇总三项；发起人视角由 Task 11 补）
+  <!-- 成员信息半屏：非发起人＝只读汇总三项；发起人＝该成员明细（分页，加载更多由页面拉）。
        同样挂在 !notFound && !error 之下，错误态不得残留成员抽屉 -->
   <campaign-member-sheet
     wx:if="{{!notFound && !error}}"
     visible="{{sheetVisible}}"
     member="{{sheetMember}}"
+    isCreator="{{isCreator}}"
+    detail="{{sheetDetail}}"
     bind:close="closeMemberSheet"
+    bind:loadmore="onSheetLoadMore"
   />
+
+  <!-- 审核抽屉（仅发起人；内联 .mask/.sheet，照 footprints.wxml:112-130 的成员列表半屏形态） -->
+  <view wx:if="{{!notFound && !error && reviewVisible}}" class="mask" catchtouchmove="noop" bindtap="closeReview">
+    <view class="sheet" catchtap="noop">
+      <view class="sheet-head">
+        <view class="sheet-title">待审批 {{pendingRows.length}}</view>
+        <view class="sheet-close" catchtap="closeReview">✕</view>
+      </view>
+      <view class="pend-row" wx:for="{{pendingRows}}" wx:key="userId">
+        <image wx:if="{{item.avatarSrc}}" class="pend-avatar" src="{{item.avatarSrc}}" mode="aspectFill" />
+        <view wx:else class="pend-avatar pend-avatar-text">{{item.avatarText}}</view>
+        <view class="pend-main">
+          <view class="pend-name">{{item.name}}</view>
+          <view class="pend-sub">申请于 {{item.appliedAtText}}</view>
+        </view>
+        <view class="pend-btn pend-ok" hover-class="pend-btn-hover" hover-stay-time="80" data-idx="{{index}}" bindtap="onApprove">同意</view>
+        <view class="pend-btn pend-no" hover-class="pend-btn-hover" hover-stay-time="80" data-idx="{{index}}" bindtap="onReject">拒绝</view>
+      </view>
+      <view class="pend-empty" wx:if="{{pendingRows.length === 0}}">没有待审批的申请</view>
+    </view>
+  </view>
+
+  <!-- 小程序码弹窗（仅 joined 生成）：点图放大 → 预览页长按识别 / 保存 -->
+  <view wx:if="{{!notFound && !error && codeVisible}}" class="mask" catchtouchmove="noop" bindtap="closeCode">
+    <view class="sheet code-sheet" catchtap="noop">
+      <view class="sheet-head">
+        <view class="sheet-title">邀请好友</view>
+        <view class="sheet-close" catchtap="closeCode">✕</view>
+      </view>
+      <image class="code-img" src="{{codeSrc}}" mode="aspectFit" bindtap="previewCode" />
+      <view class="code-tip">分享给好友扫码一起运动；点击图片放大，长按可识别小程序码 / 保存</view>
+      <view class="code-btn" hover-class="code-btn-hover" hover-stay-time="80" bindtap="previewCode">放大查看</view>
+      <view class="code-btn code-btn-ghost" hover-class="code-btn-hover" hover-stay-time="80" bindtap="saveCode">保存到相册</view>
+    </view>
+  </view>
 </view>

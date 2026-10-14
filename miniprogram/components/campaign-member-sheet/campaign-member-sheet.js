@@ -1,18 +1,29 @@
-// 活动成员信息半屏（**只读**，非发起人视角）。
-//
-// 数据由页面给：`member` 就是详情页已在手的排行榜行（`GET /:id/leaderboard` 的 rows）格式化后的对象——
-// 「只有该成员的汇总三项」是需求 §5 的硬边界（他人明细只有发起人能看），所以本组件**不发任何请求**。
-// 发起人视角（`GET /:id/members/:uid` 概况 + 分页明细 + 移出）由 Task 11 在本组件内补。
+// 活动成员信息半屏。两个视角：
+//   非发起人＝只读汇总三项，数据是页面已在手的排行榜行（`member`），**不发任何请求**；
+//   发起人＝额外展示 `GET /:id/members/:uid` 的 stats 概况 + 分页明细（`detail` 由页面拉好给进来），
+//   「加载更多」只往页面抛 `loadmore` 事件，数据仍在页面侧 —— 组件保持无请求、无身份判断。
 Component({
   properties: {
     visible: { type: Boolean, value: false },
     // { name, avatarSrc, avatarText, countText, distanceText, durationText }
     member: { type: Object, value: null },
+    isCreator: { type: Boolean, value: false },
+    // 发起人视角的明细数据（页面产物）：
+    // { loading, error, stats:{countText,distanceText,durationText}, items:[{id,typeText,timeText,distanceText,durationText,elevationText}], total, hasMore, loadingMore }
+    detail: { type: Object, value: null },
   },
   methods: {
     onClose() {
       this.triggerEvent('close');
     },
+
+    /** 「加载更多」：只在上游说还有下一页、且当前不在加载中时抛事件（防连点重复拉） */
+    onLoadMore() {
+      const d = this.data.detail;
+      if (!d || !d.hasMore || d.loadingMore) return;
+      this.triggerEvent('loadmore');
+    },
+
     noop() {},
   },
 });

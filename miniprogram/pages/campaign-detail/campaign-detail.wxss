@@ -105,6 +105,35 @@
   line-height: 1.6;
 }
 
+/* 发起人专属区 / 邀请（Task 11）：成员行的动作胶囊 */
+.act-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  margin-top: 20rpx;
+  padding-top: 20rpx;
+  border-top: 1rpx solid #f2f3f5;
+}
+.act-pill {
+  font-size: 24rpx;
+  color: #2b6cf6;
+  background: #eaf1ff;
+  border-radius: 999rpx;
+  padding: 10rpx 28rpx;
+}
+.act-pill-badge {
+  color: #fff;
+  background: #ff7a45;
+  font-weight: 600;
+}
+.act-pill-danger {
+  color: #e5484d;
+  background: #fdecec;
+}
+.act-pill-hover {
+  opacity: 0.8;
+}
+
 /* 非成员：身份说明行 + 加入入口 */
 .note-row {
   background: #f7f8fa;
@@ -235,6 +264,19 @@
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
 }
+/* 移出（仅发起人、非自己）：行尾胶囊，catchtap 不触发整行的 openMember */
+.rank-kick {
+  flex-shrink: 0;
+  margin-left: 16rpx;
+  font-size: 24rpx;
+  color: #e5484d;
+  background: #fdecec;
+  border-radius: 999rpx;
+  padding: 8rpx 20rpx;
+}
+.rank-kick-hover {
+  opacity: 0.8;
+}
 .rank-empty {
   padding: 60rpx 0;
   text-align: center;
@@ -294,4 +336,149 @@
   font-size: 22rpx;
   color: rgba(255, 255, 255, 0.78);
   margin-top: 4rpx;
+}
+
+/* 审核抽屉 / 小程序码弹窗：与 campaign-member-sheet 同一套 .mask/.sheet 观感
+   （页内样式天然隔离，组件那份到不了这里，故按同一口径复刻；z-index 显式高于 .me-card） */
+.mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 210;
+  display: flex;
+  align-items: flex-end;
+}
+.sheet {
+  width: 100%;
+  box-sizing: border-box;
+  background: #fff;
+  border-radius: 24rpx 24rpx 0 0;
+  padding: 0 32rpx calc(24rpx + env(safe-area-inset-bottom));
+  max-height: 84vh;
+  overflow-y: auto;
+}
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28rpx 0 8rpx;
+}
+.sheet-title {
+  flex: 1;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+.sheet-close {
+  flex: none;
+  padding: 8rpx 0 8rpx 24rpx;
+  font-size: 30rpx;
+  color: #999;
+}
+
+/* 审核抽屉：待审批行（昵称 / 申请时间 / 同意 / 拒绝） */
+.pend-row {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #f2f3f5;
+}
+.pend-row:last-of-type {
+  border-bottom: none;
+}
+.pend-avatar {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-right: 20rpx;
+  background: #f2f3f5;
+}
+.pend-avatar-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #fff;
+  background: #b8c4d9;
+}
+.pend-main {
+  flex: 1;
+  min-width: 0;
+}
+.pend-name {
+  font-size: 28rpx;
+  color: #1f2329;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pend-sub {
+  margin-top: 4rpx;
+  font-size: 22rpx;
+  color: #8a93a6;
+}
+.pend-btn {
+  flex-shrink: 0;
+  margin-left: 16rpx;
+  font-size: 24rpx;
+  border-radius: 999rpx;
+  padding: 12rpx 26rpx;
+}
+.pend-ok {
+  color: #fff;
+  background: #2b6cf6;
+}
+.pend-no {
+  color: #4e5969;
+  background: #f2f3f5;
+}
+.pend-btn-hover {
+  opacity: 0.8;
+}
+.pend-empty {
+  padding: 60rpx 0;
+  text-align: center;
+  font-size: 24rpx;
+  color: #8a93a6;
+}
+
+/* 小程序码弹窗 */
+.code-sheet {
+  text-align: center;
+}
+.code-img {
+  display: block;
+  width: 440rpx;
+  height: 440rpx;
+  margin: 16rpx auto 0;
+  background: #f7f8fa;
+  border-radius: 16rpx;
+}
+.code-tip {
+  margin-top: 16rpx;
+  font-size: 22rpx;
+  color: #8a93a6;
+  line-height: 1.6;
+}
+.code-btn {
+  margin-top: 20rpx;
+  height: 80rpx;
+  line-height: 80rpx;
+  border-radius: 999rpx;
+  background: #2b6cf6;
+  color: #fff;
+  font-size: 28rpx;
+}
+.code-btn-ghost {
+  margin-top: 16rpx;
+  background: #f2f3f5;
+  color: #1f2329;
+}
+.code-btn-hover {
+  opacity: 0.85;
 }
