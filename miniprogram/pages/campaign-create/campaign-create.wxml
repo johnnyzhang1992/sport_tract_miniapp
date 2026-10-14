@@ -1,2 +1,101 @@
-<!-- Task 9 填充 -->
-<view class="empty">发起活动（建设中）</view>
+<!-- 创建活动页：标题 / 描述 / 可见性 / 运动类型 / 人数上限 / 起止日期 → 发起 -->
+<view class="container">
+  <view class="fgroup">
+    <!-- 标题（必填，1–30 字；maxlength 镜像服务端上限，计数即时可见） -->
+    <view class="frow">
+      <view class="flabel">标题</view>
+      <input
+        class="finput"
+        placeholder="给活动起个名字"
+        placeholder-class="fph"
+        value="{{title}}"
+        bindinput="onTitle"
+        maxlength="{{maxTitle}}"
+      />
+    </view>
+    <view class="fnote">必填，最长 {{maxTitle}} 字，当前 {{title.length}} 字</view>
+
+    <!-- 描述（可选，≤300 字） -->
+    <view class="flabel-block">描述</view>
+    <view class="ftextarea-wrap">
+      <textarea
+        class="ftextarea"
+        placeholder="活动说明（可选）"
+        placeholder-class="fph"
+        value="{{description}}"
+        bindinput="onDesc"
+        maxlength="{{maxDesc}}"
+      />
+    </view>
+    <view class="fnote">可选，最长 {{maxDesc}} 字，当前 {{description.length}} 字</view>
+
+    <!-- 可见性：两选一（照列表页分段控件形态，不自造样式） -->
+    <view class="flabel-block">可见性</view>
+    <view class="vis-row">
+      <view
+        wx:for="{{visibilityOptions}}"
+        wx:key="key"
+        class="vis-seg {{visibility === item.key ? 'vis-seg-active' : ''}}"
+        data-value="{{item.key}}"
+        bindtap="onVisibility"
+      >{{item.label}}</view>
+    </view>
+    <view class="fnote">{{visibility === 'public' ? '公开：所有人可搜索并加入' : '隐私：仅收到邀请的人可加入'}}</view>
+
+    <!-- 运动类型：多选 chips（空选＝不限制，必须在 UI 上写明） -->
+    <view class="flabel-block">运动类型</view>
+    <view class="cat-grid">
+      <view
+        wx:for="{{types}}"
+        wx:key="type"
+        class="cat-chip {{item.active ? 'cat-chip-on' : ''}}"
+        data-type="{{item.type}}"
+        bindtap="onTypeToggle"
+      >
+        <image class="cat-icon {{item.active ? '' : 'cat-icon-gray'}}" src="{{item.iconImg}}" mode="aspectFit" />
+        <text>{{item.label}}</text>
+      </view>
+    </view>
+    <view class="fnote">不选＝全部类型都算；点已选中的可取消</view>
+
+    <!-- 人数上限：可选，1–500，不填＝不限制 -->
+    <view class="frow">
+      <view class="flabel">人数上限</view>
+      <input
+        class="finput"
+        type="number"
+        placeholder="不填＝不限制"
+        placeholder-class="fph"
+        value="{{memberLimit}}"
+        bindinput="onMemberLimit"
+        maxlength="3"
+      />
+    </view>
+    <view class="fnote">可选，1–{{maxMembers}} 的整数，不填＝不限制，当前 {{memberLimit || '不限制'}}</view>
+
+    <!-- 起止日期：picker 直接给 YYYY-MM-DD 字符串，原样上送（服务端转东八区） -->
+    <picker mode="date" value="{{startDate}}" bindchange="onStartDate">
+      <view class="frow frow-tap" hover-class="frow-hover">
+        <view class="flabel">开始日期</view>
+        <view class="fval {{startDate ? '' : 'fval-ph'}}">{{startDate || '选择日期'}}</view>
+        <view class="farrow">›</view>
+      </view>
+    </picker>
+    <picker mode="date" value="{{endDate}}" start="{{startDate}}" bindchange="onEndDate">
+      <view class="frow frow-tap" hover-class="frow-hover">
+        <view class="flabel">结束日期</view>
+        <view class="fval {{endDate ? '' : 'fval-ph'}}">{{endDate || '选择日期'}}</view>
+        <view class="farrow">›</view>
+      </view>
+    </picker>
+    <view class="fnote {{dateError ? 'fnote-error' : ''}}">{{dateError || '结束日期不早于开始日期，均按东八区计算'}}</view>
+  </view>
+
+  <button
+    class="btn-primary submit-btn"
+    disabled="{{submitting}}"
+    loading="{{submitting}}"
+    bindtap="onSubmit"
+  >{{submitting ? '创建中…' : '发起活动'}}</button>
+  <view class="text-muted submit-tip">标题为必填；运动类型不选表示不限</view>
+</view>

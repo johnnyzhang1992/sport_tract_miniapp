@@ -1,0 +1,192 @@
+/**
+ * 创建活动页（pages/campaign-create/campaign-create.js）页级回归。
+ *
+ * 前端必须把服务端 CreateCampaignSchema（sport_track_api/src/utils/validators.ts）的上限镜像出来：
+ * 违反时给「对象 + 实际值 + 上限」的提示且一个请求都不发，合法表单才 POST /campaigns，成功后带 id 跳详情。
+ * 这里只断言表单校验与请求体（不测 UI 渲染）。
+ *
+ * 运行：npm test（node --test 自动发现）；依赖：仅 node 内置模块。
+ * 桩：wx / Page / getApp 就地 stub；services/api 用 require.cache 注入假实现（绕开 config/storage 的真实
+ *     wx 依赖），respond 钩子按需改写这一轮返回什么。
+ */
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+
+/* ---------------------------------- 环境桩 ---------------------------------- */
+
+const apiCalls = [];
+/** 用例内改写的响应钩子：(path, body) => Promise<data> */
+let respond = () => Promise.resolve({ id: 'cp1' });
+const fakeApi = {
+  post(p, body) {
+    apiCalls.push({ path: p, body });
+    return respond(p, body);
+  },
+  get() {
+    return Promise.resolve({});
+  },
+};
+const apiPath = require.resolve('../miniprogram/services/api.js');
+require.cache[apiPath] = { id: apiPath, filename: apiPath, loaded: true, exports: fakeApi, children: [], paths: [] };
+
+const toasts = [];
+const navs = [];
+const modals = [];
+let modalConfirm = false; // 登录闸门弹窗：默认取消（游客态用例自己改成确认）
+let loginCalls = 0;
+global.wx = {
+  showToast: (o) => toasts.push(o && o.title),
+  navigateTo: (o) => navs.push(o && o.url),
+  showModal: (o) => {
+    modals.push(o);
+    if (o && o.success) o.success({ confirm: modalConfirm });
+  },
+};
+
+const appStub = {
+  globalData: { loggedIn: true },
+  login() {
+    loginCalls++;
+    appStub.globalData.loggedIn = true;
+    return Promise.resolve({});
+  },
+};
+global.getApp = () => appStub;
+
+let pageDef = null;
+global.Page = (def) => { pageDef = def; };
+
+require('../miniprogram/pages/campaign-create/campaign-create.js');
+assert.ok(pageDef, 'campaign-create.js 应通过 Page() 交出页面对象');
+
+/* --------------------------------- 页面装配 --------------------------------- */
+
+function applyPath(target, keyPath, value) {
+  const keys = keyPath.split('.');
+  let o = target;
+  for (let i = 0; i < keys.length - 1; i++) o = o[keys[i]];
+  o[keys[keys.length - 1]] = value;
+}
+
+function makePage() {
+  const p = Object.assign({}, pageDef);
+  p.data = JSON.parse(JSON.stringify(pageDef.data));
+  p.setData = (patch, cb) => {
+    Object.keys(patch).forEach((k) => applyPath(p.data, k, patch[k]));
+    if (cb) cb();
+  };
+  return p;
+}
+
+function resetEnv() {
+  apiCalls.length = 0;
+  toasts.length = 0;
+  navs.length = 0;
+  modals.length = 0;
+  modalConfirm = false;
+  loginCalls = 0;
+  respond = () => Promise.resolve({ id: 'cp1' });
+  appStub.globalData.loggedIn = true;
+}
+
+/** 合法表单基线（用例只覆盖要变化的字段） */
+function legal(o = {}) {
+  return Object.assign({
+    title: '周末一起去徒步',
+    description: '走西湖群山',
+    visibility: 'private',
+    allowedTypes: ['hiking', 'walking'],
+    memberLimit: '20',
+    startDate: '2026-10-01',
+    endDate: '2026-10-07',
+  }, o);
+}
+
+/* ---------------------------------- 用例 ---------------------------------- */
+
+test('CCP1 标题为空 → 不提交，toast 点名对象与实际值', async () => {
+  resetEnv();
+  const page = makePage();
+  Object.assign(page.data, legal({ title: '   ' }));
+  await page.onSubmit();
+  assert.equal(apiCalls.length, 0, '标题不合法时一个请求都不发');
+  assert.equal(navs.length, 0);
+  assert.ok(toasts.length >= 1, '要给用户具体提示');
+  assert.match(toasts[0], /标题/, `提示要点名对象：${toasts[0]}`);
+});
+
+test('CCP2 结束日期早于开始日期 → 不提交，toast 给出两个实际值', async () => {
+  resetEnv();
+  const page = makePage();
+  Object.assign(page.data, legal({ startDate: '2026-10-05', endDate: '2026-10-01' }));
+  await page.onSubmit();
+  assert.equal(apiCalls.length, 0, '日期倒置时一个请求都不发');
+  assert.ok(toasts.length >= 1);
+  assert.match(toasts[0], /日期/, `提示要点名对象：${toasts[0]}`);
+  assert.match(toasts[0], /2026-10-05/, '要带上开始日期实际值');
+  assert.match(toasts[0], /2026-10-01/, '要带上结束日期实际值');
+});
+
+test('CCP3 合法表单 → POST /campaigns 且请求体字段完整，成功后带 id 跳详情', async () => {
+  resetEnv();
+  respond = () => Promise.resolve({ id: 'cmp-abc' });
+  const page = makePage();
+  Object.assign(page.data, legal());
+  await page.onSubmit();
+  assert.equal(apiCalls.length, 1);
+  assert.equal(apiCalls[0].path, '/campaigns');
+  assert.deepEqual(apiCalls[0].body, {
+    title: '周末一起去徒步',
+    description: '走西湖群山',
+    visibility: 'private',
+    allowedTypes: ['hiking', 'walking'],
+    memberLimit: 20, // 数字而非字符串：服务端 schema 是 z.number().int()
+    startDate: '2026-10-01',
+    endDate: '2026-10-07',
+  });
+  assert.equal(toasts[toasts.length - 1], '活动已创建');
+  assert.equal(navs[navs.length - 1], '/pages/campaign-detail/campaign-detail?id=cmp-abc');
+});
+
+test('CCP4 人数上限超 500 → 不提交，toast 给对象+实际值+上限', async () => {
+  resetEnv();
+  const page = makePage();
+  Object.assign(page.data, legal({ memberLimit: '501' }));
+  await page.onSubmit();
+  assert.equal(apiCalls.length, 0, '超上限时一个请求都不发');
+  assert.match(toasts[0], /人数/, `提示要点名对象：${toasts[0]}`);
+  assert.match(toasts[0], /501/, '要带实际值');
+  assert.match(toasts[0], /500/, '要带上限');
+});
+
+test('CCP5 空选运动类型＝不限制、不填人数＝null：请求体照实发', async () => {
+  resetEnv();
+  const page = makePage();
+  Object.assign(page.data, legal({ allowedTypes: [], memberLimit: '' }));
+  await page.onSubmit();
+  assert.equal(apiCalls.length, 1);
+  assert.deepEqual(apiCalls[0].body.allowedTypes, [], '空选＝不限制，发空数组');
+  assert.equal(apiCalls[0].body.memberLimit, null, '不填人数＝不限制，发 null');
+});
+
+test('CCP6 游客取消登录闸门 → 表单合法也不提交', async () => {
+  resetEnv();
+  appStub.globalData.loggedIn = false;
+  modalConfirm = false;
+  const page = makePage();
+  Object.assign(page.data, legal());
+  await page.onSubmit();
+  assert.equal(modals.length, 1, '游客要先弹登录闸门');
+  assert.equal(loginCalls, 0, '取消登录不调用 app.login');
+  assert.equal(apiCalls.length, 0, '登录闸门未通过 → 一个请求都不发');
+});
+
+test('CCP7 提交失败 → toast e.message 且不跳转', async () => {
+  resetEnv();
+  respond = () => Promise.reject(new Error('标题含违规内容'));
+  const page = makePage();
+  Object.assign(page.data, legal());
+  await page.onSubmit();
+  assert.equal(navs.length, 0, '失败不跳详情');
+  assert.equal(toasts[toasts.length - 1], '标题含违规内容');
+});
