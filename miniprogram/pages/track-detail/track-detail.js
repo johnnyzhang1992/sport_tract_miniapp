@@ -15,6 +15,7 @@ const { matchBest } = require('../../utils/best-records');
 const { perfLevel } = require('../../utils/perf-score');
 const { getPaceScale } = require('../../utils/pace-scale');
 const { computeRunPaceZones } = require('../../utils/track-pace');
+const { simplifyForMap } = require('../../utils/track-simplify');
 const { buildAltitudeChart, usesAltitudeColor } = require('../../utils/track-altitude');
 
 Page({
@@ -140,7 +141,7 @@ Page({
         peakMarker,
         paceSlowText: (formatPaceParts(getPaceScale(activity.type).slow) || {}).value || '—',
         paceFastText: (formatPaceParts(getPaceScale(activity.type).fast) || {}).value || '—',
-        mapPoints: (activity.trackPoints || []).map((p) => ({
+        mapPoints: simplifyForMap(activity.trackPoints || []).map((p) => ({
           lat: p.lat,
           lng: p.lng,
           altitude: p.altitude != null ? p.altitude : null,

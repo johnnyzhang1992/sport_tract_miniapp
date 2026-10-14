@@ -57,6 +57,7 @@ Page({
     hasMore: true,
     loading: false,
     initialized: false,
+    loadError: false, // 首屏加载失败（与「还没有运动记录」区分，展示重试入口）
   },
 
   onLoad() {
@@ -109,6 +110,12 @@ Page({
     this.refresh().finally(() => wx.stopPullDownRefresh());
   },
 
+  /** 首屏加载失败后的重试入口 */
+  onRetryLoad() {
+    if (this.data.loading) return;
+    this.refresh();
+  },
+
   onReachBottom() {
     if (this.data.hasMore && !this.data.loading) {
       this.loadMore();
@@ -148,9 +155,11 @@ Page({
         monthlyStats: monthly,
         hasMore: data.items.length >= PAGE_SIZE,
         initialized: true,
+        loadError: false,
       });
     } catch (e) {
       console.error('加载轨迹列表失败', e);
+      this.setData({ loadError: true });
     } finally {
       this.setData({ loading: false });
     }

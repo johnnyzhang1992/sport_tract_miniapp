@@ -44,8 +44,14 @@
   </view>
 
   <!-- 轨迹列表 -->
-  <view wx:if="{{items.length === 0 && !loading}}">
+  <view wx:if="{{items.length === 0 && !loading && !loadError}}">
     <view class="empty" wx:if="{{initialized}}">还没有运动记录，去开始第一次吧</view>
+  </view>
+
+  <!-- 首屏加载失败：错误提示 + 重试 -->
+  <view class="load-error" wx:if="{{loadError && !loading && items.length === 0}}">
+    <view class="load-error-text">加载失败，请检查网络后重试</view>
+    <view class="load-error-btn" hover-class="load-error-btn-hover" bindtap="onRetryLoad">重新加载</view>
   </view>
 
   <!-- 骨架屏：列表模式首次加载，模拟卡片结构 -->
