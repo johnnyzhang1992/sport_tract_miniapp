@@ -80,22 +80,23 @@ Component({
       // 只要对象引用变了也算）——一次无关 setData 会导致 polyline/markers 整链重建
       // + fitView，地图连续重绘表现为「点击/加载时闪几下」。引用全等（页面没有
       // 真的换数据）时跳过重建；回放/追点在守卫之前处理，不受影响。
+      // 注意：observer 形参只有前三个字段，其余字段必须从 this.data 取
       if (
         points === this._builtPoints &&
         markers === this._builtMarkers &&
-        kmMarkers === this._builtKmMarkers &&
+        this.data.kmMarkers === this._builtKmMarkers &&
         this.data.colorMode === this._builtColorMode &&
         this.data.activityType === this._builtType &&
-        peakMarker === this._builtPeak
+        this.data.peakMarker === this._builtPeak
       ) {
         return;
       }
       this._builtPoints = points;
       this._builtMarkers = markers;
-      this._builtKmMarkers = kmMarkers;
+      this._builtKmMarkers = this.data.kmMarkers;
       this._builtColorMode = this.data.colorMode;
       this._builtType = this.data.activityType;
-      this._builtPeak = peakMarker;
+      this._builtPeak = this.data.peakMarker;
       this.updateCenter();
       // overview 模式轨迹线由 buildOverview 管理，buildPolyline 会清空（points 为空）
       if (this.data.mode !== 'overview') {
