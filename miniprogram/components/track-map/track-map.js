@@ -72,6 +72,30 @@ Component({
 
   observers: {
     'points, markers, currentLocation, kmMarkers, colorMode, activityType, peakMarker': function (points, markers, currentLocation) {
+      // 动态追点：center 属性在基础库 3.x 动态生效（实测），节流 1.5s 避免频繁跳动
+      if (this.data.followMode && currentLocation) {
+        this.followLocation();
+      }
+      // 冗余重建守卫：observers 在 setData 携带这些字段时就会触发（即使内容相同，
+      // 只要对象引用变了也算）——一次无关 setData 会导致 polyline/markers 整链重建
+      // + fitView，地图连续重绘表现为「点击/加载时闪几下」。引用全等（页面没有
+      // 真的换数据）时跳过重建；回放/追点在守卫之前处理，不受影响。
+      if (
+        points === this._builtPoints &&
+        markers === this._builtMarkers &&
+        kmMarkers === this._builtKmMarkers &&
+        this.data.colorMode === this._builtColorMode &&
+        this.data.activityType === this._builtType &&
+        peakMarker === this._builtPeak
+      ) {
+        return;
+      }
+      this._builtPoints = points;
+      this._builtMarkers = markers;
+      this._builtKmMarkers = kmMarkers;
+      this._builtColorMode = this.data.colorMode;
+      this._builtType = this.data.activityType;
+      this._builtPeak = peakMarker;
       this.updateCenter();
       // overview 模式轨迹线由 buildOverview 管理，buildPolyline 会清空（points 为空）
       if (this.data.mode !== 'overview') {
@@ -80,10 +104,6 @@ Component({
       }
       if (this.data.mode === 'view') {
         this.fitView();
-      }
-      // 动态追点：center 属性在基础库 3.x 动态生效（实测），节流 1.5s 避免频繁跳动
-      if (this.data.followMode && currentLocation) {
-        this.followLocation();
       }
     },
     'heading': function (heading) {
@@ -122,19 +142,26 @@ Component({
     updateCenter() {
       const loc = this.data.currentLocation;
       if (loc && Number.isFinite(loc.latitude) && Number.isFinite(loc.longitude)) {
-        this.setData({ centerLat: loc.latitude, centerLng: loc.longitude });
+        this.setCenterIfChanged(loc.latitude, loc.longitude);
         return;
       }
       const pts = this.data.points || [];
       if (pts.length && Number.isFinite(pts[0].lat) && Number.isFinite(pts[0].lng)) {
-        this.setData({ centerLat: pts[0].lat, centerLng: pts[0].lng });
+        this.setCenterIfChanged(pts[0].lat, pts[0].lng);
         return;
       }
       const ot = this.data.overviewTracks || [];
       const p0 = ot[0] && ot[0].points && ot[0].points[0];
       if (p0 && Number.isFinite(p0.lat) && Number.isFinite(p0.lng)) {
-        this.setData({ centerLat: p0.lat, centerLng: p0.lng });
+        this.setCenterIfChanged(p0.lat, p0.lng);
       }
+    },
+
+    /** 中心点回写去重：向原生 map 回写 latitude/longitude 会重置相机（表现为闪烁），
+     *  值没变就不写 */
+    setCenterIfChanged(lat, lng) {
+      if (Math.abs(lat - this.data.centerLat) <= 1e-9 && Math.abs(lng - this.data.centerLng) <= 1e-9) return;
+      this.setData({ centerLat: lat, centerLng: lng });
     },
     buildPolyline() {
       if (this.data.mode === 'overview') return; // 合集模式由 buildOverview 管理轨迹线
@@ -617,6 +644,9 @@ Component({
       const d = e.detail || {};
       const type = e.type || d.type;
       if (type !== 'end') return; // 只在视野变化结束时处理
+      // 数据驱动的视野变化（setData 经纬度/缩放导致）不是用户手势：部分机型点一下地图
+      // 也会补发这种事件，走下面的回写会让相机再重置一次（表现为点一下闪一下）
+      if (d.causedBy === 'update') return;
       if (Date.now() < (this._progCamUntil || 0)) return; // 程序化视野调整中（fitView/回放），忽略以免打断动画
       // 缩放级别字段各端不一致（e.scale / e.detail.scale，causedBy 真机常缺失），
       // 优先取事件字段，取不到用 MapContext.getScale 兜底（end 后延时确保视野已稳定）
