@@ -11,7 +11,9 @@ const EARTH_RADIUS_M = 6371000;
 const MIN_DISTANCE_M = 3;
 /** 节流：最小采点间隔（毫秒） */
 const MIN_INTERVAL_MS = 3000;
-/** 爬升确认阈值（米）：待确认累计爬升达到该值才计入（滞回式，噪声上下抵消不计） */
+/** 爬升确认阈值（米）：待确认累计爬升达到该值才计入（滞回式，噪声上下抵消不计）
+ *  ⚠️ 标定提示：不同平台公布的爬升差 15%~30% 几乎全来自这组阈值；调整时必须与服务端
+ *  sport_track_api/src/utils/pace.ts 的同名常量保持一致（App 实时值 vs 落库复核值） */
 const CLIMB_CONFIRM_M = 3;
 /** 爬升确认所需的最少连续上升步数：单点大跳（GPS 噪声）无法凭一步确认 */
 const CLIMB_MIN_UP_STEPS = 2;

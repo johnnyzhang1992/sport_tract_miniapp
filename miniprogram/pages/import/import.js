@@ -68,6 +68,9 @@ Page({
           distanceKm: (res.distance / 1000).toFixed(2),
           durationText: formatDuration(res.duration),
           pointCount: res.pointCount,
+          // 坐标系识别（未识别出按 WGS-84 处理）与实跑/规划判别提示
+          crsText: this.crsText(res),
+          plannedWarning: res.trackKind === 'planned' ? '该文件不含时间信息，疑似规划路线：不参与配速/表现分统计' : '',
         },
       });
     } catch (e) {
@@ -77,6 +80,14 @@ Page({
       loading.hide();
       this.setData({ uploading: false });
     }
+  },
+
+  /** 坐标系识别结果 → 展示文案 */
+  crsText(res) {
+    if (!res.crs) return '';
+    const names = { wgs84: 'WGS-84', gcj02: 'GCJ-02（国内坐标，未转换）', bd09: 'BD-09（百度坐标）' };
+    const suffix = res.crs === 'wgs84' ? '（已转 GCJ-02）' : res.crs === 'bd09' ? '（已转 GCJ-02）' : '';
+    return `坐标系识别：${names[res.crs] || res.crs}${suffix}`;
   },
 
   /** 切换数据来源（预设或自定义） */

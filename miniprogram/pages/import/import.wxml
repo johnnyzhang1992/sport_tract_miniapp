@@ -22,6 +22,8 @@
   <!-- 解析预览 -->
   <view class="card preview-card" wx:if="{{preview}}">
     <view class="section-title">确认信息</view>
+    <view class="crs-text" wx:if="{{preview.crsText}}">{{preview.crsText}}</view>
+    <view class="planned-warning" wx:if="{{preview.plannedWarning}}">⚠️ {{preview.plannedWarning}}</view>
     <view class="preview-row">
       <view class="preview-label">运动类型</view>
     </view>

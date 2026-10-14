@@ -12,6 +12,7 @@ const storage = require('../../services/storage');
 const { uploadPhoto } = require('../../services/oss-upload');
 const { formatDuration, formatPaceParts } = require('../../utils/format');
 const { matchBest } = require('../../utils/best-records');
+const { perfLevel } = require('../../utils/perf-score');
 const { getPaceScale } = require('../../utils/pace-scale');
 const { computeRunPaceZones } = require('../../utils/track-pace');
 const { buildAltitudeChart, usesAltitudeColor } = require('../../utils/track-altitude');
@@ -98,6 +99,8 @@ Page({
         { label: '总时长', value: formatDuration(totalSec) },
         fastestParts && { label: '最快 1km', value: fastestParts.value },
         { label: '爬升高度', value: String(activity.elevationGain || 0), unit: '米' },
+        // 表现分：服务端对类跑步类型计算落库（社区逆向估算，非官方 ITRA 分）
+        activity.perfScore > 0 && { label: '表现分', value: `${activity.perfScore} · ${perfLevel(activity.perfScore)}` },
         (activity.markers || []).length > 0 && { label: '打点', value: String(activity.markers.length), unit: '个' },
       ].filter(Boolean);
       // 轨迹线着色：徒步/爬山且有海拔数据 → 按海拔；否则按配速（绝对刻度，越快越偏黄）。

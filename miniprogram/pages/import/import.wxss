@@ -164,3 +164,20 @@
   display: inline-block;
   vertical-align: middle;
 }
+
+/* 坐标系识别结果 */
+.crs-text {
+  font-size: 22rpx;
+  color: #8a93a6;
+  margin-bottom: 12rpx;
+}
+
+/* 规划路线提示 */
+.planned-warning {
+  font-size: 22rpx;
+  color: #d48806;
+  background: #fff7e6;
+  border-radius: 8rpx;
+  padding: 12rpx 16rpx;
+  margin-bottom: 12rpx;
+}

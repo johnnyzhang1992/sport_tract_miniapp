@@ -128,14 +128,20 @@ Page({
     return [rows(o.week, o.prevWeek, '本周 vs 上周'), rows(o.month, o.prevMonth, '本月 vs 上月')];
   },
 
-  /** 个人最佳：横滑卡片（距离PB在前、其后按类型列 4 项指标），每张卡 = 一条纪录 */
+  /** 个人最佳：横滑卡片（表现分/距离PB在前、其后按类型列 4 项指标），每张卡 = 一条纪录 */
   decorateBest(b) {
     if (!b) return null;
     const { formatDuration, formatPace } = require('../../utils/format');
+    const { perfLevel } = require('../../utils/perf-score');
     const TYPE_META = require('../../config/index').ACTIVITY_TYPES || [];
     const iconOf = (t) => (TYPE_META.find((x) => x.type === t) || {}).iconImg || '';
     const cards = [];
-    // 距离里程碑 PB（服务端只下发当前纪录）：5公里PB / 10公里PB …
+    // 表现分（最高，按类型；社区逆向估算非官方 ITRA 分）
+    (b.maxPerfScoreByType || []).forEach((r) => {
+      if (!(r.perfScore > 0)) return;
+      cards.push({ key: `pi${cards.length}`, label: '表现分', value: `${r.perfScore} ${perfLevel(r.perfScore)}`, icon: iconOf(r.type) });
+    });
+    // 距离里程碑 PB（服务端只下发当前纪录）：5 公里 PB / 10 公里 PB …
     (b.fastestDistanceByKm || [])
       .slice()
       .sort((a, b2) => a.km - b2.km || a.type.localeCompare(b2.type))
