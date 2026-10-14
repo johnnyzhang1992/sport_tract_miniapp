@@ -101,7 +101,6 @@
         </view>
         <view class="lb-arrow">›</view>
       </view>
-      <view class="campaign-more" hover-class="campaign-more-hover" hover-stay-time="80" bindtap="goCampaignList">查看全部 ›</view>
     </block>
     <view
       wx:else
@@ -115,6 +114,8 @@
       </view>
       <view class="lb-arrow">›</view>
     </view>
+    <!-- 常驻行：首页只列 active 活动，活动全为已结束/已解散时这里是进列表页（能看带状态角标的卡片）的唯一入口，不随有无数据隐藏 -->
+    <view class="campaign-more" hover-class="campaign-more-hover" hover-stay-time="80" bindtap="goCampaignList">查看全部 ›</view>
   </view>
 
   <!-- 官方专题入口（生效中的专题，点击查看详情） -->

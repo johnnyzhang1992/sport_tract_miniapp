@@ -58,11 +58,16 @@ Page({
     // 仅首屏进 loading 态：刷新/切 Tab 时已有内容先留在屏上（数据到了再整体换），防闪屏
     this.setData({ loggedIn, loading: !silent && loggedIn && this.data.items.length === 0, error: '' });
     if (!loggedIn) return;
+    // 请求序号守卫：只应用最后一次结果，防竞态（切 Tab 时旧包不能盖到新档的 Tab 下）
+    const seq = (this._seq = (this._seq || 0) + 1);
+    const role = this.data.tab; // 发起时的档位：响应回来时若已切档则丢弃
     try {
-      const data = await api.get(`/campaigns?role=${this.data.tab}`);
+      const data = await api.get(`/campaigns?role=${role}`);
+      if (seq !== this._seq || role !== this.data.tab) return;
       this.setData({ items: (data.items || []).map(toCard), loading: false });
       this._loaded = true;
     } catch (e) {
+      if (seq !== this._seq || role !== this.data.tab) return;
       console.error('[campaign-list] 加载失败', e);
       const empty = this.data.items.length === 0;
       // 首屏失败：整页错误态 + 重试；已有内容：静默保住旧列表，非静默（下拉/切 Tab）才 toast
