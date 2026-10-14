@@ -1,0 +1,10 @@
+/**
+ * 本地联调覆盖配置（本文件已 gitignore，改坏了也不会影响别人）
+ *
+ * 复制为同目录 local.js 即可生效：
+ *   module.exports = { forceOnline: true };
+ *
+ * - forceOnline: true  → 所有环境（含开发者工具/真机调试）强制走线上域名
+ * - 不建 local.js      → 按环境自动切换（develop=本地局域网 IP，trial/release=线上）
+ */
+module.exports = { forceOnline: false };

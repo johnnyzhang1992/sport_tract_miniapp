@@ -37,10 +37,18 @@ module.exports = {
     } catch {
       // 非小程序环境（如 Node 测试）降级为开发版
     }
-    // ⚠️ 联调开关：强制走线上域名（体验版调试期保持 true；上线前评估是否保留）
-    const FORCE_ONLINE = true;
-    const isOnline =
-      FORCE_ONLINE || envVersion === "release" || envVersion === "trial";
+    // 本地联调开关（可选）：在 miniprogram/config/local.js（已 gitignore）里写
+    //   module.exports = { forceOnline: true };
+    // 即可强制所有环境走线上域名（比如不在同一局域网时用真机调试线上数据）。
+    // 不建该文件则按 envVersion 自动切换：开发者工具/真机调试 = 本地局域网，
+    // 体验版/正式版 = 线上域名。
+    let forceOnline = false;
+    try {
+      forceOnline = !!require("./local.js").forceOnline;
+    } catch {
+      // local.js 不存在 = 未开启强制线上
+    }
+    const isOnline = forceOnline || envVersion === "release" || envVersion === "trial";
     // 路径前缀 /sport-track 与同域名其他服务区分（nginx 按前缀转发）
     return isOnline
       ? "https://api.historybook.cn/sport-track"
