@@ -94,8 +94,9 @@
     </view>
   </block>
 
-  <!-- 底部悬浮：我的贡献（照运动榜 .me-card 形态；数据＝详情 myPanel） -->
-  <view class="me-card" wx:if="{{isMember && panel}}">
+  <!-- 底部悬浮：我的贡献（照运动榜 .me-card 形态；数据＝详情 myPanel）
+       挂在 !notFound && !error 之下：错误态不得残留上一场的成员视图 -->
+  <view class="me-card" wx:if="{{!notFound && !error && isMember && panel}}">
     <view class="me-body">
       <view class="me-name-wrap">
         <text class="me-name">我的贡献</text>
@@ -108,8 +109,10 @@
     </view>
   </view>
 
-  <!-- 成员信息半屏（非发起人视角＝只读汇总三项；发起人视角由 Task 11 补） -->
+  <!-- 成员信息半屏（非发起人视角＝只读汇总三项；发起人视角由 Task 11 补）
+       同样挂在 !notFound && !error 之下，错误态不得残留成员抽屉 -->
   <campaign-member-sheet
+    wx:if="{{!notFound && !error}}"
     visible="{{sheetVisible}}"
     member="{{sheetMember}}"
     bind:close="closeMemberSheet"

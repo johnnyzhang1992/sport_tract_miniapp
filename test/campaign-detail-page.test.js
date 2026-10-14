@@ -78,6 +78,24 @@ function resetEnv() {
 /** 让挂起的 Promise 链跑完（setImmediate 在微任务队列排空之后执行） */
 const flush = () => new Promise((r) => setImmediate(r));
 
+/**
+ * 静音 console.warn / console.error：生产代码在「畸形 scene」「加载失败」「404」这几条路径上
+ * 确实会打日志（campaign-detail.js 的 resolveId / refresh catch），但测试输出要 pristine。
+ * 只在本用例体内 stub，用完还原（不动生产代码去迎合测试）。
+ */
+async function withSilencedConsole(fn) {
+  const warn = console.warn;
+  const error = console.error;
+  console.warn = () => {};
+  console.error = () => {};
+  try {
+    return await fn();
+  } finally {
+    console.warn = warn;
+    console.error = error;
+  }
+}
+
 /* ---------------------------------- 夹具 ---------------------------------- */
 
 /** 两条分支都带的公共字段；startAt/endAt 用东八区 10-01 ~ 10-07（远期，与运行日期无关） */
@@ -202,14 +220,16 @@ test('CDP3 scene 参数（小程序码）→ 解出 campaignId', async () => {
 
 test('CDP4 畸形 scene（裸 %）→ decodeURIComponent 抛 URIError 也不能崩，走「活动不存在」态', async () => {
   resetEnv();
-  const page = makePage();
-  // decodeURIComponent('%E4%') 抛 URIError：若不用 try/catch 包住，这里会直接把页面崩掉（onLoad 抛出）
-  await page.onLoad({ scene: '%E4%' });
-  await flush();
+  await withSilencedConsole(async () => {
+    const page = makePage();
+    // decodeURIComponent('%E4%') 抛 URIError：若不用 try/catch 包住，这里会直接把页面崩掉（onLoad 抛出）
+    await page.onLoad({ scene: '%E4%' });
+    await flush();
 
-  assert.equal(page.data.notFound, true, '畸形 scene 应退回「活动不存在」态');
-  assert.equal(page.data.loading, false);
-  assert.equal(apiCalls.length, 0, 'id 解不出来时一个请求都不发');
+    assert.equal(page.data.notFound, true, '畸形 scene 应退回「活动不存在」态');
+    assert.equal(page.data.loading, false);
+    assert.equal(apiCalls.length, 0, 'id 解不出来时一个请求都不发');
+  });
 });
 
 test('CDP5 pending：身份说明行说「等待发起人同意」，按钮禁用且不请求排行榜', async () => {
@@ -281,34 +301,68 @@ test('CDP8 并发刷新：晚到的旧响应必须被丢弃（_seq 守卫，R25�
 
 test('CDP9 首屏加载失败 → 整页错误态 + 可重试，静默不弹 toast', async () => {
   resetEnv();
-  respond = () => Promise.reject(new Error('网络请求失败，请检查后端服务是否启动'));
-  const page = makePage();
-  await page.onLoad({ id: 'c1' });
-  await flush();
+  await withSilencedConsole(async () => {
+    respond = () => Promise.reject(new Error('网络请求失败，请检查后端服务是否启动'));
+    const page = makePage();
+    await page.onLoad({ id: 'c1' });
+    await flush();
 
-  assert.equal(page.data.loading, false);
-  assert.equal(page.data.notFound, false);
-  assert.match(page.data.error, /网络请求失败/);
-  assert.equal(toasts.length, 0, '加载失败静默：走屏上错误态，不用 toast 打断');
+    assert.equal(page.data.loading, false);
+    assert.equal(page.data.notFound, false);
+    assert.match(page.data.error, /网络请求失败/);
+    assert.equal(toasts.length, 0, '加载失败静默：走屏上错误态，不用 toast 打断');
 
-  // 重试：网络恢复后能正常渲染
-  mockDetail(nonMember());
-  page.retry();
-  await flush();
-  assert.equal(page.data.error, '');
-  assert.equal(page.data.head.title, '周末一起去徒步');
+    // 重试：网络恢复后能正常渲染
+    mockDetail(nonMember());
+    page.retry();
+    await flush();
+    assert.equal(page.data.error, '');
+    assert.equal(page.data.head.title, '周末一起去徒步');
+  });
 });
 
 test('CDP10 服务端 404 → 「活动不存在」态（不显示错误重试）', async () => {
   resetEnv();
-  respond = () => Promise.reject(Object.assign(new Error('活动不存在'), { statusCode: 404 }));
-  const page = makePage();
-  await page.onLoad({ id: 'c1' });
-  await flush();
+  await withSilencedConsole(async () => {
+    respond = () => Promise.reject(Object.assign(new Error('活动不存在'), { statusCode: 404 }));
+    const page = makePage();
+    await page.onLoad({ id: 'c1' });
+    await flush();
 
-  assert.equal(page.data.notFound, true);
-  assert.equal(page.data.error, '');
-  assert.equal(page.data.loading, false);
+    assert.equal(page.data.notFound, true);
+    assert.equal(page.data.error, '');
+    assert.equal(page.data.loading, false);
+  });
+});
+
+test('CDP13 成员态下拉刷新遇 404 → 成员专属字段被清零，不残留旧成员视图', async () => {
+  resetEnv();
+  await withSilencedConsole(async () => {
+    mockDetail(member());
+    const page = makePage();
+    await page.onLoad({ id: 'c1' });
+    await flush();
+
+    // 先确实进入成员态（否则后面的断言是空转）
+    assert.equal(page.data.isMember, true, '先进入成员态');
+    assert.ok(page.data.panel, '先得有底部「我的贡献」面板');
+    assert.equal(page.data.members.length, 2, '先得有两行成员');
+
+    // 打开成员抽屉，再下拉刷新拿到 404（会话内活动被删 / 被清）
+    page.openMember({ currentTarget: { dataset: { idx: 0 } } });
+    assert.equal(page.data.sheetVisible, true, '抽屉先得是开着的');
+    respond = () => Promise.reject(Object.assign(new Error('活动不存在'), { statusCode: 404 }));
+    await page.refresh(true);
+    await flush();
+
+    assert.equal(page.data.notFound, true, '刷新拿到 404 → 进「活动不存在」态');
+    assert.equal(page.data.isMember, false, '成员态必须清零');
+    assert.equal(page.data.panel, null, '「我的贡献」条不能残留上一次的数字');
+    assert.deepEqual(page.data.members, [], '成员列表必须清空');
+    assert.equal(page.data.totals, null, '全队汇总必须清空');
+    assert.equal(page.data.sheetVisible, false, '成员抽屉必须被关掉');
+    assert.equal(page.data.sheetMember, null, '抽屉数据不能残留');
+  });
 });
 
 test('CDP11 加入按钮：可点时 POST /campaigns/:id/join 并刷新，禁用时点了也不发请求', async () => {

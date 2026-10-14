@@ -6,7 +6,8 @@
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.45);
-  z-index: 100;
+  /* 显式高于页面 .me-card（z-index:100），不靠节点顺序压住 */
+  z-index: 200;
   display: flex;
   align-items: flex-end;
 }

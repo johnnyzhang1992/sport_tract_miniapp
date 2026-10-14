@@ -119,12 +119,22 @@ Page({
       if (seq !== this._seq) return;
       console.error('[campaign-detail] 加载失败', e);
       // 静默：屏上给错误态（首屏）或保住旧内容（刷新），不弹 toast 打断
+      const notFound = !!(e && e.statusCode === 404);
       const empty = !this.data.head;
-      this.setData({
-        loading: false,
-        notFound: !!(e && e.statusCode === 404),
-        error: empty && e && e.statusCode !== 404 ? (e.message || '加载失败') : '',
-      });
+      const error = empty && e && e.statusCode !== 404 ? (e.message || '加载失败') : '';
+      const patch = { loading: false, notFound, error };
+      // 进「错误态 / 活动不存在」态时，成员专属视图必须清干净：否则上一场的成员态
+      // （蓝色「我的贡献」条带着旧数字、甚至一个开着的成员抽屉）会压在错误屏上——
+      // 违反本页成功路径的数据卫生约定（applyDetail 对非成员硬清零成员字段）。
+      if (notFound || error) {
+        patch.isMember = false;
+        patch.totals = null;
+        patch.members = [];
+        patch.panel = null;
+        patch.sheetVisible = false; // 抽屉必须同时关掉
+        patch.sheetMember = null;
+      }
+      this.setData(patch);
       return;
     }
     if (seq !== this._seq) return;

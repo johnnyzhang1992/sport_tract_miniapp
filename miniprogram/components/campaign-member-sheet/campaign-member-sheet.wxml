@@ -1,5 +1,5 @@
 <!-- 成员信息半屏（非发起人视角：只读，只有汇总三项；无任何明细请求，见 JS 头注释） -->
-<view wx:if="{{visible && member}}" class="mask" bindtap="onClose">
+<view wx:if="{{visible && member}}" class="mask" catchtouchmove="noop" bindtap="onClose">
   <view class="sheet" catchtap="noop">
     <view class="sheet-head">
       <view class="sheet-title">成员信息</view>
