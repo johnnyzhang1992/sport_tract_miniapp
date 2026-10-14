@@ -94,6 +94,144 @@
   box-sizing: border-box;
   padding: 12rpx 12rpx 12rpx 0;
 }
+
+/* ── 表现分卡 ─────────────────────────────── */
+.perf-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.perf-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+.perf-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+.perf-note {
+  font-size: 20rpx;
+  color: #8a93a6;
+}
+.perf-score-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 8rpx;
+}
+.perf-score {
+  font-size: 56rpx;
+  font-weight: 700;
+  color: #c08e2e;
+  line-height: 1;
+}
+.perf-level {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #c08e2e;
+}
+/* 等级刻度条：分段线在 200/380/500/680（宽度 20/18/12/18/32%） */
+.perf-scale {
+  margin-top: 20rpx;
+}
+.perf-scale-bar {
+  position: relative;
+  display: flex;
+  height: 14rpx;
+  border-radius: 999rpx;
+  overflow: visible;
+}
+.perf-seg {
+  height: 100%;
+}
+.seg-0 { width: 20%; background: #eef0f3; border-radius: 999rpx 0 0 999rpx; }
+.seg-1 { width: 18%; background: #f5e6c8; }
+.seg-2 { width: 12%; background: #efd9a8; }
+.seg-3 { width: 18%; background: #e6c476; }
+.seg-4 { width: 32%; background: #d9a648; border-radius: 0 999rpx 999rpx 0; }
+.perf-marker {
+  position: absolute;
+  top: 50%;
+  width: 20rpx;
+  height: 20rpx;
+  border-radius: 50%;
+  background: #fff;
+  border: 4rpx solid #2b6cf6;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.2);
+}
+.perf-ticks {
+  position: relative;
+  height: 28rpx;
+  margin-top: 6rpx;
+}
+.perf-tick {
+  position: absolute;
+  transform: translateX(-50%);
+  font-size: 18rpx;
+  color: #8a93a6;
+}
+.perf-levels {
+  position: relative;
+  height: 28rpx;
+  margin-bottom: 6rpx;
+}
+.perf-level-name {
+  position: absolute;
+  transform: translateX(-50%);
+  font-size: 18rpx;
+  color: #b8bfc9;
+}
+.perf-level-name-max {
+  color: #d48806;
+  font-weight: 600;
+}
+/* 计算逻辑说明 */
+.perf-calc {
+  margin-top: 20rpx;
+  padding-top: 16rpx;
+  border-top: 1rpx solid #f2f3f5;
+}
+.perf-calc-title {
+  font-size: 22rpx;
+  font-weight: 600;
+  color: #4e5969;
+  margin-bottom: 8rpx;
+}
+.perf-formula {
+  font-size: 22rpx;
+  color: #1f2329;
+  background: #f7f8fa;
+  border-radius: 8rpx;
+  padding: 10rpx 14rpx;
+  margin-bottom: 10rpx;
+}
+.perf-sup {
+  font-size: 16rpx;
+  vertical-align: super;
+}
+.perf-calc-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12rpx;
+  padding: 4rpx 0;
+}
+.perf-calc-label {
+  font-size: 22rpx;
+  color: #8a93a6;
+  flex-shrink: 0;
+}
+.perf-calc-value {
+  font-size: 22rpx;
+  color: #1f2329;
+}
+.perf-calc-foot {
+  margin-top: 8rpx;
+  font-size: 20rpx;
+  color: #b8bfc9;
+  line-height: 1.5;
+}
 .md-label {
   font-size: 24rpx;
   color: #8a93a6;

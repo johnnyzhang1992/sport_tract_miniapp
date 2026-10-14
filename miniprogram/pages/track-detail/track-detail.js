@@ -99,10 +99,10 @@ Page({
         { label: '总时长', value: formatDuration(totalSec) },
         fastestParts && { label: '最快 1km', value: fastestParts.value },
         { label: '爬升高度', value: String(activity.elevationGain || 0), unit: '米' },
-        // 表现分：服务端对类跑步类型计算落库（社区逆向估算，非官方 ITRA 分）
-        activity.perfScore > 0 && { label: '表现分', value: `${activity.perfScore} · ${perfLevel(activity.perfScore)}` },
         (activity.markers || []).length > 0 && { label: '打点', value: String(activity.markers.length), unit: '个' },
       ].filter(Boolean);
+      // 表现分卡：大号分数 + 等级刻度条 + 代入本轨迹数值的计算说明
+      this.setData({ perf: this.buildPerfView(activity) });
       // 轨迹线着色：徒步/爬山且有海拔数据 → 按海拔；否则按配速（绝对刻度，越快越偏黄）。
       // 门槛用 utils/track-altitude.js#usesAltitudeColor 而不是「曲线非空」：曲线 1 个点也算非空，
       // 而那个点数画不出线，只会剩下图例骗人。
@@ -393,6 +393,31 @@ Page({
       best = getBestCache(app.globalData.user ? app.globalData.user.id : '');
     }
     return matchBest(activity, best);
+  },
+
+  /**
+   * 表现分卡视图数据：分数/等级来自落库值，计算说明用本轨迹数值代入公式展示。
+   * 公式（服务端 utils/perf-score.ts 同款，TrailCraft commit5 refit）：
+   *   PI = min(1000, 77.9 × (kme/小时)^0.85 × (kme/270)^0.155)，kme = 距离km + 爬升m/100
+   */
+  buildPerfView(activity) {
+    if (!(activity.perfScore > 0)) return { show: false };
+    const distKm = (activity.distance || 0) / 1000;
+    const ascent = activity.elevationGain || 0;
+    const kme = distKm + ascent / 100;
+    const hours = (activity.duration || 0) / 3600;
+    const speed = hours > 0 ? kme / hours : 0;
+    return {
+      show: true,
+      score: activity.perfScore,
+      level: perfLevel(activity.perfScore),
+      pct: Math.max(0, Math.min(100, (activity.perfScore / 1000) * 100)).toFixed(1),
+      distKm: distKm.toFixed(2),
+      ascent,
+      kme: kme.toFixed(2),
+      hours: hours.toFixed(2),
+      speed: speed.toFixed(1),
+    };
   },
 
   /** 每公里分段

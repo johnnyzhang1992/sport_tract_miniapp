@@ -98,6 +98,60 @@
     </view>
   </view>
 
+  <!-- 表现分：大号分数 + 等级刻度条 + 计算逻辑说明（类跑步类型且有落库分才显示） -->
+  <view class="card perf-card" wx:if="{{perf.show}}">
+    <view class="perf-head">
+      <view class="perf-title-wrap">
+        <text class="perf-title">表现分</text>
+        <text class="perf-note">社区估算 · 非官方 ITRA 分</text>
+      </view>
+      <view class="perf-score-wrap">
+        <text class="perf-score">{{perf.score}}</text>
+        <text class="perf-level">{{perf.level}}</text>
+      </view>
+    </view>
+    <!-- 等级刻度条：0-1000，分段线在 200/380/500/680；上排等级名、下排数值 -->
+    <view class="perf-scale">
+      <view class="perf-levels">
+        <text class="perf-level-name" style="left: 10%">入门</text>
+        <text class="perf-level-name" style="left: 29%">中等</text>
+        <text class="perf-level-name" style="left: 44%">良好</text>
+        <text class="perf-level-name" style="left: 59%">优秀</text>
+        <text class="perf-level-name perf-level-name-max" style="left: 84%">精英级</text>
+      </view>
+      <view class="perf-scale-bar">
+        <view class="perf-seg seg-0"></view>
+        <view class="perf-seg seg-1"></view>
+        <view class="perf-seg seg-2"></view>
+        <view class="perf-seg seg-3"></view>
+        <view class="perf-seg seg-4"></view>
+        <view class="perf-marker" style="left: {{perf.pct}}%"></view>
+      </view>
+      <view class="perf-ticks">
+        <text class="perf-tick" style="left: 0">0</text>
+        <text class="perf-tick" style="left: 20%">200</text>
+        <text class="perf-tick" style="left: 38%">380</text>
+        <text class="perf-tick" style="left: 50%">500</text>
+        <text class="perf-tick" style="left: 68%">680</text>
+        <text class="perf-tick" style="left: 100%">1000</text>
+      </view>
+    </view>
+    <!-- 计算逻辑（代入本轨迹数值） -->
+    <view class="perf-calc">
+      <view class="perf-calc-title">计算方式</view>
+      <view class="perf-formula">表现分 = min(1000, 77.9 × (kme/小时)<text class="perf-sup">0.85</text> × (kme/270)<text class="perf-sup">0.155</text>)</view>
+      <view class="perf-calc-row">
+        <text class="perf-calc-label">等效里程 kme</text>
+        <text class="perf-calc-value">{{perf.distKm}}km 距离 + {{perf.ascent}}m 爬升 ÷ 100 = {{perf.kme}}</text>
+      </view>
+      <view class="perf-calc-row">
+        <text class="perf-calc-label">完成速度</text>
+        <text class="perf-calc-value">{{perf.kme}} ÷ {{perf.hours}} 小时 = {{perf.speed}} kme/小时</text>
+      </view>
+      <view class="perf-calc-foot">100m 爬升 ≈ 1km 平路体力；长度项让同样配速下越长的活动得分越高（Riegel 耐力模型）</view>
+    </view>
+  </view>
+
   <!-- 最佳记录（本轨迹在所属运动类型中持有的个人最佳） -->
   <view class="card" wx:if="{{achievements.length}}">
     <view class="ach-head">
