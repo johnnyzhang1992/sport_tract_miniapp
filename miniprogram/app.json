@@ -18,7 +18,10 @@
     "pages/topic/topic",
     "pages/year-report/year-report",
     "pages/footprints/footprints",
-    "pages/footprint-list/footprint-list"
+    "pages/footprint-list/footprint-list",
+    "pages/campaign-list/campaign-list",
+    "pages/campaign-create/campaign-create",
+    "pages/campaign-detail/campaign-detail"
   ],
   "window": {
     "navigationBarBackgroundColor": "#ffffff",

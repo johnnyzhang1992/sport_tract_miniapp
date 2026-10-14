@@ -1,0 +1,48 @@
+<view class="container">
+  <!-- 游客提示（照运动榜页：登录前没有任何可看的口径） -->
+  <view class="login-hint" wx:if="{{!loggedIn && !loading}}">
+    <image class="login-hint-icon" src="/assets/icons/lucide-user.png" mode="aspectFit" />
+    <view class="login-hint-text">登录后查看你发起和参与的活动</view>
+    <button class="login-hint-btn" bindtap="guestLogin">去登录</button>
+  </view>
+
+  <block wx:if="{{loggedIn}}">
+    <!-- 我发起 / 我参与 -->
+    <view class="tab-row">
+      <view
+        wx:for="{{tabs}}"
+        wx:key="key"
+        class="tab-seg {{tab === item.key ? 'tab-seg-active' : ''}}"
+        data-tab="{{item.key}}"
+        bindtap="switchTab"
+      >{{item.label}}</view>
+    </view>
+
+    <view wx:if="{{loading && items.length === 0}}" class="list-state">加载中…</view>
+    <view wx:elif="{{error}}" class="list-state">{{error}} <text class="retry" bindtap="retry">重试</text></view>
+    <view wx:elif="{{items.length === 0}}" class="empty">
+      {{tab === 'created' ? '还没有发起过活动，点右下角发起一个' : '还没有参与的活动，扫码或让朋友邀请你加入'}}
+    </view>
+    <!-- 卡片：标题 / 时间 / 我的汇总（myState 不在列表 DTO 里，不做成员状态标注） -->
+    <view
+      wx:for="{{items}}"
+      wx:key="id"
+      class="cp-card"
+      hover-class="cp-card-hover"
+      hover-stay-time="80"
+      data-id="{{item.id}}"
+      bindtap="goDetail"
+    >
+      <view class="cp-card-head">
+        <view class="cp-card-title">{{item.title}}</view>
+        <text wx:if="{{item.status !== 'active'}}" class="cp-tag">{{item.statusText}}</text>
+        <view class="cp-card-arrow">›</view>
+      </view>
+      <view class="cp-card-range">{{item.rangeText}}</view>
+      <view class="cp-card-stats">{{item.statsText}}</view>
+    </view>
+  </block>
+
+  <!-- 右下角悬浮：发起活动（登录闸门在创建页内，这里不重复判） -->
+  <view class="fab" hover-class="fab-hover" hover-stay-time="80" bindtap="goCreate">＋发起</view>
+</view>

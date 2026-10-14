@@ -16,9 +16,19 @@ function formatDuration(seconds) {
 
 const config = require('../../config/index');
 const api = require('../../services/api');
+const { fmtRange, fmtPanel } = require('../../utils/campaign.js');
 
 // 首页概览本地缓存 key（先展示旧数据避免空白，接口返回后刷新）
 const OVERVIEW_CACHE_KEY = 'indexOverviewCache_v1';
+
+/** 首页活动卡：标题 / 时间（东八区） / 我的汇总——WXML 不做格式化，统一在这里算好 */
+function toCampaignCard(c) {
+  const p = fmtPanel(c.myStats || {});
+  return Object.assign({}, c, {
+    rangeText: fmtRange(c.startAt, c.endAt),
+    statsText: `我的 ${p.countText} 次 · ${p.distanceText} km · ${p.durationText}`,
+  });
+}
 
 Page({
   data: {
@@ -37,6 +47,7 @@ Page({
     ongoingActivity: null, // 进行中（已暂停）运动入口
     lbSummary: null, // 运动榜摘要（卡片副标题）
     topics: [], // 生效中的官方专题（首页入口）
+    campaigns: [], // 进行中的一起运动活动（首页区块，最多 3 条）
   },
 
   onLoad() {
@@ -48,6 +59,7 @@ Page({
     this.loadOverview();
     this.loadLeaderboardSummary();
     this.loadActiveTopics();
+    this.loadCampaigns();
     this.checkOngoing();
   },
 
@@ -65,6 +77,47 @@ Page({
   goTopic(e) {
     const id = e.currentTarget.dataset.id;
     if (id) wx.navigateTo({ url: `/pages/topic/topic?id=${id}` });
+  },
+
+  /**
+   * 一起运动（进行中）：我发起 + 我参与两路并发，按 id 去重后最多取 3 条。
+   * 静默拉取——游客（401）或网络失败都吞掉，区块退化为「发起一个活动」引导，不打扰首屏。
+   * status 直接用服务端派生的档位筛 active，不按 endAt 本地再算一遍（两边口径不分叉）。
+   */
+  async loadCampaigns() {
+    try {
+      const [created, joined] = await Promise.all([
+        api.get('/campaigns?role=created'),
+        api.get('/campaigns?role=joined'),
+      ]);
+      const seen = {};
+      const active = [];
+      for (const c of [...((created && created.items) || []), ...((joined && joined.items) || [])]) {
+        if (!c || seen[c.id]) continue;
+        seen[c.id] = true;
+        if (c.status === 'active') active.push(c);
+      }
+      this.setData({ campaigns: active.slice(0, 3).map(toCampaignCard) });
+    } catch (e) {
+      // 静默：区块显示发起引导即可
+      this.setData({ campaigns: [] });
+    }
+  },
+
+  /** 活动卡片 → 活动详情 */
+  goCampaign(e) {
+    const id = e.currentTarget.dataset.id;
+    if (id) wx.navigateTo({ url: `/pages/campaign-detail/campaign-detail?id=${id}` });
+  },
+
+  /** 「查看全部」→ 活动列表页 */
+  goCampaignList() {
+    wx.navigateTo({ url: '/pages/campaign-list/campaign-list' });
+  },
+
+  /** 无进行中活动时的引导卡 → 创建活动页 */
+  goCampaignCreate() {
+    wx.navigateTo({ url: '/pages/campaign-create/campaign-create' });
   },
 
   /** 版本更新检测：微信后台下载完新版本包后弹窗提醒，确认即应用并重启 */

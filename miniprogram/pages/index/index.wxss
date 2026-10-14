@@ -252,3 +252,25 @@
   background: #eef4ff;
   margin-bottom: 8rpx;
 }
+
+/* 一起运动区块：行式卡片复用上面的 .lb-card 布局，这里只补行距 / 分隔线 / 查看全部 */
+.campaign-row {
+  padding: 14rpx 0;
+}
+.campaign-row-sep {
+  border-top: 1rpx solid #f2f3f5;
+}
+.campaign-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.campaign-more {
+  padding: 10rpx 0 2rpx;
+  text-align: right;
+  font-size: 22rpx;
+  color: #2b6cf6;
+}
+.campaign-more-hover {
+  opacity: 0.7;
+}
