@@ -268,7 +268,7 @@ test('COP1 发起人进页面会请求待审批列表（渲染徽标）；非发
   assert.equal(page.data.isCreator, true);
   assert.equal(page.data.pendingCount, 2, '徽标数＝待审批条数');
   assert.equal(page.data.pendingRows[0].name, '小迹');
-  assert.equal(page.data.pendingRows[0].appliedAtText, '10-10 10:30', '申请时间按东八区 MM-DD HH:mm');
+  assert.equal(page.data.pendingRows[0].appliedAtText, '10/10 10:30', '申请时间按东八区 MM/DD HH:mm');
   // 成员行：自己不可踢、他人可踢（仅发起人视角下才有 canKick）
   assert.equal(page.data.members[0].canKick, false, '发起人不能移出自己');
   assert.equal(page.data.members[1].canKick, true);
@@ -369,7 +369,7 @@ test('COP4 点成员：发起人请求 /members/:uid 展开明细；普通成员
   assert.equal(page.data.sheetDetail.total, 25);
   assert.equal(page.data.sheetDetail.items.length, 20);
   assert.equal(page.data.sheetDetail.items[0].typeText, '徒步');
-  assert.equal(page.data.sheetDetail.items[0].timeText, '10-09 09:05');
+  assert.equal(page.data.sheetDetail.items[0].timeText, '10/09 09:05');
   assert.equal(page.data.sheetDetail.items[0].distanceText, '4.20');
   assert.equal(page.data.sheetDetail.items[0].durationText, '30min');
   assert.equal(page.data.sheetDetail.items[0].elevationText, ' · 爬升 120m');

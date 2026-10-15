@@ -24,7 +24,7 @@
     <view class="card">
       <view class="head-row">
         <text class="head-title">{{head.title}}</text>
-        <text class="head-tag">{{head.statusText}}</text>
+        <text class="campaign-tag {{head.statusTag}}">{{head.statusText}}</text>
       </view>
       <view class="head-range">{{head.rangeText}}</view>
       <view class="head-meta">
@@ -84,16 +84,16 @@
       </view>
       <view class="sum-row">
         <view class="sum-cell">
-          <view class="sum-value">{{totals.countText}}</view>
           <view class="sum-label">次数</view>
+          <view class="sum-value">{{totals.countText}}</view>
         </view>
         <view class="sum-cell">
-          <view class="sum-value">{{totals.distanceText}}</view>
           <view class="sum-label">距离 (km)</view>
+          <view class="sum-value">{{totals.distanceText}}</view>
         </view>
         <view class="sum-cell">
-          <view class="sum-value">{{totals.durationText}}</view>
           <view class="sum-label">时长</view>
+          <view class="sum-value">{{totals.durationText}}</view>
         </view>
       </view>
     </view>
@@ -121,18 +121,19 @@
         <view wx:else class="rank-avatar rank-avatar-text">{{item.avatarText}}</view>
         <view class="rank-name-wrap">
           <text class="rank-name">{{item.name}}</text>
+          <!-- 移出：紧跟在昵称后（不放行尾——行尾要留给距离这个主指标）；仅发起人、且非自己（canKick）；
+               catchtap 不冒泡到整行的 openMember -->
+          <view
+            class="rank-kick"
+            wx:if="{{item.canKick}}"
+            hover-class="rank-kick-hover"
+            hover-stay-time="80"
+            data-idx="{{index}}"
+            catchtap="onKickTap"
+          >移出</view>
         </view>
         <view class="rank-meta">{{item.countText}} 次 · {{item.durationText}}</view>
         <view class="rank-dist">{{item.distanceText}} km</view>
-        <!-- 移出：仅发起人、且非自己（canKick）；catchtap 不冒泡到整行的 openMember -->
-        <view
-          class="rank-kick"
-          wx:if="{{item.canKick}}"
-          hover-class="rank-kick-hover"
-          hover-stay-time="80"
-          data-idx="{{index}}"
-          catchtap="onKickTap"
-        >移出</view>
       </view>
       <view class="rank-empty" wx:if="{{members.length === 0}}">暂无成员数据</view>
     </view>

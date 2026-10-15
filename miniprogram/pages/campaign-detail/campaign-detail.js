@@ -28,7 +28,10 @@
 const api = require('../../services/api');
 const config = require('../../config/index');
 const { ensureLogin } = require('../../utils/login-gate');
-const { statusLabel, visibilityLabel, fmtRange, joinCta, fmtPanel } = require('../../utils/campaign.js');
+const { statusLabel, visibilityLabel, statusTagClass, fmtRange, joinCta, fmtPanel, truncateName } = require('../../utils/campaign.js');
+
+/** 成员昵称展示上限（字）；超出截断补「...」——排行行里昵称后面还跟「移出」按钮与距离，不能任其撑满 */
+const NAME_MAX = 5;
 
 /** 运动类型 key → 中文名（与创建页 / 服务端白名单同一集合，取 config 这一份） */
 const TYPE_LABEL = {};
@@ -54,6 +57,7 @@ function toHead(d) {
     description: d.description || '',
     rangeText: fmtRange(d.startAt, d.endAt),
     statusText: statusLabel(d.status),
+    statusTag: statusTagClass(d.status),
     visibilityText: visibilityLabel(d.visibility),
     limitText: d.memberLimit == null ? '不限人数' : `上限 ${d.memberLimit} 人`,
     typesText: (d.allowedTypes || []).length
@@ -62,7 +66,7 @@ function toHead(d) {
   };
 }
 
-/** epoch（数字）/ ISO 字符串 → 东八区 MM-DD HH:mm（待审批申请时间 / 轨迹开始时间共用；补位口径同 utils bjMMDD）。
+/** epoch（数字）/ ISO 字符串 → 东八区 MM/DD HH:mm（待审批申请时间 / 轨迹开始时间共用；分隔符同全站「/」）。
  *  appliedAt 在服务端是 Date，过 JSON 后到端上是 ISO 字符串；startTime 是数字 —— 两种都要吃。 */
 function fmtMMDDHHmm(v) {
   if (v == null || v === '') return '';
@@ -70,7 +74,7 @@ function fmtMMDDHHmm(v) {
   if (!Number.isFinite(t)) return '';
   const d = new Date(t + 8 * 3600000);
   const pad = (n) => String(n).padStart(2, '0');
-  return `${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+  return `${pad(d.getUTCMonth() + 1)}/${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
 }
 
 /** 全局登录用户 id（发起人身份的比较基准；app.js: globalData.userInfo 是用户对象，含 .id） */
@@ -89,13 +93,13 @@ function isCreatorOf(detail) {
 }
 
 /** 排行榜行 → 成员列表行（名次 / 头像 / 昵称 / 距离 / 次数 / 时长）；头像三级兜底同运动榜。
- *  canKick：仅发起人视角、且不是自己 —— 决定行尾「移出」是否渲染（非发起人恒 false）。 */
+ *  canKick：仅发起人视角、且不是自己 —— 决定昵称后的「移出」是否渲染（非发起人恒 false）。 */
 function toMemberRow(r, canKick) {
   const p = fmtPanel({ count: r.count, distance: r.distance, duration: r.duration });
   return {
     userId: r.userId,
     rank: r.rank,
-    name: r.name || '微信用户',
+    name: truncateName(r.name || '微信用户', NAME_MAX),
     medalIcon: r.rank <= 3 ? `/assets/icons/rank-medal-${r.rank}.png` : '',
     avatarSrc: r.avatarUrl || (r.avatarPreset ? `/assets/avatars/${r.avatarPreset}.png` : ''),
     avatarText: (r.name || '迹')[0],

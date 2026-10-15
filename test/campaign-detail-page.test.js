@@ -217,7 +217,7 @@ test('CDP1 非成员：只请求详情，一个成员数据都不请求、也不
   // 非成员视角：屏上只有标题/时间/可见性 + 加入入口
   assert.equal(page.data.isMember, false);
   assert.equal(page.data.head.title, '周末一起去徒步');
-  assert.equal(page.data.head.rangeText, '10-01 ~ 10-07');
+  assert.equal(page.data.head.rangeText, '2026/10/01 ~ 2026/10/07');
   assert.equal(page.data.cta.text, '申请加入'); // private + canJoin → 申请加入
   assert.deepEqual(page.data.members, [], '非成员不能有成员列表');
   assert.equal(page.data.panel, null, '非成员不能有底部「我的」面板');
@@ -574,4 +574,83 @@ test('CDP18 发起人：没有「退出活动」入口，onLeave 点了也不弹
   await flush();
   assert.equal(modals.length, 0, '发起人没有入口：连确认弹窗都不出现');
   assert.equal(apiCalls.length, calls, '发起人点不出任何请求');
+});
+
+test('CDP19 成员排行昵称最多展示 5 个字：6 个字截断补省略号，正好 5 个字不动', async () => {
+  resetEnv();
+  const long = '字'.repeat(6);
+  mockDetail(member(), {
+    rows: [
+      { userId: 'u1', name: long, avatarUrl: '', avatarPreset: 'face', distance: 15000, count: 3, duration: 3600, rank: 1 },
+      { userId: 'u2', name: '字'.repeat(5), avatarUrl: '', avatarPreset: 'face', distance: 10000, count: 2, duration: 3600, rank: 2 },
+      { userId: 'u3', name: '阿迹', avatarUrl: '', avatarPreset: 'face', distance: 100, count: 1, duration: 60, rank: 3 },
+    ],
+    total: 3,
+    page: 1,
+    pageSize: 50,
+  });
+  const page = makePage();
+  await page.onLoad({ id: 'c1' });
+  await flush();
+
+  assert.equal(page.data.members[0].name, '字'.repeat(5) + '...', '6 个字 → 展示前 5 个 + 「...」');
+  assert.equal(page.data.members[1].name, '字'.repeat(5), '正好 5 个字不加省略号');
+  assert.equal(page.data.members[2].name, '阿迹', '短昵称不受影响');
+});
+
+test('CDP20 「移出」按钮在昵称之后、距离/次数之前（结构顺序钉在 wxml 源里）', () => {
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../miniprogram/pages/campaign-detail/campaign-detail.wxml'),
+    'utf8',
+  );
+  const iName = src.indexOf('rank-name');
+  const iKick = src.indexOf('rank-kick');
+  const iMeta = src.indexOf('rank-meta');
+  const iDist = src.indexOf('rank-dist');
+  assert.ok(iKick > iName, '「移出」应排在昵称之后');
+  assert.ok(iKick < iMeta, '「移出」应排在次数/时长之前（不再是行尾）');
+  assert.ok(iKick < iDist, '「移出」应排在距离之前');
+  assert.match(
+    src.slice(iKick - 200, iKick + 200),
+    /catchtap="onKickTap"/,
+    '仍是 catchtap：不能冒泡到整行的 openMember，否则点「移出」会先弹出成员汇总',
+  );
+});
+
+test('CDP21 全队汇总三格是「标签左 / 数值右」横排：标签排在数值之前', () => {
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../miniprogram/pages/campaign-detail/campaign-detail.wxml'),
+    'utf8',
+  );
+  const block = src.slice(src.indexOf('class="sum-row"'));
+  const tags = [...block.matchAll(/class="sum-(label|value)"/g)]
+    .slice(0, 6)
+    .map((m) => m[1]);
+  assert.deepEqual(
+    tags,
+    ['label', 'value', 'label', 'value', 'label', 'value'],
+    '三格都必须是「标签在前、数值在后」。出现 value→label 就是退回纵向堆叠（数值在上、标签在下）',
+  );
+});
+
+test('CDP22 状态标签用共享类：head.statusTag 给修饰类，wxml 不再用自己的 .head-tag', async () => {
+  resetEnv();
+  mockDetail(member());
+  const page = makePage();
+  await page.onLoad({ id: 'c1' });
+  await flush();
+
+  assert.equal(page.data.head.statusText, '进行中');
+  assert.equal(page.data.head.statusTag, 'campaign-tag--active', 'fixture 是 active 态');
+
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../miniprogram/pages/campaign-detail/campaign-detail.wxml'),
+    'utf8',
+  );
+  assert.match(
+    src,
+    /class="campaign-tag \{\{head\.statusTag\}\}"/,
+    '详情页要改用 app.wxss 里的共享 .campaign-tag，否则又跟列表卡片各长一套',
+  );
+  assert.ok(!src.includes('head-tag'), '.head-tag 应已从详情页 wxml 消失');
 });
