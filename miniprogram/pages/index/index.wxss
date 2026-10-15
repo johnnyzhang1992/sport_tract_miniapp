@@ -257,6 +257,9 @@
   align-items: baseline;
   gap: 2rpx;
 }
+.lb-rank-line .text-muted {
+  font-size: 22rpx;
+}
 .lb-rank-num {
   font-size: 30rpx;
   font-weight: 700;
