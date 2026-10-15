@@ -626,7 +626,10 @@ Page({
     this._codeLoading = true;
     wx.showLoading({ title: '生成中…', mask: true });
     try {
-      const data = (await api.post('/campaigns/mini-code', { campaignId: this._id })) || {};
+      const data = (await api.post('/campaigns/mini-code', {
+        campaignId: this._id,
+        envVersion: wx.getAccountInfoSync().miniProgram.envVersion,
+      })) || {};
       let src = data.url || '';
       let localPath = '';
       if (!src && data.base64) {
