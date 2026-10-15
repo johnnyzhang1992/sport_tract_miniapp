@@ -12,8 +12,8 @@
 .frow {
   display: flex;
   align-items: center;
-  min-height: 88rpx;
-  padding: 12rpx 24rpx;
+  min-height: 80rpx;
+  padding: 8rpx 24rpx;
 }
 .frow-hover {
   background: #f7f8fa;
@@ -41,20 +41,38 @@
   font-size: 32rpx;
   line-height: 1;
 }
-/* 输入行：文字右对齐，占位色与 .fval-ph 一致 */
+/* 输入行：值右对齐，占位色与 .fval-ph 一致；
+   输入区要有可见的浅底框——白底白输入框用户看不出「点哪里」。
+   高度必须显式写：wx-input 默认样式是 height/min-height: 1.4rem（=22.4px），
+   不覆盖的话 padding 会被这点高度吃掉、文字被 overflow 挤扁（实测控件只有 22.4px 高）。
+   72rpx 比行高 88rpx 小一圈（上下各 8rpx 呼吸），与「可见性」分段控件同一档。 */
 .finput {
   flex: 1;
   min-width: 0;
+  height: 72rpx;
+  min-height: 72rpx;
   font-size: 30rpx;
   color: #1f2329;
   text-align: right;
+  background: #f7f8fa;
+  border-radius: 12rpx;
+  padding: 0 20rpx;
+  box-sizing: border-box;
+}
+/* 数字类字段（人数上限）只装 1–3 位数，别跟着 flex:1 撑满右列。
+   240rpx 是「占位『不填＝不限制』(6 字≈180rpx + padding 40rpx)」能完整显示的宽度；
+   margin-left:auto 保住右边缘与上面「标题」输入框同一条竖线。 */
+.finput-num {
+  flex: none;
+  width: 240rpx;
+  margin-left: auto;
 }
 .fph {
   color: #c2c7d0;
 }
 /* 组内说明行（22rpx 次级灰，与标签同一条左基线；上边距不能省） */
 .fnote {
-  padding: 16rpx 24rpx;
+  padding: 12rpx 24rpx;
   font-size: 22rpx;
   line-height: 1.5;
   color: #8a93a6;
@@ -66,16 +84,16 @@
 
 /* 非行式控件（描述）：标签在上，控件占满整行 */
 .flabel-block {
-  padding: 24rpx 24rpx 0;
+  padding: 16rpx 24rpx 0;
   font-size: 30rpx;
   color: #1f2329;
 }
 .ftextarea-wrap {
-  padding: 16rpx 24rpx 8rpx;
+  padding: 12rpx 24rpx 6rpx;
 }
 .ftextarea {
   width: 100%;
-  height: 180rpx;
+  height: 120rpx; /* 上限 120 字，约两行半；再长的在框内滚动 */
   padding: 16rpx 24rpx;
   box-sizing: border-box;
   background: #f7f8fa;
@@ -84,18 +102,20 @@
   line-height: 1.5;
 }
 
-/* 可见性两选一：照 campaign-list 的分段控件形态 */
+/* 可见性两选一：照 campaign-list 的分段控件形态；行式布局＝在 .frow 里占满标签右侧，
+   左右外边距交给 .frow 的 padding（不再自带 margin，否则和相邻字段对不齐） */
 .vis-row {
   display: flex;
+  flex: 1;
+  min-width: 0;
   background: #f2f3f5;
   border-radius: 12rpx;
-  padding: 6rpx;
-  margin: 16rpx 24rpx 8rpx;
+  padding: 4rpx;
 }
 .vis-seg {
   flex: 1;
   text-align: center;
-  padding: 12rpx 0;
+  padding: 8rpx 0;
   font-size: 25rpx;
   color: #4e5969;
   border-radius: 10rpx;
@@ -112,8 +132,8 @@
 .cat-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 12rpx;
-  padding: 16rpx 24rpx 0;
+  gap: 10rpx;
+  padding: 12rpx 24rpx 0;
 }
 .cat-chip {
   display: flex;
@@ -149,11 +169,11 @@
   font-size: 32rpx;
   margin-top: 8rpx;
 }
-.submit-btn[disabled] {
-  background: #cdd8f0;
+/* 禁用态必须显式压过框架默认：小程序预置了 button[disabled]:not([type]) 的
+   background #fafafa + 文字 rgba(0,0,0,0.18)（#fafafa 比页面底色 #f6f7f9 还淡，按钮等于消失），
+   且那条选择器权重 (0,2,1) 高于 .submit-btn[disabled] (0,2,0)，光写页面样式压不住。
+   这里重复类名把权重抬到 (0,3,0)；中灰底让它离页面底色足够远，白字保持「同一个按钮、只是关掉了」的读法。 */
+.submit-btn.submit-btn[disabled] {
+  background: #aab0bb;
   color: #fff;
-}
-.submit-tip {
-  text-align: center;
-  margin-top: 16rpx;
 }

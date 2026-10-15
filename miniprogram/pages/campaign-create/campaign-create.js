@@ -1,17 +1,19 @@
 // 创建活动页（活动列表页「＋发起」进）。
 //
 // 校验口径镜像服务端 POST /campaigns 的 CreateCampaignSchema（sport_track_api/src/utils/validators.ts）：
-//   title 1–30、description ≤300、visibility public|private、allowedTypes ⊆ 8 项白名单（空=不限制）、
+//   title 1–30、description ≤120、visibility public|private、allowedTypes ⊆ 8 项白名单（空=不限制）、
 //   memberLimit 正整数 ≤500 或 null、startDate/endDate 严格 YYYY-MM-DD 且 endDate ≥ startDate。
 // 上限在端上先拦（maxlength + 即时提示 + onSubmit 兜底），别让用户提交完才吃 400。
 // 日期用 <picker mode="date"> 拿 YYYY-MM-DD 原样上送（服务端按东八区转 epoch，端上不做时区换算）。
 const config = require('../../config/index');
+const { slashDate } = require('../../utils/campaign.js');
 const api = require('../../services/api');
 const { ensureLogin } = require('../../utils/login-gate');
 
 const MAX_TITLE = 30;
-const MAX_DESC = 300;
+const MAX_DESC = 120;
 const MAX_MEMBERS = 500;
+const DEFAULT_MEMBERS = 100; // 人数上限的默认值（页面预填；清空＝不限制）
 
 // 可见性两选一（key 与后端 enum 一一对应）
 const VISIBILITY_OPTIONS = [
@@ -26,6 +28,16 @@ function localToday() {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
+/**
+ * 必填项是否齐备 → 驱动「发起活动」按钮的可点状态。
+ * 必填只有标题：起止日期由 onLoad 预填、picker 也清不空，没有「没填」这个态可判。
+ * 只判「填没填」，不判「填得对不对」：倒置日期、人数超 500 之类仍走 onSubmit 的 toast（要带实际值），
+ * 否则按钮会时灰时亮却没人解释为什么。
+ */
+function canSubmitOf(title) {
+  return String(title || '').trim().length > 0;
+}
+
 Page({
   data: {
     title: '',
@@ -35,23 +47,29 @@ Page({
     // chips 视图态：数据源 config.ACTIVITY_TYPES（与后端白名单同一集合），active 跟 allowedTypes 同步
     types: config.ACTIVITY_TYPES.map((t) => ({ type: t.type, label: t.label, iconImg: t.iconImg, active: false })),
     allowedTypes: [], // 选中的类型；空数组 = 不限制
-    memberLimit: '', // 字符串；空 = 不限制（提交时转 null）
-    startDate: '',
+    memberLimit: String(DEFAULT_MEMBERS), // 字符串；默认 100，清空 = 不限制（提交时转 null）
+    startDate: '', // 规范值（picker 的 value 与上送体都用它，必须 YYYY-MM-DD）
     endDate: '',
+    startDateText: '', // 展示值（YYYY/MM/DD），只给 wxml 看
+    endDateText: '',
     dateError: '', // 起止倒置的即时提示（onSubmit 仍会兜底再判一次）
     submitting: false,
+    canSubmit: false, // 必填项未填完 → 「发起活动」保持不可点
     maxTitle: MAX_TITLE,
     maxDesc: MAX_DESC,
     maxMembers: MAX_MEMBERS,
+    defaultMembers: DEFAULT_MEMBERS,
   },
 
   onLoad() {
     const today = localToday();
-    this.setData({ startDate: today, endDate: today });
+    this.setData({ startDate: today, endDate: today, startDateText: slashDate(today), endDateText: slashDate(today) });
   },
 
+  /** title 与 canSubmit 一次 setData 下发：分两次会多跑一趟视图层同步 */
   onTitle(e) {
-    this.setData({ title: e.detail.value });
+    const title = e.detail.value;
+    this.setData({ title, canSubmit: canSubmitOf(title) });
   },
   onDesc(e) {
     this.setData({ description: e.detail.value });
@@ -81,18 +99,20 @@ Page({
   },
 
   onStartDate(e) {
-    this.setData({ startDate: e.detail.value });
+    this.setData({ startDate: e.detail.value, startDateText: slashDate(e.detail.value) });
     this.refreshDateError();
   },
   onEndDate(e) {
-    this.setData({ endDate: e.detail.value });
+    this.setData({ endDate: e.detail.value, endDateText: slashDate(e.detail.value) });
     this.refreshDateError();
   },
   /** 即时提示：起止倒置在选完当下就点名，不等提交 */
   refreshDateError() {
     const { startDate, endDate } = this.data;
     const bad = startDate && endDate && endDate < startDate;
-    this.setData({ dateError: bad ? `结束日期不能早于开始日期（${endDate} < ${startDate}）` : '' });
+    this.setData({
+      dateError: bad ? `结束日期不能早于开始日期（${slashDate(endDate)} < ${slashDate(startDate)}）` : '',
+    });
   },
 
   async onSubmit() {
@@ -114,7 +134,10 @@ Page({
       return wx.showToast({ title: '请选择开始和结束日期', icon: 'none' });
     }
     if (endDate < startDate) {
-      return wx.showToast({ title: `结束日期不能早于开始日期（${endDate} < ${startDate}）`, icon: 'none' });
+      return wx.showToast({
+        title: `结束日期不能早于开始日期（${slashDate(endDate)} < ${slashDate(startDate)}）`,
+        icon: 'none',
+      });
     }
     let memberLimit = null;
     if (memberRaw) {
