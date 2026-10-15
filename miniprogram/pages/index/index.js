@@ -178,13 +178,11 @@ Page({
     try {
       const api = getApp().globalData.api;
       const regions = await api.get('/stats/leaderboard-regions');
-      const myRank = await this.findMyRank(api);
+      const ranks = await this.findMyRanks(api);
       this.setData({
         lbSummary: {
           totalUsers: regions.totalUsers,
-          meText: myRank ? `${myRank.label}第${myRank.rank}名` : '',
-          rank: myRank ? myRank.rank : 0,
-          rankLabel: myRank ? `${myRank.label}第` : '',
+          ranks: ranks.slice(0, 3),
         },
       });
     } catch (e) {
@@ -193,10 +191,10 @@ Page({
   },
 
   /**
-   * 依次查 周榜→月榜→年榜→总榜，取最先有上榜类型的周期（都不在榜返回 null）。
-   * 返回 { rank, label }：label 是「散步月榜」这样的类型+榜单描述。
+   * 依次查 周榜→月榜→年榜→总榜，取最先有上榜类型的周期，返回该周期内所有上榜记录（最多 3 条）。
+   * 每条 { type, rank, label }：label 是「散步周榜」这样的类型+榜单描述。
    */
-  async findMyRank(api) {
+  async findMyRanks(api) {
     const periods = [
       { key: 'week', label: '周榜' },
       { key: 'month', label: '月榜' },
@@ -206,15 +204,17 @@ Page({
     for (const { key, label } of periods) {
       try {
         const res = await api.get(`/stats/leaderboard/me?period=${key}`);
-        if (res.best) {
-          const t = config.ACTIVITY_TYPES.find((x) => x.type === res.best.type);
-          return { rank: res.best.rank, label: `${(t && t.label) || '运动'}${label}` };
+        if (res.ranks && res.ranks.length > 0) {
+          return res.ranks.map((r) => {
+            const t = config.ACTIVITY_TYPES.find((x) => x.type === r.type);
+            return { type: r.type, rank: r.rank, label: `${(t && t.label) || '运动'}${label}` };
+          });
         }
       } catch (e) {
-        return null;
+        return [];
       }
     }
-    return null;
+    return [];
   },
 
   /** 点击"继续运动"入口 → 回记录页（让用户选择继续/重新开始） */

@@ -205,20 +205,36 @@ test('H8 接口全挂时屏上仍是缓存值，但失败要如实标出来', as
   assert.ok(p.data.overviewError && p.data.heatError, '但失败要如实标出来');
 });
 
-test('H9 运动榜摘要：findMyRank 返回结构化排名数据，数字单独放大', async () => {
+test('H9 运动榜摘要：findMyRanks 返回完整上榜记录，最多 3 条', async () => {
   resetEnv();
   respond = (p) => {
-    if (p === '/stats/leaderboard/me?period=week') return Promise.resolve({});
-    if (p === '/stats/leaderboard/me?period=month') return Promise.resolve({ best: { type: 'walking', rank: 2 } });
+    if (p === '/stats/leaderboard/me?period=week') {
+      return Promise.resolve({ ranks: [
+        { type: 'walking', rank: 2, distanceKm: 12.5, count: 3 },
+        { type: 'running', rank: 5, distanceKm: 8.0, count: 1 },
+      ] });
+    }
     return Promise.resolve({});
   };
 
   const page = makePage();
 
-  const result = await page.findMyRank(fakeApi);
-  assert.deepEqual(result, { rank: 2, label: '散步月榜' }, '返回 { rank, label } 供 wxml 分别渲染汉字和数字');
+  const result = await page.findMyRanks(fakeApi);
+  assert.equal(result.length, 2, '周榜两个类型都上榜');
+  assert.deepEqual(result[0], { type: 'walking', rank: 2, label: '散步周榜' });
+  assert.deepEqual(result[1], { type: 'running', rank: 5, label: '跑步周榜' });
 
-  // 一个榜都不在 → null
+  // 周榜没有 → 查月榜
+  respond = (p) => {
+    if (p === '/stats/leaderboard/me?period=week') return Promise.resolve({ ranks: [] });
+    if (p === '/stats/leaderboard/me?period=month') return Promise.resolve({ ranks: [{ type: 'hiking', rank: 1, distanceKm: 20, count: 5 }] });
+    return Promise.resolve({});
+  };
+  const r2 = await page.findMyRanks(fakeApi);
+  assert.equal(r2.length, 1);
+  assert.equal(r2[0].label, '徒步月榜');
+
+  // 全部没有 → 空数组
   respond = () => Promise.resolve({});
-  assert.equal(await page.findMyRank(fakeApi), null, '不在任何榜时返回 null');
+  assert.deepEqual(await page.findMyRanks(fakeApi), [], '不在任何榜时返回空数组');
 });

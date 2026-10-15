@@ -109,9 +109,9 @@
               <text class="lb-rank-num">{{lbSummary.totalUsers}}</text>
               <text class="text-muted">位迹路者</text>
             </view>
-            <view class="lb-rank-line" wx:if="{{lbSummary.rank > 0}}">
-              <text class="text-muted">{{lbSummary.rankLabel}}</text>
-              <text class="lb-rank-num">{{lbSummary.rank}}</text>
+            <view class="lb-rank-line" wx:for="{{lbSummary.ranks}}" wx:key="type">
+              <text class="text-muted">{{item.label}}第</text>
+              <text class="lb-rank-num">{{item.rank}}</text>
               <text class="text-muted">名</text>
             </view>
           </block>
