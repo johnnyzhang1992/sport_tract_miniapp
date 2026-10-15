@@ -252,6 +252,17 @@
   flex: 1;
   min-width: 0;
 }
+.lb-rank-line {
+  display: flex;
+  align-items: baseline;
+  gap: 2rpx;
+}
+.lb-rank-num {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #2b6cf6;
+  line-height: 1;
+}
 
 /* 官方专题入口（复用 lb-card 布局） */
 .topic-cover {

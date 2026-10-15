@@ -105,7 +105,11 @@
         <view class="lb-foot-text">
           <block wx:if="{{lbSummary}}">
             <view class="lb-sub text-muted">全国 {{lbSummary.totalUsers}} 位迹路者</view>
-            <view class="lb-sub text-muted" wx:if="{{lbSummary.meText}}">{{lbSummary.meText}}</view>
+            <view class="lb-rank-line" wx:if="{{lbSummary.rank > 0}}">
+              <text class="text-muted">{{lbSummary.rankLabel}}</text>
+              <text class="lb-rank-num">{{lbSummary.rank}}</text>
+              <text class="text-muted">名</text>
+            </view>
           </block>
           <view class="lb-sub text-muted" wx:else>看看全国的迹路者都在哪运动</view>
         </view>

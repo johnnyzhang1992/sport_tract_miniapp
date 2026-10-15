@@ -178,20 +178,25 @@ Page({
     try {
       const api = getApp().globalData.api;
       const regions = await api.get('/stats/leaderboard-regions');
-      const meText = await this.findMyRankText(api);
-      this.setData({ lbSummary: { totalUsers: regions.totalUsers, meText } });
+      const myRank = await this.findMyRank(api);
+      this.setData({
+        lbSummary: {
+          totalUsers: regions.totalUsers,
+          meText: myRank ? `${myRank.label}第${myRank.rank}名` : '',
+          rank: myRank ? myRank.rank : 0,
+          rankLabel: myRank ? `${myRank.label}第` : '',
+        },
+      });
     } catch (e) {
       // 静默：卡片仍展示默认文案
     }
   },
 
   /**
-   * 依次查 周榜→月榜→年榜→总榜，取最先有上榜类型的周期生成文案（都不在榜返回空串）。
-   * 文案只留「类型 + 榜单 + 名次」：首页这格现在只有半屏宽，副标题要一行装下，
-   * 「全国」由上一行「全国 N 位迹路者」承担、「我的」在首页是废话。空串是有用的——
-   * wxml 靠它决定第二行渲不渲染。
+   * 依次查 周榜→月榜→年榜→总榜，取最先有上榜类型的周期（都不在榜返回 null）。
+   * 返回 { rank, label }：label 是「散步月榜」这样的类型+榜单描述。
    */
-  async findMyRankText(api) {
+  async findMyRank(api) {
     const periods = [
       { key: 'week', label: '周榜' },
       { key: 'month', label: '月榜' },
@@ -202,15 +207,14 @@ Page({
       try {
         const res = await api.get(`/stats/leaderboard/me?period=${key}`);
         if (res.best) {
-          // 多类型同时上榜时后端已取名次最优（best），类型文案从本地配置映射
           const t = config.ACTIVITY_TYPES.find((x) => x.type === res.best.type);
-          return `${(t && t.label) || '运动'}${label}第${res.best.rank}名`;
+          return { rank: res.best.rank, label: `${(t && t.label) || '运动'}${label}` };
         }
       } catch (e) {
-        return ''; // 查询失败则放弃，静默
+        return null;
       }
     }
-    return '';
+    return null;
   },
 
   /** 点击"继续运动"入口 → 回记录页（让用户选择继续/重新开始） */
