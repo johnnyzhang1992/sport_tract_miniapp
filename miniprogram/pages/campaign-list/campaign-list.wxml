@@ -23,7 +23,7 @@
     <view wx:elif="{{items.length === 0}}" class="empty">
       {{tab === 'created' ? '还没有发起过活动，点右下角发起一个' : '还没有参与的活动，扫码或让朋友邀请你加入'}}
     </view>
-    <!-- 卡片：标题 / 时间 / 我的汇总（myState 不在列表 DTO 里，不做成员状态标注） -->
+    <!-- 卡片：标题 / 时间（开始·结束）/ 成员面（排行榜前三头像 + 人数）/ 我的汇总 -->
     <view
       wx:for="{{items}}"
       wx:key="id"
@@ -35,10 +35,19 @@
     >
       <view class="cp-card-head">
         <view class="cp-card-title">{{item.title}}</view>
-        <text wx:if="{{item.status !== 'active'}}" class="cp-tag">{{item.statusText}}</text>
+        <text class="campaign-tag {{item.statusTag}}">{{item.statusText}}</text>
         <view class="cp-card-arrow">›</view>
       </view>
-      <view class="cp-card-range">{{item.rangeText}}</view>
+      <view class="cp-card-time">{{item.timeText}}</view>
+      <view class="cp-card-members">
+        <view class="member-av-stack">
+          <block wx:for="{{item.avatarList}}" wx:key="key" wx:for-item="av">
+            <image wx:if="{{av.src}}" class="member-av" src="{{av.src}}" mode="aspectFill" />
+            <view wx:else class="member-av"></view>
+          </block>
+        </view>
+        <view class="member-av-text">{{item.memberText}}</view>
+      </view>
       <view class="cp-card-stats">{{item.statsText}}</view>
     </view>
   </block>

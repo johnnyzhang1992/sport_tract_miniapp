@@ -1,24 +1,28 @@
-// 一起运动活动列表页（首页「查看全部」进）：我发起 / 我参与两个 Tab + 卡片列表 + 右下角悬浮「＋发起」。
+// 一起运动活动列表页（首页「查看全部」进）：我参与 / 我发起两个 Tab + 卡片列表 + 右下角悬浮「＋发起」。
 // 接口：GET /campaigns?role=created|joined → { items:[{ id, title, visibility, startAt, endAt, status, myStats }],
 //                                                     total, page, pageSize }（需登录）
 // - status 是服务端已派生的档位（active/ended/dissolved），端上不按 endAt 二次计算，免口径分叉；
 // - 列表 DTO 没有 myState（R23）：卡片不做「已退出 / 已被移出」标注，那是详情页的职责；
 // - myStats 只有 { count, distance, duration }（没有 streak，连续天数只在详情 myPanel 里）。
 const api = require('../../services/api');
-const { statusLabel, fmtRange, fmtPanel } = require('../../utils/campaign.js');
+const { statusLabel, statusTagClass, fmtRangeLabeled, avatarStack, fmtPanel } = require('../../utils/campaign.js');
 
 // 两个 Tab：key 与接口 role 参数一一对应（没有活动广场，只能看到自己相关的活动）
+// 「我参与」在前并作为默认档（多数人是参与者；进页首个请求即 role=joined）
 const TABS = [
-  { key: 'created', label: '我发起' },
   { key: 'joined', label: '我参与' },
+  { key: 'created', label: '我发起' },
 ];
 
-/** 卡片展示字段在 JS 侧一次算好（WXML 不做格式化）：东八区时间范围 + 我的汇总 */
+/** 卡片展示字段在 JS 侧一次算好（WXML 不做格式化）：带标签的时间行 + 成员面 + 我的汇总 */
 function toCard(c) {
   const p = fmtPanel(c.myStats || {});
   return Object.assign({}, c, {
-    rangeText: fmtRange(c.startAt, c.endAt),
+    timeText: fmtRangeLabeled(c.startAt, c.endAt),
     statusText: statusLabel(c.status),
+    statusTag: statusTagClass(c.status),
+    memberText: `${c.memberCount || 0} 人已加入`,
+    avatarList: avatarStack(c.memberAvatars), // 头像为排行榜（距离）前三，签名 url 优先
     statsText: `我的 ${p.countText} 次 · ${p.distanceText} km · ${p.durationText}`,
   });
 }
@@ -27,7 +31,7 @@ Page({
   data: {
     loggedIn: false,
     loading: true,
-    tab: 'created', // created | joined
+    tab: 'joined', // joined | created（默认「我参与」，见 TABS）
     tabs: TABS,
     items: [],
     error: '', // 首屏加载失败的原因（屏上还有内容时刷新失败只 toast，不整页报错）
