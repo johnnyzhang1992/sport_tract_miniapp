@@ -115,9 +115,8 @@
   padding: 4rpx;
 }
 .vis-seg {
-  flex: 1;
   text-align: center;
-  padding: 6rpx 0;
+  padding: 6rpx 20rpx;
   font-size: 25rpx;
   color: #4e5969;
   border-radius: 10rpx;
