@@ -112,6 +112,7 @@
             <view class="lb-bar">
               <view class="lb-bar-fill" style="width: {{(lbSummary.totalUsers - lbSummary.rank) * 100 / lbSummary.totalUsers}}%"></view>
             </view>
+            <view class="lb-sub text-muted">全国 {{lbSummary.totalUsers}} 位迹路者</view>
           </block>
           <view class="lb-sub text-muted" wx:elif="{{lbSummary}}">全国 {{lbSummary.totalUsers}} 位迹路者</view>
           <view class="lb-sub text-muted" wx:else>看看全国的迹路者都在哪运动</view>
