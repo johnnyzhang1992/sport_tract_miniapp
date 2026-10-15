@@ -16,17 +16,61 @@ function visibilityLabel(v) {
   return VISIBILITY_LABEL[v] || v;
 }
 
-/** epoch → 东八区 MM-DD */
-function bjMMDD(ms) {
+/**
+ * 状态 → 标签修饰类。样式只有一份（app.wxss 的 .campaign-tag），详情页与列表卡片都用它。
+ * 基类本身就是中性灰，所以「已结束」以及后端将来新加的状态都返回空串落回基类，
+ * 不会出现一条没样式的裸标签——与 statusLabel 的「未知原样透传」同一取向。
+ */
+const STATUS_TAG_MOD = { active: 'campaign-tag--active', dissolved: 'campaign-tag--dissolved' };
+function statusTagClass(s) {
+  return STATUS_TAG_MOD[s] || '';
+}
+
+/** epoch → 东八区 MM/DD（withYear 时 YYYY/MM/DD）。活动全套页面统一用「/」当日期间隔符 */
+function bjDate(ms, withYear) {
   const d = new Date(ms + 8 * 3600000);
   const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
   const dd = String(d.getUTCDate()).padStart(2, '0');
-  return `${mm}-${dd}`;
+  return withYear ? `${d.getUTCFullYear()}/${mm}/${dd}` : `${mm}/${dd}`;
 }
 
-/** endAt 是「结束日 24:00」＝次日 0 点，展示时减 1ms 回到结束日 */
+/**
+ * 'YYYY-MM-DD'（picker 与接口的**规范**格式）→ 展示用 'YYYY/MM/DD'。
+ * 只用于展示：上送值、picker 的 value 一律保持连字符格式（服务端 campaignDateField 是严格 YYYY-MM-DD）。
+ */
+function slashDate(iso) {
+  return String(iso || '').replace(/-/g, '/');
+}
+
+/** 详情页时间范围：两端都带完整年月日（地址栏级别的日期，少一年会让人误判）。
+ *  endAt 是「结束日 24:00」＝次日 0 点，展示时减 1ms 回到结束日。 */
 function fmtRange(startAt, endAt) {
-  return `${bjMMDD(startAt)} ~ ${bjMMDD(endAt - 1)}`;
+  return `${bjDate(startAt, true)} ~ ${bjDate(endAt - 1, true)}`;
+}
+
+/** 带标签的时间行：`开始 2026/10/01 · 结束 2026/10/07`。
+ *  两端一律带完整年月日（与详情页同口径）——旧版只在跨年时补年份，非当年的活动卡片会缺年份。 */
+function fmtRangeLabeled(startAt, endAt) {
+  const endMs = endAt - 1; // 同 fmtRange：endAt 是次日 0 点
+  return `开始 ${bjDate(startAt, true)} · 结束 ${bjDate(endMs, true)}`;
+}
+
+/** 成员头像堆叠的数据：签名 url 优先，回退预设图，都没有则空串（端上画占位圆） */
+function avatarStack(list) {
+  return (list || []).map((m, i) => ({
+    key: i,
+    src: m.avatarUrl || (m.avatarPreset ? `/assets/avatars/${m.avatarPreset}.png` : ''),
+  }));
+}
+
+/**
+ * 昵称截断：最多 max 个字符，超出则截前 max 个再补「...」。
+ * 必须按**码点**切（Array.from）：按 UTF-16 码元切会把 emoji 的代理对劈成半个，
+ * 渲染出乱码方块（昵称里带 emoji 很常见）。「最多 max 个字」指昵称本身，省略号另算。
+ */
+function truncateName(name, max) {
+  const chars = Array.from(String(name == null ? '' : name));
+  return chars.length > max ? `${chars.slice(0, max).join('')}...` : chars.join('');
 }
 
 /**
@@ -66,4 +110,4 @@ function fmtPanel({ count = 0, streak = 0, distance = 0, duration = 0 }) {
   };
 }
 
-module.exports = { statusLabel, visibilityLabel, fmtRange, joinCta, fmtPanel };
+module.exports = { statusLabel, visibilityLabel, statusTagClass, fmtRange, fmtRangeLabeled, avatarStack, joinCta, fmtPanel, truncateName, slashDate };

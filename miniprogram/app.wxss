@@ -35,6 +35,51 @@ page {
   font-size: 26rpx;
 }
 
+/* 活动卡「成员面」的头像堆叠：首页「一起运动」区块与活动列表页共用一套（改这里两页一起变）。
+   结构：<view class="member-av-stack"><image class="member-av"/></view> + 一句人数文案 */
+.member-av-stack {
+  display: flex;
+}
+.member-av {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  border: 2rpx solid #fff;
+  background: #e3e8f0; /* 没有头像时就是这枚占位圆 */
+  flex: none;
+}
+.member-av + .member-av {
+  margin-left: -14rpx; /* 相邻头像咬合 */
+}
+.member-av-text {
+  margin-left: 12rpx;
+  font-size: 22rpx;
+  color: #8a93a6;
+}
+
+/* 活动状态标签：详情页头部与活动列表卡片共用一份（改这里两处一起变）。
+   基类＝中性灰，所以「已结束」以及后端将来新加的状态直接落回基类；只有需要跳出灰色的
+   状态才加修饰类，状态→修饰类的映射在 utils/campaign.js 的 statusTagClass。
+   与标题的间距不放进来：详情页靠 .head-row 的 gap、列表靠 .cp-card-head 的局部 margin，
+   那是各自排版，不是标签本身的样子。 */
+.campaign-tag {
+  flex: none;
+  font-size: 20rpx;
+  line-height: 1;
+  padding: 6rpx 12rpx;
+  border-radius: 6rpx;
+  color: #8a93a6;
+  background: #f2f3f5;
+}
+.campaign-tag--active {
+  color: #2b6cf6;
+  background: #eaf1ff;
+}
+.campaign-tag--dissolved {
+  color: #e5484d;
+  background: #fdecec; /* 与排行榜「移出」胶囊同一套红 */
+}
+
 /* 金色月桂穗枝（hugeicons laurel-wreath-left-01，线描风格）：
    个人最佳/特别成就的通用装饰元素，左右枝相向环抱文本，右侧加 laurel-ear-r 镜像；
    只含背景图与镜像，尺寸由使用处的类控制 */
