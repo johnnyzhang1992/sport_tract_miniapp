@@ -626,10 +626,9 @@ Page({
     this._codeLoading = true;
     wx.showLoading({ title: '生成中…', mask: true });
     try {
-      const data = (await api.post('/campaigns/mini-code', {
-        campaignId: this._id,
-        envVersion: wx.getAccountInfoSync().miniProgram.envVersion,
-      })) || {};
+      const body = { campaignId: this._id };
+      try { body.envVersion = wx.getAccountInfoSync().miniProgram.envVersion; } catch (e) { /* 低版本基础库不支持，不传 */ }
+      const data = (await api.post('/campaigns/mini-code', body)) || {};
       let src = data.url || '';
       let localPath = '';
       if (!src && data.base64) {

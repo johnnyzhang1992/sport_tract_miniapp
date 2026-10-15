@@ -458,7 +458,7 @@ test('COP7 小程序码：POST body {campaignId}，url 分支展示并走 previe
   const codes = apiCalls.filter((c) => c.path === '/campaigns/mini-code');
   assert.equal(codes.length, 1);
   assert.equal(codes[0].method, 'POST');
-  assert.deepEqual(codes[0].body, { campaignId: 'c1' });
+  assert.equal(codes[0].body.campaignId, 'c1');
   assert.equal(page.data.codeVisible, true);
   assert.equal(page.data.codeSrc, 'https://oss.example/qr.png?sig=1');
   assert.equal(page.data.codeLocalPath, '', 'url 分支不落本地文件');

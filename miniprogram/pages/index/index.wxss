@@ -252,6 +252,37 @@
   flex: 1;
   min-width: 0;
 }
+.lb-rank-line {
+  display: flex;
+  align-items: baseline;
+  gap: 6rpx;
+  white-space: nowrap;
+}
+.lb-rank-label {
+  font-size: 22rpx;
+  color: #4e5969;
+}
+.lb-rank-num {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #2b6cf6;
+}
+.lb-rank-total {
+  font-size: 22rpx;
+  color: #8a93a6;
+}
+.lb-bar {
+  margin-top: 8rpx;
+  height: 8rpx;
+  border-radius: 4rpx;
+  background: #e8ecf0;
+  overflow: hidden;
+}
+.lb-bar-fill {
+  height: 100%;
+  border-radius: 4rpx;
+  background: linear-gradient(90deg, #2b6cf6, #5b8def);
+}
 
 /* 官方专题入口（复用 lb-card 布局） */
 .topic-cover {

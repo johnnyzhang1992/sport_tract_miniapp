@@ -205,7 +205,7 @@ test('H8 接口全挂时屏上仍是缓存值，但失败要如实标出来', as
   assert.ok(p.data.overviewError && p.data.heatError, '但失败要如实标出来');
 });
 
-test('H9 运动榜摘要文案要短：首页这格只有半屏宽，副标题得一行装下', async () => {
+test('H9 运动榜摘要：findMyRank 返回结构化排名数据供进度条渲染', async () => {
   resetEnv();
   respond = (p) => {
     if (p === '/stats/leaderboard/me?period=week') return Promise.resolve({});
@@ -215,13 +215,10 @@ test('H9 运动榜摘要文案要短：首页这格只有半屏宽，副标题�
 
   const page = makePage();
 
-  assert.equal(
-    await page.findMyRankText(fakeApi),
-    '散步月榜第2名',
-    '只留「类型 + 榜单 + 名次」：「全国」由上一行「全国 N 位迹路者」承担，「我的」在首页是废话',
-  );
+  const result = await page.findMyRank(fakeApi);
+  assert.deepEqual(result, { rank: 2, label: '散步月榜' }, '返回 { rank, label } 供 wxml 渲染大字排名+进度条');
 
-  // 一个榜都不在 → 空串。wxml 靠「空不空」决定第二行要不要渲染，不能回一句占位文案
+  // 一个榜都不在 → null。wxml 靠 null 判断退化为「全国 N 位迹路者」
   respond = () => Promise.resolve({});
-  assert.equal(await page.findMyRankText(fakeApi), '', '不在任何榜时返回空串');
+  assert.equal(await page.findMyRank(fakeApi), null, '不在任何榜时返回 null');
 });
