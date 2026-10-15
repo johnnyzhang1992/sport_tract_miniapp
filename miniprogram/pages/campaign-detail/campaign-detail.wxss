@@ -292,7 +292,7 @@
    catchtap 不触发整行的 openMember */
 .rank-kick {
   flex-shrink: 0;
-  font-size: 24rpx;
+  font-size: 22rpx;
   color: #e5484d;
   background: #fdecec;
   border-radius: 999rpx;
