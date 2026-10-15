@@ -23,7 +23,7 @@ function toCard(c) {
     statusTag: statusTagClass(c.status),
     memberText: `${c.memberCount || 0} 人已加入`,
     avatarList: avatarStack(c.memberAvatars), // 头像为排行榜（距离）前三，签名 url 优先
-    statsText: `我的 ${p.countText} 次 · ${p.distanceText} km · ${p.durationText}`,
+    statsText: `我的运动 ${p.countText} 次 · ${p.distanceText} km · ${p.durationText}`,
   });
 }
 

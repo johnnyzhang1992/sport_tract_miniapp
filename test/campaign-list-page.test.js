@@ -94,7 +94,7 @@ test('CL4 卡片字段：带标签时间行 + 头像堆叠（前 3）+ 人数', 
     { key: 1, src: '/assets/avatars/default-2.png' },
     { key: 2, src: '' },
   ]);
-  assert.equal(card.statsText, '我的 2 次 · 12.34 km · 10min');
+  assert.equal(card.statsText, '我的运动 2 次 · 12.34 km · 10min');
   assert.equal(card.statusTag, 'campaign-tag--active', '卡片也要带共享修饰类');
 });
 
