@@ -417,7 +417,7 @@ test('CDP13 成员态下拉刷新遇 404 → 成员专属字段被清零，不�
 
     // 先确实进入成员态（否则后面的断言是空转）
     assert.equal(page.data.isMember, true, '先进入成员态');
-    assert.ok(page.data.panel, '先得有底部「我的贡献」面板');
+    assert.ok(page.data.panel, '先得有底部「我的运动」面板');
     assert.equal(page.data.members.length, 2, '先得有两行成员');
 
     // 打开成员抽屉，再下拉刷新拿到 404（会话内活动被删 / 被清）
@@ -429,7 +429,7 @@ test('CDP13 成员态下拉刷新遇 404 → 成员专属字段被清零，不�
 
     assert.equal(page.data.notFound, true, '刷新拿到 404 → 进「活动不存在」态');
     assert.equal(page.data.isMember, false, '成员态必须清零');
-    assert.equal(page.data.panel, null, '「我的贡献」条不能残留上一次的数字');
+    assert.equal(page.data.panel, null, '「我的运动」条不能残留上一次的数字');
     assert.deepEqual(page.data.members, [], '成员列表必须清空');
     assert.equal(page.data.totals, null, '全队汇总必须清空');
     assert.equal(page.data.sheetVisible, false, '成员抽屉必须被关掉');
@@ -576,7 +576,7 @@ test('CDP17 非发起人成员：退出活动二次确认；取消零请求；�
   assert.equal(page.data.stateNote, '你已退出该活动');
   assert.deepEqual(page.data.cta, { text: '重新加入', disabled: false });
   assert.equal(page.data.canLeave, false, '退出后入口消失');
-  assert.equal(page.data.panel, null, '退出后不能再有「我的贡献」面板');
+  assert.equal(page.data.panel, null, '退出后不能再有「我的运动」面板');
 });
 
 test('CDP18 发起人：没有「退出活动」入口，onLeave 点了也不弹窗不请求', async () => {

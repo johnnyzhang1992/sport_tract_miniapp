@@ -161,7 +161,7 @@
   <view class="me-card" wx:if="{{!notFound && !error && isMember && panel}}">
     <view class="me-body">
       <view class="me-name-wrap">
-        <text class="me-name">我的贡献</text>
+        <text class="me-name">我的运动</text>
       </view>
       <view class="me-sub">{{head.rangeText}} · 本活动内</view>
     </view>
