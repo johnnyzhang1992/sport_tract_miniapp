@@ -322,6 +322,7 @@
    36rpx 是卡片让出的宽度，其中 12rpx 被 gap 吃掉，真正露出的边 ≈ 24rpx。 */
 .camp-scroll .camp-card {
   flex: 0 0 calc(100% - 36rpx);
+  margin-right: 12rpx; /* 卡片间距（gap 在 scroll-view 里可能不生效） */
 }
 .camp-scroll::-webkit-scrollbar {
   display: none;
