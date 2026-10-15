@@ -314,15 +314,13 @@
 .camp-scroll {
   display: flex; /* 配合 scroll-view 的 enable-flex 生效 */
   align-items: flex-start; /* 卡片按内容高（stretch 会被容器拉高，底部留一片空） */
-  gap: 12rpx;
   width: 100%;
 }
-/* 半屏宽放不下「一屏两条」，只能一屏一条——那就必须让下一条露出一点边，
-   否则多条时屏上只看得到一条，完全没有「还能滑」的线索（实测过：2 条时就是全看不见）。
-   36rpx 是卡片让出的宽度，其中 12rpx 被 gap 吃掉，真正露出的边 ≈ 24rpx。 */
 .camp-scroll .camp-card {
-  flex: 0 0 calc(100% - 36rpx);
-  margin-right: 12rpx; /* 卡片间距（gap 在 scroll-view 里可能不生效） */
+  flex: 0 0 100%;
+}
+.camp-scroll .camp-card + .camp-card {
+  margin-left: 12rpx; /* 从第二张起加间距，单张时不占宽度 */
 }
 .camp-scroll::-webkit-scrollbar {
   display: none;
