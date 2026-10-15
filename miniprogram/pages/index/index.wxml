@@ -105,8 +105,8 @@
         <view class="lb-foot-text">
           <block wx:if="{{lbSummary && lbSummary.rank > 0}}">
             <view class="lb-rank-line">
-              <text class="lb-rank-label">{{lbSummary.rankLabel}}</text>
-              <text class="lb-rank-num">第 {{lbSummary.rank}}</text>
+              <text class="lb-rank-label">{{lbSummary.rankLabel}} 第</text>
+              <text class="lb-rank-num">{{lbSummary.rank}}</text>
               <text class="lb-rank-total">/ {{lbSummary.totalUsers}}</text>
             </view>
             <view class="lb-bar">
