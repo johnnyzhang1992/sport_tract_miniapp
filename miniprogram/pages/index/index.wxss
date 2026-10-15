@@ -364,8 +364,8 @@
   min-width: 0; /* 不写的话长标题会把箭头挤出去 */
 }
 .camp-card-title {
-  font-size: 26rpx;
-  font-weight: 500;
+  font-size: 24rpx;
+  font-weight: 400;
   color: #1f2329;
   overflow: hidden;
   text-overflow: ellipsis;
