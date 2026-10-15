@@ -93,8 +93,8 @@
 
   <!-- 运动榜 + 一起运动：一行两格，各占一半 -->
   <view class="duo-row">
-    <!-- 运动榜入口卡片：大字排名 + 进度条。半屏宽里标题行放不下 icon，
-         所以标题行只留「运动榜 + ›」，icon 下移到排名左侧 -->
+    <!-- 运动榜入口卡片（全国点亮 + 我的排名摘要）。半屏宽里标题行放不下 icon，
+         所以标题行只留「运动榜 + ›」，icon 下移到副标题左侧与两行文字并排 -->
     <view class="card duo-cell lb-card lb-card-stacked" hover-class="card-hover" hover-stay-time="80" bindtap="goLeaderboard">
       <view class="lb-head">
         <view class="lb-title">运动榜</view>
@@ -103,18 +103,10 @@
       <view class="lb-foot">
         <image class="lb-icon" src="/assets/icons/tab-rank-blue.png" mode="aspectFit" />
         <view class="lb-foot-text">
-          <block wx:if="{{lbSummary && lbSummary.rank > 0}}">
-            <view class="lb-rank-line">
-              <text class="lb-rank-label">{{lbSummary.rankLabel}} 第</text>
-              <text class="lb-rank-num">{{lbSummary.rank}}</text>
-              <text class="lb-rank-total">/ {{lbSummary.totalUsers}}</text>
-            </view>
-            <view class="lb-bar">
-              <view class="lb-bar-fill" style="width: {{(lbSummary.totalUsers - lbSummary.rank) * 100 / lbSummary.totalUsers}}%"></view>
-            </view>
+          <block wx:if="{{lbSummary}}">
             <view class="lb-sub text-muted">全国 {{lbSummary.totalUsers}} 位迹路者</view>
+            <view class="lb-sub text-muted" wx:if="{{lbSummary.meText}}">{{lbSummary.meText}}</view>
           </block>
-          <view class="lb-sub text-muted" wx:elif="{{lbSummary}}">全国 {{lbSummary.totalUsers}} 位迹路者</view>
           <view class="lb-sub text-muted" wx:else>看看全国的迹路者都在哪运动</view>
         </view>
       </view>
