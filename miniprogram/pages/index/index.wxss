@@ -245,7 +245,7 @@
 .lb-foot {
   display: flex;
   align-items: center; /* icon 与两行副标题垂直居中 */
-  gap: 12rpx;
+  gap: 20rpx;
   margin-top: 10rpx;
 }
 .lb-foot-text {
