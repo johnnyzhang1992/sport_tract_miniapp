@@ -259,6 +259,7 @@
 }
 .lb-rank-line .text-muted {
   font-size: 22rpx;
+  color: #1f2329;
 }
 .lb-rank-num {
   font-size: 30rpx;
