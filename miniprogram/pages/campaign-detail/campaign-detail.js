@@ -142,8 +142,12 @@ function viewerCleanPatch() {
   return {
     isMember: false,
     canLeave: false,
+    canEdit: false,
     totals: null,
     members: [],
+    memberTotal: 0, // 成员总数（joined 人数），驱动「加载更多」；老服务端不下发时按已显示数兜底
+    memberPage: 1,
+    memberLoadingMore: false,
     panel: null,
     sheetVisible: false, // 抽屉必须同时关掉
     sheetMember: null,
@@ -165,11 +169,15 @@ Page({
     head: null, // 顶部信息
     isMember: false, // myState === 'joined'
     canLeave: false, // 非发起人成员才有的「退出活动」入口（isMember && !isCreator）
+    canEdit: false, // 发起人才有的「编辑活动」入口（已解散后收回）
     cta: null, // joinCta 结果（成员为 null）
     ctaHint: '', // 按钮下方的显式提示（可点 / 不可点）
     stateNote: '', // 身份说明行
     totals: null, // 全队汇总（仅成员）
-    members: [], // 成员列表＝排行榜行（仅成员）
+    members: [], // 成员列表＝排行榜行（仅成员，随「加载更多」追加）
+    memberTotal: 0, // joined 总数，驱动「加载更多」；老服务端不下发 total 时按已显示数兜底
+    memberPage: 1,
+    memberLoadingMore: false,
     panel: null, // 底部悬浮面板：我的 myPanel
     // 成员信息半屏：非发起人＝只读汇总；发起人＝该成员明细（sheetDetail 由 loadMemberDetail 拉）
     sheetVisible: false,
@@ -274,9 +282,10 @@ Page({
     if (seq !== this._seq) return;
 
     // 排行榜只对成员拉：非成员服务端 403；失败不拖垮整页（成员列表退化为空，底部面板仍用 myPanel）
+    // 刷新一律回第 1 页：屏上的列表会被 applyDetail 整个换掉，继续留在第 N 页只会显示不全
     let board = null;
     if (detail.myState === 'joined') {
-      board = await api.get(`/campaigns/${id}/leaderboard`).catch((e) => {
+      board = await api.get(`/campaigns/${id}/leaderboard?page=1&pageSize=${MEMBER_PAGE_SIZE}`).catch((e) => {
         console.warn('[campaign-detail] 排行榜加载失败', e);
         return null;
       });
@@ -304,6 +313,9 @@ Page({
     const isCreator = isCreatorOf(detail) && isMember;
     const me = myUserId();
     const rows = board && Array.isArray(board.rows) ? board.rows : [];
+    // 「加载更多」的判据是 total，不是本页行数（本页满 20 不代表后面没人）。
+    // 老服务端不下发 total → 按「已显示的就是全部」兜底：宁可少一个入口，也不给一个点了没反应的按钮。
+    const memberTotal = board ? (typeof board.total === 'number' ? board.total : rows.length) : 0;
     const cta = joinCta({
       myState: detail.myState,
       canJoin: detail.canJoin,
@@ -322,11 +334,17 @@ Page({
       isMember,
       canLeave: isMember && !isCreator, // 退出活动：我不是发起人（发起人出路是解散）
       isCreator,
+      // 编辑：只认发起人，且**只有进行中**给入口——已结束 / 已解散都收回（服务端 PUT 同样按派生状态挡）。
+      // 状态由服务端下发，端上不拿 endAt 跟 now 自己比，避免两处判据分叉。
+      canEdit: isCreator && detail.status === 'active',
       cta,
       ctaHint: cta ? (cta.disabled ? '当前不可加入' : `点击「${cta.text}」`) : '',
       stateNote: STATE_NOTE[detail.myState] || '',
       totals: isMember && detail.totals ? fmtPanel(detail.totals) : null,
       members: isMember ? rows.map((r) => toMemberRow(r, isCreator && String(r.userId) !== me)) : [],
+      memberTotal: isMember ? memberTotal : 0,
+      memberPage: 1,
+      memberLoadingMore: false,
       panel: isMember && detail.myPanel ? fmtPanel(detail.myPanel) : null,
       pendingRows,
       pendingCount: pendingRows.length,
@@ -371,6 +389,37 @@ Page({
       wx.showToast({ title: (e && e.message) || '操作失败', icon: 'none' });
     } finally {
       this._joining = false;
+    }
+  },
+
+  /**
+   * 成员排行「加载更多」：把下一页**追加**到同一个列表。
+   * 名次由服务端按全员距离算好后一并下发（分页只切响应），端上不再排序。
+   */
+  async loadMoreMembers() {
+    const { members, memberTotal, memberPage, memberLoadingMore, isCreator } = this.data;
+    if (memberLoadingMore || members.length >= memberTotal) return;
+    // 与 refresh 共用同一个序号：期间发生过整页刷新，这一页就是接在旧列表后面的，必须丢
+    const seq = this._seq;
+    this.setData({ memberLoadingMore: true });
+    try {
+      const board = await api.get(
+        `/campaigns/${this._id}/leaderboard?page=${memberPage + 1}&pageSize=${MEMBER_PAGE_SIZE}`,
+      );
+      if (seq !== this._seq) return;
+      const rows = board && Array.isArray(board.rows) ? board.rows : [];
+      const me = myUserId();
+      this.setData({
+        members: members.concat(rows.map((r) => toMemberRow(r, isCreator && String(r.userId) !== me))),
+        memberPage: memberPage + 1,
+        memberTotal: typeof board.total === 'number' ? board.total : members.length + rows.length,
+        memberLoadingMore: false,
+      });
+    } catch (e) {
+      if (seq !== this._seq) return;
+      // 失败：列表留在原地、页码不前进（重试才会重新要同一页），按钮还在，用户看得见「还差多少」
+      this.setData({ memberLoadingMore: false });
+      wx.showToast({ title: (e && e.message) || '加载失败', icon: 'none' });
     }
   },
 
@@ -535,6 +584,13 @@ Page({
   },
 
   /** 解散（仅发起人）。二次确认后才 DELETE —— 取消＝零请求 */
+  /** 编辑活动（仅发起人，且未解散）：跳创建页的编辑态（同一个表单，带 ?id= 即预填）。
+   *  这里只是「不给入口」，真正的权限闸门在服务端 PUT /campaigns/:id——直接拼 url 进来也改不动。 */
+  goEdit() {
+    if (!this.data.canEdit) return;
+    wx.navigateTo({ url: `/pages/campaign-create/campaign-create?id=${this._id}` });
+  },
+
   onDissolve() {
     if (!this.data.isCreator || this._dissolving) return;
     wx.showModal({

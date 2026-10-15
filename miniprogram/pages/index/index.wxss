@@ -228,6 +228,31 @@
   flex-shrink: 0;
 }
 
+/* 半屏宽那一格（duo-row 里的运动榜）：标题行放不下 icon，改成「标题 + ›」一行、
+   icon 与副标题并排在下面。只作用于 .lb-card-stacked——官方专题那圈是全宽卡、
+   继续复用 .lb-card 的横排，不能跟着变。 */
+.lb-card-stacked {
+  display: block; /* 覆盖 .lb-card 的 flex，让标题行与下方内容各占一行 */
+}
+.lb-head {
+  display: flex;
+  align-items: center;
+}
+.lb-head .lb-title {
+  flex: 1;
+  min-width: 0; /* 标题过长时省略，不把箭头挤出去 */
+}
+.lb-foot {
+  display: flex;
+  align-items: center; /* icon 与两行副标题垂直居中 */
+  gap: 12rpx;
+  margin-top: 10rpx;
+}
+.lb-foot-text {
+  flex: 1;
+  min-width: 0;
+}
+
 /* 官方专题入口（复用 lb-card 布局） */
 .topic-cover {
   width: 72rpx;
@@ -253,6 +278,20 @@
   margin-bottom: 8rpx;
 }
 
+/* 运动榜 + 一起运动：一行两格，各占一半。
+   .card 自带 margin-bottom，两格都留着会让矮的那格底部多一块、看起来不等高，
+   所以底部间距交给 .duo-row 统一管。align-items 用默认 stretch：两格等高。 */
+.duo-row {
+  display: flex;
+  gap: 14rpx;
+  margin-bottom: 14rpx;
+}
+.duo-cell {
+  flex: 1;
+  min-width: 0; /* 不写的话内容（长标题/长副标题）会把格子撑过 50% */
+  margin-bottom: 0;
+}
+
 /* 区块标题行：标题在左、「查看更多」在最右 */
 .section-head {
   display: flex;
@@ -271,15 +310,18 @@
 .campaign-more-hover {
   opacity: 0.7;
 }
-/* 横向滚动：不论几条都是同一档卡片宽（一屏两条，每条 50% - 半个间距）；滚动条藏掉 */
+/* 横向滚动：区块只有半屏宽，卡片撑满容器（一屏一条），多了左右滑；滚动条藏掉 */
 .camp-scroll {
   display: flex; /* 配合 scroll-view 的 enable-flex 生效 */
   align-items: flex-start; /* 卡片按内容高（stretch 会被容器拉高，底部留一片空） */
+  gap: 12rpx;
   width: 100%;
 }
+/* 半屏宽放不下「一屏两条」，只能一屏一条——那就必须让下一条露出一点边，
+   否则多条时屏上只看得到一条，完全没有「还能滑」的线索（实测过：2 条时就是全看不见）。
+   36rpx 是卡片让出的宽度，其中 12rpx 被 gap 吃掉，真正露出的边 ≈ 24rpx。 */
 .camp-scroll .camp-card {
-  flex: 0 0 calc(50% - 14rpx);
-  margin-right: 14rpx;
+  flex: 0 0 calc(100% - 36rpx);
 }
 .camp-scroll::-webkit-scrollbar {
   display: none;
@@ -289,29 +331,38 @@
 .campaign-row {
   padding: 14rpx 0;
 }
+/* 空态引导行：借用 .lb-title 的排版，但它是「一句号召」不是卡片标题，
+   所以压一档字号、去掉加粗，并强制一行走完（半屏宽里换行会把卡片撑高）。
+   必须声明在 .lb-title 之后——同权重靠源码顺序才能盖掉 28rpx/600。 */
+.campaign-lead {
+  font-size: 22rpx;
+  font-weight: 400;
+  white-space: nowrap;
+}
 .campaign-title {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* 活动卡：浅底小块（在白卡里靠底色分块，比投影可靠）+ 标题行 + 成员面 + 指标三格 */
+/* 活动卡：浅底小块（在白卡里靠底色分块，比投影可靠）+ 标题 + 成员面。
+   整卡是 flex 行：内容在左、箭头在右，align-items:center 让箭头对整张卡垂直居中 */
 .camp-card {
   box-sizing: border-box;
   padding: 16rpx 18rpx;
   border-radius: 14rpx;
   background: #f5f7fb;
+  display: flex;
+  align-items: center;
 }
 .camp-card-hover {
   opacity: 0.8;
 }
-.camp-card-top {
-  display: flex;
-  align-items: center;
+.camp-card-main {
+  flex: 1;
+  min-width: 0; /* 不写的话长标题会把箭头挤出去 */
 }
 .camp-card-title {
-  flex: 1;
-  min-width: 0;
   font-size: 28rpx;
   font-weight: 600;
   color: #1f2329;
@@ -332,25 +383,3 @@
   margin-top: 10rpx;
 }
 /* 头像堆叠（.member-av-stack/.member-av/.member-av-text）是全局共享样式，见 app.wxss */
-/* 半宽卡里三格要挤在一行：按内容宽度排、不换行，靠 space-between 拉开间距 */
-/* 两格水平居左（不再 space-between 两端分），靠 gap 给间距 */
-.camp-metrics {
-  display: flex;
-  gap: 24rpx;
-  margin-top: 12rpx;
-}
-.camp-metric {
-  flex: 0 0 auto;
-  white-space: nowrap;
-}
-/* 数值与文案同一行：数值大一号、文案小一号灰字 */
-.camp-metric-v {
-  font-size: 26rpx;
-  font-weight: 600;
-  color: #1f2329;
-}
-.camp-metric-l {
-  margin-left: 4rpx;
-  font-size: 19rpx;
-  color: #8a93a6;
-}

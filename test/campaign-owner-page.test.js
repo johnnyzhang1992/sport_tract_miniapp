@@ -235,7 +235,7 @@ function mockAll(opts = {}) {
       state.board = Object.assign({}, state.board, { rows: state.board.rows.filter((r) => r.userId !== body.userId) });
       return Promise.resolve(null);
     }
-    if (/\/leaderboard$/.test(path)) return Promise.resolve(state.board);
+    if (/\/leaderboard(\?|$)/.test(path)) return Promise.resolve(state.board);
     if (/\/members\//.test(path)) {
       const page = Number((path.match(/[?&]page=(\d+)/) || [])[1] || 1);
       const pageSize = Number((path.match(/[?&]pageSize=(\d+)/) || [])[1] || 20);
@@ -264,7 +264,11 @@ test('COP1 发起人进页面会请求待审批列表（渲染徽标）；非发
   mockAll();
   const page = await openPage();
 
-  assert.deepEqual(apiCalls.map((c) => c.path), ['/campaigns/c1', '/campaigns/c1/leaderboard', '/campaigns/c1/pending']);
+  assert.deepEqual(apiCalls.map((c) => c.path), [
+    '/campaigns/c1',
+    '/campaigns/c1/leaderboard?page=1&pageSize=20',
+    '/campaigns/c1/pending',
+  ]);
   assert.equal(page.data.isCreator, true);
   assert.equal(page.data.pendingCount, 2, '徽标数＝待审批条数');
   assert.equal(page.data.pendingRows[0].name, '小迹');
@@ -443,7 +447,7 @@ test('COP7 小程序码：POST body {campaignId}，url 分支展示并走 previe
   resetEnv();
   respond = (path) => {
     if (/\/pending$/.test(path)) return Promise.resolve({ rows: [] });
-    if (/\/leaderboard$/.test(path)) return Promise.resolve(boardOf());
+    if (/\/leaderboard(\?|$)/.test(path)) return Promise.resolve(boardOf());
     if (path === '/campaigns/mini-code') return Promise.resolve({ url: 'https://oss.example/qr.png?sig=1', key: 'k1' });
     return Promise.resolve(detailOf());
   };
@@ -478,7 +482,7 @@ test('COP8 小程序码降级：base64 落临时文件后可预览可保存；ur
   resetEnv();
   await withSilencedConsole(async () => {
     respond = (path) => {
-      if (/\/leaderboard$/.test(path)) return Promise.resolve(boardOf());
+      if (/\/leaderboard(\?|$)/.test(path)) return Promise.resolve(boardOf());
       if (/\/pending$/.test(path)) return Promise.resolve({ rows: [] });
       if (path === '/campaigns/mini-code') return Promise.resolve({ url: '', base64: 'data:image/png;base64,QUJD' });
       return Promise.resolve(detailOf());
@@ -503,7 +507,7 @@ test('COP8 小程序码降级：base64 落临时文件后可预览可保存；ur
   // url 分支：downloadFile（需要域名在白名单里）成功 → 落回临时路径再存
   resetEnv();
   respond = (path) => {
-    if (/\/leaderboard$/.test(path)) return Promise.resolve(boardOf());
+    if (/\/leaderboard(\?|$)/.test(path)) return Promise.resolve(boardOf());
     if (/\/pending$/.test(path)) return Promise.resolve({ rows: [] });
     if (path === '/campaigns/mini-code') return Promise.resolve({ url: 'https://oss.example/qr.png?sig=1', key: 'k1' });
     return Promise.resolve(detailOf());
@@ -521,7 +525,7 @@ test('COP8 小程序码降级：base64 落临时文件后可预览可保存；ur
     albumSaves.length = 0;
     downloadFails.value = true;
     respond = (path) => {
-      if (/\/leaderboard$/.test(path)) return Promise.resolve(boardOf());
+      if (/\/leaderboard(\?|$)/.test(path)) return Promise.resolve(boardOf());
       if (/\/pending$/.test(path)) return Promise.resolve({ rows: [] });
       if (path === '/campaigns/mini-code') return Promise.resolve({ url: 'https://oss.example/qr.png?sig=1', key: 'k1' });
       return Promise.resolve(detailOf());
@@ -578,7 +582,7 @@ test('COP11 成员明细加载失败 → 半屏出错误态（不冒充空态）
   resetEnv();
   await withSilencedConsole(async () => {
     respond = (path) => {
-      if (/\/leaderboard$/.test(path)) return Promise.resolve(boardOf());
+      if (/\/leaderboard(\?|$)/.test(path)) return Promise.resolve(boardOf());
       if (/\/pending$/.test(path)) return Promise.resolve({ rows: pendingOf().rows });
       if (path.includes('/members/')) return Promise.reject(new Error('网络请求失败'));
       return Promise.resolve(detailOf());
@@ -621,7 +625,7 @@ test('COP13 待审批拉取失败：静默（无 toast）、不崩、徽标保�
     let pendingShouldFail = false;
     respond = (path) => {
       if (/\/pending$/.test(path)) return pendingShouldFail ? Promise.reject(new Error('网络请求失败')) : Promise.resolve(pendingOf());
-      if (/\/leaderboard$/.test(path)) return Promise.resolve(boardOf());
+      if (/\/leaderboard(\?|$)/.test(path)) return Promise.resolve(boardOf());
       return Promise.resolve(detailOf());
     };
     const page = await openPage();

@@ -19,11 +19,16 @@ const apiCalls = [];
 let respond = () => Promise.resolve({ id: 'cp1' });
 const fakeApi = {
   post(p, body) {
-    apiCalls.push({ path: p, body });
+    apiCalls.push({ method: 'POST', path: p, body });
     return respond(p, body);
   },
-  get() {
-    return Promise.resolve({});
+  put(p, body) {
+    apiCalls.push({ method: 'PUT', path: p, body });
+    return respond(p, body);
+  },
+  get(p) {
+    apiCalls.push({ method: 'GET', path: p, body: null });
+    return respond(p, null);
   },
 };
 const apiPath = require.resolve('../miniprogram/services/api.js');
@@ -31,12 +36,16 @@ require.cache[apiPath] = { id: apiPath, filename: apiPath, loaded: true, exports
 
 const toasts = [];
 const navs = [];
+const navBacks = [];
+const navTitles = [];
 const modals = [];
 let modalConfirm = false; // 登录闸门弹窗：默认取消（游客态用例自己改成确认）
 let loginCalls = 0;
 global.wx = {
   showToast: (o) => toasts.push(o && o.title),
   navigateTo: (o) => navs.push(o && o.url),
+  navigateBack: (o) => navBacks.push(o || {}),
+  setNavigationBarTitle: (o) => navTitles.push(o && o.title),
   showModal: (o) => {
     modals.push(o);
     if (o && o.success) o.success({ confirm: modalConfirm });
@@ -82,6 +91,8 @@ function resetEnv() {
   apiCalls.length = 0;
   toasts.length = 0;
   navs.length = 0;
+  navBacks.length = 0;
+  navTitles.length = 0;
   modals.length = 0;
   modalConfirm = false;
   loginCalls = 0;
@@ -315,3 +326,182 @@ test('CCP16 日期展示格式只有一个来源（utils 的 slashDate），别�
   assert.match(src, /slashDate\(/, '创建页的日期展示要复用 utils/campaign.js 的 slashDate');
   assert.doesNotMatch(src, /replace\(\/-\//, '不要在页面里自己写 replace 换分隔符（会与 utils 的口径分叉）');
 });
+
+/* ------------------------------ 编辑模式（?id=） ------------------------------
+ * 同一个页面兼任「编辑活动」：带 id 进页 → GET 详情预填 → PUT /campaigns/:id。
+ * 服务端 UpdateCampaignSchema 是 .strict()，多传 startDate 会整请求 400，所以请求体
+ * 里绝不能出现 startDate（开始时间不可改是产品口径，不是漏填）。
+ * --------------------------------------------------------------------------- */
+
+/** GET /campaigns/:id 的响应桩：字段名与服务端 CampaignDetailDto 对齐 */
+function detailDto(o = {}) {
+  return Object.assign({
+    id: 'cmp-abc',
+    title: '原标题',
+    description: '原描述',
+    visibility: 'private',
+    allowedTypes: ['hiking'],
+    memberLimit: 20,
+    startAt: Date.parse('2026-10-01T00:00:00+08:00'),
+    endAt: Date.parse('2026-10-08T00:00:00+08:00'),
+    startDate: '2026-10-01',
+    endDate: '2026-10-07',
+    status: 'active',
+    creatorId: 'u-me',
+    myState: 'joined',
+    canJoin: false,
+  }, o);
+}
+
+test('CCP17 带 id 进页＝编辑模式：拉详情预填六个字段，chips 与 canSubmit 跟着落地', async () => {
+  resetEnv();
+  respond = (p) => (p === '/campaigns/cmp-abc' ? Promise.resolve(detailDto()) : Promise.resolve({}));
+  const page = makePage();
+  await page.onLoad({ id: 'cmp-abc' });
+
+  assert.deepEqual(
+    apiCalls.map((c) => [c.method, c.path]),
+    [['GET', '/campaigns/cmp-abc']],
+    '进页只该发一次详情请求',
+  );
+  assert.equal(page.data.isEdit, true);
+  assert.equal(page.data.editId, 'cmp-abc');
+  assert.equal(page.data.title, '原标题');
+  assert.equal(page.data.description, '原描述');
+  assert.equal(page.data.visibility, 'private');
+  assert.equal(page.data.memberLimit, '20', '人数上限在页面上是字符串（输入框的值）');
+  assert.deepEqual(page.data.allowedTypes, ['hiking']);
+  assert.equal(page.data.types.filter((t) => t.active).length, 1, '类型 chips 要按 allowedTypes 点亮');
+  assert.equal(page.data.startDate, '2026-10-01', '开始日期取服务端下发的字符串，端上不做时区换算');
+  assert.equal(page.data.endDate, '2026-10-07');
+  assert.equal(page.data.canSubmit, true, '预填后标题非空 → 按钮应可点');
+  assert.deepEqual(navTitles, ['编辑活动'], '编辑态要把导航标题改掉，否则用户不知道自己在改而不是在建');
+});
+
+test('CCP18 编辑提交走 PUT /campaigns/:id，请求体六字段齐、且绝不含 startDate', async () => {
+  resetEnv();
+  respond = (p, body) => (body ? Promise.resolve(detailDto(body)) : Promise.resolve(detailDto()));
+  const page = makePage();
+  await page.onLoad({ id: 'cmp-abc' });
+  apiCalls.length = 0;
+
+  page.onTitle({ detail: { value: '改后的标题' } });
+  page.onEndDate({ detail: { value: '2026-10-09' } });
+  await page.onSubmit();
+
+  assert.equal(apiCalls.length, 1);
+  assert.equal(apiCalls[0].method, 'PUT');
+  assert.equal(apiCalls[0].path, '/campaigns/cmp-abc');
+  assert.deepEqual(apiCalls[0].body, {
+    title: '改后的标题',
+    description: '原描述',
+    visibility: 'private',
+    allowedTypes: ['hiking'],
+    memberLimit: 20,
+    endDate: '2026-10-09',
+  });
+  assert.ok(!('startDate' in apiCalls[0].body), '上送 startDate 会被服务端 .strict() 整请求 400');
+});
+
+test('CCP19 编辑成功 → toast + navigateBack（回到详情页由它自己刷新），不再 navigateTo 详情', async () => {
+  resetEnv();
+  respond = (p, body) => (body ? Promise.resolve(detailDto(body)) : Promise.resolve(detailDto()));
+  const page = makePage();
+  await page.onLoad({ id: 'cmp-abc' });
+  await page.onSubmit();
+  assert.equal(toasts[toasts.length - 1], '已保存');
+  assert.equal(navBacks.length, 1, '编辑是从详情页进来的，成功后应退回而不是再压一层详情页');
+  assert.equal(navs.length, 0);
+  assert.equal(page.data.submitting, false, '成功分支必须复位，否则返回后按钮永久锁死');
+});
+
+test('CCP20 编辑保存失败 → toast 服务端文案、复位 submitting、不返回（留在页上改）', async () => {
+  resetEnv();
+  respond = (p, body) =>
+    body ? Promise.reject(Object.assign(new Error('人数上限不能小于当前已占用的 3 人（收到 2）'), { statusCode: 400 }))
+      : Promise.resolve(detailDto());
+  const page = makePage();
+  await page.onLoad({ id: 'cmp-abc' });
+  await page.onSubmit();
+  assert.match(toasts[toasts.length - 1], /人数上限/, `要原样把服务端的具体提示给用户：${toasts[toasts.length - 1]}`);
+  assert.equal(navBacks.length, 0, '没保存成功不能退出页面，用户改不动就得留在原地');
+  assert.equal(page.data.submitting, false);
+});
+
+test('CCP21 预填请求失败（非发起人 / 已解散 / 断网）→ toast + 返回，不留下半张假表单', async () => {
+  resetEnv();
+  respond = () => Promise.reject(Object.assign(new Error('只有发起人可以操作'), { statusCode: 403 }));
+  const page = makePage();
+  await page.onLoad({ id: 'cmp-abc' });
+  assert.match(toasts[toasts.length - 1], /发起人/);
+  assert.equal(navBacks.length, 1);
+  assert.equal(page.data.canSubmit, false, '没拿到数据时按钮不能可点');
+
+  // 拿不到数据后即使被强行 onSubmit，也不该发出 PUT（页面上不该有「保存」这条路）
+  apiCalls.length = 0;
+  await page.onSubmit();
+  assert.equal(apiCalls.filter((c) => c.method === 'PUT').length, 0);
+});
+
+test('CCP22 编辑模式仍在前端拦日期倒置：拿预填的开始日期比，一个请求都不发', async () => {
+  resetEnv();
+  respond = (p) => (p === '/campaigns/cmp-abc' ? Promise.resolve(detailDto()) : Promise.resolve({}));
+  const page = makePage();
+  await page.onLoad({ id: 'cmp-abc' });
+  apiCalls.length = 0;
+
+  page.onEndDate({ detail: { value: '2026-09-30' } });
+  await page.onSubmit();
+  assert.equal(apiCalls.length, 0, '结束早于开始不该发请求');
+  assert.match(toasts[0], /2026\/09\/30/);
+  assert.match(toasts[0], /2026\/10\/01/, '提示要带上那个只读的开始日期，用户才知道为什么不行');
+});
+
+test('CCP23 开始日期在编辑态只读（只靠置灰表达，箭头保留、不加说明文案）、按钮文案随模式切换', () => {
+  const path = require('path');
+  const src = require('fs').readFileSync(
+    path.join(__dirname, '../miniprogram/pages/campaign-create/campaign-create.wxml'),
+    'utf8',
+  );
+  const css = require('fs').readFileSync(
+    path.join(__dirname, '../miniprogram/pages/campaign-create/campaign-create.wxss'),
+    'utf8',
+  );
+  assert.match(src, /<picker\s+mode="date"[^>]*disabled="\{\{isEdit\}\}"/, '开始日期的 picker 要在编辑态 disabled');
+  assert.match(
+    src,
+    /class="fval \{\{isEdit \? 'fval-off'/,
+    '只读靠值本身换色表达，不靠旁边补一句说明',
+  );
+  // 类名写了没样式＝静默失效（框架默认样式压页面样式这类坑踩过），所以两头都钉
+  assert.match(css, /\.fval-off\s*\{[^}]*color:/, '.fval-off 必须真的定义了颜色');
+  assert.doesNotMatch(src, /不可修改/, '按用户口径砍掉说明文案：置灰本身已经表达「点不动」');
+  assert.match(
+    src,
+    /\{\{[^{}]*isEdit \? '保存修改' : '发起活动'/,
+    '按钮文案随模式切换（编辑态写「保存修改」，别让用户以为又建了一个活动）',
+  );
+
+  // 箭头不摘：两行日期版式保持一致，只读只靠置灰表达（用户明确要保留 ›）
+  const startBlock = src.slice(src.indexOf('value="{{startDate}}"'), src.indexOf('value="{{endDate}}"'));
+  assert.match(
+    startBlock,
+    /<view class="farrow">›<\/view>/,
+    '开始日期行的 › 要无条件渲染，编辑态也保留（别被「不可点就不该给箭头」的直觉改掉）',
+  );
+});
+
+test('CCP24 不带 id 仍是创建模式：不发 GET、isEdit=false、提交走 POST', async () => {
+  resetEnv();
+  const page = makePage();
+  await page.onLoad({});
+  assert.equal(page.data.isEdit, false);
+  assert.equal(apiCalls.length, 0, '创建模式进页不发任何请求');
+  assert.equal(navTitles.length, 0, '创建模式不改导航标题');
+
+  Object.assign(page.data, legal());
+  await page.onSubmit();
+  assert.equal(apiCalls[0].method, 'POST');
+  assert.equal(apiCalls[0].path, '/campaigns');
+});
+

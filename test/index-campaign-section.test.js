@@ -83,7 +83,7 @@ function campaign(over = {}) {
 
 /* ---------------------------------- 用例 ---------------------------------- */
 
-test('IC1 首页活动卡：不出日期，指标两格＝距离 / 时长（次数不展示）', async () => {
+test('IC1 首页活动卡：不出日期、不出数据行，只剩标题 + 成员面', async () => {
   resetEnv();
   respond = (p) => {
     if (p === '/campaigns?role=created') return Promise.resolve({ items: [campaign()] });
@@ -97,14 +97,8 @@ test('IC1 首页活动卡：不出日期，指标两格＝距离 / 时长（次�
   assert.equal(p.data.campaigns.length, 1);
   const card = p.data.campaigns[0];
   assert.equal(card.rangeText, undefined, '日期不再下发——留在数据里 WXML 就会再渲染回去');
-  assert.deepEqual(
-    card.metricItems,
-    [
-      { key: 'dist', text: '4.20', label: '公里' },
-      { key: 'dur', text: '10min', label: '' },
-    ],
-    '指标＝距离 + 时长，次数不再展示；时长自带 min/h+m 单位，label 留空',
-  );
+  // 数据概况行（距离 / 时长）已从卡片去掉：JS 不再算，WXML 也就无从渲染回去
+  assert.equal(card.metricItems, undefined, '卡片不展示数据行，就别在 JS 侧多算一份');
 });
 
 test('IC3 卡片成员面：人数 + 头像堆叠（url 优先、preset 回退、都没有则空）', async () => {
@@ -204,4 +198,25 @@ test('IC6 闸门判 hasSession 不判 loggedIn：冷启动静默恢复还没跑�
     '老用户冷启动不该被误判成游客：用 loggedIn 当闸门就会在这里把请求吞掉',
   );
   assert.equal(p.data.campaigns.length, 1, '恢复中的这一趟仍要渲染出卡片');
+});
+
+test('IC7 空态引导：文案换成「运动竞赛，和好友来场PK」，并降字号去加粗（不再共用 .lb-title 的 28rpx/600）', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const wxml = fs.readFileSync(path.join(__dirname, '../miniprogram/pages/index/index.wxml'), 'utf8');
+  const css = fs.readFileSync(path.join(__dirname, '../miniprogram/pages/index/index.wxss'), 'utf8');
+
+  const line = wxml.match(/<view class="([^"]*)">([^<]*运动竞赛[^<]*)<\/view>/);
+  assert.ok(line, '空态引导行要换成新文案');
+  assert.equal(line[2].trim(), '运动竞赛，和好友来场PK');
+  assert.match(line[1], /campaign-lead/, '要挂专用类，不能继续吃 .lb-title 那套标题字号/字重');
+  assert.doesNotMatch(wxml, /发起一个活动，叫上朋友一起运动/, '旧文案应彻底移除');
+
+  const rule = css.match(/\.campaign-lead\s*\{([^}]*)\}/);
+  assert.ok(rule, '.campaign-lead 必须真的定义了样式（写了类名没样式＝静默失效）');
+  assert.match(rule[1], /font-size:/, '要压字号');
+  assert.match(rule[1], /font-weight:\s*(400|normal)/, '要去掉加粗');
+  assert.match(rule[1], /white-space:\s*nowrap/, '半屏宽里尽量一行走完');
+  // 同权重靠源码顺序赢：专用类必须排在 .lb-title 之后，否则覆盖不掉
+  assert.ok(css.indexOf('.campaign-lead') > css.indexOf('.lb-title {'), '.campaign-lead 要声明在 .lb-title 之后才能覆盖它');
 });

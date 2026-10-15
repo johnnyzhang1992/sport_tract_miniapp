@@ -100,8 +100,9 @@ function joinCta({ myState, canJoin, status, visibility }) {
  */
 function fmtPanel({ count = 0, streak = 0, distance = 0, duration = 0 }) {
   const km = (distance / 1000).toFixed(2);
-  const h = Math.floor(duration / 3600);
-  const m = Math.round((duration % 3600) / 60);
+  const totalMinutes = Math.round(duration / 60);
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
   return {
     countText: `${count}`,
     streakText: `${streak}`,

@@ -42,10 +42,12 @@ const apiPath = require.resolve('../miniprogram/services/api.js');
 require.cache[apiPath] = { id: apiPath, filename: apiPath, loaded: true, exports: fakeApi, children: [], paths: [] };
 
 const toasts = [];
+const navs = []; // navigateTo 的 url（「编辑活动」入口跳转用）
 const modals = []; // 每次 showModal 的入参（核对「退出活动」的二次确认）
 let modalResult = { confirm: true }; // 用例控制的用户选择
 global.wx = {
   showToast: (o) => toasts.push(o && o.title),
+  navigateTo: (o) => navs.push(o && o.url),
   showModal: (o) => {
     modals.push(o);
     if (o && typeof o.success === 'function') o.success(modalResult);
@@ -117,6 +119,7 @@ function makePage() {
 function resetEnv() {
   apiCalls.length = 0;
   toasts.length = 0;
+  navs.length = 0;
   modals.length = 0;
   modalResult = { confirm: true };
   gateCalls.length = 0;
@@ -190,15 +193,32 @@ const BOARD = {
     { userId: 'u1', name: '阿迹', avatarUrl: '', avatarPreset: 'face', distance: 15000, count: 3, duration: 3600, rank: 1 },
     { userId: 'u2', name: '小迹', avatarUrl: '', avatarPreset: 'face', distance: 10000, count: 2, duration: 3600, rank: 2 },
   ],
+  // 与 GET /:id/leaderboard 的真实响应同形：分页三件套缺一不可，
+  // 少了 total 就等于「夹具说谎」——端上「加载更多」的判据正好挂在这个字段上。
   total: 2,
   page: 1,
-  pageSize: 50,
+  pageSize: 20,
 };
+
+/** 排行榜行夹具：名次从 from 起共 n 行（距离按名次递减，与真实排序同向） */
+function boardRows(from, n) {
+  return Array.from({ length: n }, (_, i) => ({
+    userId: `u-${from + i}`,
+    name: `成员${from + i}`,
+    avatarUrl: '',
+    avatarPreset: 'face',
+    distance: (100 - from - i) * 1000,
+    count: 1,
+    duration: 600,
+    rank: from + i,
+  }));
+}
 
 /** 详情页进页：mock 好「详情 + 成员时的排行榜」两跳 */
 function mockDetail(detail, board = BOARD) {
   respond = (path) => {
-    if (/\/leaderboard$/.test(path)) return Promise.resolve(board);
+    // 端上现在带 query（?page=1&pageSize=20），不能再按「以 /leaderboard 结尾」匹配
+    if (/\/leaderboard(\?|$)/.test(path)) return Promise.resolve(board);
     return Promise.resolve(detail);
   };
 }
@@ -233,7 +253,7 @@ test('CDP2 成员：额外请求排行榜，汇总/成员列表/底部面板齐�
 
   assert.equal(apiCalls.length, 2, '成员要拉详情 + 排行榜');
   assert.equal(apiCalls[0].path, '/campaigns/c1');
-  assert.equal(apiCalls[1].path, '/campaigns/c1/leaderboard');
+  assert.equal(apiCalls[1].path, '/campaigns/c1/leaderboard?page=1&pageSize=20', '排行榜首屏固定要第 1 页');
   assert.equal(page.data.isMember, true);
   // 全队汇总三格
   assert.deepEqual(page.data.totals, {
@@ -653,4 +673,198 @@ test('CDP22 状态标签用共享类：head.statusTag 给修饰类，wxml 不再
     '详情页要改用 app.wxss 里的共享 .campaign-tag，否则又跟列表卡片各长一套',
   );
   assert.ok(!src.includes('head-tag'), '.head-tag 应已从详情页 wxml 消失');
+});
+
+/* ------------------------- 发起人「编辑活动」入口 -------------------------
+ * 口径：只有发起人、且活动**进行中**才能编辑；已结束与已解散都收回入口。
+ * 入口只是导航，真正的闸门在服务端 PUT /campaigns/:id。
+ * ------------------------------------------------------------------------ */
+
+test('CDP23 发起人可编辑：只有进行中给入口，已结束 / 已解散都不给', async () => {
+  resetEnv();
+  appStub.globalData.userInfo = { id: 'u-owner' };
+  mockDetail(member());
+  const page = makePage();
+  await page.onLoad({ id: 'c1' });
+  await flush();
+  assert.equal(page.data.canEdit, true, '进行中：发起人应有编辑入口');
+
+  page.goEdit();
+  assert.deepEqual(navs, ['/pages/campaign-create/campaign-create?id=c1']);
+  assert.equal(apiCalls.filter((c) => c.method === 'PUT').length, 0, '入口只跳转，不该顺手发请求');
+
+  // 已结束：活动已经跑完，改标题/改日期都不该再给入口
+  mockDetail(member({ status: 'ended', endAt: Date.UTC(2026, 9, 7, 16, 0, 0) }));
+  await page.refresh(true);
+  await flush();
+  assert.equal(page.data.head.statusText, '已结束');
+  assert.equal(page.data.canEdit, false, '已结束不能编辑（只有进行中可改）');
+  navs.length = 0;
+  page.goEdit();
+  assert.equal(navs.length, 0, '没有入口时点了也不该跳（wxml 之外再兜一层）');
+
+  // 已解散：只读，编辑入口收回
+  mockDetail(member({ status: 'dissolved' }));
+  await page.refresh(true);
+  await flush();
+  assert.equal(page.data.canEdit, false, '解散后活动转只读，不能再编辑');
+});
+
+test('CDP24 非发起人不给编辑入口：普通成员与非成员 canEdit 都是 false', async () => {
+  resetEnv();
+  appStub.globalData.userInfo = { id: 'u-viewer' }; // ≠ creatorId
+  mockDetail(member());
+  const page = makePage();
+  await page.onLoad({ id: 'c1' });
+  await flush();
+  assert.equal(page.data.isCreator, false, '先确认处在普通成员视角');
+  assert.equal(page.data.canEdit, false);
+
+  mockDetail(nonMember());
+  await page.refresh(true);
+  await flush();
+  assert.equal(page.data.canEdit, false, '非成员更不该看到编辑入口');
+});
+
+test('CDP25 「编辑」pill 挂在发起人那一排（.act-row 内、由 canEdit 驱动）', () => {
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../miniprogram/pages/campaign-detail/campaign-detail.wxml'),
+    'utf8',
+  );
+  assert.match(
+    src,
+    /class="act-pill"[^>]*wx:if="\{\{canEdit\}\}"[^>]*bindtap="goEdit"/,
+    '编辑入口要与「邀请好友」「解散活动」同排同形态，且由 canEdit 单独驱动',
+  );
+});
+
+/* ---------------------------- 成员排行分页 ----------------------------
+ * 排行按距离排，服务端必须给全员算完距离才能定名次，所以分页只切响应。
+ * 端上是**往同一个数组追加**，于是两件事必须钉住：
+ *   1. 追加行的 rank 是全局名次（服务端已算好，端上不再排）；
+ *   2. 「加载更多」的显示判据是 total，不是本页行数——老服务端不下发 total 时
+ *      退化成「全量、没有加载更多」，绝不能出一个点了没反应的按钮。
+ * -------------------------------------------------------------------- */
+
+test('CDP26 首屏带分页参数上送，并落地 total / page', async () => {
+  resetEnv();
+  appStub.globalData.userInfo = { id: 'u-owner' };
+  mockDetail(member());
+  const page = makePage();
+  await page.onLoad({ id: 'c1' });
+  await flush();
+
+  const call = apiCalls.find((c) => c.path.indexOf('/leaderboard') >= 0);
+  assert.ok(call, '成员视角要拉排行榜');
+  assert.match(call.path, /[?&]page=1(&|$)/, `首屏只要第 1 页：${call.path}`);
+  assert.match(call.path, /[?&]pageSize=20(&|$)/, `页大小要与服务端默认同口径：${call.path}`);
+  assert.equal(page.data.members.length, 2);
+  assert.equal(page.data.memberTotal, 2, 'total 决定「加载更多」出不出');
+  assert.equal(page.data.memberPage, 1);
+});
+
+test('CDP27 加载更多：追加第 2 页、名次接着数，到底后按钮条件不再成立', async () => {
+  resetEnv();
+  appStub.globalData.userInfo = { id: 'u-owner' };
+  respond = (path) => {
+    if (path.indexOf('/leaderboard') >= 0) {
+      return Promise.resolve(
+        path.indexOf('page=2') >= 0
+          ? { rows: boardRows(21, 5), total: 25, page: 2, pageSize: 20 }
+          : { rows: boardRows(1, 20), total: 25, page: 1, pageSize: 20 },
+      );
+    }
+    return Promise.resolve(member());
+  };
+  const page = makePage();
+  await page.onLoad({ id: 'c1' });
+  await flush();
+  assert.equal(page.data.members.length, 20);
+  assert.equal(page.data.memberTotal, 25);
+
+  await page.loadMoreMembers();
+  assert.equal(page.data.members.length, 25, '第 2 页要接在同一列后面，不是替换');
+  assert.deepEqual(
+    page.data.members.map((m) => m.rank),
+    Array.from({ length: 25 }, (_, i) => i + 1),
+    '追加行必须带全局名次——端上重排或沿用页内下标都会出现两个第 1 名',
+  );
+  assert.equal(page.data.memberPage, 2);
+  assert.equal(page.data.members.length < page.data.memberTotal, false, '到底了，按钮条件不再成立');
+  assert.equal(page.data.memberLoadingMore, false);
+
+  const before = apiCalls.length;
+  await page.loadMoreMembers();
+  assert.equal(apiCalls.length, before, '已经到底还点（比如 wxml 判断漏了）不该再发请求');
+});
+
+test('CDP28 加载更多失败 → toast 具体原因、列表不动、按钮可重试', async () => {
+  resetEnv();
+  appStub.globalData.userInfo = { id: 'u-owner' };
+  respond = (path) => {
+    if (path.indexOf('page=2') >= 0) return Promise.reject(new Error('网络不给力'));
+    if (path.indexOf('/leaderboard') >= 0) {
+      return Promise.resolve({ rows: boardRows(1, 20), total: 25, page: 1, pageSize: 20 });
+    }
+    return Promise.resolve(member());
+  };
+  const page = makePage();
+  await page.onLoad({ id: 'c1' });
+  await flush();
+
+  await page.loadMoreMembers();
+  assert.equal(page.data.members.length, 20, '失败不能把已显示的行清掉');
+  assert.equal(toasts[toasts.length - 1], '网络不给力', '要原样转服务端/网络的错，别只说「加载失败」');
+  assert.equal(page.data.memberPage, 1, '页码不前进，重试才会重新要第 2 页');
+  assert.equal(page.data.memberLoadingMore, false, '失败必须复位，否则按钮永久锁死');
+  assert.ok(page.data.members.length < page.data.memberTotal, '仍有 5 人没显示 → 按钮还在，可以重试');
+});
+
+test('CDP29 响应不带 total（老服务端）→ 退化成「全量、没有加载更多」', async () => {
+  resetEnv();
+  appStub.globalData.userInfo = { id: 'u-owner' };
+  mockDetail(member(), { rows: boardRows(1, 3) }); // 真实的老响应就只有 rows 一个字段
+  const page = makePage();
+  await page.onLoad({ id: 'c1' });
+  await flush();
+  assert.equal(page.data.members.length, 3);
+  assert.equal(page.data.memberTotal, 3, '没有 total 就按「已显示的就是全部」兜底');
+  assert.equal(page.data.members.length < page.data.memberTotal, false, '否则会出现一个点了没反应的按钮');
+});
+
+test('CDP30 加载更多在途时整页刷新 → 过期响应不许追加到新一页后面', async () => {
+  resetEnv();
+  appStub.globalData.userInfo = { id: 'u-owner' };
+  let release;
+  const board = (path) => {
+    if (path.indexOf('page=2') >= 0) return new Promise((r) => { release = r; });
+    return Promise.resolve({ rows: boardRows(1, 20), total: 25, page: 1, pageSize: 20 });
+  };
+  respond = (path) => (path.indexOf('/leaderboard') >= 0 ? board(path) : Promise.resolve(member()));
+
+  const page = makePage();
+  await page.onLoad({ id: 'c1' });
+  await flush();
+
+  const pending = page.loadMoreMembers(); // 故意不 await：让它悬在途
+  await page.refresh(true); // 期间用户下拉刷新，重新要了第 1 页
+  release({ rows: boardRows(21, 5), total: 25, page: 2, pageSize: 20 });
+  await pending;
+  await flush();
+
+  assert.equal(page.data.members.length, 20, '过期第 2 页若照样追加，屏上就会是「刷新后的 1..20 + 21..25」混着两场数据');
+  assert.equal(page.data.memberPage, 1, '刷新已把页码归 1，过期响应不该把它推到 2');
+});
+
+test('CDP31 「加载更多」行由 members.length < memberTotal 驱动，并写明已显示/总数', () => {
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../miniprogram/pages/campaign-detail/campaign-detail.wxml'),
+    'utf8',
+  );
+  assert.match(
+    src,
+    /wx:if="\{\{members\.length < memberTotal\}\}"[^>]*bindtap="loadMoreMembers"/,
+    '加载更多只在还有没显示的人时出现，且是显式可点的行（不靠触底自动加载）',
+  );
+  assert.match(src, /已显示 \{\{members\.length\}\} \/ \{\{memberTotal\}\}/, '要给出「还差多少」的实际数字');
 });

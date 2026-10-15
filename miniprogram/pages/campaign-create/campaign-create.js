@@ -1,10 +1,16 @@
-// 创建活动页（活动列表页「＋发起」进）。
+// 创建活动页 / 编辑活动页（同一个页面两种模式）。
 //
-// 校验口径镜像服务端 POST /campaigns 的 CreateCampaignSchema（sport_track_api/src/utils/validators.ts）：
+// 模式：不带参数＝创建（活动列表页「＋发起」进）；带 `?id=`＝编辑（活动详情页发起人「编辑」进）。
+// 编辑模式复用同一张表单，只多三件事：进页 GET /campaigns/:id 预填、开始日期只读、提交走 PUT。
+// 不复用表单而另开一页必然分叉（校验文案、chips 点亮、人数上限口径都要抄两份）。
+//
+// 校验口径镜像服务端 CreateCampaignSchema / UpdateCampaignSchema
+// （sport_track_api/src/utils/validators.ts）：
 //   title 1–30、description ≤120、visibility public|private、allowedTypes ⊆ 8 项白名单（空=不限制）、
-//   memberLimit 正整数 ≤500 或 null、startDate/endDate 严格 YYYY-MM-DD 且 endDate ≥ startDate。
+//   memberLimit 正整数 ≤500 或 null、endDate 严格 YYYY-MM-DD 且 endDate ≥ startDate。
 // 上限在端上先拦（maxlength + 即时提示 + onSubmit 兜底），别让用户提交完才吃 400。
 // 日期用 <picker mode="date"> 拿 YYYY-MM-DD 原样上送（服务端按东八区转 epoch，端上不做时区换算）。
+// 编辑态**不上送 startDate**：UpdateCampaignSchema 是 .strict()，多传一个字段就整请求 400。
 const config = require('../../config/index');
 const { slashDate } = require('../../utils/campaign.js');
 const api = require('../../services/api');
@@ -55,15 +61,49 @@ Page({
     dateError: '', // 起止倒置的即时提示（onSubmit 仍会兜底再判一次）
     submitting: false,
     canSubmit: false, // 必填项未填完 → 「发起活动」保持不可点
+    isEdit: false, // 带 ?id= 进页即编辑模式
+    editId: '',
     maxTitle: MAX_TITLE,
     maxDesc: MAX_DESC,
     maxMembers: MAX_MEMBERS,
     defaultMembers: DEFAULT_MEMBERS,
   },
 
-  onLoad() {
+  onLoad(options) {
+    const id = (options && options.id) || '';
+    if (id) {
+      this.setData({ isEdit: true, editId: id });
+      wx.setNavigationBarTitle({ title: '编辑活动' });
+      this.loadForEdit(id);
+      return;
+    }
     const today = localToday();
     this.setData({ startDate: today, endDate: today, startDateText: slashDate(today), endDateText: slashDate(today) });
+  },
+
+  /** 编辑模式预填：日期直接取服务端下发的 YYYY-MM-DD 串（端上不做时区换算），chips 跟着 allowedTypes 点亮 */
+  async loadForEdit(id) {
+    try {
+      const d = await api.get(`/campaigns/${id}`);
+      const allowed = d.allowedTypes || [];
+      this.setData({
+        title: d.title || '',
+        description: d.description || '',
+        visibility: d.visibility,
+        allowedTypes: allowed,
+        types: this.data.types.map((t) => Object.assign({}, t, { active: allowed.indexOf(t.type) >= 0 })),
+        memberLimit: d.memberLimit == null ? '' : String(d.memberLimit),
+        startDate: d.startDate,
+        endDate: d.endDate,
+        startDateText: slashDate(d.startDate),
+        endDateText: slashDate(d.endDate),
+        canSubmit: canSubmitOf(d.title),
+      });
+    } catch (e) {
+      // 非发起人 / 已解散 / 断网都到这里：退回来源页（详情页），别留一张点了也没用的空表单
+      wx.showToast({ title: (e && e.message) || '活动信息加载失败', icon: 'none' });
+      wx.navigateBack();
+    }
   },
 
   /** title 与 canSubmit 一次 setData 下发：分两次会多跑一趟视图层同步 */
@@ -160,6 +200,23 @@ Page({
     }
 
     try {
+      if (this.data.isEdit) {
+        // 不带 startDate：服务端 .strict()，多传字段＝整请求 400
+        await api.put(`/campaigns/${this.data.editId}`, {
+          title,
+          description,
+          visibility,
+          allowedTypes,
+          memberLimit,
+          endDate,
+        });
+        this.setData({ submitting: false });
+        wx.showToast({ title: '已保存', icon: 'success' });
+        // 编辑是从详情页 navigateTo 进来的：退回详情页，由它的 onShow 静默刷新拿最新值。
+        // 不再 navigateTo 一次详情页——那会在栈里多压一层，返回时用户会看到两张详情页。
+        wx.navigateBack();
+        return;
+      }
       const created = await api.post('/campaigns', {
         title,
         description,

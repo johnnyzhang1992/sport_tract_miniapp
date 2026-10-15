@@ -62,6 +62,20 @@ test('CU6 汇总格式化：列表 DTO 的 myStats 没有 streak 也不炸（只
     distanceText: '0.00',
     durationText: '0min',
   });
+  // 边界：59m30s 应进位到 1h0m，不能显示 60min
+  assert.deepEqual(fmtPanel({ count: 1, distance: 1000, duration: 3570 }), {
+    countText: '1',
+    streakText: '0',
+    distanceText: '1.00',
+    durationText: '1h0m',
+  });
+  // 边界：23h59m30s 应进位到 24h0m，不能显示 23h60m
+  assert.deepEqual(fmtPanel({ count: 1, distance: 10000, duration: 86370 }), {
+    countText: '1',
+    streakText: '0',
+    distanceText: '10.00',
+    durationText: '24h0m',
+  });
 });
 
 test('CU7 已退出且可再参加 → 「重新加入」/「重新申请」', () => {

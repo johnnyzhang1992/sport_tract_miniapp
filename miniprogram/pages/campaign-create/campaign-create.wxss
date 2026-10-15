@@ -41,6 +41,10 @@
   font-size: 32rpx;
   line-height: 1;
 }
+/* 编辑态的开始日期：只读，值改用次要色压下去（与 .fval 同权重，靠源码顺序赢） */
+.fval-off {
+  color: #8a93a6;
+}
 /* 输入行：值右对齐，占位色与 .fval-ph 一致；
    输入区要有可见的浅底框——白底白输入框用户看不出「点哪里」。
    高度必须显式写：wx-input 默认样式是 height/min-height: 1.4rem（=22.4px），

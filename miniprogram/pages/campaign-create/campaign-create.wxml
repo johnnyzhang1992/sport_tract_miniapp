@@ -77,11 +77,13 @@
     </view>
     <view class="fnote">可选，1–{{maxMembers}} 的整数，默认 {{defaultMembers}}，清空＝不限制；当前 {{memberLimit || '不限制'}}</view>
 
-    <!-- 起止日期：picker 直接给 YYYY-MM-DD 字符串，原样上送（服务端转东八区） -->
-    <picker mode="date" value="{{startDate}}" bindchange="onStartDate">
-      <view class="frow frow-tap" hover-class="frow-hover">
+    <!-- 起止日期：picker 直接给 YYYY-MM-DD 字符串，原样上送（服务端转东八区）。
+         编辑态下开始日期只读：服务端 UpdateCampaignSchema 是 .strict()，上送 startDate 会整请求 400。
+         只读只靠置灰表达，右侧箭头不摘（两行日期版式保持一致）。 -->
+    <picker mode="date" value="{{startDate}}" disabled="{{isEdit}}" bindchange="onStartDate">
+      <view class="frow frow-tap" hover-class="{{isEdit ? 'none' : 'frow-hover'}}">
         <view class="flabel">开始日期</view>
-        <view class="fval {{startDateText ? '' : 'fval-ph'}}">{{startDateText || '选择日期'}}</view>
+        <view class="fval {{isEdit ? 'fval-off' : (startDateText ? '' : 'fval-ph')}}">{{startDateText || '选择日期'}}</view>
         <view class="farrow">›</view>
       </view>
     </picker>
@@ -100,5 +102,5 @@
     disabled="{{submitting || !canSubmit}}"
     loading="{{submitting}}"
     bindtap="onSubmit"
-  >{{submitting ? '创建中…' : '发起活动'}}</button>
+  >{{submitting ? (isEdit ? '保存中…' : '创建中…') : (isEdit ? '保存修改' : '发起活动')}}</button>
 </view>

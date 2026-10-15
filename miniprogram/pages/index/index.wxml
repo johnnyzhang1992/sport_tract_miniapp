@@ -1,25 +1,21 @@
 <view class="container">
-  <!-- 活动卡（首页横滑共用）：标题 + 成员面（头像堆叠 + 人数）+ 我的汇总两格（距离 / 时长） -->
+  <!-- 活动卡（首页横滑共用）：标题 + 成员面（头像堆叠 + 人数）。
+       箭头是整张卡的直接子节点，靠 .camp-card 的 align-items:center 对整卡垂直居中 -->
   <template name="campaign-card">
     <view class="camp-card" hover-class="camp-card-hover" hover-stay-time="80" data-id="{{id}}" bindtap="goCampaign">
-      <view class="camp-card-top">
+      <view class="camp-card-main">
         <view class="camp-card-title">{{title}}</view>
-        <view class="camp-card-arrow">›</view>
-      </view>
-      <view class="camp-card-members">
-        <view class="member-av-stack">
-          <block wx:for="{{avatarList}}" wx:key="key">
-            <image wx:if="{{item.src}}" class="member-av" src="{{item.src}}" mode="aspectFill" />
-            <view wx:else class="member-av"></view>
-          </block>
-        </view>
-        <view class="member-av-text">{{memberText}}</view>
-      </view>
-      <view class="camp-metrics">
-        <view class="camp-metric" wx:for="{{metricItems}}" wx:key="key">
-          <text class="camp-metric-v">{{item.text}}</text><text wx:if="{{item.label}}" class="camp-metric-l">{{item.label}}</text>
+        <view class="camp-card-members">
+          <view class="member-av-stack">
+            <block wx:for="{{avatarList}}" wx:key="key">
+              <image wx:if="{{item.src}}" class="member-av" src="{{item.src}}" mode="aspectFill" />
+              <view wx:else class="member-av"></view>
+            </block>
+          </view>
+          <view class="member-av-text">{{memberText}}</view>
         </view>
       </view>
+      <view class="camp-card-arrow">›</view>
     </view>
   </template>
 
@@ -67,8 +63,7 @@
     </view>
   </view>
 
-  <!-- 累计数据概览（点击进入统计页）：暂时注释掉，恢复时删掉下面这行与末尾的注释结束标记即可 -->
-  <!-- TEMP 暂时隐藏累计数据卡
+  <!-- 累计数据概览（点击进入统计页） -->
   <view class="card" wx:if="{{totalOverview || overviewError}}" hover-class="card-hover" hover-stay-time="80" bindtap="goStats">
     <view class="section-title">累计数据</view>
     <view class="stats-row" wx:if="{{totalOverview}}">
@@ -89,57 +84,67 @@
         <view class="stat-label">点亮城市</view>
       </view>
     </view>
-    （原注释，挪成正文以免嵌套注释）：catchtap 重试只该重发请求，不该顺带跳统计页
+    <!-- 用 catchtap：重试只该重发请求，不该顺带触发整卡的 bindtap 跳到统计页 -->
     <view class="card-fail" wx:if="{{overviewError || footprintError}}">
       <text class="card-fail-text">{{overviewError || footprintError}}</text>
       <view class="card-fail-retry" hover-class="card-fail-retry-hover" catchtap="retryOverview">重试</view>
     </view>
   </view>
-  TEMP 暂时隐藏累计数据卡 结束 -->
 
-  <!-- 运动榜入口卡片（全国点亮 + 我的排名摘要） -->
-  <view class="card lb-card" hover-class="card-hover" hover-stay-time="80" bindtap="goLeaderboard">
-    <image class="lb-icon" src="/assets/icons/tab-rank-blue.png" mode="aspectFit" />
-    <view class="lb-body">
-      <view class="lb-title">运动榜</view>
-      <view class="lb-sub text-muted" wx:if="{{lbSummary}}">全国 {{lbSummary.totalUsers}} 位迹路者{{lbSummary.meText}}</view>
-      <view class="lb-sub text-muted" wx:else>看看全国的迹路者都在哪运动</view>
-    </view>
-    <view class="lb-arrow">›</view>
-  </view>
-
-  <!-- 一起运动活动区块：标题行右侧「查看更多」常驻（全为已结束/已解散时它是进列表页的唯一入口）；
-       有活动 → 横滑卡片（一屏两条，多了左右滑），无 → 发起引导 -->
-  <view class="card">
-    <view class="section-head">
-      <view class="section-title section-title-flat">一起运动</view>
-      <view class="campaign-more" hover-class="campaign-more-hover" hover-stay-time="80" bindtap="goCampaignList">查看更多 ›</view>
-    </view>
-
-    <!-- 横向可滚动：不论几条都是同一档卡片宽（50% - 半个间距），多了左右滑 -->
-    <scroll-view
-      wx:if="{{campaigns.length > 0}}"
-      class="camp-scroll"
-      scroll-x
-      enable-flex
-      show-scrollbar="{{false}}"
-    >
-      <block wx:for="{{campaigns}}" wx:key="id">
-        <template is="campaign-card" data="{{...item}}" />
-      </block>
-    </scroll-view>
-
-    <view
-      wx:else
-      class="lb-card campaign-row"
-      hover-class="card-hover"
-      hover-stay-time="80"
-      bindtap="goCampaignCreate"
-    >
-      <view class="lb-body">
-        <view class="lb-title">发起一个活动，叫上朋友一起运动</view>
+  <!-- 运动榜 + 一起运动：一行两格，各占一半 -->
+  <view class="duo-row">
+    <!-- 运动榜入口卡片（全国点亮 + 我的排名摘要）。半屏宽里标题行放不下 icon，
+         所以标题行只留「运动榜 + ›」，icon 下移到副标题左侧与两行文字并排 -->
+    <view class="card duo-cell lb-card lb-card-stacked" hover-class="card-hover" hover-stay-time="80" bindtap="goLeaderboard">
+      <view class="lb-head">
+        <view class="lb-title">运动榜</view>
+        <view class="lb-arrow">›</view>
       </view>
-      <view class="lb-arrow">›</view>
+      <view class="lb-foot">
+        <image class="lb-icon" src="/assets/icons/tab-rank-blue.png" mode="aspectFit" />
+        <view class="lb-foot-text">
+          <block wx:if="{{lbSummary}}">
+            <view class="lb-sub text-muted">全国 {{lbSummary.totalUsers}} 位迹路者</view>
+            <view class="lb-sub text-muted" wx:if="{{lbSummary.meText}}">{{lbSummary.meText}}</view>
+          </block>
+          <view class="lb-sub text-muted" wx:else>看看全国的迹路者都在哪运动</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 一起运动活动区块：标题行右侧「查看更多」常驻（全为已结束/已解散时它是进列表页的唯一入口）；
+         有活动 → 横滑卡片（半宽容器里一屏只放得下一条，多了左右滑），无 → 发起引导 -->
+    <view class="card duo-cell">
+      <view class="section-head">
+        <view class="section-title section-title-flat">一起运动</view>
+        <view class="campaign-more" hover-class="campaign-more-hover" hover-stay-time="80" bindtap="goCampaignList">查看更多 ›</view>
+      </view>
+
+      <!-- 横向可滚动：本区块只有半屏宽，一屏一条，卡片右侧故意露出下一条的边当「可滑」提示 -->
+      <scroll-view
+        wx:if="{{campaigns.length > 0}}"
+        class="camp-scroll"
+        scroll-x
+        enable-flex
+        show-scrollbar="{{false}}"
+      >
+        <block wx:for="{{campaigns}}" wx:key="id">
+          <template is="campaign-card" data="{{...item}}" />
+        </block>
+      </scroll-view>
+
+      <view
+        wx:else
+        class="lb-card campaign-row"
+        hover-class="card-hover"
+        hover-stay-time="80"
+        bindtap="goCampaignCreate"
+      >
+        <view class="lb-body">
+          <view class="lb-title campaign-lead">运动竞赛，和好友来场PK</view>
+        </view>
+        <view class="lb-arrow">›</view>
+      </view>
     </view>
   </view>
 

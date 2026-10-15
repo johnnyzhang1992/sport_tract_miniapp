@@ -44,6 +44,14 @@
           hover-stay-time="80"
           bindtap="openReview"
         >待审批 {{pendingCount}}</view>
+        <!-- 编辑：仅发起人、且活动进行中（已结束 / 已解散都收回入口）。表单复用创建页，带 ?id= 进编辑态 -->
+        <view
+          class="act-pill"
+          wx:if="{{canEdit}}"
+          hover-class="act-pill-hover"
+          hover-stay-time="80"
+          bindtap="goEdit"
+        >编辑</view>
         <view class="act-pill" hover-class="act-pill-hover" hover-stay-time="80" bindtap="onInvite">邀请好友</view>
         <view
           class="act-pill act-pill-danger"
@@ -136,6 +144,15 @@
         <view class="rank-dist">{{item.distanceText}} km</view>
       </view>
       <view class="rank-empty" wx:if="{{members.length === 0}}">暂无成员数据</view>
+      <!-- 分页是服务端切的，这里只做追加；判据用 total（本页满 20 不代表后面没人）。
+           显式一行可点的「加载更多」，不做触底自动加载——整页还要响应下拉刷新，抢滚动会打架。 -->
+      <view
+        class="rank-more"
+        wx:if="{{members.length < memberTotal}}"
+        hover-class="rank-more-hover"
+        hover-stay-time="80"
+        bindtap="loadMoreMembers"
+      >{{memberLoadingMore ? '加载中…' : '加载更多'}}（已显示 {{members.length}} / {{memberTotal}}）</view>
     </view>
   </block>
 

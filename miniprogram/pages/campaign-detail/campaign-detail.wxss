@@ -308,6 +308,22 @@
   color: #8a93a6;
 }
 
+/* 成员排行「加载更多」：整行可点（不是右下角一个小字），文案里带「已显示 x / 总数」，
+   用户点之前就知道还差多少。触控高度 88rpx(=44px) 取最小档，再小就点不准。 */
+.rank-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 88rpx;
+  margin-top: 8rpx;
+  border-top: 1rpx solid #eef0f4;
+  font-size: 24rpx;
+  color: #2b6cf6;
+}
+.rank-more-hover {
+  background: #f2f6ff;
+}
+
 /* 我的贡献：通栏贴底（照 leaderboard.wxss:451-546 的 .me-card 一整套） */
 .me-card {
   position: fixed;
