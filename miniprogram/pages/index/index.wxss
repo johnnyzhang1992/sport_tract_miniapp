@@ -253,24 +253,104 @@
   margin-bottom: 8rpx;
 }
 
-/* 一起运动区块：行式卡片复用上面的 .lb-card 布局，这里只补行距 / 分隔线 / 查看全部 */
+/* 区块标题行：标题在左、「查看更多」在最右 */
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12rpx;
+}
+.section-title-flat {
+  margin-bottom: 0; /* 行距交给 .section-head 统一管 */
+}
+.campaign-more {
+  font-size: 22rpx;
+  color: #2b6cf6;
+  flex-shrink: 0;
+}
+.campaign-more-hover {
+  opacity: 0.7;
+}
+/* 横向滚动：不论几条都是同一档卡片宽（一屏两条，每条 50% - 半个间距）；滚动条藏掉 */
+.camp-scroll {
+  display: flex; /* 配合 scroll-view 的 enable-flex 生效 */
+  align-items: flex-start; /* 卡片按内容高（stretch 会被容器拉高，底部留一片空） */
+  width: 100%;
+}
+.camp-scroll .camp-card {
+  flex: 0 0 calc(50% - 14rpx);
+  margin-right: 14rpx;
+}
+.camp-scroll::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
 .campaign-row {
   padding: 14rpx 0;
-}
-.campaign-row-sep {
-  border-top: 1rpx solid #f2f3f5;
 }
 .campaign-title {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.campaign-more {
-  padding: 10rpx 0 2rpx;
-  text-align: right;
-  font-size: 22rpx;
-  color: #2b6cf6;
+
+/* 活动卡：浅底小块（在白卡里靠底色分块，比投影可靠）+ 标题行 + 成员面 + 指标三格 */
+.camp-card {
+  box-sizing: border-box;
+  padding: 16rpx 18rpx;
+  border-radius: 14rpx;
+  background: #f5f7fb;
 }
-.campaign-more-hover {
-  opacity: 0.7;
+.camp-card-hover {
+  opacity: 0.8;
+}
+.camp-card-top {
+  display: flex;
+  align-items: center;
+}
+.camp-card-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1f2329;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.camp-card-arrow {
+  flex: none;
+  margin-left: 8rpx;
+  font-size: 32rpx;
+  line-height: 1;
+  color: #c8d0dc;
+}
+.camp-card-members {
+  display: flex;
+  align-items: center;
+  margin-top: 10rpx;
+}
+/* 头像堆叠（.member-av-stack/.member-av/.member-av-text）是全局共享样式，见 app.wxss */
+/* 半宽卡里三格要挤在一行：按内容宽度排、不换行，靠 space-between 拉开间距 */
+/* 两格水平居左（不再 space-between 两端分），靠 gap 给间距 */
+.camp-metrics {
+  display: flex;
+  gap: 24rpx;
+  margin-top: 12rpx;
+}
+.camp-metric {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+/* 数值与文案同一行：数值大一号、文案小一号灰字 */
+.camp-metric-v {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+.camp-metric-l {
+  margin-left: 4rpx;
+  font-size: 19rpx;
+  color: #8a93a6;
 }

@@ -16,17 +16,22 @@ function formatDuration(seconds) {
 
 const config = require('../../config/index');
 const api = require('../../services/api');
-const { fmtRange, fmtPanel } = require('../../utils/campaign.js');
+const { fmtPanel, avatarStack } = require('../../utils/campaign.js');
 
 // 首页概览本地缓存 key（先展示旧数据避免空白，接口返回后刷新）
 const OVERVIEW_CACHE_KEY = 'indexOverviewCache_v1';
 
-/** 首页活动卡：标题 / 时间（东八区） / 我的汇总——WXML 不做格式化，统一在这里算好 */
+/** 首页活动卡：标题 / 成员面（人数 + 头像堆叠）/ 我的汇总三格——WXML 不做格式化，统一在这里算好 */
 function toCampaignCard(c) {
   const p = fmtPanel(c.myStats || {});
   return Object.assign({}, c, {
-    rangeText: fmtRange(c.startAt, c.endAt),
-    statsText: `我的 ${p.countText} 次 · ${p.distanceText} km · ${p.durationText}`,
+    metricItems: [
+      { key: 'dist', text: p.distanceText, label: '公里' },
+      // 时长自带单位（min / h+m / 天+h），不再另挂 label
+      { key: 'dur', text: p.durationText, label: '' },
+    ],
+    memberText: `${c.memberCount || 0} 人`,
+    avatarList: avatarStack(c.memberAvatars), // 签名 url 优先，回退预设图（见 utils/campaign.js）
   });
 }
 
@@ -81,10 +86,17 @@ Page({
 
   /**
    * 一起运动（进行中）：我发起 + 我参与两路并发，按 id 去重后最多取 3 条。
-   * 静默拉取——游客（401）或网络失败都吞掉，区块退化为「发起一个活动」引导，不打扰首屏。
    * status 直接用服务端派生的档位筛 active，不按 endAt 本地再算一遍（两边口径不分叉）。
+   * 游客直接退：两个接口都要求登录，发出去必然 401。闸门判 hasSession() 而不是
+   * globalData.loggedIn——onShow 不 await 静默恢复，老用户冷启动那一刻 loggedIn 还是 false，
+   * 而 api.get 是从 storage 取 token 的；拿 loggedIn 判会把他们误当游客、区块整个空掉。
+   * 网络失败仍静默：区块退化成「发起一个活动」引导，不打扰首屏。
    */
   async loadCampaigns() {
+    if (!getApp().hasSession()) {
+      this.setData({ campaigns: [] });
+      return;
+    }
     try {
       const [created, joined] = await Promise.all([
         api.get('/campaigns?role=created'),

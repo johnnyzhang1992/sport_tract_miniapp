@@ -1,4 +1,28 @@
 <view class="container">
+  <!-- 活动卡（首页横滑共用）：标题 + 成员面（头像堆叠 + 人数）+ 我的汇总两格（距离 / 时长） -->
+  <template name="campaign-card">
+    <view class="camp-card" hover-class="camp-card-hover" hover-stay-time="80" data-id="{{id}}" bindtap="goCampaign">
+      <view class="camp-card-top">
+        <view class="camp-card-title">{{title}}</view>
+        <view class="camp-card-arrow">›</view>
+      </view>
+      <view class="camp-card-members">
+        <view class="member-av-stack">
+          <block wx:for="{{avatarList}}" wx:key="key">
+            <image wx:if="{{item.src}}" class="member-av" src="{{item.src}}" mode="aspectFill" />
+            <view wx:else class="member-av"></view>
+          </block>
+        </view>
+        <view class="member-av-text">{{memberText}}</view>
+      </view>
+      <view class="camp-metrics">
+        <view class="camp-metric" wx:for="{{metricItems}}" wx:key="key">
+          <text class="camp-metric-v">{{item.text}}</text><text wx:if="{{item.label}}" class="camp-metric-l">{{item.label}}</text>
+        </view>
+      </view>
+    </view>
+  </template>
+
   <!-- 未登录引导条（游客态，点击去个人中心登录） -->
   <view wx:if="{{notLoggedIn}}" class="login-tip" hover-class="login-tip-hover" hover-stay-time="80" bindtap="goLogin">
     <image class="login-tip-icon" src="/assets/icons/lucide-user.png" mode="aspectFit" />
@@ -43,7 +67,8 @@
     </view>
   </view>
 
-  <!-- 累计数据概览（点击进入统计页） -->
+  <!-- 累计数据概览（点击进入统计页）：暂时注释掉，恢复时删掉下面这行与末尾的注释结束标记即可 -->
+  <!-- TEMP 暂时隐藏累计数据卡
   <view class="card" wx:if="{{totalOverview || overviewError}}" hover-class="card-hover" hover-stay-time="80" bindtap="goStats">
     <view class="section-title">累计数据</view>
     <view class="stats-row" wx:if="{{totalOverview}}">
@@ -64,12 +89,13 @@
         <view class="stat-label">点亮城市</view>
       </view>
     </view>
-    <!-- catchtap：重试只该重发请求，不该顺带跳统计页 -->
+    （原注释，挪成正文以免嵌套注释）：catchtap 重试只该重发请求，不该顺带跳统计页
     <view class="card-fail" wx:if="{{overviewError || footprintError}}">
       <text class="card-fail-text">{{overviewError || footprintError}}</text>
       <view class="card-fail-retry" hover-class="card-fail-retry-hover" catchtap="retryOverview">重试</view>
     </view>
   </view>
+  TEMP 暂时隐藏累计数据卡 结束 -->
 
   <!-- 运动榜入口卡片（全国点亮 + 我的排名摘要） -->
   <view class="card lb-card" hover-class="card-hover" hover-stay-time="80" bindtap="goLeaderboard">
@@ -82,26 +108,27 @@
     <view class="lb-arrow">›</view>
   </view>
 
-  <!-- 一起运动活动区块（进行中的活动，最多 3 条；无数据/静默失败 → 发起引导单卡） -->
+  <!-- 一起运动活动区块：标题行右侧「查看更多」常驻（全为已结束/已解散时它是进列表页的唯一入口）；
+       有活动 → 横滑卡片（一屏两条，多了左右滑），无 → 发起引导 -->
   <view class="card">
-    <view class="section-title">一起运动</view>
-    <block wx:if="{{campaigns.length > 0}}">
-      <view
-        wx:for="{{campaigns}}"
-        wx:key="id"
-        class="lb-card campaign-row {{index > 0 ? 'campaign-row-sep' : ''}}"
-        hover-class="card-hover"
-        hover-stay-time="80"
-        data-id="{{item.id}}"
-        bindtap="goCampaign"
-      >
-        <view class="lb-body">
-          <view class="lb-title campaign-title">{{item.title}}</view>
-          <view class="lb-sub text-muted">{{item.rangeText}} · {{item.statsText}}</view>
-        </view>
-        <view class="lb-arrow">›</view>
-      </view>
-    </block>
+    <view class="section-head">
+      <view class="section-title section-title-flat">一起运动</view>
+      <view class="campaign-more" hover-class="campaign-more-hover" hover-stay-time="80" bindtap="goCampaignList">查看更多 ›</view>
+    </view>
+
+    <!-- 横向可滚动：不论几条都是同一档卡片宽（50% - 半个间距），多了左右滑 -->
+    <scroll-view
+      wx:if="{{campaigns.length > 0}}"
+      class="camp-scroll"
+      scroll-x
+      enable-flex
+      show-scrollbar="{{false}}"
+    >
+      <block wx:for="{{campaigns}}" wx:key="id">
+        <template is="campaign-card" data="{{...item}}" />
+      </block>
+    </scroll-view>
+
     <view
       wx:else
       class="lb-card campaign-row"
@@ -114,8 +141,6 @@
       </view>
       <view class="lb-arrow">›</view>
     </view>
-    <!-- 常驻行：首页只列 active 活动，活动全为已结束/已解散时这里是进列表页（能看带状态角标的卡片）的唯一入口，不随有无数据隐藏 -->
-    <view class="campaign-more" hover-class="campaign-more-hover" hover-stay-time="80" bindtap="goCampaignList">查看全部 ›</view>
   </view>
 
   <!-- 官方专题入口（生效中的专题，点击查看详情） -->
