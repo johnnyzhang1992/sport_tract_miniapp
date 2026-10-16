@@ -92,14 +92,7 @@
   font-size: 22rpx;
   color: #8a93a6;
 }
-.member-tip {
-  padding: 20rpx 0 8rpx;
-  text-align: center;
-  font-size: 22rpx;
-  color: #8a93a6;
-}
-
-/* 发起人视角：计入的轨迹明细（分页列表 + 加载更多） */
+/* 计入的轨迹明细（分页列表 + 加载更多） */
 .detail-head {
   display: flex;
   align-items: baseline;

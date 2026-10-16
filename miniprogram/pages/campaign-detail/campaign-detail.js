@@ -10,9 +10,10 @@
 // status 是服务端派生的档位（active/ended/dissolved），端上**不**按 endAt 重算，免口径分叉。
 //
 // 发起人专属（Task 11）：
-//   GET /:id/pending（非发起人 403）、POST /:id/approve|reject|kick、DELETE /:id、
-//   GET /:id/members/:uid（**仅发起人**：stats 概况 + 分页明细）——身份判否时这些请求一个都不发
-//   （服务端 403 是兜底，需求 §5「他人数据不外泄」要求端上也不去碰）。
+//   GET /:id/pending（非发起人 403）、POST /:id/approve|reject|kick、DELETE /:id —— 身份判否时这些
+//   请求一个都不发（服务端 403 是兜底，需求 §5「他人数据不外泄」要求端上也不去碰）。
+//   成员明细（GET /:id/members/:uid）不在此列：它对**活动内成员**开放（队友与本人同样可看），
+//   服务端闸门是「viewer 当前是不是 joined 成员」，非成员才 403。明细行不可点，只到汇总级数据。
 //   踢人 / 解散是破坏性操作：wx.showModal 二次确认后才发请求，取消＝零请求；成功后静默刷新。
 //   小程序码（POST /campaigns/mini-code，仅 joined）两条分支：{url}（签名 OSS 地址）与
 //   OSS 失败降级 {url:'', base64}——都落成「可预览（长按识别/保存）」的图，远程 url 无本地路径时
@@ -179,7 +180,7 @@ Page({
     memberPage: 1,
     memberLoadingMore: false,
     panel: null, // 底部悬浮面板：我的 myPanel
-    // 成员信息半屏：非发起人＝只读汇总；发起人＝该成员明细（sheetDetail 由 loadMemberDetail 拉）
+    // 成员信息半屏：明细（sheetDetail）对活动内成员一律可看，由 loadMemberDetail 拉
     sheetVisible: false,
     sheetMember: null,
     sheetDetail: null,
@@ -424,14 +425,13 @@ Page({
     }
   },
 
-  /** 点成员行 → 成员信息半屏；发起人视角额外拉该成员的分页明细，普通成员只看汇总（不发明细请求） */
+  /** 点成员行 → 成员信息半屏，并拉该成员的分页明细（明细对**活动内成员**开放，队友与本人同样可看） */
   openMember(e) {
     const idx = Number(e.currentTarget.dataset.idx);
     const member = this.data.members[idx];
     if (!member) return;
     this.setData({ sheetVisible: true, sheetMember: member, sheetDetail: null });
-    // 他人明细只有发起人能看（服务端 403 兜底；端上也不去碰）
-    if (this.data.isCreator) this.loadMemberDetail(member.userId, 1);
+    this.loadMemberDetail(member.userId, 1);
   },
 
   closeMemberSheet() {

@@ -1,9 +1,11 @@
-<!-- 成员信息半屏：非发起人＝只读汇总三项（无明细请求）；发起人＝额外展示该成员计入的轨迹明细（分页）。
+<!-- 活动成员信息半屏：汇总三项 + 该成员在本活动内计入的轨迹明细（分页）。
+     对活动内成员一律开放（队友与本人同样可看，服务端闸门＝viewer 当前是否 joined）；明细行不可点，
+     只到「类型 / 时间 / 距离 / 时长 / 爬升」这一级，不跳到轨迹详情。
      明细数据（detail）与翻页都由页面负责，组件只渲染 + 抛 loadmore / close 事件（见 JS 头注释）。 -->
 <view wx:if="{{visible && member}}" class="mask" catchtouchmove="noop" bindtap="onClose">
   <view class="sheet" catchtap="noop">
     <view class="sheet-head">
-      <view class="sheet-title">{{isCreator ? '成员明细' : '成员信息'}}</view>
+      <view class="sheet-title">成员明细</view>
       <view class="sheet-close" catchtap="onClose">✕</view>
     </view>
 
@@ -13,7 +15,7 @@
       <view class="member-name">{{member.name}}</view>
     </view>
 
-    <!-- 汇总三项：发起人视角优先用明细接口的 stats（与排行榜同源，数值应当一致） -->
+    <!-- 汇总三项：概况以明细接口的 stats 为准（与排行榜同源，数值应当一致）；未拿到前先用列表行的值 -->
     <view class="stat-row">
       <view class="stat-cell">
         <view class="stat-value">{{detail.stats ? detail.stats.countText : member.countText}}</view>
@@ -29,11 +31,8 @@
       </view>
     </view>
 
-    <!-- 非发起人：只有汇总三项（他人明细不外泄） -->
-    <view class="member-tip" wx:if="{{!isCreator}}">这里是 TA 在本活动内的汇总（加入后统计）</view>
-
-    <!-- 发起人视角：TA 在本活动内计入的轨迹（GET /:id/members/:uid，分页） -->
-    <block wx:if="{{isCreator && detail}}">
+    <!-- TA 在本活动内计入的轨迹（GET /:id/members/:uid，分页） -->
+    <block wx:if="{{detail}}">
       <view class="detail-head">
         <text class="detail-title">计入的轨迹</text>
         <text class="detail-total" wx:if="{{detail.total}}">共 {{detail.total}} 条</text>

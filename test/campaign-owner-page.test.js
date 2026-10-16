@@ -3,9 +3,10 @@
  *
  * 需求边界（本文件是唯一防线，逐条钉住）：
  *   - 发起人身份 = `getApp().globalData.userInfo.id` 与 `detail.creatorId` 比较（T10 时本页不持有 viewerId）；
- *   - **非发起人绝不请求** `GET /:id/pending` 与 `GET /:id/members/:uid`（服务端 403；他人明细不外泄）；
+ *   - **非发起人绝不请求** `GET /:id/pending`（服务端 403；他人数据不外泄）；成员明细（`GET /:id/members/:uid`）
+ *     则对**活动内成员**开放：发起人与普通成员点成员行都要拉（防的是非成员，不是队友）；
  *   - 踢人 / 解散必须 `wx.showModal` 二次确认 —— **取消＝零请求**（本仓对破坏性操作的硬要求）；
- *   - 成员明细＝发起人专属：stats 概况 + 分页列表（加载更多只在还有下一页时发请求）；
+ *   - 成员明细＝stats 概况 + 分页列表（加载更多只在还有下一页时发请求）；
  *   - 小程序码 `{url}` 与降级 `{url:'', base64}` 两条分支都要能展示；保存相册只吃本地路径
  *     （base64 → writeFile 落临时文件；远程 url → downloadFile，被域名白名单拦下时不吞掉长按识别路径）；
  *   - 分享照 track-detail.js 的 onShareAppMessage / onShareTimeline 写法。
@@ -357,7 +358,7 @@ test('COP3 解散：二次确认后才 DELETE；取消不请求；非发起人�
   assert.equal(apiCalls.length, calls);
 });
 
-test('COP4 点成员：发起人请求 /members/:uid 展开明细；普通成员绝不发明细请求', async () => {
+test('COP4 点成员：活动内成员（发起人与普通成员）都请求 /members/:uid 展开明细', async () => {
   resetEnv();
   mockAll();
   const page = await openPage();
@@ -379,17 +380,26 @@ test('COP4 点成员：发起人请求 /members/:uid 展开明细；普通成员
   assert.equal(page.data.sheetDetail.items[0].elevationText, ' · 爬升 120m');
   assert.equal(page.data.sheetDetail.hasMore, true);
 
-  // 普通成员点同一行：零明细请求，抽屉仍只出汇总
+  // 普通成员点同一行：同样拉明细（明细对活动内成员开放）——差异只剩「移出」入口
   resetEnv();
   appStub.globalData.userInfo = { id: 'u-viewer' };
   mockAll();
   const page2 = await openPage();
-  const calls = apiCalls.length;
   page2.openMember(tap(1));
   await flush();
-  assert.equal(apiCalls.length, calls, '普通成员点成员行不发任何请求');
+  const detailCalls2 = apiCalls.filter((c) => c.path.includes('/members/'));
+  assert.deepEqual(
+    detailCalls2.map((c) => c.path),
+    ['/campaigns/c1/members/u2?page=1&pageSize=20'],
+    '普通成员点成员行也要拉明细',
+  );
   assert.equal(page2.data.sheetVisible, true);
-  assert.equal(page2.data.sheetDetail, null);
+  assert.equal(page2.data.sheetMember.name, '小迹');
+  assert.equal(page2.data.sheetDetail.total, 25);
+  assert.equal(page2.data.sheetDetail.items.length, 20);
+  assert.equal(page2.data.sheetDetail.error, false, '要真拉到数据，不是错误态');
+  assert.equal(page2.data.members[1].canKick, false, '「移出」仍只有发起人');
+  assert.ok(!apiCalls.some((c) => /\/pending$/.test(c.path)), '普通成员仍绝不请求 /pending');
 });
 
 test('COP5 审批：同意 / 拒绝 → POST body {userId}，本地移除该行并刷新', async () => {
@@ -637,4 +647,21 @@ test('COP13 待审批拉取失败：静默（无 toast）、不崩、徽标保�
     assert.equal(page.data.pendingCount, 2, '刷新失败不清掉已有徽标（静默保住旧值）');
     assert.deepEqual(toasts, [], '不弹 toast');
   });
+});
+
+test('COP14 成员半屏的明细块对所有成员渲染（不再有发起人分叉）', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const sheet = fs.readFileSync(
+    path.join(__dirname, '../miniprogram/components/campaign-member-sheet/campaign-member-sheet.wxml'),
+    'utf8',
+  );
+  assert.match(sheet, /<block wx:if="\{\{detail\}\}">/, '明细块只由 detail 驱动');
+  // 组件不再持有查看者身份：页面不传、组件也没这个 property（否则又会分叉出「谁能看」的第二套判据）
+  assert.ok(!('isCreator' in compDef.properties), '组件不该再有 isCreator property');
+  const pageWxml = fs.readFileSync(
+    path.join(__dirname, '../miniprogram/pages/campaign-detail/campaign-detail.wxml'),
+    'utf8',
+  );
+  assert.ok(!/isCreator="\{\{isCreator\}\}"/.test(pageWxml), '页面不再给半屏传发起人身份');
 });

@@ -171,13 +171,13 @@
     </view>
   </view>
 
-  <!-- 成员信息半屏：非发起人＝只读汇总三项；发起人＝该成员明细（分页，加载更多由页面拉）。
+  <!-- 成员信息半屏：汇总三项 + 该成员明细（分页，加载更多由页面拉）。
+       明细对活动内成员一律开放，页面不再按身份传参。
        同样挂在 !notFound && !error 之下，错误态不得残留成员抽屉 -->
   <campaign-member-sheet
     wx:if="{{!notFound && !error}}"
     visible="{{sheetVisible}}"
     member="{{sheetMember}}"
-    isCreator="{{isCreator}}"
     detail="{{sheetDetail}}"
     bind:close="closeMemberSheet"
     bind:loadmore="onSheetLoadMore"
