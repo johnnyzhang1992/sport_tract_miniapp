@@ -115,7 +115,7 @@
               <text class="text-muted">名</text>
             </view>
           </block>
-          <view class="lb-sub text-muted" wx:else>看看全国的迹路者都在哪运动</view>
+          <view class="lb-sub text-muted" wx:else>全国迹路者都在哪运动</view>
         </view>
       </view>
     </view>

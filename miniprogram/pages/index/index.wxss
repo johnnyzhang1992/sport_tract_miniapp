@@ -242,6 +242,9 @@
   flex: 1;
   min-width: 0; /* 标题过长时省略，不把箭头挤出去 */
 }
+.lb-head .lb-arrow {
+  font-size: 22rpx; /* 与右格标题行「查看更多 ›」的箭头同档 */
+}
 .lb-foot {
   display: flex;
   align-items: center; /* icon 与两行副标题垂直居中 */
@@ -319,7 +322,7 @@
 }
 .campaign-more {
   font-size: 22rpx;
-  color: #2b6cf6;
+  color: #c8d0dc;
   flex-shrink: 0;
 }
 .campaign-more-hover {
