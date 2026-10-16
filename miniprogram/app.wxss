@@ -75,6 +75,10 @@ page {
   color: #2b6cf6;
   background: #eaf1ff;
 }
+.campaign-tag--upcoming {
+  color: #b26a00;
+  background: #fff4e0; /* 琥珀＝还没开赛、在倒计时；与 active 蓝、ended 灰、dissolved 红都拉开 */
+}
 .campaign-tag--dissolved {
   color: #e5484d;
   background: #fdecec; /* 与排行榜「移出」胶囊同一套红 */

@@ -334,9 +334,10 @@ Page({
       isMember,
       canLeave: isMember && !isCreator, // 退出活动：我不是发起人（发起人出路是解散）
       isCreator,
-      // 编辑：只认发起人，且**只有进行中**给入口——已结束 / 已解散都收回（服务端 PUT 同样按派生状态挡）。
-      // 状态由服务端下发，端上不拿 endAt 跟 now 自己比，避免两处判据分叉。
-      canEdit: isCreator && detail.status === 'active',
+      // 编辑：只认发起人，且**未开始 / 进行中**都给入口——已结束 / 已解散才收回（服务端 PUT 同口径）。
+      // 未开始正是最该调时间与标题的阶段，挡在它身上没有理由。
+      // 状态由服务端下发，端上不拿 startAt / endAt 跟 now 自己比，避免两处判据分叉。
+      canEdit: isCreator && (detail.status === 'active' || detail.status === 'upcoming'),
       cta,
       ctaHint: cta ? (cta.disabled ? '当前不可加入' : `点击「${cta.text}」`) : '',
       stateNote: STATE_NOTE[detail.myState] || '',

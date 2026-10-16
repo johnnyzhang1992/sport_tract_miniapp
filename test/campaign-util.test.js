@@ -139,3 +139,28 @@ test('CU12 状态→标签修饰类：基类就是中性灰，只有要跳出灰
   assert.equal(statusTagClass('archived'), '');
   assert.equal(statusTagClass(undefined), '');
 });
+
+test('CU13 未开始（upcoming）：标签文案「未开始」，且给专属修饰类不与「已结束」共用灰底', () => {
+  assert.equal(statusLabel('upcoming'), '未开始', '后端新增档位，端上必须有名可显');
+  assert.equal(
+    statusTagClass('upcoming'),
+    'campaign-tag--upcoming',
+    '「未开始」与「已结束」语义相反（一个在前一个在后），共用灰底会让人误读成同一档',
+  );
+});
+
+test('CU14 未开始的活动仍可加入：报名早于开赛是常态，按钮不该置灰', () => {
+  assert.deepEqual(
+    joinCta({ myState: 'none', canJoin: true, status: 'upcoming', visibility: 'public' }),
+    { text: '加入活动', disabled: false },
+  );
+  assert.deepEqual(
+    joinCta({ myState: 'none', canJoin: true, status: 'upcoming', visibility: 'private' }),
+    { text: '申请加入', disabled: false },
+  );
+  // 但人数已满时仍要挡住，不因「未开始」放行
+  assert.deepEqual(
+    joinCta({ myState: 'none', canJoin: false, status: 'upcoming', visibility: 'public' }),
+    { text: '人数已满', disabled: true },
+  );
+});

@@ -4,7 +4,7 @@
  * 运行：node --test test/campaign-util.test.js。
  */
 
-const STATUS_LABEL = { active: '进行中', ended: '已结束', dissolved: '已解散' };
+const STATUS_LABEL = { upcoming: '未开始', active: '进行中', ended: '已结束', dissolved: '已解散' };
 const VISIBILITY_LABEL = { public: '公开', private: '隐私' };
 
 /** 未知档位原样透传：后端加档时不至于是空白 */
@@ -21,7 +21,11 @@ function visibilityLabel(v) {
  * 基类本身就是中性灰，所以「已结束」以及后端将来新加的状态都返回空串落回基类，
  * 不会出现一条没样式的裸标签——与 statusLabel 的「未知原样透传」同一取向。
  */
-const STATUS_TAG_MOD = { active: 'campaign-tag--active', dissolved: 'campaign-tag--dissolved' };
+const STATUS_TAG_MOD = {
+  upcoming: 'campaign-tag--upcoming',
+  active: 'campaign-tag--active',
+  dissolved: 'campaign-tag--dissolved',
+};
 function statusTagClass(s) {
   return STATUS_TAG_MOD[s] || '';
 }

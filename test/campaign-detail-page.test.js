@@ -868,3 +868,29 @@ test('CDP31 「加载更多」行由 members.length < memberTotal 驱动，并�
   );
   assert.match(src, /已显示 \{\{members\.length\}\} \/ \{\{memberTotal\}\}/, '要给出「还差多少」的实际数字');
 });
+
+test('CDP32 未开始（upcoming）：标签「未开始」+ 专属样式，发起人仍有编辑入口', async () => {
+  resetEnv();
+  appStub.globalData.userInfo = { id: 'u-owner' };
+  mockDetail(member({ status: 'upcoming' }));
+  const page = makePage();
+  await page.onLoad({ id: 'c1' });
+  await flush();
+
+  assert.equal(page.data.head.statusText, '未开始', '文案必须有名可显，不能透传英文档位');
+  assert.equal(page.data.head.statusTag, 'campaign-tag--upcoming', '不与「已结束」共用灰底：两者语义相反');
+  assert.equal(page.data.canEdit, true, '还没开赛正是最该调时间/标题的阶段，编辑入口要给');
+  assert.equal(page.data.isMember, true, '未开始不影响成员身份');
+});
+
+test('CDP33 未开始的非成员仍可加入：cta 不置灰', async () => {
+  resetEnv();
+  appStub.globalData.userInfo = { id: 'u-viewer' };
+  mockDetail(nonMember({ status: 'upcoming', canJoin: true, visibility: 'public' }));
+  const page = makePage();
+  await page.onLoad({ id: 'c1' });
+  await flush();
+
+  assert.deepEqual(page.data.cta, { text: '加入活动', disabled: false }, '报名早于开赛是常态，未开始不该挡加入');
+  assert.equal(page.data.canEdit, false, '但编辑入口仍只给发起人');
+});
