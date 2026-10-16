@@ -10,8 +10,8 @@ const { statusLabel, statusTagClass, fmtRangeLabeled, avatarStack, fmtPanel } = 
 // 两个 Tab：key 与接口 role 参数一一对应（没有活动广场，只能看到自己相关的活动）
 // 「我参与」在前并作为默认档（多数人是参与者；进页首个请求即 role=joined）
 const TABS = [
-  { key: 'joined', label: '我参与' },
-  { key: 'created', label: '我发起' },
+  { key: 'joined', label: '我参与的' },
+  { key: 'created', label: '我发起的' },
 ];
 
 /** 卡片展示字段在 JS 侧一次算好（WXML 不做格式化）：带标签的时间行 + 成员面 + 我的汇总 */
