@@ -205,7 +205,7 @@ test('H8 接口全挂时屏上仍是缓存值，但失败要如实标出来', as
   assert.ok(p.data.overviewError && p.data.heatError, '但失败要如实标出来');
 });
 
-test('H9 运动榜摘要：findMyRanks 返回完整上榜记录，最多 3 条', async () => {
+test('H9 运动榜摘要：findMyRanks 返回该周期全部上榜记录（截断在调用方）', async () => {
   resetEnv();
   respond = (p) => {
     if (p === '/stats/leaderboard/me?period=week') {
@@ -237,4 +237,27 @@ test('H9 运动榜摘要：findMyRanks 返回完整上榜记录，最多 3 条',
   // 全部没有 → 空数组
   respond = () => Promise.resolve({});
   assert.deepEqual(await page.findMyRanks(fakeApi), [], '不在任何榜时返回空数组');
+});
+
+test('H10 卡片最多 1+2=3 行：三条上榜也只展示前两条排名', async () => {
+  resetEnv();
+  respond = (p) => {
+    if (p === '/stats/leaderboard-regions') return Promise.resolve({ totalUsers: 27 });
+    if (p === '/stats/leaderboard/me?period=week') {
+      return Promise.resolve({
+        ranks: [
+          { type: 'walking', rank: 2 },
+          { type: 'running', rank: 5 },
+          { type: 'hiking', rank: 1 },
+        ],
+      });
+    }
+    return Promise.resolve({});
+  };
+
+  const page = makePage();
+  await page.loadLeaderboardSummary();
+
+  assert.equal(page.data.lbSummary.ranks.length, 2, '排名行截到 2 条，加上「全国 N 位迹路者」共 3 行');
+  assert.deepEqual(page.data.lbSummary.ranks.map((r) => r.type), ['walking', 'running'], '按后端返回顺序取前两条');
 });

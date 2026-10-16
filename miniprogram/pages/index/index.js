@@ -182,7 +182,7 @@ Page({
       this.setData({
         lbSummary: {
           totalUsers: regions.totalUsers,
-          ranks: ranks.slice(0, 3),
+          ranks: ranks.slice(0, 2), // 卡片最多 1+2=3 行
         },
       });
     } catch (e) {
@@ -191,7 +191,7 @@ Page({
   },
 
   /**
-   * 依次查 周榜→月榜→年榜→总榜，取最先有上榜类型的周期，返回该周期内所有上榜记录（最多 3 条）。
+   * 依次查 周榜→月榜→年榜→总榜，取最先有上榜类型的周期，返回该周期内全部上榜记录（截断在调用方）。
    * 每条 { type, rank, label }：label 是「散步周榜」这样的类型+榜单描述。
    */
   async findMyRanks(api) {
