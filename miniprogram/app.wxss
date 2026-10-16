@@ -47,6 +47,7 @@ page {
   border: 2rpx solid #fff;
   background: #e3e8f0; /* 没有头像时就是这枚占位圆 */
   flex: none;
+  box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.14);
 }
 .member-av + .member-av {
   margin-left: -14rpx; /* 相邻头像咬合 */
