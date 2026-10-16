@@ -210,6 +210,11 @@ module.exports = {
     UPLOAD_INTERVAL: 30000,
     /** 单批上传点数上限 */
     BATCH_MAX_POINTS: 2000,
+    /**
+     * 未传尾部落盘的点数上限：单点 JSON 实测约 112B，5000 个 ≈ 560KB，
+     * 卡在小程序「单个 key ≤ 1MB」下面（超了是整包写失败，一个点都留不住）
+     */
+    PERSIST_MAX_POINTS: 5000,
   },
 
   /** 有效运动最小距离（米）：与后端 MIN_EFFECTIVE_DISTANCE_M 一致，低于该值保存时被自动作废 */

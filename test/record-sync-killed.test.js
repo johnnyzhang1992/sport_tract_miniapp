@@ -98,6 +98,7 @@ const lastPatch = (ctx) => ctx.patches[ctx.patches.length - 1] || {};
 
 test('K1 上传撞 409：除了停轮询，还要把服务端原文交给页面回调', async () => {
   const notices = [];
+  storage.syncPending = { activityId: 'aid', lastUploadedSeq: 0, points: [{ seq: 6, lat: 31.23, lng: 121.47, timestamp: Date.now() }] };
   const s = new SyncService({ onSyncKilled: (m) => notices.push(m) });
   s.activityId = 'aid';
   s.tracker = { getNewPoints: () => [{ seq: 7, lat: 31.23, lng: 121.47, timestamp: Date.now() }] };
@@ -110,11 +111,11 @@ test('K1 上传撞 409：除了停轮询，还要把服务端原文交给页面�
 
   assert.deepEqual(notices, ['这条运动已于 10-01 19:12:50 结束，本次 1 个点不再入库'], '409 要把整句原文给出去，不要自己拼');
   assert.equal(s.timer, null, '上传定时器应已停');
-  assert.equal(s.pending.length, 0, '被踢之后暂存队列不该留着重试');
+  assert.ok(!storage.syncPending, '被踢之后这场没有出路，落盘的待传队列也不该留着');
   clearInterval(s.timer);
 });
 
-test('K2 断网（statusCode 0）不算被踢：点进待同步队列，不通知页面', async () => {
+test('K2 断网（statusCode 0）不算被踢：点落盘等补传，不通知页面', async () => {
   const notices = [];
   const s = new SyncService({ onSyncKilled: (m) => notices.push(m) });
   s.activityId = 'aid';
@@ -126,7 +127,7 @@ test('K2 断网（statusCode 0）不算被踢：点进待同步队列，不通�
   await s.upload();
 
   assert.deepEqual(notices, [], '网络错误不是被踢');
-  assert.equal(s.pending.length, 1, '点应留在待同步队列等补传');
+  assert.deepEqual((storage.syncPending?.points || []).map((p) => p.seq), [8], '点要落盘等下一轮补传');
 });
 
 test('K3 页面收到被踢：立刻停表停定位、清掉「继续上次运动」现场、显示服务端原文', () => {

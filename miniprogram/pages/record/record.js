@@ -793,6 +793,8 @@ Page({
       if (!this.tracker.paused) {
         this.tracker.pause();
       }
+      // 最后一次上传之后采的点只活在内存：不在这儿落盘，进程被杀就跟着一起没了
+      this.sync.persist();
       wx.setStorageSync('ongoingActivity', {
         activityId: this.sync.activityId,
         type: this.data.type,
@@ -853,8 +855,14 @@ Page({
       // 整场录制期间 sync 只上传轨迹点，pausedMs 要等结束那次 final 包才进服务端 —— in_progress 活动
       // 读回来的 pausedMs 恒为 0，直接用它会把之前所有暂停（含自动暂停）回流成运动时长。累计值只有本地现场有
       const ongoing = wx.getStorageSync('ongoingActivity');
+      // 断网/杀进程时没传上去的点只存在于落盘的未传尾部：服务端读回来的点集没有它们，
+      // 而 finish 是整包替换 trackPoints，不并进来的话 final 包里照样缺这一段
+      const persisted = SyncService.readPersisted(activityId);
+      const onServer = new Set((activity.trackPoints || []).map((p) => p.seq));
+      const recovered = persisted ? persisted.points.filter((p) => !onServer.has(p.seq)) : [];
+      const trackPoints = activity.trackPoints.concat(recovered).sort((a, b) => a.seq - b.seq);
       this.tracker.restoreFromPoints(
-        activity.trackPoints, activity.markers, activity.startTime,
+        trackPoints, activity.markers, activity.startTime,
         ongoing ? ongoing.pausedMs || 0 : 0,
         ongoing ? ongoing.backdatedMs || 0 : 0,
       );
@@ -868,13 +876,15 @@ Page({
 
       this.sync = new SyncService(this);
       this.sync.activityId = activityId;
-      this.sync.lastUploadedSeq = this.tracker.seq; // 已上传到后端的点
+      // 水位取落盘值而不是 tracker.seq：这批点服务端还没收到，下一轮定时器要真把它们补传上去
+      // （服务端按库里已有 seq 去重）；取 tracker.seq 等于宣布"都传完了"，只能等结束那次 final 包
+      this.sync.lastUploadedSeq = persisted ? persisted.lastUploadedSeq : this.tracker.seq;
 
       this.setData({
         starting: false,
         paused: true,
         currentAccuracy: null,
-        mapPoints: activity.trackPoints.map((p) => ({
+        mapPoints: trackPoints.map((p) => ({
           lat: p.lat,
           lng: p.lng,
           pauseGap: !!p.pauseGap,
