@@ -3,6 +3,7 @@ const { formatDuration, formatPace, formatDurationStat } = require('../../utils/
 const { getBestCache, setBestCache } = require('../../services/storage');
 const { matchBest } = require('../../utils/best-records');
 const config = require('../../config/index');
+const { markHomeDirty } = require('../../utils/home-refresh');
 
 const PAGE_SIZE = 20;
 const VIEW_MODE_KEY = 'tracksViewMode';
@@ -341,6 +342,7 @@ Page({
         groups: this.buildGroups(items),
       });
       this.syncMonthlyStats(); // 删除影响整月累计，重新拉取聚合
+      markHomeDirty(); // 首页累计数据 / 榜名次 / 日历都会变
       wx.showToast({ title: '已删除', icon: 'success' });
     } catch (err) {
       console.error('删除轨迹失败', err);

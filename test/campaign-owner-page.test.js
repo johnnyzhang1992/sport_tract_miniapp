@@ -304,6 +304,7 @@ test('COP2 踢人：先 wx.showModal 二次确认；取消不发请求，确认�
 
   // ② 确认：POST kick（body 字段名就是 userId）+ 成功后刷新
   modalResult = { confirm: true };
+  appStub.globalData.homeDirty = false;
   page.onKickTap(tap(1));
   await flush();
   const kicks = apiCalls.filter((c) => c.path === '/campaigns/c1/kick');
@@ -311,6 +312,7 @@ test('COP2 踢人：先 wx.showModal 二次确认；取消不发请求，确认�
   assert.equal(kicks[0].method, 'POST');
   assert.deepEqual(kicks[0].body, { userId: OTHER_ID });
   assert.deepEqual(toasts, ['已移出']);
+  assert.equal(appStub.globalData.homeDirty, true, '移出成员后首页卡片(人数/头像)变了：要标脏让它重拉');
   assert.equal(apiCalls.filter((c) => c.path === '/campaigns/c1').length, 2, '踢完要静默刷新');
 
   // 自己那行（canKick=false）：连弹窗都不该有
@@ -338,12 +340,14 @@ test('COP3 解散：二次确认后才 DELETE；取消不请求；非发起人�
   // ② 确认：DELETE + toast + 刷新为已解散态（status 由服务端派生，端上不重算）
   modalResult = { confirm: true };
   delHook = () => { state.detail = detailOf({ status: 'dissolved' }); };
+  appStub.globalData.homeDirty = false;
   page.onDissolve();
   await flush();
   const dels = apiCalls.filter((c) => c.method === 'DELETE');
   assert.equal(dels.length, 1);
   assert.equal(dels[0].path, '/campaigns/c1');
   assert.deepEqual(toasts, ['活动已解散']);
+  assert.equal(appStub.globalData.homeDirty, true, '解散后首页不该再挂这条活动：要标脏让它重拉');
   assert.equal(page.data.head.statusText, '已解散', '解散后页面进入已解散态');
 
   // ③ 非发起人：按钮不存在，方法都不该被触发任何请求

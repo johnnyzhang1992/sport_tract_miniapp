@@ -21,6 +21,15 @@ const { avatarStack } = require('../../utils/campaign.js');
 // 首页概览本地缓存 key（先展示旧数据避免空白，接口返回后刷新）
 const OVERVIEW_CACHE_KEY = 'indexOverviewCache_v1';
 
+/** onShow 自动刷新的节流窗口：切 tab 回来不必每次全量重拉；下拉刷新 / 登录态变化 / homeDirty 可越过它 */
+const HOME_TTL_MS = 60 * 1000;
+
+/** 概览三段在合并响应里的字段 → 卡片上的名字（失败文案要落到自己那张卡上） */
+const SECTION_LABELS = { overview: '累计数据', footprint: '点亮省市', heat: '运动日历' };
+
+/** 榜名次 label 用的周期名（服务端回 period，端上不再自己探周期） */
+const PERIOD_LABEL = { week: '周榜', month: '月榜', year: '年榜', all: '总榜' };
+
 /** 首页活动卡：标题 + 成员面（人数 + 头像堆叠）——WXML 不做格式化，统一在这里算好 */
 function toCampaignCard(c) {
   return Object.assign({}, c, {
@@ -55,10 +64,21 @@ Page({
 
   onShow() {
     this.applyDefaultType();
-    this.loadOverview();
-    this.loadLeaderboardSummary();
-    this.loadActiveTopics();
-    this.loadCampaigns();
+    // 节流：60s 内切 tab 回来不再全量重拉；但登录态变化（游客登录 / 退出）与 homeDirty
+    // （刚跑完、刚加入/退出活动、刚删除轨迹）必须越过 TTL，否则用户会看到旧数字。
+    const app = getApp();
+    const session = app.hasSession();
+    const due = Date.now() - (this._lastAutoLoadAt || 0) >= HOME_TTL_MS;
+    const sessionChanged = session !== this._autoLoadSession;
+    if (due || sessionChanged || app.globalData.homeDirty) {
+      this._lastAutoLoadAt = Date.now();
+      this._autoLoadSession = session;
+      app.globalData.homeDirty = false;
+      this.loadOverview();
+      this.loadLeaderboardSummary();
+      this.loadActiveTopics();
+      this.loadCampaigns();
+    }
     this.checkOngoing();
   },
 
@@ -79,9 +99,11 @@ Page({
   },
 
   /**
-   * 一起运动（进行中）：我发起 + 我参与两路并发，按 id 去重后最多取 3 条。
+   * 一起运动（进行中）：只拉「我参与」一路 —— 服务端的 joined 筛选取 role ∈ ['member','creator']
+   * 且 joinedAt 非空的成员行，本来就把我发起的活动包含在内；原先并发 created 一路再按 id 去重，
+   * 等于同一个集合打两遍。
    * status 直接用服务端派生的档位筛 active，不按 endAt 本地再算一遍（两边口径不分叉）。
-   * 游客直接退：两个接口都要求登录，发出去必然 401。闸门判 hasSession() 而不是
+   * 游客直接退：接口要求登录，发出去必然 401。闸门判 hasSession() 而不是
    * globalData.loggedIn——onShow 不 await 静默恢复，老用户冷启动那一刻 loggedIn 还是 false，
    * 而 api.get 是从 storage 取 token 的；拿 loggedIn 判会把他们误当游客、区块整个空掉。
    * 网络失败仍静默：区块退化成「发起一个活动」引导，不打扰首屏。
@@ -92,18 +114,11 @@ Page({
       return;
     }
     try {
-      const [created, joined] = await Promise.all([
-        api.get('/campaigns?role=created'),
-        api.get('/campaigns?role=joined'),
-      ]);
-      const seen = {};
-      const active = [];
-      for (const c of [...((created && created.items) || []), ...((joined && joined.items) || [])]) {
-        if (!c || seen[c.id]) continue;
-        seen[c.id] = true;
-        if (c.status === 'active') active.push(c);
-      }
-      this.setData({ campaigns: active.slice(0, 3).map(toCampaignCard) });
+      const data = await api.get('/campaigns?role=joined');
+      const items = (data && data.items) || [];
+      this.setData({
+        campaigns: items.filter((c) => c && c.status === 'active').slice(0, 3).map(toCampaignCard),
+      });
     } catch (e) {
       // 静默：区块显示发起引导即可
       this.setData({ campaigns: [] });
@@ -172,49 +187,31 @@ Page({
     wx.navigateTo({ url: '/pages/leaderboard/leaderboard' });
   },
 
-  /** 运动榜摘要（卡片副标题）：全国点亮人数 + 我的排名（失败静默） */
+  /**
+   * 运动榜摘要（卡片副标题）：全国点亮人数 + 我的排名（失败静默）。
+   * ?me=1 让服务端一次带回两样：周期回退（周→月→年→总）原先在端上串行打最多 4 次接口，
+   * 现在收进一个请求；`me.period` 就是选中的周期，label 直接按它拼。
+   * 老服务端不下发 me → ranks 退化为空，人数照常展示。
+   */
   async loadLeaderboardSummary() {
-    if (this.data.notLoggedIn) return;
+    if (!getApp().hasSession() || this.data.notLoggedIn) return;
     try {
-      const api = getApp().globalData.api;
-      const regions = await api.get('/stats/leaderboard-regions');
-      const ranks = await this.findMyRanks(api);
+      const res = await api.get('/stats/leaderboard-regions?me=1');
+      const me = res.me || {};
+      const period = me.period || '';
+      const ranks = Array.isArray(me.ranks) ? me.ranks : [];
       this.setData({
         lbSummary: {
-          totalUsers: regions.totalUsers,
-          ranks: ranks.slice(0, 2), // 卡片最多 1+2=3 行
+          totalUsers: res.totalUsers,
+          ranks: ranks.slice(0, 2).map((r) => { // 卡片最多 1+2=3 行
+            const t = config.ACTIVITY_TYPES.find((x) => x.type === r.type);
+            return { type: r.type, rank: r.rank, label: `${(t && t.label) || '运动'}${PERIOD_LABEL[period] || '榜'}` };
+          }),
         },
       });
     } catch (e) {
       // 静默：卡片仍展示默认文案
     }
-  },
-
-  /**
-   * 依次查 周榜→月榜→年榜→总榜，取最先有上榜类型的周期，返回该周期内全部上榜记录（截断在调用方）。
-   * 每条 { type, rank, label }：label 是「散步周榜」这样的类型+榜单描述。
-   */
-  async findMyRanks(api) {
-    const periods = [
-      { key: 'week', label: '周榜' },
-      { key: 'month', label: '月榜' },
-      { key: 'year', label: '年榜' },
-      { key: 'all', label: '总榜' },
-    ];
-    for (const { key, label } of periods) {
-      try {
-        const res = await api.get(`/stats/leaderboard/me?period=${key}`);
-        if (res.ranks && res.ranks.length > 0) {
-          return res.ranks.map((r) => {
-            const t = config.ACTIVITY_TYPES.find((x) => x.type === r.type);
-            return { type: r.type, rank: r.rank, label: `${(t && t.label) || '运动'}${label}` };
-          });
-        }
-      } catch (e) {
-        return [];
-      }
-    }
-    return [];
   },
 
   /** 点击"继续运动"入口 → 回记录页（让用户选择继续/重新开始） */
@@ -231,7 +228,11 @@ Page({
     wx.navigateTo({ url: '/pages/stats/stats' });
   },
 
-  /** 应用设置的默认运动类型（设置页保存到后端用户 settings） */
+  /**
+   * 应用设置的默认运动类型（设置页保存到后端用户 settings）。
+   * 不再为此单独打 /users/me：登录响应本来就下发 user.settings，设置页保存后也会写回 globalData；
+   * 首页每次 onShow 多打一个接口只为读一个字段不值得。
+   */
   async applyDefaultType() {
     try {
       const app = getApp();
@@ -240,8 +241,8 @@ Page({
         await app.login();
       }
       if (!app.globalData.loggedIn) return;
-      const user = await api.get('/users/me');
-      const dt = user && user.settings && user.settings.defaultType;
+      const user = app.globalData.userInfo || {};
+      const dt = user.settings && user.settings.defaultType;
       if (dt && config.ACTIVITY_TYPES.some((t) => t.type === dt)) {
         this.setData({ selectedType: dt });
       }
@@ -251,7 +252,14 @@ Page({
   },
 
   onPullDownRefresh() {
-    this.loadOverview().finally(() => wx.stopPullDownRefresh());
+    // 下拉是「刷新这一屏」：越过 onShow 的 TTL，把四块都重拉一次
+    this._lastAutoLoadAt = 0;
+    Promise.all([
+      this.loadOverview(),
+      this.loadLeaderboardSummary(),
+      this.loadActiveTopics(),
+      this.loadCampaigns(),
+    ]).finally(() => wx.stopPullDownRefresh());
   },
 
   selectType(e) {
@@ -294,37 +302,45 @@ Page({
       this.setData({ totalOverview: cached.totalOverview, heatData: cached.heatData || [] });
     }
     try {
-      // 每个接口自己兜住失败：原先三个请求共用一个 Promise.all，/stats/overview 一挂就把不相关的
-      // 日历一起拖没，现场只剩一句 console.error —— 用户看到的只是「日历不见了」
+      // 三段合成一个请求（/stats/home），服务端按段包成 {ok,data|error}。
+      // 合并**不能**把 3cb2d5e 修掉的「一个接口挂掉、整块卡片消失」请回来：
+      // 每段失败只落到自己那张卡上，旧值不清空；整请求失败则三段一起如实标出来。
+      let sections;
+      try {
+        sections = (await api.get('/stats/home')) || {};
+      } catch (e) {
+        const msg = (e && e.message) || String(e);
+        sections = {
+          overview: { ok: false, error: msg },
+          footprint: { ok: false, error: msg },
+          heat: { ok: false, error: msg },
+        };
+      }
       const failed = {};
-      const soft = (key, label) => (p) =>
-        p.catch((e) => {
-          failed[key] = `${label}：${(e && e.message) || String(e)}`;
-          return null;
-        });
-      const [overview, footprint, heat] = await Promise.all([
-        soft('overview', '累计数据')(api.get('/stats/overview')),
-        soft('footprint', '点亮省市')(api.get('/stats/footprint')),
-        soft('heat', '运动日历')(api.get('/stats/trend?days=365')),
-      ]);
+      for (const key of Object.keys(SECTION_LABELS)) {
+        const sec = sections[key];
+        if (!sec || sec.ok !== true) {
+          failed[key] = `${SECTION_LABELS[key]}：${(sec && sec.error) || '响应缺失'}`;
+        }
+      }
       const patch = {
         overviewError: failed.overview || null,
         footprintError: failed.footprint || null,
         heatError: failed.heat || null,
       };
       if (!failed.overview) {
-        const total = overview.total || { count: 0, distance: 0 };
+        const total = sections.overview.data.total || { count: 0, distance: 0 };
         const prev = this.data.totalOverview || {};
         patch.totalOverview = {
           trackCount: total.count || 0,
           totalKm: compact((total.distance || 0) / 1000), // 公里/千卡 K·W 缩写
-          // 省市来自另一个接口：它失败就留着屏上旧值，别把「3 省」刷成 0
-          provinceCount: failed.footprint ? prev.provinceCount || 0 : footprint.provinceCount,
-          cityCount: failed.footprint ? prev.cityCount || 0 : footprint.cityCount,
+          // 省市来自另一段：它失败就留着屏上旧值，别把「3 省」刷成 0
+          provinceCount: failed.footprint ? prev.provinceCount || 0 : sections.footprint.data.provinceCount,
+          cityCount: failed.footprint ? prev.cityCount || 0 : sections.footprint.data.cityCount,
         };
       }
       // 日历失败同理不清空：屏上留着近 365 天的旧点，比刷成空白更等得起重试
-      if (!failed.heat) patch.heatData = (heat && heat.data) || [];
+      if (!failed.heat) patch.heatData = (sections.heat.data && sections.heat.data.data) || [];
       this.setData(patch);
       // 全绿才写缓存（下次先展示旧值）；半套数据不落盘——否则下次冷启动会把「某个接口挂了」
       // 掩盖成「你的数据就是这些」

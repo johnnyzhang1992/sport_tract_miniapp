@@ -29,6 +29,7 @@
 const api = require('../../services/api');
 const config = require('../../config/index');
 const { ensureLogin } = require('../../utils/login-gate');
+const { markHomeDirty } = require('../../utils/home-refresh');
 const { statusLabel, visibilityLabel, statusTagClass, fmtRange, joinCta, fmtPanel, truncateName } = require('../../utils/campaign.js');
 
 /** 成员昵称展示上限（字）；超出截断补「...」——排行行里昵称后面还跟「移出」按钮与距离，不能任其撑满 */
@@ -385,6 +386,7 @@ Page({
     this._joining = true;
     try {
       await api.post(`/campaigns/${this._id}/join`, {});
+      markHomeDirty();
       wx.showToast({ title: cta.text + '成功', icon: 'success' });
       await this.refresh(true);
     } catch (e) {
@@ -510,6 +512,7 @@ Page({
     this._reviewing = true;
     try {
       await api.post(`/campaigns/${this._id}/${action}`, { userId: row.userId });
+      markHomeDirty(); // 成员面的头像/人数会变
       wx.showToast({ title: okText, icon: 'success' });
       // 本地先移除该行（抽屉即时收窄），再静默刷新取服务端最新态（同意会进成员榜）
       const pendingRows = this.data.pendingRows.filter((r) => r.userId !== row.userId);
@@ -541,6 +544,7 @@ Page({
     this._kicking = true;
     try {
       await api.post(`/campaigns/${this._id}/kick`, { userId: member.userId });
+      markHomeDirty();
       wx.showToast({ title: '已移出', icon: 'success' });
       // 被移出的人若正开着明细半屏：数据已失效，先关掉（刷新失败也不残留）
       if (this.data.sheetMember && this.data.sheetMember.userId === member.userId) {
@@ -574,6 +578,7 @@ Page({
     this._leaving = true;
     try {
       await api.post(`/campaigns/${this._id}/leave`);
+      markHomeDirty();
       wx.showToast({ title: '已退出活动', icon: 'success' });
       // 服务端 myState→left：刷新即转「你已退出该活动」+「重新加入」（渲染路径在 applyDetail，端上不自己拼状态）
       await this.refresh(true);
@@ -608,6 +613,7 @@ Page({
     this._dissolving = true;
     try {
       await api.del(`/campaigns/${this._id}`);
+      markHomeDirty();
       wx.showToast({ title: '活动已解散', icon: 'success' });
       await this.refresh(true); // 「已解散」由服务端 status 派生，刷新即得，端上不重算
     } catch (e) {

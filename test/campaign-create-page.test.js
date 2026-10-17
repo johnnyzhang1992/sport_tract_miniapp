@@ -143,6 +143,7 @@ test('CCP3 合法表单 → POST /campaigns 且请求体字段完整，成功后
   respond = () => Promise.resolve({ id: 'cmp-abc' });
   const page = makePage();
   Object.assign(page.data, legal());
+  appStub.globalData.homeDirty = false;
   await page.onSubmit();
   assert.equal(apiCalls.length, 1);
   assert.equal(apiCalls[0].path, '/campaigns');
@@ -157,6 +158,7 @@ test('CCP3 合法表单 → POST /campaigns 且请求体字段完整，成功后
   });
   assert.equal(toasts[toasts.length - 1], '活动已创建');
   assert.equal(navs[navs.length - 1], '/pages/campaign-detail/campaign-detail?id=cmp-abc');
+  assert.equal(appStub.globalData.homeDirty, true, '新建后首页区块要多一条：要标脏让它重拉');
 });
 
 test('CCP4 人数上限超 500 → 不提交，toast 给对象+实际值+上限', async () => {
@@ -408,10 +410,12 @@ test('CCP19 编辑成功 → toast + navigateBack（回到详情页由它自己�
   respond = (p, body) => (body ? Promise.resolve(detailDto(body)) : Promise.resolve(detailDto()));
   const page = makePage();
   await page.onLoad({ id: 'cmp-abc' });
+  appStub.globalData.homeDirty = false;
   await page.onSubmit();
   assert.equal(toasts[toasts.length - 1], '已保存');
   assert.equal(navBacks.length, 1, '编辑是从详情页进来的，成功后应退回而不是再压一层详情页');
   assert.equal(navs.length, 0);
+  assert.equal(appStub.globalData.homeDirty, true, '编辑后首页卡片(标题等)可能变了：要标脏让它重拉');
   assert.equal(page.data.submitting, false, '成功分支必须复位，否则返回后按钮永久锁死');
 });
 

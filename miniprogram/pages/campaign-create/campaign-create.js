@@ -15,6 +15,7 @@ const config = require('../../config/index');
 const { slashDate } = require('../../utils/campaign.js');
 const api = require('../../services/api');
 const { ensureLogin } = require('../../utils/login-gate');
+const { markHomeDirty } = require('../../utils/home-refresh');
 
 const MAX_TITLE = 30;
 const MAX_DESC = 120;
@@ -211,6 +212,7 @@ Page({
           endDate,
         });
         this.setData({ submitting: false });
+        markHomeDirty();
         wx.showToast({ title: '已保存', icon: 'success' });
         // 编辑是从详情页 navigateTo 进来的：退回详情页，由它的 onShow 静默刷新拿最新值。
         // 不再 navigateTo 一次详情页——那会在栈里多压一层，返回时用户会看到两张详情页。
@@ -230,6 +232,7 @@ Page({
       // 若 submitting 仍为 true，用户从详情页返回后按钮会永久 disabled/loading、文案停在「创建中…」，
       // 且 onSubmit 被守卫短路，页面上没有任何重置路径 → 真用户被锁死（Critical-1）。
       this.setData({ submitting: false });
+      markHomeDirty();
       wx.showToast({ title: '活动已创建', icon: 'success' });
       const id = created && created.id;
       wx.navigateTo({ url: `/pages/campaign-detail/campaign-detail?id=${id}` });

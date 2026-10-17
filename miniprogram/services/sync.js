@@ -4,6 +4,7 @@
  */
 const api = require('./api');
 const config = require('../config/index');
+const { markHomeDirty } = require('../utils/home-refresh');
 
 /** 未传尾部的落盘位（单 key 覆盖式写：一场只有一份，读回来时靠里面的 activityId 认场） */
 const PENDING_KEY = 'syncPending';
@@ -130,6 +131,8 @@ class SyncService {
     const res = await api.put(`/activities/${this.activityId}/finish`, finalPack);
     // final 包已带全量 trackPoints（服务端整包替换），增量队列到这儿没有下一步
     SyncService.clearPersisted();
+    // 刚结束的这场会改变首页累计数据与榜名次：让下次 onShow 越过 60s 节流
+    markHomeDirty();
     return res;
   }
 

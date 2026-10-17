@@ -464,6 +464,7 @@ test('CDP11 加入按钮：可点时 POST /campaigns/:id/join 并刷新，禁用
   await page2.onLoad({ id: 'c1' });
   await flush();
   apiCalls.length = 0;
+  appStub.globalData.homeDirty = false;
   await page2.onJoin();
   await flush();
 
@@ -471,6 +472,7 @@ test('CDP11 加入按钮：可点时 POST /campaigns/:id/join 并刷新，禁用
   assert.equal(apiCalls[0].path, '/campaigns/c1/join');
   assert.equal(page2.data.isMember, true, '加入成功后要刷新成成员视角');
   assert.equal(toasts.length, 1, '用户主动点击：成功后给一次提示');
+  assert.equal(appStub.globalData.homeDirty, true, '加入后首页卡片(人数/头像)变了：要标脏让它重拉');
 });
 
 /* ------------------------------ 终端收尾：游客登录闸门（M1） ------------------------------ */
@@ -566,6 +568,7 @@ test('CDP17 非发起人成员：退出活动二次确认；取消零请求；�
 
   // ② 确认：POST /leave → refresh(true) → 「你已退出该活动」+「重新加入」
   modalResult = { confirm: true };
+  appStub.globalData.homeDirty = false;
   page.onLeave();
   await flush();
   const leaves = apiCalls.filter((c) => c.path === '/campaigns/c1/leave');
@@ -577,6 +580,7 @@ test('CDP17 非发起人成员：退出活动二次确认；取消零请求；�
   assert.deepEqual(page.data.cta, { text: '重新加入', disabled: false });
   assert.equal(page.data.canLeave, false, '退出后入口消失');
   assert.equal(page.data.panel, null, '退出后不能再有「我的运动」面板');
+  assert.equal(appStub.globalData.homeDirty, true, '退出后首页卡片(人数/头像)变了：要标脏让它重拉');
 });
 
 test('CDP18 发起人：没有「退出活动」入口，onLeave 点了也不弹窗不请求', async () => {

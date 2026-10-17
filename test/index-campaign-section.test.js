@@ -86,8 +86,8 @@ function campaign(over = {}) {
 test('IC1 首页活动卡：不出日期、不出数据行，只剩标题 + 成员面', async () => {
   resetEnv();
   respond = (p) => {
-    if (p === '/campaigns?role=created') return Promise.resolve({ items: [campaign()] });
-    if (p === '/campaigns?role=joined') return Promise.resolve({ items: [] });
+    // 只打「我参与」一路：服务端的 joined 已含我发起的活动（role=['member','creator']）
+    if (p === '/campaigns?role=joined') return Promise.resolve({ items: [campaign()] });
     return Promise.resolve({});
   };
 
@@ -104,7 +104,7 @@ test('IC1 首页活动卡：不出日期、不出数据行，只剩标题 + 成�
 test('IC3 卡片成员面：人数 + 头像堆叠（url 优先、preset 回退、都没有则空）', async () => {
   resetEnv();
   respond = (p) => {
-    if (p === '/campaigns?role=created') {
+    if (p === '/campaigns?role=joined') {
       return Promise.resolve({
         items: [
           campaign({
@@ -118,7 +118,6 @@ test('IC3 卡片成员面：人数 + 头像堆叠（url 优先、preset 回退�
         ],
       });
     }
-    if (p === '/campaigns?role=joined') return Promise.resolve({ items: [] });
     return Promise.resolve({});
   };
 
@@ -134,17 +133,19 @@ test('IC3 卡片成员面：人数 + 头像堆叠（url 优先、preset 回退�
   );
 });
 
-test('IC2 选择规则不变：两路按 id 去重、只留 active、最多 3 条', async () => {
+test('IC2 选择规则不变：只留 active、最多 3 条（joined 一路已无重复项）', async () => {
   resetEnv();
   respond = (p) => {
-    if (p === '/campaigns?role=created') {
-      return Promise.resolve({
-        items: [campaign({ id: 'c1' }), campaign({ id: 'c2' }), campaign({ id: 'c3' }), campaign({ id: 'c4' })],
-      });
-    }
     if (p === '/campaigns?role=joined') {
-      // c1 与 created 重复 → 去重；c9 已结束 → 过滤
-      return Promise.resolve({ items: [campaign({ id: 'c1' }), campaign({ id: 'c9', status: 'ended' })] });
+      return Promise.resolve({
+        items: [
+          campaign({ id: 'c1' }),
+          campaign({ id: 'c2' }),
+          campaign({ id: 'c3' }),
+          campaign({ id: 'c4' }),
+          campaign({ id: 'c9', status: 'ended' }),
+        ],
+      });
     }
     return Promise.resolve({});
   };
@@ -155,8 +156,9 @@ test('IC2 选择规则不变：两路按 id 去重、只留 active、最多 3 �
   assert.deepEqual(
     p.data.campaigns.map((c) => c.id),
     ['c1', 'c2', 'c3'],
-    '去重 + 只留 active + 截前 3',
+    '只留 active + 截前 3',
   );
+  assert.deepEqual(apiCalls, ['/campaigns?role=joined'], '不再并发 created 一路（joined 已含发起人）');
 });
 
 test('IC4 只有 1 条时也按普通卡片宽度展示，不再占满整行', () => {
@@ -170,7 +172,7 @@ test('IC4 只有 1 条时也按普通卡片宽度展示，不再占满整行', (
   );
 });
 
-test('IC5 游客不发请求：两个列表接口必然 401，区块直接退化为引导', async () => {
+test('IC5 游客不发请求：列表接口必然 401，区块直接退化为引导', async () => {
   resetEnv();
   sessionStub = false; // 本地没有 token＝真游客
   loggedInStub = false; // 游客也不可能有登录态
@@ -194,7 +196,7 @@ test('IC6 闸门判 hasSession 不判 loggedIn：冷启动静默恢复还没跑�
 
   assert.deepEqual(
     apiCalls,
-    ['/campaigns?role=created', '/campaigns?role=joined'],
+    ['/campaigns?role=joined'],
     '老用户冷启动不该被误判成游客：用 loggedIn 当闸门就会在这里把请求吞掉',
   );
   assert.equal(p.data.campaigns.length, 1, '恢复中的这一趟仍要渲染出卡片');
