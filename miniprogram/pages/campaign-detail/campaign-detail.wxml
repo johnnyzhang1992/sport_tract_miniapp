@@ -92,15 +92,15 @@
       </view>
       <view class="sum-row">
         <view class="sum-cell">
-          <view class="sum-label">次数</view>
+          <view class="sum-label">运动次数</view>
           <view class="sum-value">{{totals.countText}}</view>
         </view>
         <view class="sum-cell">
-          <view class="sum-label">距离 (km)</view>
+          <view class="sum-label">运动距离 (km)</view>
           <view class="sum-value">{{totals.distanceText}}</view>
         </view>
         <view class="sum-cell">
-          <view class="sum-label">时长</view>
+          <view class="sum-label">运动时长</view>
           <view class="sum-value">{{totals.durationText}}</view>
         </view>
       </view>
