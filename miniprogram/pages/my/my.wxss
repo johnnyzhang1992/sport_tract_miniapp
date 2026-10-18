@@ -23,6 +23,10 @@
 .menu-card {
   padding: 8rpx 12rpx;
 }
+.cell-left {
+  display: flex;
+  align-items: center;
+}
 .cell-icon {
   width: 38rpx;
   height: 38rpx;
@@ -164,4 +168,18 @@
   font-size: 26rpx;
   color: #2b6cf6;
   font-weight: 500;
+}
+
+/* 消息中心未读角标 */
+.unread-badge {
+  min-width: 32rpx;
+  height: 32rpx;
+  padding: 0 8rpx;
+  border-radius: 16rpx;
+  background: #e54d42;
+  color: #ffffff;
+  font-size: 20rpx;
+  line-height: 32rpx;
+  text-align: center;
+  margin-right: 8rpx;
 }

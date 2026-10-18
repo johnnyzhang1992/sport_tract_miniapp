@@ -29,6 +29,7 @@ import { execFileSync } from 'node:child_process';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT_DIR = join(ROOT, 'miniprogram', 'assets', 'icons');
 const SIZE = Number((process.argv.find((a) => a.startsWith('--size=')) || '').split('=')[1] || 96);
+const ONLY = (process.argv.find((a) => a.startsWith('--only=')) || '').split('=')[1] || '';
 const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const STROKE = '#1f2329'; // 与页面主文字色一致
 const LUCIDE = 'https://cdn.jsdelivr.net/npm/lucide-static@latest/icons';
@@ -47,7 +48,7 @@ const CATEGORIES = {
 };
 
 /** 地图页浮层按钮用的字形（黑色透明底，按钮白底由 CSS 给；search 覆盖掉早期的灰版资产） */
-const PLAIN = ['sliders-horizontal', 'plus', 'search', 'layers', 'pencil', 'trash-2', 'map-pinned', 'building-2'];
+const PLAIN = ['sliders-horizontal', 'plus', 'search', 'layers', 'pencil', 'trash-2', 'map-pinned', 'building-2', 'bell'];
 /** 逐字形的额外内缩（CSS px，SIZE=96 口径）：lucide 各家字形在 24 网格里占位不同，
  *  统一 inset 0 会让「占格多的」在按钮里明显大一号。实测墨迹宽：sliders/justify 80px、plus 64px，
  *  layers 的菱形盘、pencil 的斜杆都跨 22 格 → 满幅出到 88px，故各内缩 4.5 拉回 80px 与同排一致
@@ -120,22 +121,27 @@ function emitFromSvg(name, svgPath, size) {
   console.log(`✓ ${name}.png`);
 }
 
-for (const [key, icon] of Object.entries(CATEGORIES)) {
-  const inner = await lucideInner(icon);
-  emit(`fp-cat-${key}`, inner, SIZE * 0.18, false);
-  emit(`fp-cat-${key}-chip`, inner, SIZE * 0.26, true);
+if (!ONLY) {
+  for (const [key, icon] of Object.entries(CATEGORIES)) {
+    const inner = await lucideInner(icon);
+    emit(`fp-cat-${key}`, inner, SIZE * 0.18, false);
+    emit(`fp-cat-${key}-chip`, inner, SIZE * 0.26, true);
+  }
 }
 for (const icon of PLAIN) {
+  if (ONLY && icon !== ONLY) continue;
   // inset 0 = 字形铺满画布：与既有的 lucide-text-align-justify 等老资产同一口径
   // （实测老资产墨迹占宽 83%、描边 8px；用 0.14 内缩出来的只有 5.8px，混在一排按钮里明显偏细偏小）
   const tint = PLAIN_STROKE[icon];
   emit(`lucide-${icon}${tint ? tint.suffix : ''}`, await lucideInner(icon), PLAIN_INSET[icon] || 0, false, tint && tint.color);
 }
-for (const a of ACTIVITY) {
-  emit(a.out, await lucideInner(a.icon), a.inset, false, a.stroke, a.size, a.strokeWidth);
-}
-for (const t of TAB) {
-  emit(t.out, await lucideInner(t.icon), t.inset, false, t.color, t.size, t.strokeWidth);
+if (!ONLY) {
+  for (const a of ACTIVITY) {
+    emit(a.out, await lucideInner(a.icon), a.inset, false, a.stroke, a.size, a.strokeWidth);
+  }
+  for (const t of TAB) {
+    emit(t.out, await lucideInner(t.icon), t.inset, false, t.color, t.size, t.strokeWidth);
+  }
 }
 console.log(`\n共 ${Object.keys(CATEGORIES).length * 2 + PLAIN.length} 张，尺寸 ${SIZE}px → ${OUT_DIR}`);
 console.log('注意：白圆底那组是给地图 marker 用的，字形留白比透明底那组大，视觉重量才和 24px 参考图一致。');

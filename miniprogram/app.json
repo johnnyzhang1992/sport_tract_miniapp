@@ -21,7 +21,9 @@
     "pages/footprint-list/footprint-list",
     "pages/campaign-list/campaign-list",
     "pages/campaign-create/campaign-create",
-    "pages/campaign-detail/campaign-detail"
+    "pages/campaign-detail/campaign-detail",
+    "pages/notification/notification",
+    "pages/notification-list/notification-list"
   ],
   "window": {
     "navigationBarBackgroundColor": "#ffffff",

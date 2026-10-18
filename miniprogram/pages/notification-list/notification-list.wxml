@@ -1,0 +1,28 @@
+<view class="container">
+  <view wx:if="{{loading && items.length === 0}}" class="state">加载中…</view>
+  <view wx:elif="{{failed && items.length === 0}}" class="state">
+    <view class="state-text">消息加载失败</view>
+    <button class="retry-btn" bindtap="onRetry">重试</button>
+  </view>
+  <view wx:elif="{{items.length === 0}}" class="state">暂无消息</view>
+  <view wx:else class="card msg-list">
+    <view
+      wx:for="{{items}}"
+      wx:key="id"
+      class="msg-row"
+      hover-class="msg-row-hover"
+      hover-stay-time="80"
+      data-id="{{item.id}}"
+      bindtap="goDetail"
+    >
+      <view class="msg-main">
+        <view class="msg-title-row">
+          <view wx:if="{{item.unread}}" class="msg-dot"></view>
+          <view class="msg-title">{{item.title}}</view>
+        </view>
+        <view class="msg-date">{{item.dateText}}</view>
+      </view>
+      <view class="msg-arrow">›</view>
+    </view>
+  </view>
+</view>

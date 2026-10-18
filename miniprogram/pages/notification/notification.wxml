@@ -1,0 +1,13 @@
+<view class="container">
+  <view wx:if="{{loading}}" class="state">加载中…</view>
+  <view wx:elif="{{failed}}" class="state">
+    <view class="state-text">{{notFound ? '通知不存在' : '通知加载失败'}}</view>
+    <button wx:if="{{notFound}}" class="retry-btn" bindtap="goBack">返回</button>
+    <button wx:else class="retry-btn" bindtap="onRetry">重试</button>
+  </view>
+  <view wx:else class="card notice-card">
+    <view class="notice-title">{{notice.title}}</view>
+    <view class="notice-date">{{notice.dateText}}</view>
+    <view class="notice-content">{{notice.content}}</view>
+  </view>
+</view>

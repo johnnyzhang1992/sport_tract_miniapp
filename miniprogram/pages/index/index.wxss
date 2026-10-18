@@ -400,3 +400,27 @@
   margin-top: 10rpx;
 }
 /* 头像堆叠（.member-av-stack/.member-av/.member-av-text）是全局共享样式，见 app.wxss */
+
+/* 首页系统通知：单行、标题省略、右侧红点 */
+.notice-bar {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  padding: 20rpx 24rpx;
+  margin-bottom: 16rpx;
+  background: #ffffff;
+  border-radius: 16rpx;
+}
+.notice-bar-hover { opacity: 0.85; }
+.notice-icon { width: 36rpx; height: 36rpx; flex: none; }
+.notice-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 28rpx;
+  color: #1f2329;
+}
+.notice-dot { width: 14rpx; height: 14rpx; border-radius: 50%; background: #e54d42; flex: none; }
+.notice-arrow { color: #8a93a6; font-size: 28rpx; flex: none; }

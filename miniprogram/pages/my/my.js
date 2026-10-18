@@ -14,16 +14,33 @@ Page({
     loading: false,
     overview: null, // { totalCount, totalKm }
     footprint: null, // { provinceCount, cityCount }
+    unreadCount: 0, // 未读通知数（0=不显示角标）
   },
 
   onShow() {
     // 年度报告入口仅年末（12 月）展示，平时从运动报告页进入
     this.setData({ showYearReport: new Date().getMonth() === 11 });
     this.refreshUser();
+    this.loadUnread();
   },
 
   onPullDownRefresh() {
     this.refreshUser().finally(() => wx.stopPullDownRefresh());
+  },
+
+  /** 未读通知数：失败静默（无角标）；游客接口返回 0 */
+  async loadUnread() {
+    try {
+      const res = await api.get('/notifications/summary');
+      this.setData({ unreadCount: (res && res.unreadCount) || 0 });
+    } catch (e) {
+      // 静默
+    }
+  },
+
+  /** 消息中心（历史通知） */
+  goNotifications() {
+    wx.navigateTo({ url: '/pages/notification-list/notification-list' });
   },
 
   async refreshUser() {

@@ -1,4 +1,19 @@
 <view class="container">
+  <!-- 系统通知（单行）：登录用户有未读才出现；游客看最新一条、无红点 -->
+  <view
+    wx:if="{{notice}}"
+    class="notice-bar"
+    hover-class="notice-bar-hover"
+    hover-stay-time="80"
+    data-id="{{notice.id}}"
+    bindtap="goNotice"
+  >
+    <image class="notice-icon" src="/assets/icons/lucide-bell.png" mode="aspectFit" />
+    <view class="notice-title">{{notice.title}}</view>
+    <view wx:if="{{noticeDot}}" class="notice-dot"></view>
+    <view class="notice-arrow">›</view>
+  </view>
+
   <!-- 活动卡（首页横滑共用）：标题 + 成员面（头像堆叠 + 人数）。
        箭头是整张卡的直接子节点，靠 .camp-card 的 align-items:center 对整卡垂直居中 -->
   <template name="campaign-card">

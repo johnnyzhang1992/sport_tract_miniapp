@@ -56,6 +56,8 @@ Page({
     lbSummary: null, // 运动榜摘要（卡片副标题）
     topics: [], // 生效中的官方专题（首页入口）
     campaigns: [], // 进行中的一起运动活动（首页区块，最多 3 条）
+    notice: null, // 首页单行通知（{id,title}；null=不渲染）
+    noticeDot: false, // 红点：登录用户才画
   },
 
   onLoad() {
@@ -70,6 +72,9 @@ Page({
     const session = app.hasSession();
     const due = Date.now() - (this._lastAutoLoadAt || 0) >= HOME_TTL_MS;
     const sessionChanged = session !== this._autoLoadSession;
+    // 读完通知回来：只补通知摘要，不触发整屏重拉
+    const noticeDirty = app.globalData.notificationDirty;
+    app.globalData.notificationDirty = false;
     if (due || sessionChanged || app.globalData.homeDirty) {
       this._lastAutoLoadAt = Date.now();
       this._autoLoadSession = session;
@@ -78,8 +83,30 @@ Page({
       this.loadLeaderboardSummary();
       this.loadActiveTopics();
       this.loadCampaigns();
+      this.loadNotificationSummary(); // 整屏批次里一并拉（noticeDirty 也随之消费）
+    } else if (noticeDirty) {
+      this.loadNotificationSummary();
     }
     this.checkOngoing();
+  },
+
+  /** 首页单行通知摘要：登录用户取最新未读，游客取最新已发布；失败静默不显示 */
+  async loadNotificationSummary() {
+    try {
+      const res = await api.get('/notifications/summary');
+      this.setData({
+        notice: (res && res.item) || null,
+        noticeDot: !!getApp().hasSession(),
+      });
+    } catch (e) {
+      this.setData({ notice: null, noticeDot: false });
+    }
+  },
+
+  /** 通知条 → 详情 */
+  goNotice(e) {
+    const id = e.currentTarget.dataset.id;
+    if (id) wx.navigateTo({ url: `/pages/notification/notification?id=${id}` });
   },
 
   /** 官方专题（生效中）：静默拉取，失败不打扰；游客也可看 */
@@ -252,13 +279,14 @@ Page({
   },
 
   onPullDownRefresh() {
-    // 下拉是「刷新这一屏」：越过 onShow 的 TTL，把四块都重拉一次
+    // 下拉是「刷新这一屏」：越过 onShow 的 TTL，把五块都重拉一次
     this._lastAutoLoadAt = 0;
     Promise.all([
       this.loadOverview(),
       this.loadLeaderboardSummary(),
       this.loadActiveTopics(),
       this.loadCampaigns(),
+      this.loadNotificationSummary(),
     ]).finally(() => wx.stopPullDownRefresh());
   },
 
