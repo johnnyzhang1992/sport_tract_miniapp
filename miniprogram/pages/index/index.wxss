@@ -234,6 +234,9 @@
 .lb-card-stacked {
   display: block; /* 覆盖 .lb-card 的 flex，让标题行与下方内容各占一行 */
 }
+.lb-card-stacked .lb-title {
+  color: #333;
+}
 .lb-head {
   display: flex;
   align-items: center;
@@ -262,10 +265,10 @@
 }
 .lb-rank-line .text-muted {
   font-size: 22rpx;
-  color: #1f2329;
+  color: #333;
 }
 .lb-rank-num {
-  font-size: 30rpx;
+  font-size: 28rpx;
   font-weight: 700;
   color: #2b6cf6;
   line-height: 1;
