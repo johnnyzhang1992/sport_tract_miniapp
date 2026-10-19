@@ -8,8 +8,8 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
 const {
-  computePosterLayout, posterViewHeight,
-  POSTER,
+  computePosterLayout, posterViewHeight, yearPosterHeight,
+  POSTER, YEAR_POSTER,
   POSTER_WIDTH,
   METRIC_COLS,
 } = require('../miniprogram/utils/poster-layout.js');
@@ -96,6 +96,40 @@ test('PL9 轨迹区不受内容影响：指标/分段多少都占 200 高（轨�
   const b = base({ metricsCount: 9, segCount: 30 });
   assert.equal(a.regions.track.bottom - a.regions.track.top, POSTER.TRACK_H);
   assert.equal(b.regions.track.bottom - b.regions.track.top, POSTER.TRACK_H);
+});
+
+test('YP1 年度海报：三段全空只留基础版面', () => {
+  assert.equal(yearPosterHeight({ typeCount: 0, bestCount: 0, milestoneCount: 0 }), YEAR_POSTER.BASE_H + YEAR_POSTER.BOTTOM_H);
+});
+
+test('YP2 年度海报：类型/最佳/新解锁全展示，按行数累加', () => {
+  const h = yearPosterHeight({ typeCount: 4, bestCount: 4, milestoneCount: 5 });
+  assert.equal(
+    h,
+    YEAR_POSTER.BASE_H +
+      (YEAR_POSTER.SECTION_TITLE_H + 4 * YEAR_POSTER.ROW_H) +
+      YEAR_POSTER.SECTION_GAP + (YEAR_POSTER.SECTION_TITLE_H + 4 * YEAR_POSTER.ROW_H) +
+      YEAR_POSTER.SECTION_GAP + (YEAR_POSTER.SECTION_TITLE_H + 5 * YEAR_POSTER.ROW_H) +
+      YEAR_POSTER.BOTTOM_H
+  );
+});
+
+test('YP3 年度海报：空段不占高度，也不留段间距', () => {
+  const withMs = yearPosterHeight({ typeCount: 4, bestCount: 4, milestoneCount: 1 });
+  const withoutMs = yearPosterHeight({ typeCount: 4, bestCount: 4, milestoneCount: 0 });
+  assert.equal(withMs - withoutMs, YEAR_POSTER.SECTION_GAP + YEAR_POSTER.SECTION_TITLE_H + YEAR_POSTER.ROW_H);
+});
+
+test('YP4 年度海报：类型每多一行只多一行高', () => {
+  const a = yearPosterHeight({ typeCount: 4, bestCount: 4, milestoneCount: 2 });
+  const b = yearPosterHeight({ typeCount: 5, bestCount: 4, milestoneCount: 2 });
+  assert.equal(b - a, YEAR_POSTER.ROW_H);
+});
+
+test('YP5 年度海报：脏输入兜底为有限数', () => {
+  const h = yearPosterHeight({ typeCount: NaN, bestCount: undefined, milestoneCount: -3 });
+  assert.ok(Number.isFinite(h));
+  assert.equal(h, YEAR_POSTER.BASE_H + YEAR_POSTER.BOTTOM_H);
 });
 
 test('PL10 posterViewHeight 与 computePosterLayout.viewHeight 同一个函数：三处弹窗共用一条封顶规则', () => {

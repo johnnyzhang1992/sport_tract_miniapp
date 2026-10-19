@@ -1,14 +1,14 @@
 /**
  * 年度运动报告页
  * 数据源：/overview?from=&to=（年初→年末精确区间，后端零改动）
- * 页面聚合出：年度总评 / 月度距离分解 / 高光时刻（单次最长·最佳配速·最长时长·最大爬升）/ 连续运动天数
+ * 页面聚合出：年度总评 / 月度距离分解 / 最佳记录（单次最长·最佳配速·最长时长·最大爬升）/ 连续运动天数
  * 支持保存 canvas 海报到相册
  */
 const api = require('../../services/api');
 const config = require('../../config/index');
 const loading = require('../../utils/loading');
 const { formatDuration } = require('../../utils/format');
-const { posterViewHeight } = require('../../utils/poster-layout');
+const { posterViewHeight, yearPosterHeight, YEAR_POSTER } = require('../../utils/poster-layout');
 
 /** 圆角矩形路径 */
 function roundRect(ctx, x, y, w, h, r) {
@@ -21,6 +21,13 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
+/** 时间戳 → YYYY/MM/DD（页面与海报共用） */
+function ymd(ts) {
+  const d = new Date(ts);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())}`;
+}
+
 /** 逐级缩小字号直到文本宽度 ≤ maxW */
 function fitFont(ctx, text, maxW, base, weight) {
   let size = base;
@@ -29,6 +36,14 @@ function fitFont(ctx, text, maxW, base, weight) {
     size -= 1;
     ctx.font = `${weight} ${size}px sans-serif`;
   }
+}
+
+/** 单行截断：超出 maxW 时从尾部裁剪并补省略号；调用前先设好 font */
+function ellipsize(ctx, text, maxW) {
+  if (ctx.measureText(text).width <= maxW) return text;
+  let s = text;
+  while (s.length > 1 && ctx.measureText(`${s}…`).width > maxW) s = s.slice(0, -1);
+  return `${s}…`;
 }
 
 Page({
@@ -40,7 +55,7 @@ Page({
     summary: null, // { count, distanceKm, durationText, activeDays, elevationGain, calories }
     chartData: [], // 月度距离 [{label:'1月', value:km}]
     typeSummary: [], // 分类型汇总（各类型总距离/总时长/次数）
-    highlights: [], // [{ key, label, value, sub, id }]
+    highlights: [], // 最佳记录 [{ key, label, value, sub, id }]
     milestones: [], // 今年新解锁 [{iconImg, text, date}]
     streakDays: 0, // 最长连续运动天数
     posterVisible: false,
@@ -102,7 +117,7 @@ Page({
     }
   },
 
-  /** 年度数据聚合：总评 / 月度柱状 / 分类型汇总 / 高光时刻 / 连续天数 */
+  /** 年度数据聚合：总评 / 月度柱状 / 分类型汇总 / 最佳记录 / 连续天数 */
   buildReport(tracks, o) {
     const hasData = (o.count || 0) > 0;
     if (!hasData) {
@@ -148,10 +163,7 @@ Page({
       });
 
     // 高光时刻（按年度数据计算；最快配速取轨迹内最快 1km 分段 fastestKm，不足 1km 的轨迹已为 null）
-    const withDate = (t) => {
-      const d = new Date(t.startTime);
-      return `${d.getMonth() + 1}-${d.getDate()}`;
-    };
+    const withDate = (t) => ymd(t.startTime);
     const best = (arr, fn) => arr.reduce((a, b) => (fn(b) > fn(a) ? b : a), arr[0]);
     const bestPacePool = tracks.filter(
       (t) => t.fastestKm > 0 && !['swimming', 'cycling'].includes(t.type),
@@ -249,8 +261,7 @@ Page({
   },
 
   md(ts) {
-    const d = new Date(ts);
-    return `${d.getMonth() + 1}-${d.getDate()}`;
+    return ymd(ts);
   },
 
   dayKey(ts) {
@@ -269,10 +280,16 @@ Page({
   async openPoster() {
     if (!this.data.hasData) return;
     const win = wx.getWindowInfo ? wx.getWindowInfo() : {};
+    const posterCanvasH = yearPosterHeight({
+      typeCount: this.data.typeSummary.length,
+      bestCount: this.data.highlights.length,
+      milestoneCount: this.data.milestones.length,
+    });
     this.setData({
       posterVisible: true,
       posterPath: '',
-      posterViewH: posterViewHeight(this.data.posterCanvasH, win.windowHeight),
+      posterCanvasH,
+      posterViewH: posterViewHeight(posterCanvasH, win.windowHeight),
     });
     loading.show('生成海报…');
     try {
@@ -287,7 +304,7 @@ Page({
       this._canvasNode = res.node;
       // 尺寸一律用设计值，不用 res.size：canvas 只为出图存在，CSS 已缩成 2px 占位
       const width = 300;
-      const height = this.data.posterCanvasH;
+      const height = posterCanvasH;
       const ctx = res.node.getContext('2d');
       const dpr = (wx.getWindowInfo ? wx.getWindowInfo().pixelRatio : 2) || 2;
       res.node.width = width * dpr;
@@ -398,6 +415,65 @@ Page({
         ctx.fillText(c.label, x + barW / 2, chartTop + chartH + 14);
       }
     });
+
+    // 三段明细：运动类型汇总 / 最佳记录 / 今年新解锁（全量展示，高度由 yearPosterHeight 预算）
+    let y = YEAR_POSTER.BASE_H;
+    let hasSection = false;
+    const startSection = (title) => {
+      if (hasSection) y += YEAR_POSTER.SECTION_GAP;
+      hasSection = true;
+      ctx.textAlign = 'left';
+      ctx.fillStyle = ink;
+      ctx.font = 'bold 10px sans-serif';
+      ctx.fillText(title, 24, y);
+      y += YEAR_POSTER.SECTION_TITLE_H;
+    };
+
+    if (this.data.typeSummary.length) {
+      startSection('运动类型汇总');
+      this.data.typeSummary.forEach((t, i) => {
+        const cy = y + i * YEAR_POSTER.ROW_H;
+        ctx.textAlign = 'left';
+        ctx.fillStyle = ink;
+        ctx.font = '9px sans-serif';
+        ctx.fillText(t.typeLabel, 24, cy + 13);
+        ctx.textAlign = 'right';
+        ctx.fillStyle = muted;
+        ctx.fillText(`${t.distanceKm} km · ${t.durationText} · ${t.count} 次`, W - 24, cy + 13);
+      });
+      y += this.data.typeSummary.length * YEAR_POSTER.ROW_H;
+    }
+
+    if (this.data.highlights.length) {
+      startSection('最佳记录');
+      this.data.highlights.forEach((h, i) => {
+        const cy = y + i * YEAR_POSTER.ROW_H;
+        ctx.textAlign = 'left';
+        ctx.fillStyle = ink;
+        ctx.font = '9px sans-serif';
+        ctx.fillText(h.label, 24, cy + 13);
+        ctx.textAlign = 'right';
+        ctx.fillStyle = muted;
+        ctx.fillText(`${h.value} · ${h.sub}`, W - 24, cy + 13);
+      });
+      y += this.data.highlights.length * YEAR_POSTER.ROW_H;
+    }
+
+    if (this.data.milestones.length) {
+      startSection(`今年新解锁（${this.data.milestones.length}）`);
+      this.data.milestones.forEach((m, i) => {
+        const cy = y + i * YEAR_POSTER.ROW_H;
+        ctx.textAlign = 'right';
+        ctx.fillStyle = muted;
+        ctx.font = '9px sans-serif';
+        const dateW = ctx.measureText(m.date).width;
+        ctx.fillText(m.date, W - 24, cy + 13);
+        ctx.textAlign = 'left';
+        ctx.fillStyle = ink;
+        ctx.fillText(ellipsize(ctx, m.text, W - 24 * 2 - dateW - 8), 24, cy + 13);
+      });
+      y += this.data.milestones.length * YEAR_POSTER.ROW_H;
+    }
 
     // 品牌行：左昵称 + 右 @小迹一下
     const u = getApp().globalData.userInfo;

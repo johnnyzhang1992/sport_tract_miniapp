@@ -65,9 +65,9 @@
       </view>
     </view>
 
-    <!-- 高光时刻 -->
+    <!-- 最佳记录 -->
     <view class="card" wx:if="{{highlights.length}}">
-      <view class="section-title">高光时刻</view>
+      <view class="section-title">最佳记录</view>
       <view
         class="hl-row"
         hover-class="hl-row-hover"

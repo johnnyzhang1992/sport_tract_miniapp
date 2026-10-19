@@ -30,7 +30,30 @@ const POSTER = {
   PREVIEW_MIN_VIEW_H: 240, // 小屏兜底：视口不低于此值
 };
 
+/** 年度报告海报：现有总评+月度图之后，再按「运动类型汇总 / 最佳记录 / 今年新解锁」三段自适应加高。
+ *  三段都全量展示（有多少行画多少行），段标题、行高、段间距与 year-report.js 的绘制逐项对齐。 */
+const YEAR_POSTER = {
+  BASE_H: 402, // 顶部品牌带+总距离+四格数据卡+月度柱状图（含月份标签）的固定高度
+  SECTION_TITLE_H: 6,
+  ROW_H: 18,
+  SECTION_GAP: 20,
+  BOTTOM_H: 34, // 最后一行到品牌行（H-14）之间的留白
+};
+
 const toCount = (v) => (Number.isFinite(v) && v > 0 ? Math.floor(v) : 0);
+
+function yearPosterHeight({ typeCount, bestCount, milestoneCount } = {}) {
+  const counts = [toCount(typeCount), toCount(bestCount), toCount(milestoneCount)];
+  let height = YEAR_POSTER.BASE_H;
+  let drawn = 0;
+  counts.forEach((n) => {
+    if (!n) return;
+    if (drawn) height += YEAR_POSTER.SECTION_GAP;
+    height += YEAR_POSTER.SECTION_TITLE_H + n * YEAR_POSTER.ROW_H;
+    drawn += 1;
+  });
+  return height + YEAR_POSTER.BOTTOM_H;
+}
 
 /**
  * @param {number} metricsCount 运动数据项数（详情页 metrics 长度）
@@ -95,4 +118,12 @@ function posterViewHeight(naturalHeight, screenHeight) {
   return Math.min(h, cap);
 }
 
-module.exports = { computePosterLayout, posterViewHeight, POSTER, POSTER_WIDTH, METRIC_COLS };
+module.exports = {
+  computePosterLayout,
+  posterViewHeight,
+  yearPosterHeight,
+  POSTER,
+  YEAR_POSTER,
+  POSTER_WIDTH,
+  METRIC_COLS,
+};
