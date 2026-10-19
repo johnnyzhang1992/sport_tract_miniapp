@@ -104,7 +104,11 @@
       <view class="cmp-label">{{item.label}}</view>
       <view class="cmp-cell" wx:for="{{item.items}}" wx:for-item="it" wx:key="key">
         <view class="cmp-val">{{it.val}}</view>
-        <view class="cmp-diff cmp-diff-{{it.diff.cls}}">{{it.diff.text}}</view>
+        <view class="cmp-diff cmp-diff-{{it.diff.cls}}">
+          <image wx:if="{{it.diff.cls === 'up'}}" class="cmp-diff-icon" src="/assets/icons/lucide-trending-up-green.png" mode="aspectFit" />
+          <image wx:elif="{{it.diff.cls === 'down'}}" class="cmp-diff-icon" src="/assets/icons/lucide-trending-down-red.png" mode="aspectFit" />
+          <text>{{it.diff.text}}</text>
+        </view>
       </view>
     </view>
   </view>

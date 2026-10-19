@@ -32,7 +32,8 @@ const SIZE = Number((process.argv.find((a) => a.startsWith('--size=')) || '').sp
 const ONLY = (process.argv.find((a) => a.startsWith('--only=')) || '').split('=')[1] || '';
 const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const STROKE = '#1f2329'; // 与页面主文字色一致
-const LUCIDE = 'https://cdn.jsdelivr.net/npm/lucide-static@latest/icons';
+// jsdelivr 在当前网络 TLS 被重置、npmmirror 不允许该包，改用 unpkg（会自动 302 到具体版本）
+const LUCIDE = 'https://unpkg.com/lucide-static@latest/icons';
 
 /** 分类 key → lucide 图标名（与 API src/utils/footprint-category.ts 的 key 一一对应） */
 const CATEGORIES = {
@@ -48,14 +49,18 @@ const CATEGORIES = {
 };
 
 /** 地图页浮层按钮用的字形（黑色透明底，按钮白底由 CSS 给；search 覆盖掉早期的灰版资产） */
-const PLAIN = ['sliders-horizontal', 'plus', 'search', 'layers', 'pencil', 'trash-2', 'map-pinned', 'building-2', 'bell'];
+const PLAIN = ['sliders-horizontal', 'plus', 'search', 'layers', 'pencil', 'trash-2', 'map-pinned', 'building-2', 'bell', 'trending-up', 'trending-down'];
 /** 逐字形的额外内缩（CSS px，SIZE=96 口径）：lucide 各家字形在 24 网格里占位不同，
  *  统一 inset 0 会让「占格多的」在按钮里明显大一号。实测墨迹宽：sliders/justify 80px、plus 64px，
  *  layers 的菱形盘、pencil 的斜杆都跨 22 格 → 满幅出到 88px，故各内缩 4.5 拉回 80px 与同排一致
  *  （building-2 同理，跨 22 格 → 内缩 4） */
 const PLAIN_INSET = { layers: 4.5, pencil: 4.5, 'building-2': 4, 'map-pinned': 4.5 };
 /** 图标不带文字时颜色是唯一的语义载体：删除走危险红，出文件名加 -red 后缀（同仓里 *-blue/-white 的变体命名） */
-const PLAIN_STROKE = { 'trash-2': { color: '#e54d42', suffix: '-red' } };
+const PLAIN_STROKE = {
+  'trash-2': { color: '#e54d42', suffix: '-red' },
+  'trending-up': { color: '#2bb673', suffix: '-green' },
+  'trending-down': { color: '#e54d42', suffix: '-red' },
+};
 
 /** 运动类型图标（config/index.js 的 ACTIVITY_TYPES[].iconImg）：144px 画布，与既有 activity-*.png 同尺寸。
  *  inset 逐字形给：这一族老资产的墨迹从 54% 到 100% 都有（本来就没校准过），拿「跑步 96px」当基准，

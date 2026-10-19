@@ -131,7 +131,7 @@ Page({
   /** 个人最佳：横滑卡片（表现分/距离PB在前、其后按类型列 4 项指标），每张卡 = 一条纪录 */
   decorateBest(b) {
     if (!b) return null;
-    const { formatDuration, formatPace } = require('../../utils/format');
+    const { formatDuration, formatPaceParts } = require('../../utils/format');
     const { perfLevel } = require('../../utils/perf-score');
     const TYPE_META = require('../../config/index').ACTIVITY_TYPES || [];
     const iconOf = (t) => (TYPE_META.find((x) => x.type === t) || {}).iconImg || '';
@@ -155,7 +155,7 @@ Page({
       });
     };
     put(b.maxDistanceByType, '最远距离', (r) => `${(r.distance / 1000).toFixed(1)}km`);
-    put(b.minPaceByType, '最快配速', (r) => formatPace(r.fastestKm));
+    put(b.minPaceByType, '最快配速', (r) => (formatPaceParts(r.fastestKm) || {}).value || '—');
     put(b.maxDurationByType, '最长时长', (r) => formatDuration(r.duration));
     put(b.maxElevationByType, '最大爬升', (r) => `${r.elevationGain}m`);
     Object.keys(byType)

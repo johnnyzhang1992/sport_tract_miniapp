@@ -135,7 +135,7 @@
 .cmp-row {
   display: flex;
   align-items: center;
-  padding: 18rpx 0;
+  padding: 12rpx 0;
   border-bottom: 1rpx solid #f2f3f5;
 }
 .cmp-row:last-child {
@@ -156,12 +156,23 @@
   font-size: 28rpx;
   font-weight: 600;
   color: #1f2329;
+  line-height: 1.3;
   white-space: nowrap;
 }
 .cmp-diff {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4rpx;
+  margin-top: 2rpx;
   font-size: 20rpx;
-  margin-top: 4rpx;
+  line-height: 1.2;
   white-space: nowrap;
+}
+.cmp-diff-icon {
+  width: 20rpx;
+  height: 20rpx;
+  flex: none;
 }
 .cmp-diff-up {
   color: #2bb673;
@@ -237,17 +248,19 @@
   width: 33.33%;
   box-sizing: border-box;
   text-align: center;
-  padding: 14rpx 0;
+  padding: 10rpx 0;
 }
 .sum-num {
   font-size: 34rpx;
   font-weight: 600;
   color: #2b6cf6;
+  line-height: 1.3;
 }
 .sum-label {
   font-size: 22rpx;
   color: #999;
-  margin-top: 4rpx;
+  margin-top: 2rpx;
+  line-height: 1.25;
 }
 
 /* 个人最佳 */

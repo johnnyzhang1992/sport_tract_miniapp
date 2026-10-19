@@ -5,7 +5,7 @@
 const api = require('../../services/api');
 const loading = require('../../utils/loading');
 const config = require('../../config/index');
-const { formatDuration, formatPace, formatDurationStat, compact } = require('../../utils/format');
+const { formatDuration, formatPaceParts, formatDurationStat, compact } = require('../../utils/format');
 const { calcDiff } = require('../../utils/diff');
 const { posterViewHeight } = require('../../utils/poster-layout');
 
@@ -560,7 +560,7 @@ Page({
       });
     };
     put(b.maxDistanceByType, '最远距离', (r) => `${(r.distance / 1000).toFixed(1)}km`);
-    put(b.minPaceByType, '最快配速', (r) => formatPace(r.fastestKm));
+    put(b.minPaceByType, '最快配速', (r) => (formatPaceParts(r.fastestKm) || {}).value || '—');
     put(b.maxDurationByType, '最长时长', (r) => formatDuration(r.duration));
     put(b.maxElevationByType, '最大爬升', (r) => `${r.elevationGain}m`);
     Object.keys(byType)
