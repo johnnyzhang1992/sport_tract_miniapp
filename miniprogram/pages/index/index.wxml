@@ -59,10 +59,9 @@
 
   <!-- 运动日历热力图（GitHub 风格，近 365 天）；接口挂了也要留着卡片说清原因，不能整块消失 -->
   <view class="card heat-card" wx:if="{{heatData.length > 0 || heatError}}">
-    <view class="section-title">运动日历</view>
-    <block wx:if="{{heatData.length > 0}}">
-      <calendar-heat data="{{heatData}}" />
-      <view class="heat-legend-row">
+    <view class="section-head">
+      <view class="section-title section-title-flat">运动日历</view>
+      <view class="heat-legend-row" wx:if="{{heatData.length > 0}}">
         <text class="heat-legend-text">颜色越深，当天运动越多</text>
         <view class="heat-legend-colors">
           <view class="hl-cell" style="background:#ebedf0"></view>
@@ -71,6 +70,9 @@
           <view class="hl-cell" style="background:#2b6cf6"></view>
         </view>
       </view>
+    </view>
+    <block wx:if="{{heatData.length > 0}}">
+      <calendar-heat data="{{heatData}}" />
     </block>
     <view class="card-fail" wx:if="{{heatError}}">
       <text class="card-fail-text">{{heatError}}</text>
@@ -139,7 +141,7 @@
          有活动 → 横滑卡片（半宽容器里一屏只放得下一条，多了左右滑），无 → 发起引导 -->
     <view class="card duo-cell">
       <view class="section-head">
-        <view class="section-title section-title-flat">一起运动</view>
+        <view class="section-title section-title-flat">组队运动</view>
         <view class="campaign-more" hover-class="campaign-more-hover" hover-stay-time="80" bindtap="goCampaignList">查看更多 ›</view>
       </view>
 

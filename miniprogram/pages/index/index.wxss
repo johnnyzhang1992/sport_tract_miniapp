@@ -70,7 +70,7 @@
   margin-top: 2rpx;
 }
 .start-btn {
-  margin-top: 48rpx; /* 与上方间距加大 */
+  margin-top: 28rpx;
 }
 
 
@@ -170,20 +170,13 @@
   opacity: 0.8;
 }
 
-/* 运动日历卡片：底部内边距 */
-.heat-card {
-  padding-bottom: 16rpx;
-}
-
-/* 运动日历图例说明 */
+/* 运动日历图例说明：标题行右侧 */
 .heat-legend-row {
   display: flex;
   align-items: center;
-  justify-content: flex-end; /* 文案+色块整体靠右 */
-  margin-top: 12rpx;
 }
 .heat-legend-text {
-  font-size: 20rpx;
+  font-size: 18rpx;
   color: #8a93a6;
   margin-right: 10rpx; /* 与色块间距 */
 }
@@ -349,7 +342,9 @@
   height: 0;
 }
 .campaign-row {
-  padding: 14rpx 0;
+  padding: 16rpx 18rpx;
+  border-radius: 14rpx;
+  background: #f5f7fb;
 }
 /* 空态引导行：借用 .lb-title 的排版，但它是「一句号召」不是卡片标题，
    所以压一档字号、去掉加粗，并强制一行走完（半屏宽里换行会把卡片撑高）。
@@ -409,21 +404,22 @@
   display: flex;
   align-items: center;
   gap: 10rpx;
-  padding: 20rpx 24rpx;
-  margin-bottom: 16rpx;
+  padding: 16rpx 24rpx;
+  margin-bottom: 12rpx;
   background: #ffffff;
   border-radius: 16rpx;
+  line-height: 1.3;
 }
 .notice-bar-hover { opacity: 0.85; }
-.notice-icon { width: 36rpx; height: 36rpx; flex: none; }
+.notice-icon { width: 30rpx; height: 30rpx; flex: none; }
 .notice-title {
   flex: 1;
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  font-size: 28rpx;
+  font-size: 26rpx;
   color: #1f2329;
 }
 .notice-dot { width: 14rpx; height: 14rpx; border-radius: 50%; background: #e54d42; flex: none; }
-.notice-arrow { color: #8a93a6; font-size: 28rpx; flex: none; }
+.notice-arrow { color: #8a93a6; font-size: 26rpx; flex: none; }
