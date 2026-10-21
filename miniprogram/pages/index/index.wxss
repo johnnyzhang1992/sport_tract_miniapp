@@ -441,18 +441,18 @@
 }
 .fav-guide-bubble {
   position: fixed;
-  max-width: 420rpx;
-  background: rgba(17, 24, 39, 0.92);
+  max-width: 460rpx;
+  background: #1f2937;
   border-radius: 16rpx;
   padding: 24rpx 28rpx;
-  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.25);
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.3);
 }
 .fav-guide-arrow {
   position: absolute;
   top: -8rpx;
   width: 16rpx;
   height: 16rpx;
-  background: rgba(17, 24, 39, 0.92);
+  background: #1f2937;
   transform: rotate(45deg);
   border-radius: 4rpx;
 }

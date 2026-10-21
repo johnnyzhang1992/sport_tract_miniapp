@@ -78,13 +78,15 @@ Page({
       const shown = Number(wx.getStorageSync('favGuideShowCount') || 0);
       if (shown >= 3) return;
       const rect = wx.getMenuButtonBoundingClientRect();
-      if (!rect || !rect.bottom) return;
+      if (!rect || !rect.width) return;
       const { windowWidth } = wx.getSystemInfoSync();
       this.setData({
         favGuide: {
           visible: true,
-          top: rect.bottom + 6, // 气泡贴在胶囊正下方
-          right: Math.max(8, windowWidth - rect.right),
+          // 纵向固定贴视口顶部：原生导航栏下方就是胶囊，fixed 的原点在导航栏之下，
+          // 不要用 rect.bottom（那是含状态栏/导航栏的屏幕系坐标，会整体偏下 ~70px）
+          top: 8,
+          right: Math.max(8, windowWidth - rect.right), // 横向原点一致，rect 可直接用
           arrowRight: Math.max(10, windowWidth - (rect.left + rect.width / 2) - 9), // 箭头对准胶囊中线
         },
       });
