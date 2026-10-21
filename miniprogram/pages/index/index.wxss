@@ -317,9 +317,15 @@
   margin-bottom: 0; /* 行距交给 .section-head 统一管 */
 }
 .campaign-more {
-  font-size: 28rpx;
   color: #c8d0dc;
   flex-shrink: 0;
+}
+.campaign-more-text {
+  font-size: 22rpx;
+}
+.campaign-more-arrow {
+  font-size: 28rpx;
+  margin-left: 4rpx;
 }
 .campaign-more-hover {
   opacity: 0.7;

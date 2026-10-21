@@ -145,7 +145,7 @@
     <view class="card duo-cell">
       <view class="section-head">
         <view class="section-title section-title-flat">组队运动</view>
-        <view class="campaign-more" hover-class="campaign-more-hover" hover-stay-time="80" bindtap="goCampaignList">查看更多 ›</view>
+        <view class="campaign-more" hover-class="campaign-more-hover" hover-stay-time="80" bindtap="goCampaignList"><text class="campaign-more-text">查看更多</text><text class="campaign-more-arrow">›</text></view>
       </view>
 
       <!-- 横向可滚动：本区块只有半屏宽，一屏一条，卡片右侧故意露出下一条的边当「可滑」提示 -->
