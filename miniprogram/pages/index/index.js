@@ -58,10 +58,48 @@ Page({
     campaigns: [], // 进行中的一起运动活动（首页区块，最多 3 条）
     notice: null, // 首页单行通知（{id,title}；null=不渲染）
     noticeDot: false, // 红点：登录用户才画
+    favGuide: { visible: false, top: 0, right: 12, arrowRight: 20 }, // 收藏引导浮层
   },
 
   onLoad() {
     this.setupUpdateCheck();
+    // 收藏引导：等首屏渲染稳定后再弹，不打架
+    setTimeout(() => this.maybeShowFavGuide(), 800);
+  },
+
+  /**
+   * 收藏引导浮层：指向右上角胶囊，引导「收藏 / 添加到我的小程序」。
+   * 微信没有查询收藏状态的 API（收藏与否读不到），所以只能按展示次数控制：
+   * 每台设备最多弹 3 次（一次冷启动至多一次），点「知道了」后永不再弹。
+   */
+  maybeShowFavGuide() {
+    try {
+      if (wx.getStorageSync('favGuideDismissed')) return;
+      const shown = Number(wx.getStorageSync('favGuideShowCount') || 0);
+      if (shown >= 3) return;
+      const rect = wx.getMenuButtonBoundingClientRect();
+      if (!rect || !rect.bottom) return;
+      const { windowWidth } = wx.getSystemInfoSync();
+      this.setData({
+        favGuide: {
+          visible: true,
+          top: rect.bottom + 6, // 气泡贴在胶囊正下方
+          right: Math.max(8, windowWidth - rect.right),
+          arrowRight: Math.max(10, windowWidth - (rect.left + rect.width / 2) - 9), // 箭头对准胶囊中线
+        },
+      });
+      wx.setStorageSync('favGuideShowCount', shown + 1);
+    } catch (e) {
+      // 任一环境异常都不影响首页
+    }
+  },
+
+  /** 关闭引导；点「知道了」视为已知悉，永不再弹 */
+  closeFavGuide() {
+    this.setData({ 'favGuide.visible': false });
+    try {
+      wx.setStorageSync('favGuideDismissed', true);
+    } catch (e) {}
   },
 
   onShow() {

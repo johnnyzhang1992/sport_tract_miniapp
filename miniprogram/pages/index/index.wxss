@@ -239,7 +239,7 @@
   min-width: 0; /* 标题过长时省略，不把箭头挤出去 */
 }
 .lb-head .lb-arrow {
-  font-size: 22rpx; /* 与右格标题行「查看更多 ›」的箭头同档 */
+  font-size: 28rpx; /* 与右格标题行「查看更多 ›」的箭头同档 */
 }
 .lb-foot {
   display: flex;
@@ -317,7 +317,7 @@
   margin-bottom: 0; /* 行距交给 .section-head 统一管 */
 }
 .campaign-more {
-  font-size: 22rpx;
+  font-size: 28rpx;
   color: #c8d0dc;
   flex-shrink: 0;
 }
@@ -423,3 +423,57 @@
 }
 .notice-dot { width: 14rpx; height: 14rpx; border-radius: 50%; background: #e54d42; flex: none; }
 .notice-arrow { color: #8a93a6; font-size: 26rpx; flex: none; }
+/* 累计数据标题行右侧箭头：与运动榜/组队运动标题栏图标同档 */
+.overview-arrow {
+  font-size: 28rpx;
+  color: #c8d0dc;
+  flex-shrink: 0;
+}
+
+/* ── 收藏引导浮层：深色气泡指向右上角胶囊，透明遮罩点任意处关闭 ── */
+.fav-guide-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3000;
+}
+.fav-guide-bubble {
+  position: fixed;
+  max-width: 420rpx;
+  background: rgba(17, 24, 39, 0.92);
+  border-radius: 16rpx;
+  padding: 24rpx 28rpx;
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.25);
+}
+.fav-guide-arrow {
+  position: absolute;
+  top: -8rpx;
+  width: 16rpx;
+  height: 16rpx;
+  background: rgba(17, 24, 39, 0.92);
+  transform: rotate(45deg);
+  border-radius: 4rpx;
+}
+.fav-guide-line1 {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 8rpx;
+}
+.fav-guide-line2 {
+  font-size: 22rpx;
+  color: rgba(255, 255, 255, 0.75);
+  line-height: 1.5;
+  margin-bottom: 16rpx;
+}
+.fav-guide-btn {
+  margin-left: auto;
+  width: fit-content;
+  font-size: 22rpx;
+  color: #111827;
+  background: #fff;
+  border-radius: 999rpx;
+  padding: 6rpx 24rpx;
+}
