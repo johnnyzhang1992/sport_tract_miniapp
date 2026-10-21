@@ -87,7 +87,7 @@ Page({
           // 不要用 rect.bottom（那是含状态栏/导航栏的屏幕系坐标，会整体偏下 ~70px）
           top: 8,
           right: Math.max(8, windowWidth - rect.right), // 横向原点一致，rect 可直接用
-          arrowRight: Math.max(10, windowWidth - (rect.left + rect.width / 2) - 9), // 箭头对准胶囊中线
+          arrowRight: Math.max(10, windowWidth - (rect.left + rect.width / 2) - 20), // 箭头对准胶囊中线（偏左一点，视觉居中于气泡）
         },
       });
       wx.setStorageSync('favGuideShowCount', shown + 1);
