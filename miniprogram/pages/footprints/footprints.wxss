@@ -103,8 +103,8 @@
 }
 .tool-btn {
   position: relative;
-  width: 88rpx;
-  height: 88rpx;
+  width: 76rpx;
+  height: 76rpx;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -116,8 +116,8 @@
   background: #f2f3f5;
 }
 .tool-icon {
-  width: 40rpx;
-  height: 40rpx;
+  width: 34rpx;
+  height: 34rpx;
 }
 /* 有筛选生效时给个蓝环，收起状态下也看得出来"当前不是全量" */
 .tool-btn-on {
@@ -146,20 +146,21 @@
   line-height: 1;
   border: 2rpx solid #fff;
 }
-/* 右下三个入口（图层 / 列表 / 新增）与左上筛选、右上搜索同一套度量：88rpx 白圆 + 40rpx 黑色图标 */
+/* 右下三个入口（图层 / 列表 / 新增）与左上筛选、右上搜索同一套度量：76rpx 白圆 + 34rpx 黑色图标（与合集页浮层按钮同档） */
 
-/* 右上搜索：收起时是一个圆钮，展开时向左长成整行输入框 */
+/* 右上搜索：收起时是一个圆钮，展开时向左长成整行输入框
+   收起态与其它浮层按钮同规格（76rpx）；左右内边距按 (76-34)/2 取 21rpx，让 34rpx 图标居中 */
 .search-dock {
   position: absolute;
   top: 24rpx;
   right: 24rpx;
   z-index: 6;
-  width: 88rpx;
-  height: 88rpx;
+  width: 76rpx;
+  height: 76rpx;
   box-sizing: border-box;
   display: flex;
   align-items: center;
-  padding: 0 24rpx;
+  padding: 0 21rpx;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.96);
   box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.14);

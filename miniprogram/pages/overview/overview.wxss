@@ -84,26 +84,26 @@
   z-index: 2;
 }
 
-/* 地图浮层：分享（与组件内「标注」同规格的 88rpx 白圆底 + 40rpx 图标；
-   位于「标注」左侧：right 24 + 标注宽 88 + 间距 8 = 120） */
+/* 地图浮层：分享（与组件内「标注」同规格的 76rpx 白圆底 + 34rpx 图标；
+   位于「标注」左侧：right 24 + 标注宽 76 + 间距 16 = 116，间距与右上角 top-tools 一致） */
 .share-btn {
   position: absolute;
   bottom: calc(64rpx + env(safe-area-inset-bottom)); /* 抬到地图自带比例尺（左下）之上，并避开 Home 指示条 */
-  right: 120rpx;
+  right: 116rpx;
   z-index: 10;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 88rpx;
-  height: 88rpx;
+  width: 76rpx;
+  height: 76rpx;
   box-sizing: border-box;
   background: rgba(255, 255, 255, 0.92);
   border-radius: 50%;
   box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
 }
 .share-btn-icon {
-  width: 40rpx;
-  height: 40rpx;
+  width: 34rpx;
+  height: 34rpx;
 }
 
 /* 分享弹窗 */
