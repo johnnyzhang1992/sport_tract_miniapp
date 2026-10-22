@@ -5,7 +5,7 @@
 const api = require('../../services/api');
 const loading = require('../../utils/loading');
 const config = require('../../config/index');
-const { formatDuration, formatPaceParts, formatDurationStat, compact } = require('../../utils/format');
+const { formatDuration, formatDurationStat, compact } = require('../../utils/format');
 const { calcDiff } = require('../../utils/diff');
 const { posterViewHeight } = require('../../utils/poster-layout');
 
@@ -88,7 +88,6 @@ Page({
     periodLabel: '',
     canGoNext: false,
     summary: null, // 汇总
-    best: null, // 个人最佳
     typeSummary: [], // 分类型汇总（各类型总距离/总时长/次数）
     dateSummary: [], // 日期汇总（按当前维度日期桶聚合：次数/距离/时长/千卡）
     dateSummaryTitle: '', // 桶粒度文案：按天/按周/按月/按半年（后端下发）
@@ -439,19 +438,15 @@ Page({
     this.setData({ loading: true });
     try {
       const prevQuery = this.buildPrevQuery();
-      const reqs = [
-        api.get(`/overview?${this.buildOverviewQuery()}`),
-        api.get('/stats/best').catch(() => null),
-      ];
+      const reqs = [api.get(`/overview?${this.buildOverviewQuery()}`)];
       // 上一周期数据（"全部"无对比）
       if (prevQuery) reqs.push(api.get(`/overview?${prevQuery}`).catch(() => null));
-      const [overview, best, prevOverview] = await Promise.all(reqs);
+      const [overview, prevOverview] = await Promise.all(reqs);
       if (seq !== this._fetchSeq) return;
       // 日期汇总改由后端按东八区分桶下发（避免前端日期运算出错）
       const ds = overview.dateSummary || { title: '', label: '', rows: [] };
       this.setData({
         summary: this.buildSummary(overview),
-        best: this.decorateBest(best),
         typeSummary: this.buildTypeSummary(overview.tracks || []),
         dateSummary: (ds.rows || []).map((r) => ({
           key: r.key,
@@ -533,40 +528,6 @@ Page({
           durationText: formatDuration(r.duration),
         };
       });
-  },
-
-  /** 个人最佳：横滑卡片（表现分/距离PB在前、其后按类型列 4 项指标），每张卡 = 一条纪录 */
-  decorateBest(b) {
-    if (!b) return null;
-    const iconOf = (t) => (config.ACTIVITY_TYPES.find((x) => x.type === t) || {}).iconImg || '';
-    const { perfLevel } = require('../../utils/perf-score');
-    const cards = [];
-    // 表现分（最高，按类型；社区逆向估算非官方 ITRA 分）
-    (b.maxPerfScoreByType || []).forEach((r) => {
-      if (!(r.perfScore > 0)) return;
-      cards.push({ key: `pi${cards.length}`, label: '表现分', value: `${r.perfScore} ${perfLevel(r.perfScore)}`, icon: iconOf(r.type) });
-    });
-    // 距离里程碑 PB（服务端只下发当前纪录）：5 公里 PB / 10 公里 PB …
-    (b.fastestDistanceByKm || [])
-      .slice()
-      .sort((a, b2) => a.km - b2.km || a.type.localeCompare(b2.type))
-      .forEach((r) => cards.push({ key: `pb${cards.length}`, label: `${r.km} 公里 PB`, value: formatDuration(r.sec), icon: iconOf(r.type) }));
-    // 各类型 4 项指标
-    const byType = {};
-    const put = (rows, label, valFn) => {
-      (rows || []).forEach((r) => {
-        if (!byType[r.type]) byType[r.type] = [];
-        byType[r.type].push({ label, value: valFn(r) });
-      });
-    };
-    put(b.maxDistanceByType, '最远距离', (r) => `${(r.distance / 1000).toFixed(1)}km`);
-    put(b.minPaceByType, '最快配速', (r) => (formatPaceParts(r.fastestKm) || {}).value || '—');
-    put(b.maxDurationByType, '最长时长', (r) => formatDuration(r.duration));
-    put(b.maxElevationByType, '最大爬升', (r) => `${r.elevationGain}m`);
-    Object.keys(byType)
-      .sort()
-      .forEach((t) => byType[t].forEach((c) => cards.push({ key: `m${cards.length}`, ...c, icon: iconOf(t) })));
-    return { bestCards: cards };
   },
 
 });

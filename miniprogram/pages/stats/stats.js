@@ -4,7 +4,6 @@
  */
 const api = require('../../services/api');
 const { formatDuration } = require('../../utils/format');
-const { calcDiff } = require('../../utils/diff');
 
 Page({
   data: {
@@ -21,7 +20,6 @@ Page({
     loading: true,
     best: null, // 个人最佳纪录
     typeSummary: [], // 分类型汇总（各类型总距离/总时长/次数）
-    compare: [], // 周期对比 [{label, items: [{key, val, diff}]}]
   },
 
   onShow() {
@@ -63,7 +61,6 @@ Page({
         })),
         best: this.decorateBest(best),
         typeSummary: this.decorateTypeSummary(overview.total && overview.total.byType),
-        compare: this.buildCompare(decorated),
       });
       // 缓存原始 best 数据（记录页打破纪录提示用）
       if (best) {
@@ -91,8 +88,6 @@ Page({
       month: sec(o.month),
       year: sec(o.year),
       total: sec(o.total),
-      prevWeek: sec(o.prevWeek),
-      prevMonth: sec(o.prevMonth),
     };
   },
 
@@ -113,19 +108,6 @@ Page({
           durationText: formatDuration(r.duration || 0),
         };
       });
-  },
-
-  /** 周期对比行：本周vs上周 / 本月vs上月（次数/距离/时长） */
-  buildCompare(o) {
-    const rows = (cur, prev, label) => ({
-      label,
-      items: [
-        { key: 'count', val: String(cur.count), diff: calcDiff(cur.count, prev.count) },
-        { key: 'distance', val: `${(cur.distance / 1000).toFixed(1)}km`, diff: calcDiff(cur.distance, prev.distance) },
-        { key: 'duration', val: formatDuration(cur.duration), diff: calcDiff(cur.duration, prev.duration) },
-      ],
-    });
-    return [rows(o.week, o.prevWeek, '本周 vs 上周'), rows(o.month, o.prevMonth, '本月 vs 上月')];
   },
 
   /** 个人最佳：横滑卡片（表现分/距离PB在前、其后按类型列 4 项指标），每张卡 = 一条纪录 */

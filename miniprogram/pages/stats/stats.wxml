@@ -40,22 +40,6 @@
     </view>
   </view>
 
-  <!-- 周期对比（本周vs上周 / 本月vs上月） -->
-  <view class="card" wx:if="{{compare.length > 0}}">
-    <view class="section-title">周期对比</view>
-    <view class="cmp-row" wx:for="{{compare}}" wx:key="label">
-      <view class="cmp-label">{{item.label}}</view>
-      <view class="cmp-cell" wx:for="{{item.items}}" wx:for-item="it" wx:key="key">
-        <view class="cmp-val">{{it.val}}</view>
-        <view class="cmp-diff cmp-diff-{{it.diff.cls}}">
-          <image wx:if="{{it.diff.cls === 'up'}}" class="cmp-diff-icon" src="/assets/icons/lucide-trending-up-green.png" mode="aspectFit" />
-          <image wx:elif="{{it.diff.cls === 'down'}}" class="cmp-diff-icon" src="/assets/icons/lucide-trending-down-red.png" mode="aspectFit" />
-          <text>{{it.diff.text}}</text>
-        </view>
-      </view>
-    </view>
-  </view>
-
   <!-- 最佳记录：横滑卡片（穗枝环住类型图标 + 名称 + 数值），距离PB在前、其后按类型列指标 -->
   <view class="best-section" wx:if="{{best && best.bestCards.length}}">
     <view class="section-title">最佳记录</view>
@@ -74,9 +58,9 @@
     </scroll-view>
   </view>
 
-  <!-- 分类型汇总（各类型总距离/总时长/次数） -->
+  <!-- 分类型汇总（全站累计：各类型总距离/总时长/次数） -->
   <view class="card" wx:if="{{typeSummary.length > 0}}">
-    <view class="section-title">分类型汇总</view>
+    <view class="section-title">累计分类型汇总</view>
     <view class="best-table">
       <view class="bt-head">
         <view class="bt-th bt-col-type">类型</view>
