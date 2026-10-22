@@ -1,5 +1,8 @@
 .filter-tabs {
   margin-bottom: 8rpx;
+  /* 顶边与白色导航齐平，只圆下面两角；白底在组件内层，靠 overflow 裁出弧 */
+  border-radius: 0 0 16rpx 16rpx;
+  overflow: hidden;
 }
 
 /* 展示模式切换（列表 / 图片） */
@@ -173,6 +176,8 @@
   margin-right: 24rpx;
   flex-shrink: 0;
   background: #eef4ff;
+  /* 行是 stretch（右侧列要靠它贴底），固定高的图标会被留在行首，单独拉回中线 */
+  align-self: center;
 }
 .list-icon {
   width: 48rpx;
@@ -191,9 +196,17 @@
   color: #1f2329;
 }
 .list-dist {
-  font-size: 34rpx;
+  display: flex;
+  align-items: baseline;
+  gap: 2rpx;
   font-weight: 600;
   color: #2b6cf6;
+}
+.list-dist-num {
+  font-size: 38rpx;
+}
+.list-dist-unit {
+  font-size: 24rpx;
 }
 .list-right {
   display: flex;

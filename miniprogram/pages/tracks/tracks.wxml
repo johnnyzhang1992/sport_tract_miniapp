@@ -122,7 +122,10 @@
               </view>
               <view class="list-main">
                 <text class="list-type">{{item.label}}</text>
-                <text class="list-dist">{{item.distanceKm}}公里</text>
+                <view class="list-dist">
+                  <text class="list-dist-num">{{item.distanceKm}}</text>
+                  <text class="list-dist-unit">公里</text>
+                </view>
               </view>
               <view class="list-right">
                 <view class="list-best {{item.bestFormer ? 'list-best-former' : ''}}" wx:if="{{item.bestText}}">
