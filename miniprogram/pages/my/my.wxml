@@ -64,16 +64,16 @@
 
   <!-- 菜单（轨迹合集 · 数据导入 · 设置 · 消息中心，点亮地图已并入数据统计页） -->
   <t-cell-group class="card menu-card">
-    <t-cell title="轨迹合集" arrow t-class-left="cell-left" bind:click="goOverview">
+    <t-cell title="轨迹合集" arrow t-class-left="cell-left" t-class-title="cell-title" bind:click="goOverview">
       <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-compass.png" mode="aspectFit" />
     </t-cell>
-    <t-cell title="数据导入" arrow t-class-left="cell-left" bind:click="goImport">
+    <t-cell title="数据导入" arrow t-class-left="cell-left" t-class-title="cell-title" bind:click="goImport">
       <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-download.png" mode="aspectFit" />
     </t-cell>
-    <t-cell title="设置" arrow t-class-left="cell-left" bind:click="goSettings">
+    <t-cell title="设置" arrow t-class-left="cell-left" t-class-title="cell-title" bind:click="goSettings">
       <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-settings.png" mode="aspectFit" />
     </t-cell>
-    <t-cell title="消息中心" arrow t-class-left="cell-left" bind:click="goNotifications">
+    <t-cell title="消息中心" arrow t-class-left="cell-left" t-class-title="cell-title" bind:click="goNotifications">
       <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-bell.png" mode="aspectFit" />
       <view slot="note" wx:if="{{unreadCount > 0}}" class="unread-badge">{{unreadCount > 99 ? '99+' : unreadCount}}</view>
     </t-cell>

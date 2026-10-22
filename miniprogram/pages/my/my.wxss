@@ -1,7 +1,8 @@
 .user-card {
   display: flex;
   align-items: center;
-  padding: 40rpx 28rpx;
+  /* 横向与页面其它卡片一致 24rpx（上下留白维持 40rpx，这张是页面头牌，不跟着压） */
+  padding: 40rpx 24rpx;
 }
 .card-hover {
   opacity: 0.7;
@@ -21,16 +22,35 @@
   font-weight: 600;
 }
 .menu-card {
-  padding: 8rpx 12rpx;
+  /* 横向与页面其它卡片一致（24rpx）：卡片自己出这 24rpx，cell 的内建边距归零，
+     否则 12rpx + 32rpx = 44rpx 会比上面的卡片缩进去一圈。
+     自定义属性里的 rpx 不参与编译期换算，所以只能写 0px 这种 px 值。 */
+  padding: 8rpx 24rpx;
+  --td-cell-horizontal-padding: 0px;
+  /* 行上下留白收一档：组件默认 32rpx（行距 56px）→ 12px（行距 48px）。同样只能写 px。 */
+  --td-cell-vertical-padding: 12px;
+  /* 图标与文案的间距：组件给 .t-cell__left 带 24rpx（≈12.5px），原先图片又叠了 8rpx，
+     实测墨迹间空隙 14.4px。这里去掉图片那层重复 margin，只留这个令牌（6px）。 */
+  --td-spacer-1: 6px;
+  /* 右侧箭头（TDesign 内置 arrow 默认 48rpx）跟着文案一起收。
+     只能走自定义属性：t-class-right-icon 外类名进不到 t-icon 组件内部；
+     而自定义属性里的 rpx 不参与编译期换算（写了会被整条声明丢掉），所以这里用 px：16px≈32rpx。 */
+  --td-cell-right-icon-size: 16px;
 }
 .cell-left {
   display: flex;
   align-items: center;
 }
+/* 菜单文案压一档（组件默认 32rpx）。外类名落在 .t-cell__title-text 同一个元素上，
+   两边都是单类选择器、组件样式排在后面，普通声明会被它的 `font:` 简写压掉；
+   页面样式进不到组件内部也没法再抬权重（试过 --td-cell-title-font 令牌，值被解析掉不生效），只能 !important。
+   只压字号，行高仍走组件的 48rpx，行距不受影响。 */
+.cell-title {
+  font-size: 28rpx !important;
+}
 .cell-icon {
-  width: 38rpx;
-  height: 38rpx;
-  margin-right: 8rpx;
+  width: 32rpx;
+  height: 32rpx;
   flex-shrink: 0;
 }
 
@@ -106,7 +126,8 @@
 
 /* 数据统计卡片 */
 .stats-card {
-  padding: 26rpx 28rpx;
+  /* 同上：横向对齐 24rpx */
+  padding: 26rpx 24rpx;
 }
 .stats-head {
   display: flex;
