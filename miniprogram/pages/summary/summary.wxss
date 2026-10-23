@@ -44,7 +44,7 @@
   margin-top: 16rpx;
   font-size: 22rpx;
   line-height: 1.5;
-  color: #ad6800;
+  color: #8a5f12;
 }
 .marker-item {
   display: flex;
@@ -91,6 +91,6 @@
   border: 1rpx solid #ffd591;
   border-radius: 16rpx;
   font-size: 26rpx;
-  color: #ad6800;
+  color: #8a5f12;
   line-height: 1.5;
 }

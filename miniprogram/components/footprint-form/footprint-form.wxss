@@ -90,17 +90,17 @@
   word-break: break-all;
 }
 .fval-ph {
-  color: #c2c7d0;
+  color: #667080;
 }
 .fval-sub {
   margin-top: 4rpx;
   font-size: 22rpx;
-  color: #8a93a6;
+  color: #667080;
 }
 .farrow {
   flex: none;
   margin-left: 8rpx;
-  color: #c2c7d0;
+  color: #8a93a6;
   font-size: 32rpx;
   line-height: 1;
 }
@@ -113,7 +113,7 @@
   text-align: right;
 }
 .fph {
-  color: #c2c7d0;
+  color: #667080;
 }
 .fadd {
   flex: none;
@@ -131,7 +131,7 @@
   padding: 16rpx 24rpx;
   font-size: 22rpx;
   line-height: 1.5;
-  color: #8a93a6;
+  color: #667080;
 }
 
 /* 同行的人：标签（可点删） */

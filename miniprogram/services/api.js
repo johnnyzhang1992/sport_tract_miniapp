@@ -244,4 +244,26 @@ async function uploadFile(url, filePath, formData = {}) {
   }
 }
 
-module.exports = { request, get, post, put, del, checkImage, uploadFile, buildUrl };
+/**
+ * 中国省界 GeoJSON：内容静态、体积大，榜单 / 足迹统计 / 足迹地图三处共用。
+ * 进程内缓存 + 在途合并（并发只发一次请求）；失败不缓存，下次仍可重试。
+ */
+let chinaMapCache = null;
+let chinaMapPending = null;
+function getChinaMap() {
+  if (chinaMapCache) return Promise.resolve(chinaMapCache);
+  if (chinaMapPending) return chinaMapPending;
+  chinaMapPending = get('/geo/china-map')
+    .then((map) => {
+      chinaMapCache = map;
+      chinaMapPending = null;
+      return map;
+    })
+    .catch((err) => {
+      chinaMapPending = null;
+      throw err;
+    });
+  return chinaMapPending;
+}
+
+module.exports = { request, get, post, put, del, checkImage, uploadFile, buildUrl, getChinaMap };

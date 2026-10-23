@@ -110,7 +110,7 @@
 }
 .login-tip-arrow {
   font-size: 26rpx;
-  color: #b8860b;
+  color: #8a5f12;
   font-weight: 600;
 }
 .ongoing-bar-hover {
@@ -156,7 +156,7 @@
   min-width: 0;
   font-size: 22rpx;
   line-height: 32rpx;
-  color: #e54d42;
+  color: #c02a30;
 }
 .card-fail-retry {
   flex: none;
@@ -164,7 +164,7 @@
   border-radius: 999rpx;
   font-size: 22rpx;
   color: #fff;
-  background: #e54d42;
+  background: #c02a30;
 }
 .card-fail-retry-hover {
   opacity: 0.8;
@@ -177,7 +177,7 @@
 }
 .heat-legend-text {
   font-size: 18rpx;
-  color: #8a93a6;
+  color: #667080;
   margin-right: 10rpx; /* 与色块间距 */
 }
 .heat-legend-colors {
@@ -217,7 +217,7 @@
 }
 .lb-arrow {
   font-size: 36rpx;
-  color: #c8d0dc;
+  color: #8a93a6;
   flex-shrink: 0;
 }
 
@@ -317,7 +317,7 @@
   margin-bottom: 0; /* 行距交给 .section-head 统一管 */
 }
 .campaign-more {
-  color: #c8d0dc;
+  color: #667080;
   flex-shrink: 0;
 }
 .campaign-more-text {
@@ -396,7 +396,7 @@
   margin-left: 8rpx;
   font-size: 32rpx;
   line-height: 1;
-  color: #c8d0dc;
+  color: #8a93a6;
 }
 .camp-card-members {
   display: flex;
@@ -427,12 +427,12 @@
   font-size: 26rpx;
   color: #1f2329;
 }
-.notice-dot { width: 14rpx; height: 14rpx; border-radius: 50%; background: #e54d42; flex: none; }
-.notice-arrow { color: #8a93a6; font-size: 26rpx; flex: none; }
+.notice-dot { width: 14rpx; height: 14rpx; border-radius: 50%; background: #c02a30; flex: none; }
+.notice-arrow { color: #667080; font-size: 26rpx; flex: none; }
 /* 累计数据标题行右侧箭头：与运动榜/组队运动标题栏图标同档 */
 .overview-arrow {
   font-size: 28rpx;
-  color: #c8d0dc;
+  color: #8a93a6;
   flex-shrink: 0;
 }
 

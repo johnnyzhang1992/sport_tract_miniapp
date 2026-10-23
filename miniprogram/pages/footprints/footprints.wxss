@@ -181,7 +181,7 @@
   color: #1f2329;
 }
 .dock-placeholder {
-  color: #b6bcc6;
+  color: #667080;
   font-size: 26rpx;
 }
 .dock-clear {
@@ -194,7 +194,7 @@
   justify-content: center;
   border-radius: 50%;
   background: #f2f3f5;
-  color: #8a9099;
+  color: #667080;
   font-size: 22rpx;
 }
 .search-dock .tool-badge {
@@ -264,7 +264,7 @@
 .member-date {
   flex: none;
   font-size: 24rpx;
-  color: #8a9099;
+  color: #667080;
 }
 
 /* 新增足迹按钮已并入右下 .tool-col-right（原 .fab 蓝底白字与四个按钮风格不统一，删除） */

@@ -328,7 +328,7 @@ test('L8 时间筛选：默认全部不带区间；切月/翻页/抽屉都带对
 
   page.onPrevPeriod();
   await flush();
-  assert.equal(page.data.periodOffset, 1);
+  assert.equal(page._periodOffset, 1);
   assert.equal(page.data.canGoNext, true);
   assert.equal(apiCalls[apiCalls.length - 1].params.from, fmt(new Date(now.getFullYear(), now.getMonth() - 1, 1)));
 
@@ -337,14 +337,14 @@ test('L8 时间筛选：默认全部不带区间；切月/翻页/抽屉都带对
   assert.equal(page.data.pickerScrollInto, 'period-1', '滚动定位到当前周期');
   page.onSelectPeriod({ currentTarget: { dataset: { offset: 3 } } });
   await flush();
-  assert.equal(page.data.periodOffset, 3);
+  assert.equal(page._periodOffset, 3);
   const start = new Date(now.getFullYear(), now.getMonth() - 3, 1);
   assert.equal(apiCalls[apiCalls.length - 1].params.from, fmt(start));
   assert.equal(apiCalls[apiCalls.length - 1].params.to, fmt(new Date(start.getFullYear(), start.getMonth() + 1, 1)));
 
   page.onRangeChange({ currentTarget: { dataset: { value: 'year' } } });
   await flush();
-  assert.equal(page.data.periodOffset, 0, '切档偏移归零');
+  assert.equal(page._periodOffset, 0, '切档偏移归零');
   assert.equal(apiCalls[apiCalls.length - 1].params.from, `${now.getFullYear()}-01-01`);
 
   page.onRangeChange({ currentTarget: { dataset: { value: 'all' } } });

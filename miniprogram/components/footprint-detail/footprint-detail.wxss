@@ -59,7 +59,7 @@
 }
 .sheet-meta {
   font-size: 24rpx;
-  color: #8a9099;
+  color: #667080;
 }
 /* 日期·地点 一行，分类标签跟在后面（未分类时不渲染标签，行高不变） */
 .sheet-metarow {

@@ -119,11 +119,15 @@ Page({
       this._lastAutoLoadAt = Date.now();
       this._autoLoadSession = session;
       app.globalData.homeDirty = false;
+      // 首屏只等这两块：通知条在顶部、日历/累计数据在第一屏；新榜/组队/专题在首屏之外，
+      // 等这一帧渲染完再拉，避免它们和首屏抢带宽（nextTick 后即「已绘制」）
       this.loadOverview();
-      this.loadLeaderboardSummary();
-      this.loadActiveTopics();
-      this.loadCampaigns();
       this.loadNotificationSummary(); // 整屏批次里一并拉（noticeDirty 也随之消费）
+      wx.nextTick(() => {
+        this.loadLeaderboardSummary();
+        this.loadCampaigns();
+        this.loadActiveTopics();
+      });
     } else if (noticeDirty) {
       this.loadNotificationSummary();
     }

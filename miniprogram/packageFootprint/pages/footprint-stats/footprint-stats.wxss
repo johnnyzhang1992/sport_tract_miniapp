@@ -20,7 +20,7 @@
 }
 .stat-label {
   font-size: 24rpx;
-  color: #8a93a6;
+  color: #667080;
   margin-top: 6rpx;
 }
 .stat-divider {
@@ -46,7 +46,7 @@
 }
 .region-summary {
   font-size: 24rpx;
-  color: #8a93a6;
+  color: #667080;
 }
 .region-head-row {
   border-top: none;
@@ -55,7 +55,7 @@
 .region-head-row .region-name,
 .region-head-row .region-count {
   font-size: 22rpx;
-  color: #a3a9b5;
+  color: #667080;
   font-weight: 400;
 }
 .region-row {
@@ -104,7 +104,7 @@
 .region-count-city {
   font-size: 24rpx;
   font-weight: 400;
-  color: #8a93a6;
+  color: #667080;
 }
 .region-caret {
   width: 32rpx;
@@ -160,7 +160,7 @@
   background: #e2e6eb;
 }
 .period-arrow-disabled {
-  color: #c0c4cc;
+  color: #8a93a6;
 }
 .period-label {
   flex: 1;

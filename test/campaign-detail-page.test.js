@@ -764,7 +764,7 @@ test('CDP26 首屏带分页参数上送，并落地 total / page', async () => {
   assert.match(call.path, /[?&]pageSize=20(&|$)/, `页大小要与服务端默认同口径：${call.path}`);
   assert.equal(page.data.members.length, 2);
   assert.equal(page.data.memberTotal, 2, 'total 决定「加载更多」出不出');
-  assert.equal(page.data.memberPage, 1);
+  assert.equal(page._memberPage, 1);
 });
 
 test('CDP27 加载更多：追加第 2 页、名次接着数，到底后按钮条件不再成立', async () => {
@@ -793,7 +793,7 @@ test('CDP27 加载更多：追加第 2 页、名次接着数，到底后按钮�
     Array.from({ length: 25 }, (_, i) => i + 1),
     '追加行必须带全局名次——端上重排或沿用页内下标都会出现两个第 1 名',
   );
-  assert.equal(page.data.memberPage, 2);
+  assert.equal(page._memberPage, 2);
   assert.equal(page.data.members.length < page.data.memberTotal, false, '到底了，按钮条件不再成立');
   assert.equal(page.data.memberLoadingMore, false);
 
@@ -819,7 +819,7 @@ test('CDP28 加载更多失败 → toast 具体原因、列表不动、按钮可
   await page.loadMoreMembers();
   assert.equal(page.data.members.length, 20, '失败不能把已显示的行清掉');
   assert.equal(toasts[toasts.length - 1], '网络不给力', '要原样转服务端/网络的错，别只说「加载失败」');
-  assert.equal(page.data.memberPage, 1, '页码不前进，重试才会重新要第 2 页');
+  assert.equal(page._memberPage, 1, '页码不前进，重试才会重新要第 2 页');
   assert.equal(page.data.memberLoadingMore, false, '失败必须复位，否则按钮永久锁死');
   assert.ok(page.data.members.length < page.data.memberTotal, '仍有 5 人没显示 → 按钮还在，可以重试');
 });
@@ -857,7 +857,7 @@ test('CDP30 加载更多在途时整页刷新 → 过期响应不许追加到新
   await flush();
 
   assert.equal(page.data.members.length, 20, '过期第 2 页若照样追加，屏上就会是「刷新后的 1..20 + 21..25」混着两场数据');
-  assert.equal(page.data.memberPage, 1, '刷新已把页码归 1，过期响应不该把它推到 2');
+  assert.equal(page._memberPage, 1, '刷新已把页码归 1，过期响应不该把它推到 2');
 });
 
 test('CDP31 「加载更多」行由 members.length < memberTotal 驱动，并写明已显示/总数', () => {

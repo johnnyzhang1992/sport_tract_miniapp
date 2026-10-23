@@ -244,7 +244,7 @@ Page({
   async ensureChinaMap() {
     if (this._chinaMap) return this._chinaMap;
     try {
-      this._chinaMap = await getApp().globalData.api.get('/geo/china-map');
+      this._chinaMap = await getApp().globalData.api.getChinaMap();
       return this._chinaMap;
     } catch (e) {
       console.error('加载中国地图失败', e);

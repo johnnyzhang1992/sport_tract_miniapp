@@ -84,7 +84,6 @@ Page({
     ranges: RANGES,
     activeRange: 'week',
     year: new Date().getFullYear(), // 年度报告入口年份
-    periodOffset: 0, // 往前的周期数（0=当前周/月/年）
     periodLabel: '',
     canGoNext: false,
     summary: null, // 汇总
@@ -113,29 +112,31 @@ Page({
   onRangeChange(e) {
     const value = e.currentTarget.dataset.value;
     if (value === this.data.activeRange) return;
-    this.setData({ activeRange: value, periodOffset: 0 });
+    this._periodOffset = 0;
+    this.setData({ activeRange: value });
     this.applyPeriod();
     this.fetch();
   },
 
   /** 翻到上一周期（更早） */
   onPrevPeriod() {
-    this.setData({ periodOffset: this.data.periodOffset + 1 });
+    this._periodOffset = (this._periodOffset || 0) + 1;
     this.applyPeriod();
     this.fetch();
   },
 
   /** 翻回下一周期（到当前周期后不可再翻） */
   onNextPeriod() {
-    if (this.data.periodOffset <= 0) return;
-    this.setData({ periodOffset: this.data.periodOffset - 1 });
+    if ((this._periodOffset || 0) <= 0) return;
+    this._periodOffset = (this._periodOffset || 0) - 1;
     this.applyPeriod();
     this.fetch();
   },
 
   /** 根据当前 tab + 偏移量计算周期区间与文案（"全部"无周期） */
   applyPeriod() {
-    const { activeRange, periodOffset } = this.data;
+    const activeRange = this.data.activeRange;
+    const periodOffset = this._periodOffset || 0;
     if (activeRange === 'all') {
       this._period = null;
       this.setData({ periodLabel: '', canGoNext: false });
@@ -148,7 +149,8 @@ Page({
 
   /** 打开周期选择弹窗：按当前粒度生成最近 N 个周期选项 */
   onTapPeriodLabel() {
-    const { activeRange, periodOffset } = this.data;
+    const activeRange = this.data.activeRange;
+    const periodOffset = this._periodOffset || 0;
     if (activeRange === 'all') return;
     const count = PICKER_COUNT[activeRange] || 12;
     const options = [];
@@ -159,7 +161,7 @@ Page({
     }
     this.setData({ showPeriodPicker: true, periodOptions: options, pickerScrollInto: '' });
     wx.nextTick(() => {
-      this.setData({ pickerScrollInto: `period-${this.data.periodOffset}` });
+      this.setData({ pickerScrollInto: `period-${this._periodOffset || 0}` });
     });
   },
 
@@ -174,8 +176,8 @@ Page({
   onSelectPeriod(e) {
     const offset = Number(e.currentTarget.dataset.offset);
     this.setData({ showPeriodPicker: false });
-    if (offset === this.data.periodOffset) return;
-    this.setData({ periodOffset: offset });
+    if (offset === (this._periodOffset || 0)) return;
+    this._periodOffset = offset;
     this.applyPeriod();
     this.fetch();
   },
@@ -402,7 +404,7 @@ Page({
   /** 上一周期查询参数：当前周期往前翻一档；"全部"无对比 */
   buildPrevQuery() {
     if (this.data.activeRange === 'all' || !this._period) return null;
-    const prev = periodRange(this.data.activeRange, this.data.periodOffset + 1);
+    const prev = periodRange(this.data.activeRange, (this._periodOffset || 0) + 1);
     return `from=${prev.from}&to=${prev.to}&lean=1`;
   },
 

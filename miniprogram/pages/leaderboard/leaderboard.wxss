@@ -27,7 +27,7 @@
 }
 .card-sub {
   font-size: 22rpx;
-  color: #8a93a6;
+  color: #667080;
 }
 
 /* 地图 */
@@ -167,7 +167,7 @@
   bottom: calc(16rpx + env(safe-area-inset-bottom));
   left: 24rpx;
   font-size: 22rpx;
-  color: #8a93a6;
+  color: #667080;
 }
 
 /* 分享图预览弹窗 */
@@ -236,14 +236,14 @@
   position: absolute;
   text-align: center;
   width: 100%;
-  color: #8a93a6;
+  color: #667080;
   font-size: 24rpx;
   padding-top: 200rpx;
 }
 .map-tip {
   text-align: center;
   font-size: 22rpx;
-  color: #8a93a6;
+  color: #667080;
   padding: 12rpx 0 4rpx;
 }
 
@@ -333,7 +333,7 @@
   justify-content: center;
   font-size: 26rpx;
   font-weight: 700;
-  color: #8a93a6;
+  color: #667080;
   text-align: center;
   flex-shrink: 0;
 }
@@ -356,7 +356,7 @@
   font-size: 26rpx;
   font-weight: 600;
   color: #fff;
-  background: #b8c4d9;
+  background: #64748f;
 }
 .rank-name-wrap {
   flex: 1;
@@ -379,7 +379,7 @@
 }
 .rank-meta {
   font-size: 22rpx;
-  color: #8a93a6;
+  color: #667080;
   margin-right: 20rpx;
   flex-shrink: 0;
 }
@@ -406,7 +406,7 @@
 }
 .best-label {
   font-size: 20rpx;
-  color: #8a93a6;
+  color: #667080;
 }
 .best-value {
   font-size: 28rpx;
@@ -438,11 +438,11 @@
   justify-content: center;
   font-size: 18rpx;
   color: #fff;
-  background: #b8c4d9;
+  background: #64748f;
 }
 .best-name {
   font-size: 20rpx;
-  color: #8a93a6;
+  color: #667080;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -542,7 +542,7 @@
 }
 .me-hint {
   font-size: 24rpx;
-  color: #8a93a6;
+  color: #667080;
 }
 /* TOP10 列表：入榜人数少时不显拥挤留的下限。空态就在同一个容器里，共用这一条 */
 .rank-list {
@@ -554,7 +554,7 @@
   align-items: center;
   justify-content: center;
   text-align: center;
-  color: #8a93a6;
+  color: #667080;
   font-size: 24rpx;
 }
 
@@ -623,11 +623,11 @@
 }
 .city-meta {
   font-size: 22rpx;
-  color: #8a93a6;
+  color: #667080;
 }
 .city-empty {
   text-align: center;
-  color: #8a93a6;
+  color: #667080;
   font-size: 24rpx;
   padding: 30rpx 0;
 }

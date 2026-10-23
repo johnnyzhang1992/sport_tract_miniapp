@@ -24,6 +24,10 @@ const fakeApi = {
     if (p.startsWith('/geo/china-map')) return Promise.resolve({ type: 'FeatureCollection', features: [] });
     return boardRespond(p);
   },
+  // 页面改为走 api.getChinaMap（进程内缓存），测试桩保持同一路径计数
+  getChinaMap() {
+    return this.get('/geo/china-map');
+  },
 };
 const apiPath = require.resolve('../miniprogram/services/api.js');
 require.cache[apiPath] = { id: apiPath, filename: apiPath, loaded: true, exports: fakeApi, children: [], paths: [] };

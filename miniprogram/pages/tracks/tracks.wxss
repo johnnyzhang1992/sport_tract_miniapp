@@ -144,12 +144,12 @@
 }
 .ms-head {
   font-size: 22rpx;
-  color: #8a93a6;
+  color: #667080;
 }
 .ms-label {
   width: 100rpx;
   flex-shrink: 0;
-  color: #8a93a6;
+  color: #667080;
 }
 .ms-col {
   flex: 1;
@@ -219,7 +219,7 @@
 }
 .list-time {
   font-size: 24rpx;
-  color: #8a93a6;
+  color: #667080;
 }
 /* 个人最佳角标：金色月桂穗枝（公共背景图在 app.wxss 的 .laurel-ear），左右枝环抱文本 */
 .list-best {
@@ -235,7 +235,7 @@
 .list-best-text {
   font-size: 18rpx;
   font-weight: 600;
-  color: #c08e2e;
+  color: #8a5f12;
   letter-spacing: 1rpx;
   margin: 0 3rpx;
   white-space: nowrap;
@@ -244,7 +244,7 @@
 }
 /* 前纪录（已被刷新）：文字灰金降调（穗枝灰显走全局 .laurel-ear-grey） */
 .list-best-former .list-best-text {
-  color: #a89e86;
+  color: #6f6857;
 }
 
 /* 卡片（缩略图在上，信息在下） */
@@ -288,7 +288,7 @@
 }
 .track-duration {
   font-size: 22rpx;
-  color: #8a93a6;
+  color: #667080;
   flex-shrink: 0;
 }
 .track-foot {
@@ -303,7 +303,7 @@
 }
 .track-time {
   font-size: 22rpx;
-  color: #8a93a6;
+  color: #667080;
 }
 
 .loading-tip {
@@ -313,7 +313,7 @@
 
 /* 左滑删除按钮 */
 .del-action {
-  background: #e34d59;
+  background: #c02a30;
   color: #fff;
   height: 100%;
   display: flex;
@@ -355,7 +355,7 @@
 }
 .load-error-text {
   font-size: 26rpx;
-  color: #8a93a6;
+  color: #667080;
 }
 .load-error-btn {
   font-size: 28rpx;

@@ -127,8 +127,8 @@
 }
 .btn-del {
   background: #fff;
-  color: #ff4d4f;
-  border: 2rpx solid #ff4d4f;
+  color: #c02a30;
+  border: 2rpx solid #c02a30;
   margin-right: 20rpx;
 }
 .btn-cancel {

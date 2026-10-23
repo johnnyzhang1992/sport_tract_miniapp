@@ -63,12 +63,12 @@
   </view>
 
   <!-- 右上：搜索按钮，点一下向左展开成整行输入框（✕ 清空、回车生效、再点图标收起） -->
-  <view class="search-dock {{searchOpen ? 'search-dock-open' : ''}}">
+  <!-- 点击区放在整只胶囊上：图标只有 34rpx，单独挂 handler 会被体验评分判「响应区域过小」 -->
+  <view class="search-dock {{searchOpen ? 'search-dock-open' : ''}}" bindtap="toggleSearch">
     <image
       class="tool-icon dock-icon"
       src="/assets/icons/lucide-search.png"
       mode="aspectFit"
-      bindtap="toggleSearch"
     />
     <input
       wx:if="{{searchOpen}}"
@@ -80,6 +80,7 @@
       confirm-type="search"
       bindinput="onKeywordInput"
       bindconfirm="onSearchConfirm"
+      catchtap="noop"
     />
     <view wx:if="{{searchOpen}}" class="dock-clear" catchtap="onClearKeyword">✕</view>
     <view wx:if="{{!searchOpen && keyword}}" class="tool-badge">1</view>

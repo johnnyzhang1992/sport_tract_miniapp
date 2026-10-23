@@ -23,7 +23,7 @@
         <view class="camp-card-members">
           <view class="member-av-stack">
             <block wx:for="{{avatarList}}" wx:key="key">
-              <image wx:if="{{item.src}}" class="member-av" src="{{item.src}}" mode="aspectFill" />
+              <image wx:if="{{item.src}}" class="member-av" src="{{item.src}}" mode="aspectFill" lazy-load />
               <view wx:else class="member-av"></view>
             </block>
           </view>
@@ -186,7 +186,7 @@
     data-id="{{item.id}}"
     bindtap="goTopic"
   >
-    <image wx:if="{{item.coverUrl}}" class="lb-icon topic-cover" src="{{item.coverUrl}}" mode="aspectFill" />
+    <image wx:if="{{item.coverUrl}}" class="lb-icon topic-cover" src="{{item.coverUrl}}" mode="aspectFill" lazy-load />
     <view wx:else class="lb-icon topic-emoji">🎉</view>
     <view class="lb-body">
       <view class="topic-tag">官方专题</view>

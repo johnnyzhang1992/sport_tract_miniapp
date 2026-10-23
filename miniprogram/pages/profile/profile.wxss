@@ -96,7 +96,7 @@
 }
 .link-arrow {
   font-size: 40rpx;
-  color: #c2c7d0;
+  color: #8a93a6;
 }
 .card-hover {
   opacity: 0.8;
@@ -195,7 +195,7 @@
 }
 .upload-entry-arrow {
   font-size: 34rpx;
-  color: #c2c7d0;
+  color: #8a93a6;
 }
 .presets-empty {
   font-size: 24rpx;

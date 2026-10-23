@@ -18,7 +18,7 @@
 .date {
   margin-top: 10rpx;
   font-size: 24rpx;
-  color: #8a93a6;
+  color: #667080;
 }
 
 .content {
@@ -27,7 +27,7 @@
 
 .tip {
   text-align: center;
-  color: #8a93a6;
+  color: #667080;
   font-size: 26rpx;
   padding: 120rpx 0;
 }

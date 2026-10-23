@@ -12,7 +12,7 @@
 }
 .privacy-updated {
   font-size: 22rpx;
-  color: #8a93a6;
+  color: #667080;
   margin-bottom: 40rpx;
 }
 .privacy-section {

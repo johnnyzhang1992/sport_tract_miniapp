@@ -32,18 +32,18 @@
   word-break: break-all;
 }
 .fval-ph {
-  color: #c2c7d0;
+  color: #667080;
 }
 .farrow {
   flex: none;
   margin-left: 8rpx;
-  color: #c2c7d0;
+  color: #8a93a6;
   font-size: 32rpx;
   line-height: 1;
 }
 /* 编辑态的开始日期：只读，值改用次要色压下去（与 .fval 同权重，靠源码顺序赢） */
 .fval-off {
-  color: #8a93a6;
+  color: #667080;
 }
 /* 输入行：值右对齐，占位色与 .fval-ph 一致；
    输入区要有可见的浅底框——白底白输入框用户看不出「点哪里」。
@@ -72,18 +72,18 @@
   margin-left: auto;
 }
 .fph {
-  color: #c2c7d0;
+  color: #667080;
 }
 /* 组内说明行（22rpx 次级灰，与标签同一条左基线；上边距不能省） */
 .fnote {
   padding: 12rpx 24rpx;
   font-size: 22rpx;
   line-height: 1.5;
-  color: #8a93a6;
+  color: #667080;
 }
 /* 起止倒置的即时提示：换成告警红，别跟普通说明混在一起 */
 .fnote-error {
-  color: #e34d59;
+  color: #c02a30;
 }
 
 /* 非行式控件（描述）：标签在上，控件占满整行 */

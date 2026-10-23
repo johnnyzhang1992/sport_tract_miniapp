@@ -209,7 +209,7 @@ Component({
         // 省界地图数据（放后端，按需拉取）
         if (!this._chinaMap) {
           try {
-            const map = await app.globalData.api.get('/geo/china-map');
+            const map = await app.globalData.api.getChinaMap();
             this._chinaMap = map;
             echarts.registerMap('china', map);
           } catch (e) {

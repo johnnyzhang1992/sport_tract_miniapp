@@ -53,7 +53,6 @@ Page({
     items: [],
     totalCount: 0, // 当前筛选命中的总条数（接口 total，非已加载条数）
     groups: [], // 列表模式按月分组：[{ key: '2026-9', label: '2026年9月', items }]
-    monthlyStats: {}, // 后端按月聚合（整月全量）：key '2026-9' → { count, distance, duration, calories }
     page: 1,
     hasMore: true,
     loading: false,
@@ -143,17 +142,18 @@ Page({
     }
     if (!app.globalData.loggedIn) return;
     try {
-      this.setData({ loading: true, page: 1, monthlyStats: {} }); // 重置聚合缓存，防上一次筛选的数据串味
+      this._monthlyStats = {}; // 重置聚合缓存，防上一次筛选的数据串味（只在 JS 用，不进 data）
+      this.setData({ loading: true, page: 1 });
       // 个人最佳与列表并行拉取：每次刷新都取实时值（缓存不失效，新纪录要立刻在卡片亮出）
       const [data, best] = await Promise.all([api.get('/activities', this.buildParams(1)), this.loadBest()]);
       this._best = best;
       const items = data.items.map((it) => this.decorate(it, best));
-      const monthly = mergeMonthly({}, data.monthlyStats); // 列表响应附带页内月份的全量聚合
+      const monthly = mergeMonthly({}, data.monthlyStats);
+      this._monthlyStats = monthly; // 列表响应附带页内月份的全量聚合
       this.setData({
         items,
         totalCount: data.total || 0,
         groups: this.buildGroups(items, monthly),
-        monthlyStats: monthly,
         hasMore: data.items.length >= PAGE_SIZE,
         initialized: true,
         loadError: false,
@@ -175,7 +175,8 @@ Page({
       if (this.data.activeFilter !== type) return; // 期间已切换筛选，丢弃过期响应
       const map = {};
       (data.months || []).forEach((m) => { map[`${m.year}-${m.month}`] = m; });
-      this.setData({ monthlyStats: map, groups: this.buildGroups(this.data.items, map) });
+      this._monthlyStats = map;
+      this.setData({ groups: this.buildGroups(this.data.items, map) });
     } catch (e) {
       console.warn('月度统计拉取失败', e); // 静默：统计块沿用已加载条目的汇总
     }
@@ -200,12 +201,12 @@ Page({
       this.setData({ loading: true });
       const data = await api.get('/activities', this.buildParams(next));
       const items = this.data.items.concat(data.items.map((it) => this.decorate(it, this._best)));
-      const monthly = mergeMonthly(this.data.monthlyStats, data.monthlyStats); // 新出现月份增量并入
+      const monthly = mergeMonthly(this._monthlyStats, data.monthlyStats); // 新出现月份增量并入
+      this._monthlyStats = monthly;
       this.setData({
         items,
         totalCount: data.total || 0,
         groups: this.buildGroups(items, monthly),
-        monthlyStats: monthly,
         page: next,
         hasMore: data.items.length >= PAGE_SIZE,
       });
@@ -218,7 +219,7 @@ Page({
 
   /** 列表模式按月分组：items 时间倒序，依次归入「YYYY年M月」组（分页/删除后全量重建）；
    *  每组附带当月统计，优先用后端整月聚合（monthly 参数），未命中时回退到已加载条目的汇总 */
-  buildGroups(items, monthly = this.data.monthlyStats || {}) {
+  buildGroups(items, monthly = this._monthlyStats || {}) {
     const groups = [];
     const byKey = new Map();
     for (const item of items) {

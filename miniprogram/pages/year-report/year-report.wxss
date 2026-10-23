@@ -25,7 +25,7 @@
   background: #e2e6eb;
 }
 .year-arrow-disabled {
-  color: #c0c4cc;
+  color: #8a93a6;
 }
 .year-label {
   font-size: 34rpx;

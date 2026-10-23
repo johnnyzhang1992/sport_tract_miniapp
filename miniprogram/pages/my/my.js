@@ -12,8 +12,6 @@ Page({
     user: null,
     loggedIn: false,
     loading: false,
-    overview: null, // { totalCount, totalKm }
-    footprint: null, // { provinceCount, cityCount }
     unreadCount: 0, // 未读通知数（0=不显示角标）
   },
 
@@ -60,13 +58,11 @@ Page({
     }
     try {
       this.setData({ loading: true });
-      // 刷新资料 + 概况（轨迹合集总数/点亮省市数）
-      const [user, overview, footprint] = await Promise.all([
+      // 刷新资料 + 概况（今日/本周/本月的运动距离）
+      const [user, overview] = await Promise.all([
         api.get('/users/me'),
         api.get('/stats/overview').catch(() => null),
-        api.get('/stats/footprint').catch(() => null),
       ]);
-      const total = overview && overview.total ? overview.total : { count: 0, distance: 0 };
 
       // 头像缓存判断：基础 URL 没变且缓存未过期 → 复用缓存签名 URL（image src 不变 → 微信缓存命中，不重复下载）
       let avatarUrl = user.avatarUrl || '';
@@ -91,30 +87,11 @@ Page({
         user: { ...user, avatarUrl, avatarText: user.nickname ? user.nickname[0] : '', joinDays },
         showBodyData,
         loggedIn: true,
-        overview: {
-          totalCount: total.count || 0,
-          totalKm: ((total.distance || 0) / 1000).toFixed(1),
-        },
-        // 轨迹合集卡片：累计 次数/公里/总时长（3 格网格）
-        overviewStats: [
-          { value: String(total.count || 0), label: '次数' },
-          { value: ((total.distance || 0) / 1000).toFixed(1), label: '公里' },
-          { value: this.fmtDuration(total.duration || 0), label: '总时长' },
-        ],
         // 数据统计卡片：今日/本周/本月运动距离（km）
         statsCards: ['today', 'week', 'month'].map((k) => {
           const s = overview && overview[k] ? overview[k] : { distance: 0 };
           return { key: k, distance: ((s.distance || 0) / 1000).toFixed(1) };
         }),
-        footprint: {
-          provinceCount: footprint ? footprint.provinceCount : 0,
-          cityCount: footprint ? footprint.cityCount : 0,
-        },
-        // 点亮地图卡片：省份/城市（通用网格）
-        footprintStats: [
-          { value: String(footprint ? footprint.provinceCount : 0), label: '省份' },
-          { value: String(footprint ? footprint.cityCount : 0), label: '城市' },
-        ],
       });
     } catch (e) {
       console.error('加载用户信息失败', e);

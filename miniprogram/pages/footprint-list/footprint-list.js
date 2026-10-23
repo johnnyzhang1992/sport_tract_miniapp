@@ -47,13 +47,11 @@ Page({
     items: [], // toCard 后的完整 DTO（点卡片直接开详情，不再二次请求）
     page: 1, pageSize: 20, total: 0, hasMore: true, loadingList: false,
     totalCount: 0, // 全局记录总数（/calendar 口径）：分享文案用
-    placeCount: 0, // 全局地方数（distinct 地点名）：分享文案用
     // 筛选态：keywordInput 是输入框内容（不请求），keyword 是点「搜索」/回车后生效的词
     keywordInput: '',
     keyword: '',
     ranges: RANGES,
     activeRange: 'all', // 默认全部：列表默认行为与加筛选前一致
-    periodOffset: 0, // 往前的周期数（0=当前月/年）
     periodLabel: '',
     canGoNext: false,
     showPeriodPicker: false,
@@ -97,7 +95,6 @@ Page({
         summaryText: '',
         emptyText: '',
         totalCount: 0,
-        placeCount: 0,
         hasMore: false,
         loadingList: false,
       });
@@ -159,11 +156,13 @@ Page({
         if (seq !== this._calSeq) return;
         const d = data || {};
         this._calLoaded = true;
+        // 分享文案要用全局地方数（列表此刻可能正被筛着）；只在 JS 用，不进 data
+        this._placeCount = d.placeCount || 0;
         this.setData({
           calendarDays: d.days || [],
           // 全局口径：分享文案要用它（列表此刻可能正被筛着，屏上那几行不代表全部）
           totalCount: d.total || 0,
-          placeCount: d.placeCount || 0,
+
           summaryText: cal.summaryText({ total: d.total, placeCount: d.placeCount, photoCount: d.photoCount }),
         });
       })
@@ -181,7 +180,7 @@ Page({
   shareTitle() {
     const n = this.data.totalCount;
     if (!(n > 0)) return '在小迹一下记录去过的每个地方';
-    const places = this.data.placeCount;
+    const places = this._placeCount || 0;
     return places > 0 ? `我记录了 ${n} 条足迹 · ${places} 个地方` : `我记录了 ${n} 条足迹`;
   },
 
@@ -251,7 +250,8 @@ Page({
   onRangeChange(e) {
     const value = e.currentTarget.dataset.value;
     if (value === this.data.activeRange) return;
-    this.setData({ activeRange: value, periodOffset: 0 });
+    this._periodOffset = 0;
+    this.setData({ activeRange: value });
     this.applyPeriod();
     this.syncFiltered();
     this.loadAll();
@@ -259,15 +259,15 @@ Page({
 
   /** 翻到上一周期（更早） */
   onPrevPeriod() {
-    this.setData({ periodOffset: this.data.periodOffset + 1 });
+    this._periodOffset = (this._periodOffset || 0) + 1;
     this.applyPeriod();
     this.loadAll();
   },
 
   /** 翻回下一周期（当前周期后不可再翻） */
   onNextPeriod() {
-    if (this.data.periodOffset <= 0) return;
-    this.setData({ periodOffset: this.data.periodOffset - 1 });
+    if (this._periodOffset <= 0) return;
+    this._periodOffset = (this._periodOffset || 0) - 1;
     this.applyPeriod();
     this.loadAll();
   },
@@ -278,7 +278,8 @@ Page({
    * 列表态 = 月/年档的周期区间，「全部」不带 from/to。
    */
   applyPeriod() {
-    const { view, activeRange, periodOffset, calendarMonth, calendarSelected } = this.data;
+    const { view, activeRange, calendarMonth, calendarSelected } = this.data;
+    const periodOffset = this._periodOffset || 0;
     if (view === 'calendar') {
       this._period = calendarSelected ? cal.dayRange(calendarSelected) : cal.monthRange(calendarMonth);
       this.setData({ periodLabel: '', canGoNext: false });
@@ -296,7 +297,8 @@ Page({
 
   /** 打开周期抽屉：按粒度生成最近 N 个周期选项（对齐统计页），nextTick 滚动定位到当前项 */
   onTapPeriodLabel() {
-    const { activeRange, periodOffset } = this.data;
+    const activeRange = this.data.activeRange;
+    const periodOffset = this._periodOffset || 0;
     if (activeRange === 'all') return;
     const count = PICKER_COUNT[activeRange] || 12;
     const options = [];
@@ -306,7 +308,7 @@ Page({
     }
     this.setData({ showPeriodPicker: true, periodOptions: options, pickerScrollInto: '' });
     wx.nextTick(() => {
-      this.setData({ pickerScrollInto: `period-${this.data.periodOffset}` });
+      this.setData({ pickerScrollInto: `period-${this._periodOffset}` });
     });
   },
   onClosePeriodPicker() { this.setData({ showPeriodPicker: false }); },
@@ -315,15 +317,16 @@ Page({
   onSelectPeriod(e) {
     const offset = Number(e.currentTarget.dataset.offset);
     this.setData({ showPeriodPicker: false });
-    if (offset === this.data.periodOffset) return;
-    this.setData({ periodOffset: offset });
+    if (offset === this._periodOffset) return;
+    this._periodOffset = offset;
     this.applyPeriod();
     this.loadAll();
   },
 
   /** 清空筛选（空态引导）：搜索清空 + 时间回「全部」（日历态顺带清掉点选的某天） */
   onClearFilter() {
-    this.setData({ keywordInput: '', keyword: '', activeRange: 'all', periodOffset: 0, calendarSelected: '' });
+    this._periodOffset = 0;
+    this.setData({ keywordInput: '', keyword: '', activeRange: 'all', calendarSelected: '' });
     this.applyPeriod();
     this.syncFiltered();
     this.loadAll();

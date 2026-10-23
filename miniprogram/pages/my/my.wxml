@@ -16,7 +16,7 @@
         <text class="body-item" wx:if="{{user.weightKg}}">体重 {{user.weightKg}}kg</text>
       </view>
     </view>
-    <view class="link-arrow user-arrow">›</view>
+    <view class="link-arrow">›</view>
   </view>
 
   <!-- 数据统计卡片（今日/本周/本月运动距离，整卡可点） -->
@@ -26,7 +26,7 @@
         <image class="stats-icon" src="/assets/icons/lucide-chart.png" mode="aspectFit" />
         <text class="stats-title">数据统计</text>
       </view>
-      <view class="stats-arrow">›</view>
+      <view class="link-arrow">›</view>
     </view>
     <view class="stats-grid">
       <view class="stats-cell">
@@ -62,19 +62,24 @@
     <view class="link-arrow">›</view>
   </view>
 
-  <!-- 菜单（轨迹合集 · 数据导入 · 设置 · 消息中心，点亮地图已并入数据统计页） -->
+  <!-- 菜单（轨迹合集 · 数据导入 · 设置 · 消息中心，点亮地图已并入数据统计页）
+       箭头统一用 .link-arrow（与上面三张卡同字形同色同右距），不再用组件的 arrow 图标 -->
   <t-cell-group class="card menu-card">
-    <t-cell title="轨迹合集" arrow t-class-left="cell-left" t-class-title="cell-title" bind:click="goOverview">
+    <t-cell title="轨迹合集" t-class-left="cell-left" t-class-title="cell-title" bind:click="goOverview">
       <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-compass.png" mode="aspectFit" />
+      <view slot="right-icon" class="link-arrow">›</view>
     </t-cell>
-    <t-cell title="数据导入" arrow t-class-left="cell-left" t-class-title="cell-title" bind:click="goImport">
+    <t-cell title="数据导入" t-class-left="cell-left" t-class-title="cell-title" bind:click="goImport">
       <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-download.png" mode="aspectFit" />
+      <view slot="right-icon" class="link-arrow">›</view>
     </t-cell>
-    <t-cell title="设置" arrow t-class-left="cell-left" t-class-title="cell-title" bind:click="goSettings">
+    <t-cell title="设置" t-class-left="cell-left" t-class-title="cell-title" bind:click="goSettings">
       <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-settings.png" mode="aspectFit" />
+      <view slot="right-icon" class="link-arrow">›</view>
     </t-cell>
-    <t-cell title="消息中心" arrow t-class-left="cell-left" t-class-title="cell-title" bind:click="goNotifications">
+    <t-cell title="消息中心" t-class-left="cell-left" t-class-title="cell-title" bind:click="goNotifications">
       <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-bell.png" mode="aspectFit" />
+      <view slot="right-icon" class="link-arrow">›</view>
       <view slot="note" wx:if="{{unreadCount > 0}}" class="unread-badge">{{unreadCount > 99 ? '99+' : unreadCount}}</view>
     </t-cell>
   </t-cell-group>

@@ -40,7 +40,7 @@
 .sheet-empty {
   padding: 24rpx 0;
   font-size: 26rpx;
-  color: #8a9099;
+  color: #667080;
 }
 
 .sec {
@@ -48,7 +48,7 @@
 }
 .sec-title {
   font-size: 24rpx;
-  color: #8a9099;
+  color: #667080;
   margin-bottom: 12rpx;
 }
 .chips {
@@ -73,7 +73,7 @@
 }
 .chip-count {
   font-size: 22rpx;
-  color: #8a9099;
+  color: #667080;
 }
 .chip-on .chip-count {
   color: #2b6cf6;

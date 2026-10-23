@@ -86,6 +86,12 @@
       ]
     }
   ],
+  "preloadRule": {
+    "pages/footprint-list/footprint-list": {
+      "network": "wifi",
+      "packages": ["packageFootprint"]
+    }
+  },
   "requiredBackgroundModes": [
     "location"
   ]

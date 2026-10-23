@@ -193,7 +193,7 @@
 }
 .share-mode-btn {
   font-size: 24rpx;
-  color: #8a93a6;
+  color: #667080;
   padding: 8rpx 28rpx;
   border-radius: 999rpx;
   transition: all 0.2s;

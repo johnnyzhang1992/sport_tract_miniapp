@@ -125,7 +125,7 @@
           <image wx:if="{{item.medalIcon}}" class="medal-img" src="{{item.medalIcon}}" mode="aspectFit" />
           <text wx:else>{{item.rank}}</text>
         </view>
-        <image wx:if="{{item.avatarSrc}}" class="rank-avatar" src="{{item.avatarSrc}}" mode="aspectFill" />
+        <image wx:if="{{item.avatarSrc}}" class="rank-avatar" src="{{item.avatarSrc}}" mode="aspectFill" lazy-load />
         <view wx:else class="rank-avatar rank-avatar-text">{{item.avatarText}}</view>
         <view class="rank-name-wrap">
           <text class="rank-name">{{item.name}}</text>
@@ -191,7 +191,7 @@
         <view class="sheet-close" catchtap="closeReview">✕</view>
       </view>
       <view class="pend-row" wx:for="{{pendingRows}}" wx:key="userId">
-        <image wx:if="{{item.avatarSrc}}" class="pend-avatar" src="{{item.avatarSrc}}" mode="aspectFill" />
+        <image wx:if="{{item.avatarSrc}}" class="pend-avatar" src="{{item.avatarSrc}}" mode="aspectFill" lazy-load />
         <view wx:else class="pend-avatar pend-avatar-text">{{item.avatarText}}</view>
         <view class="pend-main">
           <view class="pend-name">{{item.name}}</view>

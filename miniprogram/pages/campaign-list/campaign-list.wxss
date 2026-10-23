@@ -1,4 +1,4 @@
-/* 一起运动活动列表页：卡片度量对齐足迹列表（白卡圆角 16rpx + 轻投影 #8a93a6 次级文字），
+/* 一起运动活动列表页：卡片度量对齐足迹列表（白卡圆角 16rpx + 轻投影 #667080 次级文字），
    页面左右留白由全局 .container（24rpx）提供 */
 .list-state {
   padding: 120rpx 32rpx;
@@ -96,12 +96,12 @@
   flex: none;
   margin-left: 8rpx;
   font-size: 36rpx;
-  color: #c8d0dc;
+  color: #8a93a6;
 }
 .cp-card-time {
   margin-top: 8rpx;
   font-size: 24rpx;
-  color: #8a93a6;
+  color: #667080;
 }
 /* 成员面：头像堆叠是全局共享样式（.member-av-stack/.member-av/.member-av-text，见 app.wxss） */
 .cp-card-members {

@@ -57,7 +57,7 @@
   font-size: 34rpx;
   font-weight: 700;
   color: #fff;
-  background: #b8c4d9;
+  background: #64748f;
 }
 .member-name {
   flex: 1;
@@ -90,7 +90,7 @@
 .stat-label {
   margin-top: 6rpx;
   font-size: 22rpx;
-  color: #8a93a6;
+  color: #667080;
 }
 /* 计入的轨迹明细（分页列表 + 加载更多） */
 .detail-head {
@@ -106,7 +106,7 @@
 }
 .detail-total {
   font-size: 22rpx;
-  color: #8a93a6;
+  color: #667080;
 }
 /* 列表本体可滚动：明细最多一页 20 条，超出由列表内部消化，不把整张半屏顶穿 */
 .detail-list {
@@ -132,7 +132,7 @@
 .detail-sub {
   margin-top: 4rpx;
   font-size: 22rpx;
-  color: #8a93a6;
+  color: #667080;
 }
 .detail-right {
   flex-shrink: 0;
@@ -148,13 +148,13 @@
   padding: 40rpx 0;
   text-align: center;
   font-size: 24rpx;
-  color: #8a93a6;
+  color: #667080;
 }
 .detail-error {
   padding: 20rpx 0 0;
   text-align: center;
   font-size: 22rpx;
-  color: #e5484d;
+  color: #c02a30;
 }
 .detail-more {
   margin-top: 20rpx;

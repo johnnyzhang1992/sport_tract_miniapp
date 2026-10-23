@@ -148,7 +148,6 @@ function viewerCleanPatch() {
     totals: null,
     members: [],
     memberTotal: 0, // 成员总数（joined 人数），驱动「加载更多」；老服务端不下发时按已显示数兜底
-    memberPage: 1,
     memberLoadingMore: false,
     panel: null,
     sheetVisible: false, // 抽屉必须同时关掉
@@ -178,7 +177,6 @@ Page({
     totals: null, // 全队汇总（仅成员）
     members: [], // 成员列表＝排行榜行（仅成员，随「加载更多」追加）
     memberTotal: 0, // joined 总数，驱动「加载更多」；老服务端不下发 total 时按已显示数兜底
-    memberPage: 1,
     memberLoadingMore: false,
     panel: null, // 底部悬浮面板：我的 myPanel
     // 成员信息半屏：明细（sheetDetail）对活动内成员一律可看，由 loadMemberDetail 拉
@@ -328,6 +326,7 @@ Page({
     const pendingRows = isCreator
       ? (pending === null ? this.data.pendingRows : (pending.rows || []).map(toPendingRow))
       : [];
+    this._memberPage = 1; // 成员分页页码只在 JS 用，不进 data
     this.setData({
       loading: false,
       notFound: false,
@@ -346,7 +345,6 @@ Page({
       totals: isMember && detail.totals ? fmtPanel(detail.totals) : null,
       members: isMember ? rows.map((r) => toMemberRow(r, isCreator && String(r.userId) !== me)) : [],
       memberTotal: isMember ? memberTotal : 0,
-      memberPage: 1,
       memberLoadingMore: false,
       panel: isMember && detail.myPanel ? fmtPanel(detail.myPanel) : null,
       pendingRows,
@@ -401,7 +399,8 @@ Page({
    * 名次由服务端按全员距离算好后一并下发（分页只切响应），端上不再排序。
    */
   async loadMoreMembers() {
-    const { members, memberTotal, memberPage, memberLoadingMore, isCreator } = this.data;
+    const { members, memberTotal, memberLoadingMore, isCreator } = this.data;
+    const memberPage = this._memberPage || 1;
     if (memberLoadingMore || members.length >= memberTotal) return;
     // 与 refresh 共用同一个序号：期间发生过整页刷新，这一页就是接在旧列表后面的，必须丢
     const seq = this._seq;
@@ -413,9 +412,9 @@ Page({
       if (seq !== this._seq) return;
       const rows = board && Array.isArray(board.rows) ? board.rows : [];
       const me = myUserId();
+      this._memberPage = memberPage + 1;
       this.setData({
         members: members.concat(rows.map((r) => toMemberRow(r, isCreator && String(r.userId) !== me))),
-        memberPage: memberPage + 1,
         memberTotal: typeof board.total === 'number' ? board.total : members.length + rows.length,
         memberLoadingMore: false,
       });

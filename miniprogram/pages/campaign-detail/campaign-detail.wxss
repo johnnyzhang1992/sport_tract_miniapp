@@ -13,7 +13,7 @@
 }
 .state-text {
   font-size: 26rpx;
-  color: #8a93a6;
+  color: #667080;
   line-height: 1.7;
 }
 .state-btn {
@@ -76,7 +76,7 @@
 }
 .card-sub {
   font-size: 22rpx;
-  color: #8a93a6;
+  color: #667080;
 }
 
 /* 顶部信息 */
@@ -108,7 +108,7 @@
 }
 .head-meta-item {
   font-size: 22rpx;
-  color: #8a93a6;
+  color: #667080;
   background: #f2f3f5;
   border-radius: 6rpx;
   padding: 6rpx 12rpx;
@@ -144,7 +144,7 @@
   font-weight: 600;
 }
 .act-pill-danger {
-  color: #e5484d;
+  color: #c02a30;
   background: #fdecec;
 }
 .act-pill-hover {
@@ -178,13 +178,13 @@
   opacity: 0.85;
 }
 .join-btn-off {
-  background: #b8c4d9;
+  background: #64748f;
 }
 .join-tip {
   margin-top: 14rpx;
   text-align: center;
   font-size: 22rpx;
-  color: #8a93a6;
+  color: #667080;
 }
 
 /* 全队汇总三格 */
@@ -212,7 +212,7 @@
 }
 .sum-label {
   font-size: 22rpx;
-  color: #8a93a6;
+  color: #667080;
 }
 
 /* 成员列表＝排行榜（照 leaderboard.wxss 的 .rank-*） */
@@ -236,7 +236,7 @@
   justify-content: center;
   font-size: 26rpx;
   font-weight: 700;
-  color: #8a93a6;
+  color: #667080;
   text-align: center;
   flex-shrink: 0;
 }
@@ -259,7 +259,7 @@
   font-size: 26rpx;
   font-weight: 600;
   color: #fff;
-  background: #b8c4d9;
+  background: #64748f;
 }
 .rank-name-wrap {
   flex: 1;
@@ -277,7 +277,7 @@
 }
 .rank-meta {
   font-size: 22rpx;
-  color: #8a93a6;
+  color: #667080;
   margin-right: 20rpx;
   flex-shrink: 0;
 }
@@ -293,7 +293,7 @@
 .rank-kick {
   flex-shrink: 0;
   font-size: 22rpx;
-  color: #e5484d;
+  color: #c02a30;
   background: #fdecec;
   border-radius: 999rpx;
   padding: 4rpx 12rpx;
@@ -305,7 +305,7 @@
   padding: 60rpx 0;
   text-align: center;
   font-size: 24rpx;
-  color: #8a93a6;
+  color: #667080;
 }
 
 /* 成员排行「加载更多」：整行可点（不是右下角一个小字），文案里带「已显示 x / 总数」，
@@ -444,7 +444,7 @@
   font-size: 28rpx;
   font-weight: 600;
   color: #fff;
-  background: #b8c4d9;
+  background: #64748f;
 }
 .pend-main {
   flex: 1;
@@ -460,7 +460,7 @@
 .pend-sub {
   margin-top: 4rpx;
   font-size: 22rpx;
-  color: #8a93a6;
+  color: #667080;
 }
 .pend-btn {
   flex-shrink: 0;
@@ -484,7 +484,7 @@
   padding: 60rpx 0;
   text-align: center;
   font-size: 24rpx;
-  color: #8a93a6;
+  color: #667080;
 }
 
 /* 小程序码弹窗 */
@@ -502,7 +502,7 @@
 .code-tip {
   margin-top: 16rpx;
   font-size: 22rpx;
-  color: #8a93a6;
+  color: #667080;
   line-height: 1.6;
 }
 .code-btn {

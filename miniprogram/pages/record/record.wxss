@@ -234,5 +234,5 @@
 }
 .capsule-guide-hint {
   font-size: 22rpx;
-  color: #9aa3ad;
+  color: #667080;
 }

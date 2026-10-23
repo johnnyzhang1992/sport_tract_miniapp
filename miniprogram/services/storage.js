@@ -20,12 +20,22 @@ function safeSet(key, value) {
   }
 }
 
+/**
+ * 进程内 token 缓存：api 层每个请求都要取 token，走同步存储会白白占用主线程；
+ * 这里读一次存内存，写入/清除时同步更新，语义与直接读存储一致。
+ * undefined = 尚未读过（首次读才落一次存储），null = 明确无 token。
+ */
+let tokenCache;
+
 function setToken(accessToken, refreshToken) {
-  safeSet(TOKEN_KEY, { accessToken, refreshToken });
+  const v = { accessToken, refreshToken };
+  tokenCache = v;
+  safeSet(TOKEN_KEY, v);
 }
 
 function getToken() {
-  return safeGet(TOKEN_KEY) || null;
+  if (tokenCache === undefined) tokenCache = safeGet(TOKEN_KEY) || null;
+  return tokenCache;
 }
 
 const PROFILE_GUIDE_KEY = 'sport_track_profile_guide';
@@ -46,6 +56,7 @@ function getProfileGuideDone(userId) {
 }
 
 function clearToken() {
+  tokenCache = null;
   try {
     wx.removeStorageSync(TOKEN_KEY);
   } catch {

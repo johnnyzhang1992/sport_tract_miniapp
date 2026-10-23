@@ -138,7 +138,7 @@
   background: #ffc107;
 }
 .heat-legend-dot-2 {
-  background: #ff9800;
+  background: #b45309;
 }
 .heat-legend-dot-3 {
   background: #e53935;

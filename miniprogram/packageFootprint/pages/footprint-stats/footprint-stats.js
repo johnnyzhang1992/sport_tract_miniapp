@@ -313,7 +313,7 @@ Page({
       // 省界地图数据（放后端，按需拉取并缓存）
       if (!this._chinaMap) {
         try {
-          this._chinaMap = await app.globalData.api.get('/geo/china-map');
+          this._chinaMap = await app.globalData.api.getChinaMap();
           echarts.registerMap('china', this._chinaMap);
         } catch (e) {
           console.error('加载地图数据失败', e);

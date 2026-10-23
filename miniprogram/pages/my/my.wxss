@@ -14,9 +14,6 @@
 .user-info {
   flex: 1; /* 撑满中部，箭头靠右 */
 }
-.user-arrow {
-  flex-shrink: 0;
-}
 .user-name {
   font-size: 34rpx;
   font-weight: 600;
@@ -32,10 +29,6 @@
   /* 图标与文案的间距：组件给 .t-cell__left 带 24rpx（≈12.5px），原先图片又叠了 8rpx，
      实测墨迹间空隙 14.4px。这里去掉图片那层重复 margin，只留这个令牌（6px）。 */
   --td-spacer-1: 6px;
-  /* 右侧箭头（TDesign 内置 arrow 默认 48rpx）跟着文案一起收。
-     只能走自定义属性：t-class-right-icon 外类名进不到 t-icon 组件内部；
-     而自定义属性里的 rpx 不参与编译期换算（写了会被整条声明丢掉），所以这里用 px：16px≈32rpx。 */
-  --td-cell-right-icon-size: 16px;
 }
 .cell-left {
   display: flex;
@@ -70,8 +63,10 @@
 }
 .link-arrow {
   font-size: 40rpx;
-  color: #c2c7d0;
+  color: #8a93a6;
   margin-left: 12rpx;
+  flex-shrink: 0;
+  line-height: 1;
 }
 .version-tip {
   text-align: center;
@@ -106,7 +101,7 @@
 }
 .entry-arrow {
   font-size: 40rpx;
-  color: #c2c7d0;
+  color: #8a93a6;
   line-height: 1;
 }
 
@@ -118,7 +113,7 @@
 }
 .body-item {
   font-size: 22rpx;
-  color: #8a93a6;
+  color: #667080;
   background: #f2f3f5;
   border-radius: 999rpx;
   padding: 4rpx 16rpx;
@@ -148,11 +143,6 @@
   font-weight: 600;
   color: #1f2329;
 }
-.stats-arrow {
-  font-size: 40rpx;
-  color: #c2c7d0;
-  line-height: 1;
-}
 .stats-grid {
   display: flex;
   margin-top: 26rpx;
@@ -176,7 +166,7 @@
 }
 .stats-label {
   font-size: 22rpx;
-  color: #86909c;
+  color: #667080;
   margin-top: 6rpx;
 }
 
@@ -197,7 +187,7 @@
   height: 32rpx;
   padding: 0 8rpx;
   border-radius: 16rpx;
-  background: #e54d42;
+  background: #c02a30;
   color: #ffffff;
   font-size: 20rpx;
   line-height: 32rpx;

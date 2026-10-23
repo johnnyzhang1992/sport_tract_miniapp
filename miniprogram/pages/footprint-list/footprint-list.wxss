@@ -1,5 +1,5 @@
 /* 足迹列表独立页：卡片度量对齐 pages/tracks/tracks.wxss 的 .track-card / .list-row
-   （白卡圆角 16rpx + box-shadow 0 2rpx 12rpx rgba(0,0,0,.04)、次级文字 #8a93a6、hover 0.7）
+   （白卡圆角 16rpx + box-shadow 0 2rpx 12rpx rgba(0,0,0,.04)、次级文字 #667080、hover 0.7）
    页面左右留白由 app.wxss 的 .container（24rpx）提供 */
 .list-state {
   padding: 160rpx 32rpx;
@@ -24,7 +24,7 @@
   flex: 1;
   min-width: 0;
   font-size: 24rpx;
-  color: #8a93a6;
+  color: #667080;
 }
 .head-actions {
   flex: none;
@@ -60,7 +60,7 @@
 .section-title {
   padding: 8rpx 4rpx 14rpx;
   font-size: 26rpx;
-  color: #8a93a6;
+  color: #667080;
 }
 
 /* ------------------------------ 足迹卡片 ------------------------------ */
@@ -124,7 +124,7 @@
   margin-left: 8rpx;
   font-size: 32rpx;
   line-height: 1;
-  color: #c0c4cc;
+  color: #8a93a6;
 }
 /* 地址·同行人 与分类标签同一行（标签靠右，meta 过长省略） */
 .fp-card-metarow {
@@ -156,7 +156,7 @@
 .fp-card-meta {
   margin-top: 8rpx;
   font-size: 24rpx;
-  color: #8a93a6;
+  color: #667080;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -228,7 +228,7 @@
   color: #1f2329;
 }
 .search-ph {
-  color: #b8bfcc;
+  color: #667080;
 }
 .search-clear {
   position: absolute;
@@ -295,7 +295,7 @@
   background: #e2e6eb;
 }
 .period-arrow-disabled {
-  color: #c0c4cc;
+  color: #8a93a6;
 }
 .period-label {
   flex: 1;

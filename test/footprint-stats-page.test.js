@@ -29,6 +29,9 @@ const fakeApi = {
     if (next instanceof Error) return Promise.reject(next);
     return Promise.resolve(next || { total: 0, provinceCount: 0, cityCount: 0, provinces: [] });
   },
+  getChinaMap() {
+    return this.get('/geo/china-map');
+  },
 };
 
 // echarts 自定义构建（1MB+ UMD）在 node 下没必要真跑：registerMap/init 换成可断言的假实现。
