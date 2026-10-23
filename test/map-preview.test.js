@@ -4,9 +4,8 @@
  */
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const path = require('node:path');
 
-const { buildMapView } = require(path.join(__dirname, '..', 'miniprogram', 'utils', 'map-preview.js'));
+const { buildMapView } = require('../miniprogram/utils/map-preview.js');
 
 test('MV1 普通轨迹：一条折线 + 全部点用于自适应视野', () => {
   const view = buildMapView([
@@ -60,7 +59,7 @@ test('MV3 空/单点/非法坐标：不出图', () => {
   assert.equal(buildMapView(null), null);
 });
 
-const { visibleMapIds } = require(path.join(__dirname, '..', 'miniprogram', 'utils', 'map-preview.js'));
+const { visibleMapIds } = require('../miniprogram/utils/map-preview.js');
 
 test('MV4 可视行判定：视口上下各留 240px 预加载，非 map-item 节点忽略', () => {
   const rects = [
@@ -105,7 +104,7 @@ test('MV6 无时间戳：无法算配速时回退单色蓝线', () => {
   assert.equal(view.polyline[0].color, '#2B6CF6');
 });
 
-const { selectMapEvictions } = require(path.join(__dirname, '..', 'miniprogram', 'utils', 'map-preview.js'));
+const { selectMapEvictions } = require('../miniprogram/utils/map-preview.js');
 
 test('MV7 地图节点保活：未超上限不卸载，短距离来回滚动不重建', () => {
   const seen = new Map([

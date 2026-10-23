@@ -4,11 +4,9 @@
  */
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const path = require('node:path');
 
-const ROOT = path.join(__dirname, '..', 'miniprogram', 'utils');
-const { buildTrendCompare } = require(path.join(ROOT, 'trend-compare.js'));
-const { buildTrophies } = require(path.join(ROOT, 'trophy.js'));
+const { buildTrendCompare } = require('../miniprogram/utils/trend-compare.js');
+const { buildTrophies } = require('../miniprogram/utils/trophy.js');
 
 /** 造 n 天数据：valueFn(i) 返回当天距离（米），按时间升序 */
 function days(n, valueFn) {

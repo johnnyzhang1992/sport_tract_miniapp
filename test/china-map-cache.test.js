@@ -27,7 +27,8 @@ function loadApi(requestImpl) {
     exports: { getToken: () => null },
   };
   global.wx = { request: requestImpl };
-  return require(API);
+  // 与 require.cache[API] 同一绝对路径（require.cache 以解析后的文件名为键），缓存剔除不受影响
+  return require('../miniprogram/services/api.js');
 }
 
 const okRequest = (counter) => (opts) => {
