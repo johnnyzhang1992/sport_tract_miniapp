@@ -63,6 +63,14 @@ function formatPaceParts(secPerKm) {
   return { value: `${m}'${String(s).padStart(2, '0')}"`, unit: '/公里' };
 }
 
+/**
+ * 头像占位圆里的首字：按**码点**取（Array.from）。昵称以 emoji 开头时 `name[0]` 切的是 UTF-16
+ * 码元，会留下半个代理对 → 渲染成乱码方块。榜上/活动/「我的」页共用这一份。
+ */
+function initialOf(name, fallback) {
+  return Array.from(String(name || fallback || ''))[0] || '';
+}
+
 module.exports = {
   formatDuration,
   formatKm,
@@ -71,4 +79,5 @@ module.exports = {
   formatDurationStat,
   formatThousands,
   formatCompactCn,
+  initialOf,
 };

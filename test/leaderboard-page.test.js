@@ -179,3 +179,17 @@ test('LB6 计数拉不到：chips 退回 config 顺序、默认仍是首位，�
   assert.equal(boardCalls().length, 1);
   assert.ok(boardCalls()[0].includes('type=walking'));
 });
+
+test('LB7 占位圆首字按码点取：emoji 开头的昵称不出乱码方块', async () => {
+  boardRespond = () =>
+    Promise.resolve({
+      top: [best('u1', 10000, { name: '🏃跑者' }), best('u2', 9000, { name: '' })],
+      me: null,
+      best: [],
+    });
+  const p = makePage();
+  await p.fetchBoard();
+
+  assert.equal(p.data.board.top[0].avatarText, '🏃', '码元下标会留下半个代理对');
+  assert.equal(p.data.board.top[1].avatarText, '迹', '空昵称走缺省字');
+});

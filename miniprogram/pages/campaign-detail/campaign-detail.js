@@ -30,7 +30,8 @@ const api = require('../../services/api');
 const config = require('../../config/index');
 const { ensureLogin } = require('../../utils/login-gate');
 const { markHomeDirty } = require('../../utils/home-refresh');
-const { statusLabel, visibilityLabel, statusTagClass, fmtRange, joinCta, fmtPanel, initialOf } = require('../../utils/campaign.js');
+const { statusLabel, visibilityLabel, statusTagClass, fmtRange, joinCta, fmtPanel } = require('../../utils/campaign.js');
+const { initialOf } = require('../../utils/format.js');
 
 /** 成员昵称展示上限（字）；超出截断补「...」——排行行里昵称后面还跟「移出」按钮与距离，不能任其撑满 */
 const NAME_MAX = 5;

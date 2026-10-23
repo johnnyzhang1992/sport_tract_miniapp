@@ -6,7 +6,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const { statusLabel, visibilityLabel, fmtRange, fmtRangeLabeled, avatarStack, joinCta, fmtPanel, truncateName, statusTagClass, initialOf } = require('../miniprogram/utils/campaign.js');
+const { statusLabel, visibilityLabel, fmtRange, fmtRangeLabeled, avatarStack, joinCta, fmtPanel, truncateName, statusTagClass } = require('../miniprogram/utils/campaign.js');
 
 test('CU1 状态/可见性标签', () => {
   assert.equal(statusLabel('active'), '进行中');
@@ -182,10 +182,3 @@ test('CU14 未开始的活动仍可加入：报名早于开赛是常态，按钮
   );
 });
 
-test('CU15 占位首字按码点取：emoji 开头的昵称不能切出半个代理对', () => {
-  assert.equal(initialOf('阿迹', '迹'), '阿');
-  assert.equal(initialOf('🏃跑者', '迹'), '🏃', '码点取才是一个完整 emoji（name[0] 会切出代理对的前一半）');
-  assert.equal(initialOf('', '迹'), '迹', '空昵称走缺省字');
-  assert.equal(initialOf(null, '微信用户'), '微');
-  assert.equal(initialOf('🏃', '迹'), '🏃', '整个昵称就是一个 emoji 时也要完整');
-});

@@ -1,5 +1,6 @@
 const api = require('../../services/api');
 const loading = require('../../utils/loading');
+const { initialOf } = require('../../utils/format.js');
 
 /** 头像签名 URL 缓存（OSS 签名 URL 每次生成都不同，导致 image 无法缓存、每次进入重复下载）
  * 基础 URL（去签名参数）没变 → 复用缓存签名 URL（微信 image 缓存命中，不重复请求 CDN） */
@@ -84,7 +85,7 @@ Page({
         ? Math.max(1, Math.ceil((Date.now() - new Date(user.createdAt).getTime()) / 86400000))
         : null;
       this.setData({
-        user: { ...user, avatarUrl, avatarText: user.nickname ? user.nickname[0] : '', joinDays },
+        user: { ...user, avatarUrl, avatarText: initialOf(user.nickname, ''), joinDays },
         showBodyData,
         loggedIn: true,
         // 数据统计卡片：今日/本周/本月运动距离（km）

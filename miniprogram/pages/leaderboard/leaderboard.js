@@ -10,7 +10,7 @@
 const drawGeoMap = require('../../utils/map-draw');
 const loading = require('../../utils/loading');
 const { applyTypeCounts } = require('../../utils/leaderboard-types.js');
-const { formatDuration } = require('../../utils/format.js');
+const { formatDuration, initialOf } = require('../../utils/format.js');
 
 const ACTIVITY_TYPES = require('../../config/index').ACTIVITY_TYPES;
 
@@ -90,7 +90,7 @@ function withDuration(row) {
 function avatarOf(r) {
   return {
     avatarSrc: r.avatarUrl || (r.avatarPreset ? `/assets/avatars/${r.avatarPreset}.png` : ''),
-    avatarText: (r.name || '迹')[0],
+    avatarText: initialOf(r.name, '迹'),
   };
 }
 

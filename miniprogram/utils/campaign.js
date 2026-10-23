@@ -4,6 +4,8 @@
  * 运行：node --test test/campaign-util.test.js。
  */
 
+const { initialOf } = require('./format.js');
+
 const STATUS_LABEL = { upcoming: '未开始', active: '进行中', ended: '已结束', dissolved: '已解散' };
 const VISIBILITY_LABEL = { public: '公开', private: '隐私' };
 
@@ -57,14 +59,6 @@ function fmtRange(startAt, endAt) {
 function fmtRangeLabeled(startAt, endAt) {
   const endMs = endAt - 1; // 同 fmtRange：endAt 是次日 0 点
   return `开始 ${bjDate(startAt, true)} · 结束 ${bjDate(endMs, true)}`;
-}
-
-/**
- * 占位圆里的首字：必须按**码点**取（Array.from）。昵称以 emoji 开头时 `name[0]` 切的是 UTF-16
- * 码元，会留下半个代理对 → 渲染成乱码方块（和 truncateName 同一个坑）。
- */
-function initialOf(name, fallback) {
-  return Array.from(String(name || fallback || ''))[0] || '';
 }
 
 /** 成员头像堆叠的数据：签名 url 优先 → 回退预设图 → 都没有时用昵称首字画占位圆 */
@@ -124,4 +118,4 @@ function fmtPanel({ count = 0, streak = 0, distance = 0, duration = 0 }) {
   };
 }
 
-module.exports = { statusLabel, visibilityLabel, statusTagClass, fmtRange, fmtRangeLabeled, avatarStack, joinCta, fmtPanel, truncateName, initialOf, slashDate };
+module.exports = { statusLabel, visibilityLabel, statusTagClass, fmtRange, fmtRangeLabeled, avatarStack, joinCta, fmtPanel, truncateName, slashDate };
