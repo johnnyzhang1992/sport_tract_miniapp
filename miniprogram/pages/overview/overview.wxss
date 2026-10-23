@@ -180,7 +180,7 @@
 }
 .share-toggle {
   font-size: 26rpx;
-  color: #2b6cf6;
+  color: #1a56d6;
   padding: 12rpx 24rpx;
   background: #eef4ff;
   border-radius: 999rpx;

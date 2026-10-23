@@ -38,11 +38,11 @@
 }
 .type-item-hover {
   background: #eef4ff;
-  border-color: #2b6cf6;
+  border-color: #1a56d6;
 }
 .type-item-active {
   background: #eef4ff;
-  border-color: #2b6cf6;
+  border-color: #1a56d6;
 }
 .type-icon {
   width: 44rpx;
@@ -217,7 +217,7 @@
 }
 .lb-arrow {
   font-size: 36rpx;
-  color: #8a93a6;
+  color: #667080;
   flex-shrink: 0;
 }
 
@@ -287,7 +287,7 @@
   line-height: 1;
   padding: 4rpx 10rpx;
   border-radius: 6rpx;
-  color: #2b6cf6;
+  color: #1a56d6;
   background: #eef4ff;
   margin-bottom: 8rpx;
 }
@@ -396,7 +396,7 @@
   margin-left: 8rpx;
   font-size: 32rpx;
   line-height: 1;
-  color: #8a93a6;
+  color: #667080;
 }
 .camp-card-members {
   display: flex;
@@ -432,7 +432,7 @@
 /* 累计数据标题行右侧箭头：与运动榜/组队运动标题栏图标同档 */
 .overview-arrow {
   font-size: 28rpx;
-  color: #8a93a6;
+  color: #667080;
   flex-shrink: 0;
 }
 

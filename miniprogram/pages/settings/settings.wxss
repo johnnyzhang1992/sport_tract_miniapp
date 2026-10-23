@@ -25,8 +25,8 @@
 }
 .gender-active {
   background: #eef4ff;
-  color: #2b6cf6;
-  border: 2rpx solid #2b6cf6;
+  color: #1a56d6;
+  border: 2rpx solid #1a56d6;
 }
 .type-grid {
   display: flex;
@@ -44,7 +44,7 @@
 }
 .type-item-active {
   background: #eef4ff;
-  border-color: #2b6cf6;
+  border-color: #1a56d6;
 }
 .type-icon {
   width: 44rpx;
@@ -70,7 +70,7 @@
 }
 .link-arrow {
   font-size: 40rpx;
-  color: #8a93a6;
+  color: #667080;
 }
 
 .type-icon {

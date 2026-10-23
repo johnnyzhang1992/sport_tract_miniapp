@@ -313,7 +313,7 @@
 }
 .time-sep {
   margin: 0 14rpx;
-  color: #8a93a6;
+  color: #667080;
 }
 
 /* 编辑入口 + 备注

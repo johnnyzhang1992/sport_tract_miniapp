@@ -63,7 +63,7 @@
 }
 .link-arrow {
   font-size: 40rpx;
-  color: #8a93a6;
+  color: #667080;
   margin-left: 12rpx;
   flex-shrink: 0;
   line-height: 1;
@@ -101,7 +101,7 @@
 }
 .entry-arrow {
   font-size: 40rpx;
-  color: #8a93a6;
+  color: #667080;
   line-height: 1;
 }
 

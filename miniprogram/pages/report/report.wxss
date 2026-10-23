@@ -22,8 +22,8 @@
 }
 .range-btn-active {
   background: #eef4ff;
-  color: #2b6cf6;
-  border: 2rpx solid #2b6cf6;
+  color: #1a56d6;
+  border: 2rpx solid #1a56d6;
 }
 /* 历史周期翻页 */
 .period-nav {
@@ -123,8 +123,8 @@
 }
 .picker-card-active {
   background: #eef4ff;
-  border-color: #2b6cf6;
-  color: #2b6cf6;
+  border-color: #1a56d6;
+  color: #1a56d6;
   font-weight: 600;
 }
 .picker-card-compact {
@@ -293,7 +293,7 @@
   margin-left: 2rpx;
 }
 .best-row-date {
-  color: #8a93a6;
+  color: #667080;
   font-size: 20rpx;
   margin-left: 12rpx;
 }
@@ -343,7 +343,7 @@
 }
 .poster-link {
   font-size: 24rpx;
-  color: #2b6cf6;
+  color: #1a56d6;
   padding: 8rpx 20rpx;
   border-radius: 999rpx;
   background: #eef4ff;

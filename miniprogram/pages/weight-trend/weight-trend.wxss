@@ -39,8 +39,8 @@
 }
 .range-btn-active {
   background: #eef4ff;
-  color: #2b6cf6;
-  border: 2rpx solid #2b6cf6;
+  color: #1a56d6;
+  border: 2rpx solid #1a56d6;
 }
 
 .section-title {

@@ -199,7 +199,7 @@ ec-canvas {
   padding: 16rpx 24rpx;
   border-radius: 12rpx;
   background: #eef4ff;
-  color: #2b6cf6;
+  color: #1a56d6;
   font-size: 26rpx;
 }
 .prov-track-entry-hover {

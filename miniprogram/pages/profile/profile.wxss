@@ -70,8 +70,8 @@
 }
 .gender-active {
   background: #eef4ff;
-  color: #2b6cf6;
-  border: 2rpx solid #2b6cf6;
+  color: #1a56d6;
+  border: 2rpx solid #1a56d6;
 }
 
 /* 身体数据提示 */
@@ -96,7 +96,7 @@
 }
 .link-arrow {
   font-size: 40rpx;
-  color: #8a93a6;
+  color: #667080;
 }
 .card-hover {
   opacity: 0.8;
@@ -105,7 +105,7 @@
 /* 首次注册引导说明 */
 .guide-tip {
   background: #eef4ff;
-  color: #2b6cf6;
+  color: #1a56d6;
   font-size: 26rpx;
   padding: 20rpx 28rpx;
   border-radius: 14rpx;
@@ -195,7 +195,7 @@
 }
 .upload-entry-arrow {
   font-size: 34rpx;
-  color: #8a93a6;
+  color: #667080;
 }
 .presets-empty {
   font-size: 24rpx;

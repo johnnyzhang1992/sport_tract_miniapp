@@ -40,8 +40,8 @@
 }
 .type-pill-active {
   background: #eef4ff;
-  color: #2b6cf6;
-  border: 2rpx solid #2b6cf6;
+  color: #1a56d6;
+  border: 2rpx solid #1a56d6;
 }
 .input-wrap {
   margin: 8rpx 0;
@@ -161,8 +161,8 @@
 }
 .preset-pill-active {
   background: #eef4ff;
-  color: #2b6cf6;
-  border-color: #2b6cf6;
+  color: #1a56d6;
+  border-color: #1a56d6;
 }
 .preset-emoji {
   font-size: 28rpx;

@@ -96,7 +96,7 @@
   flex: none;
   margin-left: 8rpx;
   font-size: 36rpx;
-  color: #8a93a6;
+  color: #667080;
 }
 .cp-card-time {
   margin-top: 8rpx;

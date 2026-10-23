@@ -37,7 +37,7 @@
 .farrow {
   flex: none;
   margin-left: 8rpx;
-  color: #8a93a6;
+  color: #667080;
   font-size: 32rpx;
   line-height: 1;
 }
