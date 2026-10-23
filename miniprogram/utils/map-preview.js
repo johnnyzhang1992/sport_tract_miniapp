@@ -146,4 +146,20 @@ function visibleMapIds(rects, windowHeight, margin = 240) {
   return ids;
 }
 
-module.exports = { buildMapView, visibleMapIds, PACE_COLORS, TRACK_COLOR };
+/**
+ * 地图节点保活淘汰：可视行永不卸载；已挂载数超过 cap 时，按最近一次可见时间
+ * 从旧到新淘汰非可视行。短距离来回滚动不会反复重建原生 map。
+ * @param {{mounted:Set<string>, visible:Set<string>, seen:Map<string,number>, cap:number}} opts
+ * @returns {Set<string>} 需要卸载的 id
+ */
+function selectMapEvictions({ mounted, visible, seen, cap }) {
+  const keep = Math.max(cap, visible.size);
+  const over = mounted.size - keep;
+  if (over <= 0) return new Set();
+  const candidates = [...mounted]
+    .filter((id) => !visible.has(id))
+    .sort((a, b) => (seen.get(a) || 0) - (seen.get(b) || 0));
+  return new Set(candidates.slice(0, over));
+}
+
+module.exports = { buildMapView, visibleMapIds, selectMapEvictions, PACE_COLORS, TRACK_COLOR };

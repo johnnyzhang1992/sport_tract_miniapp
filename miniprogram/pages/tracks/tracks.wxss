@@ -350,7 +350,7 @@
   min-width: 0;
 }
 .map-dist {
-  font-size: 42rpx;
+  font-size: 38rpx;
   font-weight: 600;
   color: #2b6cf6;
   line-height: 1.1;

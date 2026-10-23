@@ -40,10 +40,14 @@ require.cache[storagePath] = {
 
 let rects = [];
 const fits = [];
+const navs = [];
 global.wx = {
   getStorageSync: () => '',
   setStorageSync: () => {},
-  navigateTo: () => {},
+  navigateTo: (opts) => {
+    navs.push(opts.url);
+    if (opts.complete) opts.complete();
+  },
   createMapContext: (id) => ({
     includePoints: (opts) => fits.push({ id, opts }),
   }),
@@ -118,7 +122,7 @@ test('TM1 只请求可视行地图点；成功后写入折线并缓存不重复�
   assert.deepEqual(fits[0].opts.padding, [12, 12, 12, 12]);
 });
 
-test('TM1b 滚出视口后卸载地图节点（点数据保留）', () => {
+test('TM1b 短距离滚出视口：保留地图节点，不反复卸载/挂载', () => {
   rects = [{ id: 'map-item-a1', top: 2000, bottom: 2100 }];
   const page = makePage([
     {
@@ -129,8 +133,25 @@ test('TM1b 滚出视口后卸载地图节点（点数据保留）', () => {
     },
   ]);
   page.syncVisibleMaps();
-  assert.equal(page.data.items[0].mapReady, false);
+  assert.equal(page.data.items[0].mapReady, true, '未超保活上限不卸载');
   assert.equal(page.data.items[0].mapPolyline.length, 1, '缓存的折线不丢');
+});
+
+test('TM1c 超过 15 张保活上限：淘汰最久未见的非可视行', () => {
+  rects = [];
+  const page = makePage(
+    Array.from({ length: 22 }, (_, i) => ({
+      id: `a${i}`,
+      mapReady: true,
+      mapCenter: { latitude: 30, longitude: 120 },
+      mapPolyline: [],
+    })),
+  );
+  page._mapSeen = new Map(page.data.items.map((it, i) => [it.id, i]));
+  page.syncVisibleMaps();
+  assert.equal(page.data.items.filter((i) => i.mapReady).length, 15);
+  assert.equal(page.data.items[0].mapReady, false, '最久未见的先淘汰');
+  assert.equal(page.data.items[21].mapReady, true);
 });
 
 test('TM2 请求失败：标记降级，不把整行卡死', async () => {
@@ -188,4 +209,44 @@ test('TM4 无预览点的轨迹（规划路线等）：不出折线，留给详�
   );
   assert.equal(item.mapPolyline.length, 0);
   assert.equal(item.mapCenter, null);
+});
+
+test('TM5 hide 时只保留严格视口内的地图节点', () => {
+  const page = makePage(
+    Array.from({ length: 8 }, (_, i) => ({
+      id: `a${i}`,
+      mapReady: true,
+      mapCenter: { latitude: 30, longitude: 120 },
+      mapPolyline: [],
+    })),
+  );
+  page._viewportIds = new Set(['a2', 'a3', 'a4', 'a5', 'a6']);
+  page.trimMountedMapsToViewport();
+  assert.deepEqual(
+    page.data.items.map((i) => i.mapReady),
+    [false, false, true, true, true, true, true, false],
+    '视口外保活节点释放，视口内保留',
+  );
+});
+
+test('TM6 列表模式下 hide：卸载全部地图', () => {
+  const page = makePage([
+    { id: 'a1', mapReady: true, mapCenter: { latitude: 30, longitude: 120 }, mapPolyline: [] },
+    { id: 'a2', mapReady: true, mapCenter: { latitude: 31, longitude: 121 }, mapPolyline: [] },
+  ]);
+  page.data.viewMode = 'list';
+  page.trimMountedMapsToViewport();
+  assert.ok(page.data.items.every((i) => !i.mapReady));
+});
+
+
+test('TM7 连点地图/卡片只跳一次，短时间后恢复', async () => {
+  navs.length = 0;
+  const page = makePage([{ id: 'a1' }]);
+  page.onTapItem({ currentTarget: { dataset: { id: 'a1' } } });
+  page.onTapItem({ currentTarget: { dataset: { id: 'a1' } } });
+  assert.equal(navs.length, 1, '连续点击只导航一次');
+  await new Promise((r) => setTimeout(r, 450));
+  page.onTapItem({ currentTarget: { dataset: { id: 'a1' } } });
+  assert.equal(navs.length, 2, '锁释放后可再次进入');
 });

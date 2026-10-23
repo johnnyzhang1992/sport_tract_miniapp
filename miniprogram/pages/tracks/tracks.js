@@ -4,10 +4,12 @@ const { getBestCache, setBestCache } = require('../../services/storage');
 const { matchBest } = require('../../utils/best-records');
 const config = require('../../config/index');
 const { markHomeDirty } = require('../../utils/home-refresh');
-const { buildMapView, visibleMapIds } = require('../../utils/map-preview');
+const { buildMapView, visibleMapIds, selectMapEvictions } = require('../../utils/map-preview');
 
 const PAGE_SIZE = 20;
 const VIEW_MODE_KEY = 'tracksViewMode';
+/** 地图模式最多保活的 map 节点数：峰值 15 张；超过后从最久未见的非可视行开始淘汰 */
+const MAX_MOUNTED_MAPS = 15;
 const pad2 = (n) => String(n).padStart(2, '0');
 
 /** 秒 → h:mm:ss（月度统计用） */
@@ -107,8 +109,14 @@ Page({
             ? wx.getSystemInfoSync()
             : {};
         const ids = visibleMapIds(rects, info.windowHeight || 667, 240);
+        // 严格视口（不含预加载带）：切页时只保留这几张地图节点
+        this._viewportIds = visibleMapIds(rects, info.windowHeight || 667, 0);
+        if (!this._mapSeen) this._mapSeen = new Map();
+        const now = Date.now();
+        ids.forEach((id) => this._mapSeen.set(id, now));
         const patch = {};
         let changed = false;
+        const mountedAfter = new Set();
         this.data.items.forEach((item, idx) => {
           if (ids.has(item.id)) {
             if (!item.mapReady && item.mapCenter) {
@@ -116,12 +124,26 @@ Page({
               changed = true;
               if (item.mapFitPoints && item.mapFitPoints.length) this.fitItemMap(item.id);
             }
+            if (item.mapReady || item.mapCenter) mountedAfter.add(item.id);
             this.loadItemMap(item.id);
           } else if (item.mapReady) {
-            patch[`items[${idx}].mapReady`] = false;
-            changed = true;
+            mountedAfter.add(item.id);
           }
         });
+        // 超过保活上限才淘汰最久未见的非可视行；短距离来回滚动不卸载
+        const evict = selectMapEvictions({
+          mounted: mountedAfter,
+          visible: ids,
+          seen: this._mapSeen,
+          cap: MAX_MOUNTED_MAPS,
+        });
+        if (evict.size) {
+          this.data.items.forEach((item, idx) => {
+            if (!evict.has(item.id)) return;
+            patch[`items[${idx}].mapReady`] = false;
+            changed = true;
+          });
+        }
         if (changed) this.setData(patch);
       })
       .exec();
@@ -155,6 +177,28 @@ Page({
       if (it.mapReady) patch[`items[${idx}].mapReady`] = false;
     });
     this.setData(patch);
+  },
+
+  /** 切页时只保留严格视口内的地图，卸载视口外的保活节点 */
+  trimMountedMapsToViewport() {
+    if (this.data.viewMode !== 'grid') {
+      this.unmountMaps();
+      return;
+    }
+    const keep = this._viewportIds;
+    if (!keep || !keep.size) {
+      this.unmountMaps();
+      return;
+    }
+    const patch = {};
+    let changed = false;
+    this.data.items.forEach((item, idx) => {
+      if (item.mapReady && !keep.has(item.id)) {
+        patch[`items[${idx}].mapReady`] = false;
+        changed = true;
+      }
+    });
+    if (changed) this.setData(patch);
   },
 
   async loadItemMap(id) {
@@ -225,6 +269,7 @@ Page({
   },
 
   onShow() {
+    this._navLock = false; // 从详情返回后解除导航锁
     const app = getApp();
     // 报告页「日期汇总」下钻：tab 页不能带参，经 globalData 传精确时间范围
     if (app.globalData.pendingTracksRange) {
@@ -267,7 +312,8 @@ Page({
 
   onHide() {
     this.clearMapTimers();
-    this.unmountMaps();
+    // 切 tab / 切页：只留视口内的地图节点（约 5–6 张），视口外的保活节点先释放
+    this.trimMountedMapsToViewport();
   },
 
   onUnload() {
@@ -324,6 +370,8 @@ Page({
     try {
       this._monthlyStats = {}; // 重置聚合缓存，防上一次筛选的数据串味（只在 JS 用，不进 data）
       this._mapCache = {}; // 地图抽稀点缓存随列表刷新一起作废
+      this._mapSeen = new Map(); // 地图节点保活的最近可见时间
+      this._viewportIds = new Set();
       this.setData({ loading: true, page: 1 });
       // 个人最佳与列表并行拉取：每次刷新都取实时值（缓存不失效，新纪录要立刻在卡片亮出）
       const [data, best] = await Promise.all([api.get('/activities', this.buildParams(1)), this.loadBest()]);
@@ -508,12 +556,18 @@ Page({
     return out;
   },
 
-  /** 进入轨迹详情 */
+  /** 进入轨迹详情：地图与卡片共用，短时锁防止连点重复导航 */
   onTapItem(e) {
     const id = e.currentTarget.dataset.id;
-    if (!id) return;
+    if (!id || this._navLock) return;
+    this._navLock = true;
     wx.navigateTo({
       url: `/pages/track-detail/track-detail?id=${id}`,
+      complete: () => {
+        setTimeout(() => {
+          this._navLock = false;
+        }, 400);
+      },
     });
   },
 
@@ -537,6 +591,7 @@ Page({
     try {
       await api.del(`/activities/${id}`);
       if (this._mapCache) delete this._mapCache[id];
+      if (this._mapSeen) this._mapSeen.delete(id);
       const items = this.data.items.filter((i) => i.id !== id);
       this.setData({
         items,

@@ -104,3 +104,45 @@ test('MV6 无时间戳：无法算配速时回退单色蓝线', () => {
   assert.equal(view.polyline.length, 1);
   assert.equal(view.polyline[0].color, '#2B6CF6');
 });
+
+const { selectMapEvictions } = require(path.join(__dirname, '..', 'miniprogram', 'utils', 'map-preview.js'));
+
+test('MV7 地图节点保活：未超上限不卸载，短距离来回滚动不重建', () => {
+  const seen = new Map([
+    ['a', 1],
+    ['b', 2],
+  ]);
+  const evict = selectMapEvictions({
+    mounted: new Set(['a', 'b']),
+    visible: new Set(['a']),
+    seen,
+    cap: 12,
+  });
+  assert.equal(evict.size, 0);
+});
+
+test('MV8 超上限：只淘汰最久未见的非可视行，可视行永不卸载', () => {
+  const seen = new Map();
+  const mounted = new Set();
+  for (let i = 0; i < 15; i++) {
+    mounted.add(`m${i}`);
+    seen.set(`m${i}`, i);
+  }
+  const visible = new Set(['m14', 'm13']);
+  const evict = selectMapEvictions({ mounted, visible, seen, cap: 12 });
+  assert.equal(evict.size, 3, '15 张保活 12 张');
+  assert.deepEqual([...evict].sort(), ['m0', 'm1', 'm2'], '最久未见的先走');
+  assert.ok(!evict.has('m14') && !evict.has('m13'), '可视行不淘汰');
+});
+
+test('MV9 可视行比上限还多：也不卸载可视行', () => {
+  const seen = new Map();
+  const mounted = new Set();
+  for (let i = 0; i < 14; i++) {
+    mounted.add(`m${i}`);
+    seen.set(`m${i}`, i);
+  }
+  const visible = new Set(mounted); // 全都在视口
+  const evict = selectMapEvictions({ mounted, visible, seen, cap: 12 });
+  assert.equal(evict.size, 0);
+});
