@@ -509,3 +509,59 @@ test('CCP24 不带 id 仍是创建模式：不发 GET、isEdit=false、提交走
   assert.equal(apiCalls[0].path, '/campaigns');
 });
 
+
+/* ------------------------- 跨度上限（与服务端 assertCampaignSpan 同一条线） ------------------------- */
+
+/** YYYY-MM-DD + n 个日历日（测试侧独立实现一遍，不复用页面里的 helper） */
+function plusDays(dateStr, n) {
+  return new Date(Date.parse(`${dateStr}T00:00:00Z`) + n * 86400000).toISOString().slice(0, 10);
+}
+
+test('CCP21 结束日期选择器要封顶：maxEndDate = 开始日期 + 364（含首尾正好 365 天）', async () => {
+  resetEnv();
+  const page = makePage();
+  await page.onLoad({});
+  assert.equal(page.data.maxEndDate, plusDays(page.data.startDate, 364), '进页默认态就要算出上界');
+
+  page.onStartDate({ detail: { value: '2026-01-01' } });
+  assert.equal(page.data.maxEndDate, '2026-12-31', '2026 是闰年：+364 天落在 12-31');
+  page.onStartDate({ detail: { value: '2027-01-01' } });
+  assert.equal(page.data.maxEndDate, '2027-12-31', '平年同样落在 12-31');
+});
+
+test('CCP22 编辑态预填也带上 maxEndDate（否则选择器没有上界，能一路划到两年后）', async () => {
+  resetEnv();
+  respond = (p) => (p === '/campaigns/cmp-abc' ? Promise.resolve(detailDto()) : Promise.resolve({}));
+  const page = makePage();
+  await page.onLoad({ id: 'cmp-abc' });
+  assert.equal(page.data.startDate, '2026-10-01');
+  assert.equal(page.data.maxEndDate, '2027-09-30', '开始日期 + 364 天');
+});
+
+test('CCP23 跨度超一年 → 不提交，toast 带实际天数与上限（一个请求都不发）', async () => {
+  resetEnv();
+  const page = makePage();
+  Object.assign(page.data, legal({ startDate: '2026-01-01', endDate: '2027-01-01' }));
+  await page.onSubmit();
+  assert.equal(apiCalls.length, 0, '超跨度时不该发请求');
+  assert.ok(toasts.length >= 1, JSON.stringify(toasts));
+  assert.match(toasts[toasts.length - 1], /365/, `要说明上限：${toasts[toasts.length - 1]}`);
+  assert.match(toasts[toasts.length - 1], /366/, `要报出实际跨了多少天：${toasts[toasts.length - 1]}`);
+
+  // 收回到正好 365 天要放行（边界不能被端上多砍一格）
+  resetEnv();
+  const ok = makePage();
+  Object.assign(ok.data, legal({ startDate: '2026-01-01', endDate: '2026-12-31' }));
+  await ok.onSubmit();
+  assert.equal(apiCalls.length, 1, '正好 365 天该提交出去');
+});
+
+test('CCP24 结束日期 picker 必须挂上 end 上界', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const wxml = fs.readFileSync(
+    path.join(__dirname, '../miniprogram/pages/campaign-create/campaign-create.wxml'),
+    'utf8',
+  ).replace(/<!--[\s\S]*?-->/g, '');
+  assert.match(wxml, /mode="date"[^>]*end="\{\{maxEndDate\}\}"/, '结束日期选择器要绑上界');
+});

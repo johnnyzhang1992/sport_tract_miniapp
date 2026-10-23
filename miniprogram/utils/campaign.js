@@ -59,11 +59,20 @@ function fmtRangeLabeled(startAt, endAt) {
   return `开始 ${bjDate(startAt, true)} · 结束 ${bjDate(endMs, true)}`;
 }
 
-/** 成员头像堆叠的数据：签名 url 优先，回退预设图，都没有则空串（端上画占位圆） */
+/**
+ * 占位圆里的首字：必须按**码点**取（Array.from）。昵称以 emoji 开头时 `name[0]` 切的是 UTF-16
+ * 码元，会留下半个代理对 → 渲染成乱码方块（和 truncateName 同一个坑）。
+ */
+function initialOf(name, fallback) {
+  return Array.from(String(name || fallback || ''))[0] || '';
+}
+
+/** 成员头像堆叠的数据：签名 url 优先 → 回退预设图 → 都没有时用昵称首字画占位圆 */
 function avatarStack(list) {
   return (list || []).map((m, i) => ({
     key: i,
     src: m.avatarUrl || (m.avatarPreset ? `/assets/avatars/${m.avatarPreset}.png` : ''),
+    text: initialOf(m.nickname, '微信用户'),
   }));
 }
 
@@ -99,7 +108,7 @@ function joinCta({ myState, canJoin, status, visibility }) {
 
 /**
  * 汇总面板格式化（左闭右开口径无关，纯展示）：
- * 次数 / 距离 km 两位小数 / 时长（≥1h 为 h+m，否则 min）。
+ * 次数 / 距离 km 两位小数 / 时长（中文单位：满 1 小时走「N小时M分钟」，整点省掉「0分钟」，不足 1 小时走「M分钟」）。
  * 列表卡片 DTO 的 myStats 没有 streak（只有详情 myPanel 有），缺省归 0。
  */
 function fmtPanel({ count = 0, streak = 0, distance = 0, duration = 0 }) {
@@ -111,8 +120,8 @@ function fmtPanel({ count = 0, streak = 0, distance = 0, duration = 0 }) {
     countText: `${count}`,
     streakText: `${streak}`,
     distanceText: `${km}`,
-    durationText: h > 0 ? `${h}h${m}m` : `${m}min`,
+    durationText: h > 0 ? (m > 0 ? `${h}小时${m}分钟` : `${h}小时`) : `${m}分钟`,
   };
 }
 
-module.exports = { statusLabel, visibilityLabel, statusTagClass, fmtRange, fmtRangeLabeled, avatarStack, joinCta, fmtPanel, truncateName, slashDate };
+module.exports = { statusLabel, visibilityLabel, statusTagClass, fmtRange, fmtRangeLabeled, avatarStack, joinCta, fmtPanel, truncateName, initialOf, slashDate };

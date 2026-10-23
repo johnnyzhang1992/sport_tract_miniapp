@@ -43,11 +43,13 @@ require.cache[apiPath] = { id: apiPath, filename: apiPath, loaded: true, exports
 
 const toasts = [];
 const navs = []; // navigateTo 的 url（「编辑活动」入口跳转用）
+const navTitles = []; // setNavigationBarTitle 的 title（导航栏标题＝活动名）
 const modals = []; // 每次 showModal 的入参（核对「退出活动」的二次确认）
 let modalResult = { confirm: true }; // 用例控制的用户选择
 global.wx = {
   showToast: (o) => toasts.push(o && o.title),
   navigateTo: (o) => navs.push(o && o.url),
+  setNavigationBarTitle: (o) => navTitles.push(o && o.title),
   showModal: (o) => {
     modals.push(o);
     if (o && typeof o.success === 'function') o.success(modalResult);
@@ -120,6 +122,7 @@ function resetEnv() {
   apiCalls.length = 0;
   toasts.length = 0;
   navs.length = 0;
+  navTitles.length = 0;
   modals.length = 0;
   modalResult = { confirm: true };
   gateCalls.length = 0;
@@ -198,7 +201,38 @@ const BOARD = {
   total: 2,
   page: 1,
   pageSize: 20,
+  metric: 'distance',
+  type: '',
+  my: { rank: 2, value: 10000, total: 2, leaderValue: 15000, gapToLeader: 5000 },
 };
+
+/** 累计趋势：labels + 各成员累计距离（米），与 GET /:id/trend 同形 */
+const TREND = {
+  metric: 'distance',
+  bucket: 'day',
+  labels: ['10/01', '10/02', '10/03'],
+  series: [
+    { userId: 'u1', name: '阿迹', isMe: false, values: [1000, 3000, 5000] },
+    { userId: 'u2', name: '小小梦工场爱运动', isMe: true, values: [500, 1500, 2500] },
+  ],
+};
+
+/** by=type 档：一条线＝一个运动类型。故意给**升序**（没排好）的系列，用来证明端上不再自己重排 */
+const TREND_BY_TYPE = {
+  metric: 'distance',
+  by: 'type',
+  bucket: 'day',
+  labels: ['10/01', '10/02', '10/03'],
+  series: [
+    { type: 'running', isMe: false, values: [500, 1500, 2500] },
+    { type: 'hiking', isMe: false, values: [2000, 4000, 6000] },
+  ],
+};
+
+/** 两档按请求路径分流：带 by=type 才给分类型夹具 */
+function mockTrendByPath(path) {
+  return /[?&]by=type(&|$)/.test(path) ? TREND_BY_TYPE : TREND;
+}
 
 /** 排行榜行夹具：名次从 from 起共 n 行（距离按名次递减，与真实排序同向） */
 function boardRows(from, n) {
@@ -214,11 +248,13 @@ function boardRows(from, n) {
   }));
 }
 
-/** 详情页进页：mock 好「详情 + 成员时的排行榜」两跳 */
-function mockDetail(detail, board = BOARD) {
+/** 详情页进页：mock 好「详情 + 成员时的排行榜 + 趋势」三跳（trend 给函数则按请求路径分档） */
+function mockDetail(detail, board = BOARD, trend = TREND) {
+  const trendFor = typeof trend === 'function' ? trend : () => trend;
   respond = (path) => {
     // 端上现在带 query（?page=1&pageSize=20），不能再按「以 /leaderboard 结尾」匹配
     if (/\/leaderboard(\?|$)/.test(path)) return Promise.resolve(board);
+    if (/\/trend(\?|$)/.test(path)) return Promise.resolve(trendFor(path));
     return Promise.resolve(detail);
   };
 }
@@ -244,23 +280,24 @@ test('CDP1 非成员：只请求详情，一个成员数据都不请求、也不
   assert.equal(page.data.totals, null, '非成员不能有全队汇总');
 });
 
-test('CDP2 成员：额外请求排行榜，汇总/成员列表/底部面板齐备', async () => {
+test('CDP2 成员：额外请求排行榜与趋势，汇总/成员列表/底部面板齐备', async () => {
   resetEnv();
   mockDetail(member());
   const page = makePage();
   await page.onLoad({ id: 'c1' });
   await flush();
 
-  assert.equal(apiCalls.length, 2, '成员要拉详情 + 排行榜');
+  assert.equal(apiCalls.length, 3, '成员要拉详情 + 排行榜 + 趋势');
   assert.equal(apiCalls[0].path, '/campaigns/c1');
   assert.equal(apiCalls[1].path, '/campaigns/c1/leaderboard?page=1&pageSize=20', '排行榜首屏固定要第 1 页');
+  assert.equal(apiCalls[2].path, '/campaigns/c1/trend', '趋势默认不带筛选参数');
   assert.equal(page.data.isMember, true);
   // 全队汇总三格
   assert.deepEqual(page.data.totals, {
     countText: '5',
     streakText: '0', // totals 没有 streak，fmtPanel 归 0（汇总三格不展示这一项）
     distanceText: '25.00',
-    durationText: '2h0m',
+    durationText: '2小时',
   });
   // 成员列表＝排行榜行（名次 / 头像 / 昵称 / 距离 / 次数 / 时长）
   assert.equal(page.data.members.length, 2);
@@ -268,13 +305,13 @@ test('CDP2 成员：额外请求排行榜，汇总/成员列表/底部面板齐�
   assert.equal(page.data.members[0].name, '阿迹');
   assert.equal(page.data.members[0].distanceText, '15.00');
   assert.equal(page.data.members[0].countText, '3');
-  assert.equal(page.data.members[0].durationText, '1h0m');
+  assert.equal(page.data.members[0].durationText, '1小时');
   assert.equal(page.data.members[0].medalIcon, '/assets/icons/rank-medal-1.png');
   // 底部悬浮面板：myPanel 经 fmtPanel（次数 / 连续 N 天 / 距离 / 时长）
   assert.equal(page.data.panel.streakText, '3');
   assert.equal(page.data.panel.distanceText, '10.00');
   assert.equal(page.data.panel.countText, '2');
-  assert.equal(page.data.panel.durationText, '1h0m');
+  assert.equal(page.data.panel.durationText, '1小时');
   assert.equal(page.data.cta, null, '成员没有加入按钮');
   assert.equal(page.data.stateNote, '');
 });
@@ -600,9 +637,9 @@ test('CDP18 发起人：没有「退出活动」入口，onLeave 点了也不弹
   assert.equal(apiCalls.length, calls, '发起人点不出任何请求');
 });
 
-test('CDP19 成员排行昵称最多展示 5 个字：6 个字截断补省略号，正好 5 个字不动', async () => {
+test('CDP19 成员排行昵称不截字：整条留给 CSS 省略号（5 字上限只是图例的口径）', async () => {
   resetEnv();
-  const long = '字'.repeat(6);
+  const long = '字'.repeat(12);
   mockDetail(member(), {
     rows: [
       { userId: 'u1', name: long, avatarUrl: '', avatarPreset: 'face', distance: 15000, count: 3, duration: 3600, rank: 1 },
@@ -617,9 +654,22 @@ test('CDP19 成员排行昵称最多展示 5 个字：6 个字截断补省略号
   await page.onLoad({ id: 'c1' });
   await flush();
 
-  assert.equal(page.data.members[0].name, '字'.repeat(5) + '...', '6 个字 → 展示前 5 个 + 「...」');
-  assert.equal(page.data.members[1].name, '字'.repeat(5), '正好 5 个字不加省略号');
+  assert.equal(page.data.members[0].name, long, '12 个字也原样下发（端上不砍）');
   assert.equal(page.data.members[2].name, '阿迹', '短昵称不受影响');
+
+  // 兜住长名字的必须是样式：昵称那一段能收缩并出省略号，右侧数值不被挤走
+  const fs = require('fs');
+  const path = require('path');
+  const wxss = fs
+    .readFileSync(path.join(__dirname, '../miniprogram/pages/campaign-detail/campaign-detail.wxss'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '');
+  const name = /\.rank-name\s*\{([^}]*)\}/.exec(wxss);
+  assert.ok(name, '.rank-name 样式还在');
+  ['overflow:\\s*hidden', 'text-overflow:\\s*ellipsis', 'white-space:\\s*nowrap'].forEach((re) => {
+    assert.match(name[1], new RegExp(re), `长昵称要靠 ${re} 收口`);
+  });
+  assert.match(/\.rank-name-wrap\s*\{([^}]*)\}/.exec(wxss)[1], /min-width:\s*0/, '包裹层能收缩');
+  assert.match(/\.rank-dist\s*\{([^}]*)\}/.exec(wxss)[1], /flex-shrink:\s*0/, '右侧数值不许被昵称压缩');
 });
 
 test('CDP20 「移出」按钮在昵称之后、距离/次数之前（结构顺序钉在 wxml 源里）', () => {
@@ -634,8 +684,12 @@ test('CDP20 「移出」按钮在昵称之后、距离/次数之前（结构顺�
   assert.ok(iKick > iName, '「移出」应排在昵称之后');
   assert.ok(iKick < iMeta, '「移出」应排在次数/时长之前（不再是行尾）');
   assert.ok(iKick < iDist, '「移出」应排在距离之前');
+  // 取「移出」这个元素标签的完整标签体再断言：整段源码正则会被注释里的同名字样命中，
+  // 而固定长度的窗口又会因注释长短漂移（这里按元素边界取，稳）。
+  const elStart = src.indexOf('class="rank-kick"');
+  const el = src.slice(elStart, src.indexOf('>', elStart));
   assert.match(
-    src.slice(iKick - 200, iKick + 200),
+    el,
     /catchtap="onKickTap"/,
     '仍是 catchtap：不能冒泡到整行的 openMember，否则点「移出」会先弹出成员汇总',
   );
@@ -897,4 +951,548 @@ test('CDP33 未开始的非成员仍可加入：cta 不置灰', async () => {
 
   assert.deepEqual(page.data.cta, { text: '加入活动', disabled: false }, '报名早于开赛是常态，未开始不该挡加入');
   assert.equal(page.data.canEdit, false, '但编辑入口仍只给发起人');
+});
+
+/* ------------------- 活动详情改版：比较视角（P0/P1/P2） -------------------
+ * 活动虽然是「一起运动」，目的仍然是比较。这一组钉住：
+ *   - 我的位置（名次 / 距第一 / 占全队）落在底部悬浮条；
+ *   - 排行榜可按距离/次数/时长切换、按活动白名单里的运动类型筛选（服务端排序，端上不重排）；
+ *   - 趋势图（我 vs 前三）拉取 /trend 并换成人能读的 km；
+ *   - 点队友开半屏时给「我 vs TA」对照，点自己不给；
+ *   - 已结束 / 已解散收回邀请与解散入口；
+ *   - 赛程进度只在进行中 / 未开始显示；
+ *   - 成员视角的汇总卡副标题不再说「加入后开始统计」。
+ * -------------------------------------------------------------------------- */
+
+const DAY_MS = 86400000;
+
+test('CDP34 底部悬浮条展示我的位置：只报第几名 + 距上一名差多少', async () => {
+  resetEnv();
+  appStub.globalData.userInfo = { id: 'u2' };
+  // 第 3 名：距榜首 9km、距上一名 4km —— 两个数不同才能证明悬浮条读的是后者
+  mockDetail(member({
+    myPanel: {
+      count: 2, streak: 3, distance: 10000, duration: 3600,
+      rank: 3, members: 5, gapToLeader: 9000, gapToPrev: 4000, share: 0.4,
+    },
+  }));
+  const page = makePage();
+  await page.onLoad({ id: 'c1' });
+  await flush();
+
+  assert.equal(page.data.panel.rankText, '第 3 名', '名次不再带总人数');
+  assert.equal(page.data.panel.gapText, '距上一名 4.00 km');
+  assert.equal(page.data.panel.shareText, undefined, '不再展示占全队比例');
+
+  const fs = require('fs');
+  const path = require('path');
+  const wxml = fs.readFileSync(
+    path.join(__dirname, '../miniprogram/pages/campaign-detail/campaign-detail.wxml'),
+    'utf8',
+  ).replace(/<!--[\s\S]*?-->/g, '');
+  assert.ok(!/shareText/.test(wxml), '悬浮条不再渲染占比那一段');
+
+  // 第一名没有上一名
+  resetEnv();
+  appStub.globalData.userInfo = { id: 'u1' };
+  mockDetail(member({
+    myPanel: { count: 3, streak: 3, distance: 15000, duration: 3600, rank: 1, members: 5, gapToLeader: 0, gapToPrev: 0, share: 0.6 },
+  }));
+  const page2 = makePage();
+  await page2.onLoad({ id: 'c1' });
+  await flush();
+  assert.equal(page2.data.panel.rankText, '第 1 名');
+  assert.equal(page2.data.panel.gapText, '领跑全队');
+});
+
+test('CDP35 排行榜切指标 / 切类型：带参数重新拉第 1 页，端上按当前指标展示主数值', async () => {
+  resetEnv();
+  appStub.globalData.userInfo = { id: 'u2' };
+  mockDetail(member({ allowedTypes: ['hiking', 'running'] }));
+  const page = makePage();
+  await page.onLoad({ id: 'c1' });
+  await flush();
+
+  assert.equal(page.data.metric, 'distance', '默认按距离');
+  assert.equal(page.data.members[0].valueText, '15.00 km');
+  // 白名单两种类型 + 「全部」= 3 个 chip
+  assert.deepEqual(page.data.typeOptions.map((t) => t.key), ['', 'hiking', 'running']);
+
+  await page.onMetricTap({ currentTarget: { dataset: { metric: 'count' } } });
+  await flush();
+  let calls = apiCalls.filter((c) => c.path.indexOf('/leaderboard') >= 0);
+  assert.match(calls[calls.length - 1].path, /[?&]metric=count(&|$)/);
+  assert.equal(page.data.metric, 'count');
+  assert.equal(page.data.members[0].valueText, '3 次', '主数值跟着指标走');
+  assert.equal(page.data.members[0].metaText, '15.00 km · 1小时', '副行补另外两项');
+
+  await page.onTypeTap({ currentTarget: { dataset: { type: 'running' } } });
+  await flush();
+  calls = apiCalls.filter((c) => c.path.indexOf('/leaderboard') >= 0);
+  const last = calls[calls.length - 1].path;
+  assert.match(last, /[?&]type=running(&|$)/);
+  assert.match(last, /[?&]metric=count(&|$)/, '切类型不清掉已选指标');
+  assert.equal(page.data.type, 'running');
+  // 趋势也要跟着类型筛选重拉（距离口径）
+  const trendCalls = apiCalls.filter((c) => c.path.indexOf('/trend') >= 0);
+  assert.match(trendCalls[trendCalls.length - 1].path, /[?&]type=running(&|$)/);
+
+  // 回到「全部」
+  await page.onTypeTap({ currentTarget: { dataset: { type: '' } } });
+  await flush();
+  calls = apiCalls.filter((c) => c.path.indexOf('/leaderboard') >= 0);
+  assert.ok(!/[?&]type=/.test(calls[calls.length - 1].path), '全部＝不带 type 参数');
+});
+
+test('CDP36 趋势图：拉 /trend，系列换算成 km 并给「我」标记', async () => {
+  resetEnv();
+  mockDetail(member());
+  const page = makePage();
+  await page.onLoad({ id: 'c1' });
+  await flush();
+
+  assert.ok(page.data.trend, '成员要有趋势数据');
+  assert.deepEqual(page.data.trend.labels, ['10/01', '10/02', '10/03']);
+  assert.equal(page.data.trend.series.length, 2);
+  const mine = page.data.trend.series.find((s) => s.isMe);
+  assert.equal(mine.values[2], 2.5, '累计距离按 km 交给图表');
+  assert.equal(mine.color, '#2B6CF6', '本人线固定主色');
+  const legendMine = page.data.trend.legend.find((x) => x.isMe);
+  // 图例只留名字：按人档的里程下方「成员排行」逐行都有，按类型档的也能从 Y 轴与曲线读到
+  assert.ok(!('valueText' in legendMine), '图例不再有里程字段');
+  assert.equal(legendMine.name, '小小梦工场…', '姓名最多 5 字，超出补单字符省略号');
+  assert.equal(page.data.trend.legend.find((x) => !x.isMe).name, '阿迹', '没超 5 字就原样，不加省略号');
+});
+
+test('CDP46 趋势「按类型」档：线名与颜色取自运动类型，不再强调「我」', async () => {
+  resetEnv();
+  appStub.globalData.userInfo = { id: 'u2' };
+  mockDetail(member(), BOARD, mockTrendByPath);
+  const page = makePage();
+  await page.onLoad({ id: 'c1' });
+  await flush();
+
+  assert.equal(page.data.trendBy, 'person', '缺省档＝按人');
+  assert.equal(page.data.trend.subText, '按日累计', '副标题只说桶粒度，前三/全队由 chip 表达');
+  const personCalls = apiCalls.filter((c) => c.path.indexOf('/trend') >= 0);
+  assert.ok(!/[?&]by=/.test(personCalls[0].path), '按人档不带 by 参数＝与改版前的请求逐字节一致');
+
+  await page.onTrendByTap({ currentTarget: { dataset: { by: 'type' } } });
+  await flush();
+
+  assert.equal(page.data.trendBy, 'type');
+  const t = page.data.trend;
+  assert.equal(t.by, 'type');
+  assert.deepEqual(
+    t.series.map((s) => s.name),
+    ['跑步', '徒步'],
+    '线名用运动类型中文，不是昵称',
+  );
+  assert.deepEqual(
+    t.series.map((s) => s.color),
+    ['#2B6CF6', '#FF9800'],
+    '线色用各运动类型在册的配色（与轨迹图标同一套）',
+  );
+  assert.equal(t.series[1].values[2], 6, '累计距离照样换成 km');
+  assert.ok(t.series.every((s) => !s.isMe), '按类型档没有「我」这条线');
+  // 夹具是升序（没排好）：原样吐出才证明端上没再排一次——排序是服务端的职责，两处排会打架
+  assert.deepEqual(t.legend.map((x) => x.key), ['running', 'hiking'], '服务端给什么顺序就画什么顺序');
+  assert.ok(t.legend.every((x) => !('valueText' in x)), '按类型档的图例也只留名字');
+
+  // 档位 chip 必须真的挂在 onTrendByTap 上：没接 handler 的 chip 看着能点、点了没反应
+  const fs = require('fs');
+  const path = require('path');
+  const wxml = fs.readFileSync(
+    path.join(__dirname, '../miniprogram/pages/campaign-detail/campaign-detail.wxml'),
+    'utf8',
+  ).replace(/<!--[\s\S]*?-->/g, '');
+  assert.equal((wxml.match(/bindtap="onTrendByTap"/g) || []).length, 2, '两枚档位 chip 都要可点');
+  assert.match(wxml, /data-by="type"[\s\S]{0,80}bindtap="onTrendByTap"/, 'chip 要带自己的档位标识');
+  assert.match(wxml, /wx:for="\{\{trend\.legend\}\}" wx:key="key"/, '图例按 key 走（按类型档没有 userId）');
+
+  // 切回按人：by 参数要摘掉，回到与改版前逐字节一致的请求
+  await page.onTrendByTap({ currentTarget: { dataset: { by: 'person' } } });
+  await flush();
+  const last = apiCalls.filter((c) => c.path.indexOf('/trend') >= 0).pop();
+  assert.ok(!/[?&]by=/.test(last.path), `切回按人不能留着 by：${last.path}`);
+  assert.equal(page.data.trend.series.find((s) => s.isMe).color, '#2B6CF6', '本人线回到固定主色');
+});
+
+test('CDP47 趋势切类型 chip 时保留当前档位：按类型档仍带 by=type 重拉', async () => {
+  resetEnv();
+  appStub.globalData.userInfo = { id: 'u2' };
+  mockDetail(member({ allowedTypes: ['hiking', 'running'] }), BOARD, mockTrendByPath);
+  const page = makePage();
+  await page.onLoad({ id: 'c1' });
+  await flush();
+
+  await page.onTrendByTap({ currentTarget: { dataset: { by: 'type' } } });
+  await flush();
+  await page.onTypeTap({ currentTarget: { dataset: { type: 'running' } } });
+  await flush();
+
+  const last = apiCalls.filter((c) => c.path.indexOf('/trend') >= 0).pop();
+  assert.match(last.path, /[?&]by=type(&|$)/, '档位不能被类型筛选冲掉');
+  assert.match(last.path, /[?&]type=running(&|$)/, '类型筛选照样带上：选了跑步就只画跑步一条线');
+});
+
+test('CDP37 成员半屏「我 vs TA」：点队友只给距离对照，点自己不给', async () => {
+  resetEnv();
+  appStub.globalData.userInfo = { id: 'u2' };
+  mockDetail(member({
+    myPanel: { count: 2, streak: 3, distance: 10000, duration: 3600, rank: 2, members: 2, gapToLeader: 5000, share: 0.4 },
+  }));
+  const page = makePage();
+  await page.onLoad({ id: 'c1' });
+  await flush();
+
+  page.openMember({ currentTarget: { dataset: { idx: 0 } } }); // 阿迹（别人）
+  await flush();
+  assert.ok(page.data.sheetCompare, '点队友要有对照');
+  const rows = page.data.sheetCompare.rows;
+  // 只对比距离：次数＝明细条数（「共 N 条」）、时长＝明细各行累计，都不用再占一行
+  assert.deepEqual(rows.map((r) => r.label), ['距离']);
+  const dist = rows[0];
+  assert.equal(dist.myText, '10.00 km');
+  assert.equal(dist.taText, '15.00 km');
+  assert.equal(dist.state, 'lose');
+  assert.equal(dist.diffText, '差 5.00 km');
+
+  page.closeMemberSheet();
+  page.openMember({ currentTarget: { dataset: { idx: 1 } } }); // 自己
+  await flush();
+  assert.equal(page.data.sheetCompare, null, '点自己不做「我 vs 我」');
+});
+
+test('CDP38 已结束 / 已解散收回邀请与解散；进行中仍给', async () => {
+  resetEnv();
+  appStub.globalData.userInfo = { id: 'u-owner' };
+  mockDetail(member());
+  const active = makePage();
+  await active.onLoad({ id: 'c1' });
+  await flush();
+  assert.equal(active.data.canInvite, true);
+  assert.equal(active.data.canDissolve, true);
+  assert.equal(active.data.canLeave, false, '发起人没有退出入口');
+
+  resetEnv();
+  appStub.globalData.userInfo = { id: 'u-owner' };
+  mockDetail(member({ status: 'ended' }));
+  const ended = makePage();
+  await ended.onLoad({ id: 'c1' });
+  await flush();
+  assert.equal(ended.data.canInvite, false, '已结束不再邀请');
+  assert.equal(ended.data.canDissolve, false, '已结束不再解散');
+
+  resetEnv();
+  appStub.globalData.userInfo = { id: 'u-viewer' };
+  mockDetail(member({ status: 'ended' }));
+  const endedMember = makePage();
+  await endedMember.onLoad({ id: 'c1' });
+  await flush();
+  assert.equal(endedMember.data.canLeave, true, '成员仍可退出已结束活动（只是从我的列表移走）');
+
+  resetEnv();
+  appStub.globalData.userInfo = { id: 'u-viewer' };
+  mockDetail(member({ status: 'dissolved' }));
+  const dissolved = makePage();
+  await dissolved.onLoad({ id: 'c1' });
+  await flush();
+  assert.equal(dissolved.data.canInvite, false);
+  assert.equal(dissolved.data.canLeave, false, '已解散活动没有可做的成员动作');
+});
+
+test('CDP39 赛程进度：进行中显示百分比与剩余天数；未开始显示开赛倒计时；已结束不显示', async () => {
+  resetEnv();
+  const now = Date.now();
+  mockDetail(member({ startAt: now - 3 * DAY_MS, endAt: now + 4 * DAY_MS }));
+  const page = makePage();
+  await page.onLoad({ id: 'c1' });
+  await flush();
+  assert.ok(page.data.progress, '进行中要有进度');
+  assert.ok(page.data.progress.pct >= 40 && page.data.progress.pct <= 45, `约 43%，实际 ${page.data.progress.pct}`);
+  assert.match(page.data.progress.text, /还剩 4 天/);
+
+  resetEnv();
+  mockDetail(member({ status: 'upcoming', startAt: now + 2 * DAY_MS, endAt: now + 6 * DAY_MS }));
+  const upcoming = makePage();
+  await upcoming.onLoad({ id: 'c1' });
+  await flush();
+  assert.match(upcoming.data.progress.text, /2 天后开赛/);
+
+  resetEnv();
+  mockDetail(member({ status: 'ended', startAt: now - 10 * DAY_MS, endAt: now - 3 * DAY_MS }));
+  const ended = makePage();
+  await ended.onLoad({ id: 'c1' });
+  await flush();
+  assert.equal(ended.data.progress, null);
+});
+
+test('CDP40 汇总卡副标题改掉「加入后开始统计」（成员看到的是已计入的数据）', () => {
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../miniprogram/pages/campaign-detail/campaign-detail.wxml'),
+    'utf8',
+  );
+  assert.ok(!src.includes('加入后开始统计'), '成员视角下这句话自相矛盾');
+  assert.match(src, /活动期间全队累计/);
+});
+test('CDP41 导航栏标题＝当前活动名称（详情落地后改写，不是写死的「活动详情」）', async () => {
+  resetEnv();
+  mockDetail(nonMember({ title: '周末一起去徒步' }));
+  const page = makePage();
+  await page.onLoad({ id: 'c1' });
+  await flush();
+  assert.deepEqual(navTitles, ['周末一起去徒步'], '标题随活动走');
+
+  // 换一场活动（同一页面实例再刷新）标题要跟着换，不能留着上一场的
+  resetEnv();
+  mockDetail(nonMember({ title: '夜跑小队' }));
+  await page.refresh(true);
+  await flush();
+  assert.equal(navTitles[navTitles.length - 1], '夜跑小队');
+});
+test('CDP42 成员半屏接了「我 vs TA」：组件声明 compare 属性、wxml 渲染对照行、页面把对照传进去', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const read = (p) => fs.readFileSync(path.join(__dirname, '../miniprogram', p), 'utf8');
+
+  const compJs = read('components/campaign-member-sheet/campaign-member-sheet.js');
+  assert.match(compJs, /compare:\s*\{\s*type:\s*Object/, '组件要声明 compare 属性，否则传进去的对照不会被接收');
+
+  const compWxml = read('components/campaign-member-sheet/campaign-member-sheet.wxml');
+  assert.match(compWxml, /class="cmp"/, '要有对照块的容器');
+  assert.match(compWxml, /compare\.rows/, '要遍历对照行');
+
+  const pageWxml = read('pages/campaign-detail/campaign-detail.wxml');
+  assert.match(pageWxml, /compare="\{\{sheetCompare\}\}"/, '页面要把对照传给组件');
+});
+
+test('CDP43 成员半屏不重复显示 TA 的三项：有对照时只留对照行，没对照才用一行汇总', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const compWxml = fs.readFileSync(
+    path.join(__dirname, '../miniprogram/components/campaign-member-sheet/campaign-member-sheet.wxml'),
+    'utf8',
+  );
+  // 有对照时 TA 的次数/距离/时长就在对照行里，再叠一张汇总卡＝同一组数字显示两遍、白占半屏高度
+  assert.ok(!/class="stat-row"/.test(compWxml), '对照行里已经有 TA 的三项，不能再叠一张汇总卡');
+  assert.match(compWxml, /class="stat-line"[^>]*wx:if="\{\{!compare\}\}"/, '没有对照（点自己）时要有一行紧凑汇总顶上');
+});
+
+test('CDP44 成员半屏标题行就是头像+昵称，不再写死「成员明细」', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const raw = fs.readFileSync(
+    path.join(__dirname, '../miniprogram/components/campaign-member-sheet/campaign-member-sheet.wxml'),
+    'utf8',
+  );
+  // 注释里可能提到同名字样，断言前先剥掉注释
+  const wxml = raw.replace(/<!--[\s\S]*?-->/g, '');
+  assert.ok(!/成员明细/.test(wxml), '标题不再写死「成员明细」');
+  assert.ok(!/class="sheet-title"/.test(wxml), '没有单独的标题文字块');
+  assert.ok(!/class="member-head"/.test(wxml), '头像昵称不再单独占一行（并进标题行）');
+  assert.match(
+    wxml,
+    /class="sheet-head"[\s\S]*?class="member-avatar[\s\S]*?class="member-name"/,
+    '标题行里先是头像、再是昵称',
+  );
+});
+
+test('CDP45 详情页顶部不展示活动描述（描述只留在创建/编辑表单与管理端）', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const wxml = fs.readFileSync(
+    path.join(__dirname, '../miniprogram/pages/campaign-detail/campaign-detail.wxml'),
+    'utf8',
+  ).replace(/<!--[\s\S]*?-->/g, '');
+  assert.ok(!/head-desc/.test(wxml), '顶部不再渲染活动描述那行');
+  assert.ok(!/head\.description/.test(wxml), 'WXML 不再取 head.description');
+
+  const js = fs.readFileSync(
+    path.join(__dirname, '../miniprogram/pages/campaign-detail/campaign-detail.js'),
+    'utf8',
+  );
+  assert.ok(!/description/.test(js), 'toHead 里不再留 description 字段（没人用了）');
+});
+
+test('CDP48 成员排行「我」这一行只用整行底色标注，不再叠左侧蓝竖条', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const wxss = fs.readFileSync(
+    path.join(__dirname, '../miniprogram/pages/campaign-detail/campaign-detail.wxss'),
+    'utf8',
+  ).replace(/\/\*[\s\S]*?\*\//g, '');
+  const rule = /\.rank-row-me\s*\{([^}]*)\}/.exec(wxss);
+  assert.ok(rule, '「我」这一行还有专门的样式');
+  assert.match(rule[1], /background\s*:/, '底色标注保留');
+  assert.ok(!/box-shadow/.test(rule[1]), '左侧竖条（inset box-shadow）已去掉，别和底色重复表达');
+  assert.ok(!/border-left/.test(rule[1]), '也不用 border-left 画竖条');
+});
+
+test('CDP49 成员排行去掉进度条：行里只有名次/头像/昵称/主指标/副行', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const dir = path.join(__dirname, '../miniprogram/pages/campaign-detail');
+  const wxml = fs.readFileSync(path.join(dir, 'campaign-detail.wxml'), 'utf8').replace(/<!--[\s\S]*?-->/g, '');
+  assert.ok(!/rank-track/.test(wxml), '不再渲染进度条底槽');
+  assert.ok(!/rank-fill/.test(wxml), '不再渲染进度条填充');
+  assert.ok(!/barPct/.test(wxml), 'WXML 不再取 barPct');
+
+  const wxss = fs.readFileSync(path.join(dir, 'campaign-detail.wxss'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  assert.ok(!/\.rank-track/.test(wxss), '进度条样式一并撤掉');
+  assert.ok(!/\.rank-fill/.test(wxss), '进度条填充样式一并撤掉（含 .rank-fill-me）');
+
+  const js = fs.readFileSync(path.join(dir, 'campaign-detail.js'), 'utf8');
+  assert.ok(!/barPct/.test(js), '行视图模型不再算 barPct');
+  // 榜首长值只服务于进度条，条没了它就成了死变量
+  assert.ok(!/leaderValue/.test(js), 'leaderValue 相关的取值/透传全部下线');
+});
+
+test('CDP50 全队汇总三格是上下结构（标签在上、数值在下），中文时长单位下不再折行', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const dir = path.join(__dirname, '../miniprogram/pages/campaign-detail');
+  const wxss = fs.readFileSync(path.join(dir, 'campaign-detail.wxss'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const cell = /\.sum-cell\s*\{([^}]*)\}/.exec(wxss);
+  assert.ok(cell, '汇总格样式还在');
+  assert.match(cell[1], /flex-direction\s*:\s*column/, '格内改成上下结构');
+  assert.ok(!/height\s*:/.test(cell[1]), '不再锁死单行高度（两行会被裁掉）');
+
+  const wxml = fs.readFileSync(path.join(dir, 'campaign-detail.wxml'), 'utf8').replace(/<!--[\s\S]*?-->/g, '');
+  // 竖排后每格有整格宽度，标签恢复成完整说法（横排时为省宽度砍过「运动」前缀）
+  ['运动次数', '运动距离 (km)', '运动时长'].forEach((t) => {
+    assert.ok(wxml.indexOf(t) >= 0, `标签保留完整说法「${t}」`);
+  });
+});
+
+test('CDP51 顶部进度文案与活动时间同行（时间居左、文案居右），不再各占一行', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const dir = path.join(__dirname, '../miniprogram/pages/campaign-detail');
+  const wxml = fs.readFileSync(path.join(dir, 'campaign-detail.wxml'), 'utf8').replace(/<!--[\s\S]*?-->/g, '');
+  const lineBlock = /<view class="head-line"[^>]*>([\s\S]*?)<\/view>/.exec(wxml);
+  assert.ok(lineBlock, 'head-line 容器存在');
+  assert.match(lineBlock[1], /class="head-range"/, '活动时间在这一行里');
+  assert.match(lineBlock[1], /class="head-progress-text"/, '进度文案也在这同一行里（不再另起一行）');
+  // 进度条容器里只剩条本身（文案已经挪到上一行）
+  const bar = /<view class="head-progress"[^>]*>([\s\S]*?)<\/view>\s*<\/view>/.exec(wxml);
+  assert.ok(bar, '进度条块还在');
+  assert.ok(!/head-progress-text/.test(bar[1]), '进度文案不再挂在进度条下方');
+
+  const wxss = fs.readFileSync(path.join(dir, 'campaign-detail.wxss'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const line = /\.head-line\s*\{([^}]*)\}/.exec(wxss);
+  assert.ok(line, 'head-line 样式存在');
+  assert.match(line[1], /display\s*:\s*flex/, 'head-line 是横排');
+  assert.match(line[1], /justify-content\s*:\s*space-between/, '两端对齐：时间左、进度右');
+  assert.ok(!/height\s*:/.test(line[1]), '不锁行高（窄屏上时间串折行会被裁掉）');
+});
+
+/** WCAG 相对亮度（贴底蓝条那组用例共用） */
+function wcagLum(c) {
+  const f = (v) => (v / 255 <= 0.04045 ? v / 255 / 12.92 : Math.pow((v / 255 + 0.055) / 1.055, 2.4));
+  return 0.2126 * f(c.r) + 0.7152 * f(c.g) + 0.0722 * f(c.b);
+}
+
+/** 贴底蓝条的对比度算分：颜色全部从 wxss 里解析，测试不另抄一份字面值 */
+function contrastOfWxss(sel, bgStops) {
+  const parse = (body) => {
+    const hex = /color:\s*(#[0-9a-fA-F]{6}|#[0-9a-fA-F]{3})/.exec(body);
+    if (hex) {
+      const h = hex[1].length === 4 ? '#' + [...hex[1].slice(1)].map((c) => c + c).join('') : hex[1];
+      return { r: parseInt(h.slice(1, 3), 16), g: parseInt(h.slice(3, 5), 16), b: parseInt(h.slice(5, 7), 16), a: 1 };
+    }
+    const rgba = /color:\s*rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)/.exec(body);
+    if (rgba) return { r: +rgba[1], g: +rgba[2], b: +rgba[3], a: +rgba[4] };
+    return null;
+  };
+  const css = require('fs')
+    .readFileSync(
+      require('path').join(__dirname, '../miniprogram/pages/campaign-detail/campaign-detail.wxss'),
+      'utf8',
+    )
+    .replace(/\/\*[\s\S]*?\*\//g, '');
+  const body = new RegExp('\\.' + sel + '\\s*\\{([^}]*)\\}').exec(css);
+  assert.ok(body, '.' + sel + ' 样式存在');
+  const fg = parse(body[1]);
+  assert.ok(fg, '.' + sel + ' 的颜色能解析');
+  // 半透明白要先合成到蓝底上，否则算的是「白对蓝」，虚高
+  const worst = bgStops
+    .map((bg) => {
+      const mix = { r: fg.a * fg.r + (1 - fg.a) * bg.r, g: fg.a * fg.g + (1 - fg.a) * bg.g, b: fg.a * fg.b + (1 - fg.a) * bg.b };
+      const a = wcagLum(mix);
+      const b = wcagLum(bg);
+      return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+    })
+    .sort((x, y) => x - y)[0];
+  return Math.round(worst * 100) / 100;
+}
+
+test('CDP52 贴底「我的运动」条：22rpx 次要文字对蓝底对比度 ≥4.5（78% 白只有 2.5，看不清）', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const css = fs
+    .readFileSync(path.join(__dirname, '../miniprogram/pages/campaign-detail/campaign-detail.wxss'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '');
+  const card = /\.me-card\s*\{([^}]*)\}/.exec(css);
+  assert.ok(card, '蓝条样式还在');
+  const stops = [...card[1].matchAll(/#([0-9a-fA-F]{6})/g)].map((m) => ({
+    r: parseInt(m[1].slice(0, 2), 16),
+    g: parseInt(m[1].slice(2, 4), 16),
+    b: parseInt(m[1].slice(4, 6), 16),
+  }));
+  assert.ok(stops.length >= 1, '蓝底色值可解析');
+  ['me-sub', 'me-count'].forEach((sel) => {
+    const r = contrastOfWxss(sel, stops);
+    assert.ok(r >= 4.5, `${sel} 对比度 ${r} < 4.5（正文级字号）`);
+  });
+  // 「第 N 名」徽标：蓝字压在白药丸上，也要过 4.5（原来字色与蓝条同档，看着像背景）
+  const badge = contrastOfWxss('me-rank', [{ r: 255, g: 255, b: 255 }]);
+  assert.ok(badge >= 4.5, `me-rank 对药丸白底对比度 ${badge} < 4.5`);
+  // 徽标字色必须比蓝条最亮处更深，否则「第 N 名 的蓝和条子的蓝一个色」的观感会回来
+  const rankBody = /\.me-rank\s*\{([^}]*)\}/.exec(css)[1];
+  const rankHex = /color:\s*(#[0-9a-fA-F]{6})/.exec(rankBody)[1];
+  const h2r = (h) => ({ r: parseInt(h.slice(1, 3), 16), g: parseInt(h.slice(3, 5), 16), b: parseInt(h.slice(5, 7), 16) });
+  const rankLum = wcagLum(h2r(rankHex));
+  // 要比蓝条「最深的那一端」还深：落在渐变两端之间就等于「和条子同一个蓝」，正是看不清的原因
+  const barMinLum = Math.min(...stops.map(wcagLum));
+  assert.ok(rankLum < barMinLum, `徽标字色 ${rankHex}（亮度 ${rankLum.toFixed(3)}）要比蓝条最深端（${barMinLum.toFixed(3)}）还深`);
+});
+
+test('CDP53 趋势卡文案改名：运动趋势 / 成员 / 类型（不再叫「累计趋势」「按人」「按类型」）', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const wxml = fs
+    .readFileSync(path.join(__dirname, '../miniprogram/pages/campaign-detail/campaign-detail.wxml'), 'utf8')
+    .replace(/<!--[\s\S]*?-->/g, '');
+  assert.ok(wxml.indexOf('<view class="card-title">运动趋势</view>') >= 0, '卡标题＝运动趋势');
+  assert.ok(!/累计趋势/.test(wxml), '「累计趋势」不再出现在界面上');
+  assert.match(wxml, /data-by="person"[^>]*>[\s\S]*?成员<\/view>/, 'person 档的 chip 文案是「成员」');
+  assert.match(wxml, /data-by="type"[^>]*>[\s\S]*?类型<\/view>/, 'type 档的 chip 文案是「类型」');
+  assert.ok(!/按人|按类型/.test(wxml), '旧 chip 文案已换掉');
+});
+
+test('CDP54 成员行/待审批行的占位字走码点首字（emoji 昵称不再出乱码方块）', async () => {
+  resetEnv();
+  mockDetail(member(), {
+    rows: [
+      { userId: 'u1', name: '🏃跑者', avatarUrl: '', avatarPreset: '', distance: 15000, count: 3, duration: 3600, rank: 1 },
+      { userId: 'u2', name: '', avatarUrl: '', avatarPreset: '', distance: 10000, count: 2, duration: 3600, rank: 2 },
+    ],
+    total: 2,
+    page: 1,
+    pageSize: 50,
+  });
+  const page = makePage();
+  await page.onLoad({ id: 'c1' });
+  await flush();
+
+  assert.equal(page.data.members[0].avatarText, '🏃', 'emoji 开头要拿到完整 emoji');
+  assert.equal(page.data.members[1].avatarText, '迹', '没昵称时回退缺省字');
+
+  // 同页的待审批行是另一处同样的写法，别只改成员行
+  const js = require('fs')
+    .readFileSync(require('path').join(__dirname, '../miniprogram/pages/campaign-detail/campaign-detail.js'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '');
+  assert.ok(!/name \|\| '迹'\)\[0\]/.test(js), "不再用 (name || '迹')[0] 取首字");
+  assert.equal(js.split('initialOf(').length - 1, 2, '成员行与待审批行各用一次共享首字函数');
 });

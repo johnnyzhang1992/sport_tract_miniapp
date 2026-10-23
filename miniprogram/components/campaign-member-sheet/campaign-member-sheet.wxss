@@ -6,8 +6,6 @@
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.45);
-  /* 显式高于页面 .me-card（z-index:100），不靠节点顺序压住 */
-  z-index: 200;
   display: flex;
   align-items: flex-end;
 }
@@ -17,18 +15,18 @@
   background: #fff;
   border-radius: 24rpx 24rpx 0 0;
   padding: 0 32rpx calc(24rpx + env(safe-area-inset-bottom));
+  /* 真半屏：固定高度（不是只靠内容堆），上方留出 18% 暗区看得到底层页面。
+     高度必须确定，否则里面按 flex 收缩的 scroll-view 拿不到确定高度、
+     就没有可滚范围（实测：auto 基准时 scroll-top 不生效） */
+  display: flex;
+  flex-direction: column;
+  height: 82vh;
 }
 .sheet-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 28rpx 0 8rpx;
-}
-.sheet-title {
-  flex: 1;
-  font-size: 32rpx;
-  font-weight: 600;
-  color: #1f2329;
+  gap: 16rpx;
+  padding: 24rpx 0 8rpx;
 }
 .sheet-close {
   flex: none;
@@ -37,15 +35,9 @@
   color: #999;
 }
 
-.member-head {
-  display: flex;
-  align-items: center;
-  gap: 20rpx;
-  padding: 20rpx 0 8rpx;
-}
 .member-avatar {
-  width: 88rpx;
-  height: 88rpx;
+  width: 60rpx;
+  height: 60rpx;
   border-radius: 50%;
   flex-shrink: 0;
   background: #f2f3f5;
@@ -54,7 +46,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 34rpx;
+  font-size: 26rpx;
   font-weight: 700;
   color: #fff;
   background: #64748f;
@@ -70,25 +62,85 @@
   white-space: nowrap;
 }
 
-.stat-row {
+/* 点自己（没有对照）时的一行汇总；有对照时三项在对照行里，不再重复一张卡 */
+.stat-line {
   display: flex;
-  margin-top: 20rpx;
-  padding: 24rpx 0;
+  align-items: center;
+  gap: 8rpx;
+  margin-top: 12rpx;
+  padding: 12rpx 16rpx;
+  background: #f7f8fa;
+  border-radius: 16rpx;
+  font-size: 24rpx;
+  color: #4e5969;
+}
+.stat-line-item {
+  font-variant-numeric: tabular-nums;
+}
+.stat-line-dot {
+  color: #b0b4bb;
+}
+/* 「我 vs TA」对照：三项同口径，胜方高亮，差距写清楚 */
+.cmp {
+  margin-top: 12rpx;
+  padding: 8rpx 16rpx 4rpx;
   background: #f7f8fa;
   border-radius: 16rpx;
 }
-.stat-cell {
-  flex: 1;
-  text-align: center;
+.cmp-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 4rpx;
 }
-.stat-value {
-  font-size: 34rpx;
-  font-weight: 700;
+.cmp-title {
+  font-size: 26rpx;
+  font-weight: 600;
   color: #1f2329;
+}
+.cmp-row {
+  display: flex;
+  align-items: center;
+  padding: 10rpx 0;
+  border-bottom: 1rpx solid #eef0f4;
+}
+.cmp-row:last-child {
+  border-bottom: none;
+}
+.cmp-label {
+  width: 60rpx;
+  flex-shrink: 0;
+  font-size: 24rpx;
+  color: #667080;
+}
+.cmp-vals {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8rpx;
+}
+.cmp-val {
+  font-size: 26rpx;
+  color: #4e5969;
   font-variant-numeric: tabular-nums;
 }
-.stat-label {
-  margin-top: 6rpx;
+/* 胜方：本人＝主色、TA＝橙色，差在颜色而不是加粗（细看更好分辨） */
+.cmp-val-me.cmp-val-hi {
+  color: #2b6cf6;
+  font-weight: 700;
+}
+.cmp-val-ta.cmp-val-hi {
+  color: #ff7a45;
+  font-weight: 700;
+}
+.cmp-vs {
+  font-size: 22rpx;
+  color: #b0b4bb;
+}
+.cmp-diff {
+  flex-shrink: 0;
+  margin-left: 8rpx;
   font-size: 22rpx;
   color: #667080;
 }
@@ -108,9 +160,12 @@
   font-size: 22rpx;
   color: #667080;
 }
-/* 列表本体可滚动：明细最多一页 20 条，超出由列表内部消化，不把整张半屏顶穿 */
+/* 列表本体可滚动：高度必须确定才有可滚范围（flex 基准取 0，长度由父级剩余空间给出），
+   明细最多一页 20 条，超出由列表内部消化，不把整张半屏顶穿 */
 .detail-list {
-  max-height: 44vh;
+  flex: 1 1 0;
+  height: 0;
+  min-height: 0;
 }
 .detail-row {
   display: flex;

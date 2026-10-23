@@ -26,17 +26,26 @@
         <text class="head-title">{{head.title}}</text>
         <text class="campaign-tag {{head.statusTag}}">{{head.statusText}}</text>
       </view>
-      <view class="head-range">{{head.rangeText}}</view>
+      <!-- 时间居左、进度文案居右共用一行（进度文案原来单独占一行，白吃一段高度） -->
+      <view class="head-line">
+        <text class="head-range">{{head.rangeText}}</text>
+        <text class="head-progress-text" wx:if="{{progress}}">{{progress.text}}</text>
+      </view>
+      <!-- 赛程进度条：只在进行中 / 未开始显示（已结束的时间范围本身已说清） -->
+      <view class="head-progress" wx:if="{{progress}}">
+        <view class="head-progress-track">
+          <view class="head-progress-fill" style="width: {{progress.pct}}%"></view>
+        </view>
+      </view>
       <view class="head-meta">
         <text class="head-meta-item">{{head.visibilityText}}</text>
         <text class="head-meta-item">{{head.limitText}}</text>
         <text class="head-meta-item">{{head.typesText}}</text>
       </view>
-      <view class="head-desc" wx:if="{{head.description}}">{{head.description}}</view>
 
       <!-- 发起人专属区 / 邀请 / 退出（Task 11 + 终审 M2）：发起人＝待审批徽标 + 解散；成员＝邀请好友；
            退出活动仅「非发起人成员」（canLeave）渲染——发起人的出路是解散 -->
-      <view class="act-row" wx:if="{{isMember}}">
+      <view class="act-row" wx:if="{{isMember && (pendingCount > 0 || canEdit || canInvite || canLeave || canDissolve)}}">
         <view
           class="act-pill act-pill-badge"
           wx:if="{{isCreator && pendingCount > 0}}"
@@ -52,7 +61,7 @@
           hover-stay-time="80"
           bindtap="goEdit"
         >编辑</view>
-        <view class="act-pill" hover-class="act-pill-hover" hover-stay-time="80" bindtap="onInvite">邀请好友</view>
+        <view class="act-pill" wx:if="{{canInvite}}" hover-class="act-pill-hover" hover-stay-time="80" bindtap="onInvite">邀请好友</view>
         <view
           class="act-pill act-pill-danger"
           wx:if="{{canLeave}}"
@@ -62,7 +71,7 @@
         >退出活动</view>
         <view
           class="act-pill act-pill-danger"
-          wx:if="{{isCreator}}"
+          wx:if="{{canDissolve}}"
           hover-class="act-pill-hover"
           hover-stay-time="80"
           bindtap="onDissolve"
@@ -88,7 +97,7 @@
     <view class="card" wx:if="{{isMember}}">
       <view class="card-head">
         <view class="card-title">全队汇总</view>
-        <view class="card-sub">加入后开始统计</view>
+        <view class="card-sub">活动期间全队累计</view>
       </view>
       <view class="sum-row">
         <view class="sum-cell">
@@ -106,14 +115,71 @@
       </view>
     </view>
 
-    <!-- 成员：成员列表＝活动内排行榜（按距离降序，点行看该成员汇总） -->
+    <!-- 成员：运动趋势（两档共用一张图：成员＝我 vs 前三 / 类型＝全队分线）
+         档位 chip 在卡头右侧，副标题只报桶粒度（按日 / 按周），页面不长高 -->
+    <view class="card" wx:if="{{isMember && trend}}">
+      <view class="card-head card-head-trend">
+        <view class="card-title">运动趋势</view>
+        <view class="trend-tools">
+          <text class="card-sub">{{trend.subText}}</text>
+          <view
+            class="filter-chip filter-chip-sm {{trendBy === 'person' ? 'filter-chip-on' : ''}}"
+            data-by="person"
+            bindtap="onTrendByTap"
+          >成员</view>
+          <view
+            class="filter-chip filter-chip-sm {{trendBy === 'type' ? 'filter-chip-on' : ''}}"
+            data-by="type"
+            bindtap="onTrendByTap"
+          >类型</view>
+        </view>
+      </view>
+      <view class="trend-legend">
+        <view class="trend-item" wx:for="{{trend.legend}}" wx:key="key">
+          <view class="trend-dot" style="background: {{item.color}}"></view>
+          <text class="trend-name {{item.isMe ? 'trend-name-me' : ''}}">{{item.name}}</text>
+        </view>
+      </view>
+      <!-- canvas 是原生层，压不住任何浮层（半屏/弹窗都会被图表穿出去）：
+           浮层打开时撤掉图表，用同高占位保住版式，关掉再画回来 -->
+      <view wx:if="{{sheetVisible || reviewVisible || codeVisible}}" class="trend-blank"></view>
+      <stat-chart
+        wx:else
+        type="multi-line"
+        series="{{trend.series}}"
+        labels="{{trend.labels}}"
+        unit="km"
+        height="{{190}}"
+      />
+    </view>
+
+    <!-- 成员：成员列表＝活动内排行榜（按当前指标降序，点行看该成员汇总与「我 vs TA」） -->
     <view class="card" wx:if="{{isMember}}">
       <view class="card-head">
         <view class="card-title">成员排行</view>
-        <view class="card-sub">按距离降序 · 点成员看汇总</view>
+        <view class="card-sub">点成员看明细与对比</view>
+      </view>
+      <!-- 指标：服务端按所选指标重排（端上不重排）；类型 chip 只在白名单 ≥2 类时出现 -->
+      <view class="filter-row">
+        <view
+          class="filter-chip {{metric === item.key ? 'filter-chip-on' : ''}}"
+          wx:for="{{metricOptions}}"
+          wx:key="key"
+          data-metric="{{item.key}}"
+          bindtap="onMetricTap"
+        >{{item.label}}</view>
+      </view>
+      <view class="filter-row filter-row-type" wx:if="{{typeOptions.length}}">
+        <view
+          class="filter-chip filter-chip-sm {{type === item.key ? 'filter-chip-on' : ''}}"
+          wx:for="{{typeOptions}}"
+          wx:key="key"
+          data-type="{{item.key}}"
+          bindtap="onTypeTap"
+        >{{item.label}}</view>
       </view>
       <view
-        class="rank-row"
+        class="rank-row {{item.isMe ? 'rank-row-me' : ''}}"
         wx:for="{{members}}"
         wx:key="userId"
         hover-class="rank-row-hover"
@@ -127,21 +193,26 @@
         </view>
         <image wx:if="{{item.avatarSrc}}" class="rank-avatar" src="{{item.avatarSrc}}" mode="aspectFill" lazy-load />
         <view wx:else class="rank-avatar rank-avatar-text">{{item.avatarText}}</view>
-        <view class="rank-name-wrap">
-          <text class="rank-name">{{item.name}}</text>
-          <!-- 移出：紧跟在昵称后（不放行尾——行尾要留给距离这个主指标）；仅发起人、且非自己（canKick）；
-               catchtap 不冒泡到整行的 openMember -->
-          <view
-            class="rank-kick"
-            wx:if="{{item.canKick}}"
-            hover-class="rank-kick-hover"
-            hover-stay-time="80"
-            data-idx="{{index}}"
-            catchtap="onKickTap"
-          >移出</view>
+        <view class="rank-main">
+          <view class="rank-top">
+            <view class="rank-name-wrap">
+              <text class="rank-name">{{item.name}}</text>
+              <text class="rank-me" wx:if="{{item.isMe}}">我</text>
+              <!-- 移出：紧跟在昵称后（不放行尾——行尾留给主指标）；仅发起人、且非自己（canKick）；
+                   catchtap 不冒泡到整行的 openMember -->
+              <view
+                class="rank-kick"
+                wx:if="{{item.canKick}}"
+                hover-class="rank-kick-hover"
+                hover-stay-time="80"
+                data-idx="{{index}}"
+                catchtap="onKickTap"
+              >移出</view>
+            </view>
+            <view class="rank-dist">{{item.valueText}}</view>
+          </view>
+          <view class="rank-meta">{{item.metaText}}</view>
         </view>
-        <view class="rank-meta">{{item.countText}} 次 · {{item.durationText}}</view>
-        <view class="rank-dist">{{item.distanceText}} km</view>
       </view>
       <view class="rank-empty" wx:if="{{members.length === 0}}">暂无成员数据</view>
       <!-- 分页是服务端切的，这里只做追加；判据用 total（本页满 20 不代表后面没人）。
@@ -156,14 +227,16 @@
     </view>
   </block>
 
-  <!-- 底部悬浮：我的贡献（照运动榜 .me-card 形态；数据＝详情 myPanel）
+  <!-- 底部悬浮：我的贡献 + 我的位置（照运动榜 .me-card 形态；数据＝详情 myPanel）
        挂在 !notFound && !error 之下：错误态不得残留上一场的成员视图 -->
   <view class="me-card" wx:if="{{!notFound && !error && isMember && panel}}">
     <view class="me-body">
       <view class="me-name-wrap">
         <text class="me-name">我的运动</text>
+        <text class="me-rank" wx:if="{{panel.rankText}}">{{panel.rankText}}</text>
       </view>
-      <view class="me-sub">{{head.rangeText}} · 本活动内</view>
+      <view class="me-sub" wx:if="{{panel.gapText}}">{{panel.gapText}}</view>
+      <view class="me-sub" wx:else>{{head.rangeText}} · 本活动内</view>
     </view>
     <view class="me-stats">
       <view class="me-dist">{{panel.distanceText}} km</view>
@@ -171,14 +244,16 @@
     </view>
   </view>
 
-  <!-- 成员信息半屏：汇总三项 + 该成员明细（分页，加载更多由页面拉）。
+  <!-- 成员信息半屏：标题行是头像+昵称 +「我 vs TA」对照 + 该成员明细（分页，加载更多由页面拉）。
        明细对活动内成员一律开放，页面不再按身份传参。
        同样挂在 !notFound && !error 之下，错误态不得残留成员抽屉 -->
   <campaign-member-sheet
+    class="member-sheet-host"
     wx:if="{{!notFound && !error}}"
     visible="{{sheetVisible}}"
     member="{{sheetMember}}"
     detail="{{sheetDetail}}"
+    compare="{{sheetCompare}}"
     bind:close="closeMemberSheet"
     bind:loadmore="onSheetLoadMore"
   />

@@ -52,6 +52,7 @@ const downloadFails = { value: false }; // downloadFile 是否模拟「被域名
 const writtenFiles = []; // writeFile 入参（base64 降级分支）
 global.wx = {
   showToast: (o) => toasts.push(o && o.title),
+  setNavigationBarTitle: () => {},
   showModal: (o) => {
     modals.push(o);
     if (o && typeof o.success === 'function') o.success(modalResult);
@@ -215,6 +216,19 @@ function detailItemsOf() {
 
 const MEMBER_STATS = { count: 25, distance: 250000, duration: 9000 };
 
+/** 累计趋势（GET /:id/trend）：成员视角会额外拉一次 */
+function trendOf() {
+  return {
+    metric: 'distance',
+    bucket: 'day',
+    labels: ['10/01', '10/02'],
+    series: [
+      { userId: OWNER_ID, name: '我', isMe: true, values: [1000, 2000] },
+      { userId: OTHER_ID, name: '小迹', isMe: false, values: [500, 1500] },
+    ],
+  };
+}
+
 /**
  * 按路径分发的一站式 mock：approve/reject 会真实收窄待审批列表、kick 会收窄排行榜，
  * 页面 refresh 后拿到的就是「服务端视角」的新状态（而不是写死回包）。
@@ -237,6 +251,7 @@ function mockAll(opts = {}) {
       return Promise.resolve(null);
     }
     if (/\/leaderboard(\?|$)/.test(path)) return Promise.resolve(state.board);
+    if (/\/trend(\?|$)/.test(path)) return Promise.resolve(trendOf());
     if (/\/members\//.test(path)) {
       const page = Number((path.match(/[?&]page=(\d+)/) || [])[1] || 1);
       const pageSize = Number((path.match(/[?&]pageSize=(\d+)/) || [])[1] || 20);
@@ -268,6 +283,7 @@ test('COP1 发起人进页面会请求待审批列表（渲染徽标）；非发
   assert.deepEqual(apiCalls.map((c) => c.path), [
     '/campaigns/c1',
     '/campaigns/c1/leaderboard?page=1&pageSize=20',
+    '/campaigns/c1/trend',
     '/campaigns/c1/pending',
   ]);
   assert.equal(page.data.isCreator, true);
@@ -374,13 +390,13 @@ test('COP4 点成员：活动内成员（发起人与普通成员）都请求 /m
   assert.equal(page.data.sheetVisible, true);
   assert.equal(page.data.sheetMember.name, '小迹');
   // 概况来自该接口的 stats，明细行是格式化过的展示字段
-  assert.deepEqual(page.data.sheetDetail.stats, { countText: '25', streakText: '0', distanceText: '250.00', durationText: '2h30m' });
+  assert.deepEqual(page.data.sheetDetail.stats, { countText: '25', streakText: '0', distanceText: '250.00', durationText: '2小时30分钟' });
   assert.equal(page.data.sheetDetail.total, 25);
   assert.equal(page.data.sheetDetail.items.length, 20);
   assert.equal(page.data.sheetDetail.items[0].typeText, '徒步');
   assert.equal(page.data.sheetDetail.items[0].timeText, '10/09 09:05');
   assert.equal(page.data.sheetDetail.items[0].distanceText, '4.20');
-  assert.equal(page.data.sheetDetail.items[0].durationText, '30min');
+  assert.equal(page.data.sheetDetail.items[0].durationText, '30分钟');
   assert.equal(page.data.sheetDetail.items[0].elevationText, ' · 爬升 120m');
   assert.equal(page.data.sheetDetail.hasMore, true);
 

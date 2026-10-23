@@ -24,7 +24,7 @@
           <view class="member-av-stack">
             <block wx:for="{{avatarList}}" wx:key="key">
               <image wx:if="{{item.src}}" class="member-av" src="{{item.src}}" mode="aspectFill" lazy-load />
-              <view wx:else class="member-av"></view>
+              <view wx:else class="member-av member-av-char">{{item.text}}</view>
             </block>
           </view>
           <view class="member-av-text">{{memberText}}</view>

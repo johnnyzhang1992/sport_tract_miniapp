@@ -87,7 +87,7 @@
         <view class="farrow">›</view>
       </view>
     </picker>
-    <picker mode="date" value="{{endDate}}" start="{{startDate}}" bindchange="onEndDate">
+    <picker mode="date" value="{{endDate}}" start="{{startDate}}" end="{{maxEndDate}}" bindchange="onEndDate">
       <view class="frow frow-tap" hover-class="frow-hover">
         <view class="flabel">结束日期</view>
         <view class="fval {{endDateText ? '' : 'fval-ph'}}">{{endDateText || '选择日期'}}</view>

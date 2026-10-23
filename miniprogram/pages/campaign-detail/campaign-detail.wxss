@@ -2,7 +2,7 @@
 .page {
   min-height: 100vh;
   background: #f5f6f8;
-  padding: 20rpx 24rpx calc(150rpx + env(safe-area-inset-bottom));
+  padding: 20rpx 24rpx calc(170rpx + env(safe-area-inset-bottom));
   box-sizing: border-box;
 }
 
@@ -95,8 +95,16 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.head-range {
+/* 时间 + 进度文案同一行：时间居左、进度文案居右（原来各占一行，卡片白多一行高） */
+.head-line {
   margin-top: 12rpx;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+.head-range {
+  min-width: 0;
   font-size: 26rpx;
   color: #4e5969;
 }
@@ -113,13 +121,26 @@
   border-radius: 6rpx;
   padding: 6rpx 12rpx;
 }
-.head-desc {
-  margin-top: 16rpx;
-  padding-top: 16rpx;
-  border-top: 1rpx solid #f2f3f5;
-  font-size: 26rpx;
-  color: #4e5969;
-  line-height: 1.6;
+
+/* 赛程进度：一条细进度条 + 一句「还剩 N 天」（已结束不显示） */
+.head-progress {
+  margin-top: 12rpx;
+}
+.head-progress-track {
+  height: 8rpx;
+  border-radius: 999rpx;
+  background: #eef0f4;
+  overflow: hidden;
+}
+.head-progress-fill {
+  height: 100%;
+  border-radius: 999rpx;
+  background: linear-gradient(90deg, #2b6cf6, #5b8cff);
+}
+.head-progress-text {
+  flex-shrink: 0;
+  font-size: 22rpx;
+  color: #667080;
 }
 
 /* 发起人专属区 / 邀请（Task 11）：成员行的动作胶囊 */
@@ -193,17 +214,17 @@
   gap: 20px;
   padding: 8rpx 0 4rpx;
 }
-/* 格内横排：文案居左，三格按内容宽排（不再等分 1/3） */
+/* 上下结构：标签一行、数值一行，三格等分。
+   横排（标签+数值同行、按内容宽排）在时长换成中文单位后放不下了——
+   实测「运动时长 37小时29分钟」这组三格自然宽要 382px，容器只有 342px，标签被挤成两行。
+   竖排后每格 100px，最坏值「123小时45分钟」约 91px 单行放得下。 */
 .sum-cell {
   min-width: 0;
+  flex: 1;
   display: flex;
-  align-items: baseline;
-  gap: 12rpx;
-  height: 20px;
+  flex-direction: column;
+  gap: 4rpx;
 }
-/* 28rpx 不是随手定的：横排后数值要与标签共用 114px 一格。
-   实测「次数 1234 / 距离 (km) 12345.67 / 时长 123h45m」这组极端值时，
-   36rpx 会让「距离 (km)」折成两行、数值还压进右格；28rpx 单行放得下。 */
 .sum-value {
   font-size: 28rpx;
   font-weight: 700;
@@ -215,10 +236,48 @@
   color: #667080;
 }
 
+/* 筛选 chip：指标 / 运动类型 / 趋势档位共用同一套形态（服务端重排后整列换掉，端上不重排） */
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-bottom: 12rpx;
+}
+.filter-row-type {
+  margin-bottom: 20rpx;
+}
+.filter-chip {
+  font-size: 24rpx;
+  color: #4e5969;
+  background: #f2f3f5;
+  border-radius: 999rpx;
+  padding: 8rpx 24rpx;
+}
+/* 小一号：挪进卡头（挨着 30rpx 标题）时用，免得把卡头撑高 */
+.filter-chip-sm {
+  font-size: 22rpx;
+  padding: 6rpx 20rpx;
+}
+.filter-chip-on {
+  color: #fff;
+  background: #2b6cf6;
+  font-weight: 600;
+}
+
+/* 累计趋势卡头：标题居左，右侧「桶粒度 + 档位 chip」同一行（chip 有内边距，整行按中心对齐而非基线） */
+.card-head-trend {
+  align-items: center;
+}
+.trend-tools {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
 /* 成员列表＝排行榜（照 leaderboard.wxss 的 .rank-*） */
 .rank-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   padding: 18rpx 8rpx;
   border-bottom: 1rpx solid #f2f3f5;
 }
@@ -228,9 +287,14 @@
 .rank-row-hover {
   background: #f7f8fa;
 }
+/* 我这一行：只用整行淡蓝底标出来（左侧竖条与底色重复表达同一件事，已去掉） */
+.rank-row-me {
+  background: #f3f7ff;
+}
 .rank-no {
   width: 44rpx;
   height: 44rpx;
+  margin-top: 6rpx;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -261,6 +325,16 @@
   color: #fff;
   background: #64748f;
 }
+/* 行主体：昵称+主指标一行，副行（另外两项）一行 */
+.rank-main {
+  flex: 1;
+  min-width: 0;
+}
+.rank-top {
+  display: flex;
+  align-items: baseline;
+  gap: 12rpx;
+}
 .rank-name-wrap {
   flex: 1;
   display: flex;
@@ -275,11 +349,19 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* 「我」标记：跟昵称同排，小蓝底 */
+.rank-me {
+  flex-shrink: 0;
+  font-size: 20rpx;
+  color: #2b6cf6;
+  background: #eaf1ff;
+  border-radius: 6rpx;
+  padding: 2rpx 8rpx;
+}
 .rank-meta {
+  margin-top: 12rpx;
   font-size: 22rpx;
   color: #667080;
-  margin-right: 20rpx;
-  flex-shrink: 0;
 }
 .rank-dist {
   font-size: 26rpx;
@@ -308,6 +390,41 @@
   color: #667080;
 }
 
+/* 累计趋势图例：色点 + 名字 + 当前累计值（本人加粗） */
+.trend-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx 24rpx;
+  margin-bottom: 12rpx;
+}
+.trend-item {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+.trend-dot {
+  width: 14rpx;
+  height: 14rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+/* 图例名字：20rpx 是按「八类全出」的最坏情况定的。
+   22rpx 时 8 枚要 664rpx、容器只有 658rpx → 实测换成两行（图例高 40px）；
+   20rpx 后实测 8 枚一行排下（图例高 16px，占 332 / 342 CSS px）。 */
+.trend-name {
+  font-size: 20rpx;
+  color: #4e5969;
+}
+.trend-name-me {
+  color: #1f2329;
+  font-weight: 600;
+}
+/* 浮层打开时的图表占位：高度＝图表高度（190px，见 wxml 的 height 属性），
+   撤掉 canvas 后版式不跳 */
+.trend-blank {
+  height: 190px;
+}
+
 /* 成员排行「加载更多」：整行可点（不是右下角一个小字），文案里带「已显示 x / 总数」，
    用户点之前就知道还差多少。触控高度 88rpx(=44px) 取最小档，再小就点不准。 */
 .rank-more {
@@ -331,7 +448,9 @@
   right: 0;
   bottom: 0;
   z-index: 100;
-  background: linear-gradient(135deg, #2b6cf6, #5b8cff);
+  /* 亮端 #306ef4 是「22rpx 白字仍够 4.5:1」的上限（实测再亮一档 #316ef7 就掉到 4.46）；
+     原来渐变到 #5b8cff 时白字只剩 3.16:1，那两行次要文字看不清 */
+  background: linear-gradient(135deg, #2465e8, #306ef4);
   border-radius: 0;
   padding: 24rpx 40rpx calc(24rpx + env(safe-area-inset-bottom));
   display: flex;
@@ -357,9 +476,20 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* 名次徽标：白底蓝字（贴底蓝条上的反色）；字色比蓝条深两档，
+   免得「第 3 名」的蓝和条子的蓝看成同一块颜色 */
+.me-rank {
+  flex-shrink: 0;
+  font-size: 22rpx;
+  font-weight: 600;
+  color: #1e5be0;
+  background: #fff;
+  border-radius: 999rpx;
+  padding: 2rpx 12rpx;
+}
 .me-sub {
   font-size: 22rpx;
-  color: rgba(255, 255, 255, 0.78);
+  color: #fff;
   margin-top: 4rpx;
 }
 .me-stats {
@@ -374,7 +504,7 @@
 }
 .me-count {
   font-size: 22rpx;
-  color: rgba(255, 255, 255, 0.78);
+  color: #fff;
   margin-top: 4rpx;
 }
 
@@ -390,6 +520,13 @@
   z-index: 210;
   display: flex;
   align-items: flex-end;
+}
+
+/* 成员半屏的宿主：组件内部压不住页面里 position:fixed 的 .me-card（z-index:100），
+   抬层只能在页面上对宿主节点做（与 track-detail 的 .fixed-actions 同一手法） */
+.member-sheet-host {
+  position: relative;
+  z-index: 9999;
 }
 .sheet {
   width: 100%;

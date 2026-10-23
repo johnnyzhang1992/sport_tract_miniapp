@@ -30,17 +30,50 @@ const api = require('../../services/api');
 const config = require('../../config/index');
 const { ensureLogin } = require('../../utils/login-gate');
 const { markHomeDirty } = require('../../utils/home-refresh');
-const { statusLabel, visibilityLabel, statusTagClass, fmtRange, joinCta, fmtPanel, truncateName } = require('../../utils/campaign.js');
+const { statusLabel, visibilityLabel, statusTagClass, fmtRange, joinCta, fmtPanel, initialOf } = require('../../utils/campaign.js');
 
 /** 成员昵称展示上限（字）；超出截断补「...」——排行行里昵称后面还跟「移出」按钮与距离，不能任其撑满 */
 const NAME_MAX = 5;
 
-/** 运动类型 key → 中文名（与创建页 / 服务端白名单同一集合，取 config 这一份） */
+/** 运动类型 key → 中文名 / 配色（与创建页、轨迹图标同一集合，都取 config 这一份，别再抄一份会分叉） */
 const TYPE_LABEL = {};
-(config.ACTIVITY_TYPES || []).forEach((t) => { TYPE_LABEL[t.type] = t.label; });
+const TYPE_COLOR = {};
+(config.ACTIVITY_TYPES || []).forEach((t) => {
+  TYPE_LABEL[t.type] = t.label;
+  TYPE_COLOR[t.type] = t.color;
+});
 
 /** 成员明细分页大小（服务端默认同为 20；显式传，翻页口径才有据可依） */
 const MEMBER_PAGE_SIZE = 20;
+
+const DAY_MS = 86400000;
+
+/** 排行榜可选指标（距离是活动主口径，默认放第一） */
+const METRIC_OPTIONS = [
+  { key: 'distance', label: '距离' },
+  { key: 'count', label: '次数' },
+  { key: 'duration', label: '时长' },
+];
+
+/** 趋势图配色：本人固定主色，其余按排名给可区分的颜色 */
+const TREND_ME_COLOR = '#2B6CF6';
+const TREND_COLORS = ['#FF7A45', '#34C759', '#9B59B6'];
+
+/** 排行榜路径：默认指标（距离）与「全部类型」不上送参数，老服务端也能照常工作 */
+function leaderboardPath(id, page, metric, type) {
+  const parts = [`page=${page}`, `pageSize=${MEMBER_PAGE_SIZE}`];
+  if (metric && metric !== 'distance') parts.push(`metric=${metric}`);
+  if (type) parts.push(`type=${encodeURIComponent(type)}`);
+  return `/campaigns/${id}/leaderboard?${parts.join('&')}`;
+}
+
+/** 趋势路径：缺省档（按人）不上送 by，与改版前的请求逐字节一致；只有切到「按类型」才带参数 */
+function trendPath(id, type, by) {
+  const parts = [];
+  if (by === 'type') parts.push('by=type');
+  if (type) parts.push(`type=${encodeURIComponent(type)}`);
+  return `/campaigns/${id}/trend${parts.length ? `?${parts.join('&')}` : ''}`;
+}
 
 /**
  * 身份说明行（R27）：说清「现在是什么状态」。与 joinCta 按钮互补——按钮只说「下一步能做什么」。
@@ -56,7 +89,6 @@ const STATE_NOTE = {
 function toHead(d) {
   return {
     title: d.title,
-    description: d.description || '',
     rangeText: fmtRange(d.startAt, d.endAt),
     statusText: statusLabel(d.status),
     statusTag: statusTagClass(d.status),
@@ -94,21 +126,130 @@ function isCreatorOf(detail) {
   return !!(me && detail && detail.creatorId && String(detail.creatorId) === me);
 }
 
-/** 排行榜行 → 成员列表行（名次 / 头像 / 昵称 / 距离 / 次数 / 时长）；头像三级兜底同运动榜。
+/** 米 → "12.34"（纯数值，单位由调用方拼，避免「12.34 km km」） */
+function fmtKm(meters) {
+  return (Number(meters || 0) / 1000).toFixed(2);
+}
+
+/** 秒 → 与 fmtPanel 同口径的时长文案（小时 / 分钟） */
+function fmtDuration(sec) {
+  return fmtPanel({ duration: sec }).durationText;
+}
+
+/**
+ * 赛程进度：只做**展示**的百分比与倒计时，状态仍以服务端 status 为准（端上不拿时间重判档位）。
+ * 已结束 / 已解散返回 null（时间范围本身已经说清了）。
+ */
+function toProgress(detail, now = Date.now()) {
+  if (detail.status === 'upcoming') {
+    const days = Math.max(0, Math.ceil((detail.startAt - now) / DAY_MS));
+    return { pct: 0, text: days > 0 ? `${days} 天后开赛` : '即将开赛' };
+  }
+  if (detail.status !== 'active') return null;
+  const total = detail.endAt - detail.startAt;
+  const pct = total > 0 ? Math.min(100, Math.max(0, Math.round(((now - detail.startAt) / total) * 100))) : 0;
+  const days = Math.max(0, Math.ceil((detail.endAt - now) / DAY_MS));
+  return { pct, text: `${pct}% · 还剩 ${days} 天` };
+}
+
+/** 排行榜行某指标的原值 */
+function metricOf(r, metric) {
+  if (metric === 'count') return Number(r.count) || 0;
+  if (metric === 'duration') return Number(r.duration) || 0;
+  return Number(r.distance) || 0;
+}
+
+/** 排行榜行 → 成员列表行（名次 / 头像 / 昵称 / 主指标 / 副行）；头像三级兜底同运动榜。
  *  canKick：仅发起人视角、且不是自己 —— 决定昵称后的「移出」是否渲染（非发起人恒 false）。 */
-function toMemberRow(r, canKick) {
+function toMemberRow(r, canKick, metric, isMe) {
   const p = fmtPanel({ count: r.count, distance: r.distance, duration: r.duration });
+  const value = r.value != null ? Number(r.value) || 0 : metricOf(r, metric);
+  const valueText =
+    metric === 'count' ? `${value} 次` : metric === 'duration' ? fmtDuration(value) : `${fmtKm(value)} km`;
+  const metaText =
+    metric === 'count'
+      ? `${p.distanceText} km · ${p.durationText}`
+      : metric === 'duration'
+        ? `${p.distanceText} km · ${p.countText} 次`
+        : `${p.countText} 次 · ${p.durationText}`;
   return {
     userId: r.userId,
     rank: r.rank,
-    name: truncateName(r.name || '微信用户', NAME_MAX),
+    name: r.name || '微信用户',
     medalIcon: r.rank <= 3 ? `/assets/icons/rank-medal-${r.rank}.png` : '',
     avatarSrc: r.avatarUrl || (r.avatarPreset ? `/assets/avatars/${r.avatarPreset}.png` : ''),
-    avatarText: (r.name || '迹')[0],
+    avatarText: initialOf(r.name, '迹'),
+    distance: Number(r.distance) || 0,
+    count: Number(r.count) || 0,
+    duration: Number(r.duration) || 0,
+    // 三项固定文案：成员半屏在明细未到前用它们兜底（与 valueText 的「当前指标」并存）
     distanceText: p.distanceText,
     countText: p.countText,
     durationText: p.durationText,
+    valueText,
+    metaText,
+    isMe: !!isMe,
     canKick: !!canKick,
+  };
+}
+
+/** 我的面板 → 底部悬浮条：名次只报「第几名」，差距按上一名（追上谁就能升一名，比距榜首更够得着） */
+function toPanel(p) {
+  const base = fmtPanel(p || {});
+  const ranked = typeof p.rank === 'number' && typeof p.members === 'number' && p.members > 0;
+  return Object.assign(base, {
+    rankText: ranked ? `第 ${p.rank} 名` : '',
+    gapText: ranked ? (p.rank <= 1 ? '领跑全队' : `距上一名 ${fmtKm(p.gapToPrev)} km`) : '',
+  });
+}
+
+/** 图例里的姓名：最多 5 字，超出补**单字符**省略号。
+ *  不复用 truncateName（它尾巴是「...」三个点）——三枚图例要挤在同一行，多占两格就会换行。 */
+function trendName(name) {
+  const chars = Array.from(String(name || ''));
+  return chars.length > NAME_MAX ? `${chars.slice(0, NAME_MAX).join('')}…` : chars.join('');
+}
+
+/** GET /:id/trend → 图表数据。两档共用同一条时间轴与换算，只有「一条线代表谁」不同：
+ *  按人＝前三名 + 我（本人固定主色并排到系列最前）；按类型＝全队每类一条线
+ *  （名字与颜色取自运动类型在册配色，服务端已按累计距离降序，端上不再重排）。
+ *  无成绩（未开赛 / 全 0）返回 null，卡片整张收起。 */
+function toTrendView(t) {
+  if (!t || !Array.isArray(t.labels) || t.labels.length === 0 || !Array.isArray(t.series) || t.series.length === 0) {
+    return null;
+  }
+  const byType = t.by === 'type';
+  let colorIdx = 0;
+  const series = t.series.map((s) => {
+    const isMe = !byType && !!s.isMe;
+    return {
+      key: byType ? String(s.type || '') : String(s.userId || ''),
+      name: byType
+        ? TYPE_LABEL[s.type] || s.type || '未知类型'
+        : trendName(s.name),
+      isMe,
+      color: isMe
+        ? TREND_ME_COLOR
+        : (byType ? TYPE_COLOR[s.type] : null) || TREND_COLORS[colorIdx++ % TREND_COLORS.length],
+      values: (s.values || []).map((v) => Math.round((Number(v) || 0) / 10) / 100),
+    };
+  });
+  if (!series.some((s) => s.values.some((v) => v > 0))) return null;
+  const ordered = byType ? series : [...series].sort((a, b) => (b.isMe ? 1 : 0) - (a.isMe ? 1 : 0));
+  // 图例只留名字：按人档的里程下方「成员排行」逐行都有，按类型档的也能从 Y 轴刻度读到，
+  // 两处都写就会把三枚挤成两行。
+  const legend = ordered.map((s) => ({
+    key: s.key,
+    name: s.name,
+    color: s.color,
+    isMe: s.isMe,
+  }));
+  return {
+    by: byType ? 'type' : 'person',
+    labels: t.labels.map(String),
+    series: ordered,
+    legend,
+    subText: t.bucket === 'week' ? '按周累计' : '按日累计',
   };
 }
 
@@ -118,7 +259,7 @@ function toPendingRow(r) {
     userId: r.userId,
     name: r.name || '微信用户',
     avatarSrc: r.avatarUrl || (r.avatarPreset ? `/assets/avatars/${r.avatarPreset}.png` : ''),
-    avatarText: (r.name || '迹')[0],
+    avatarText: initialOf(r.name, '迹'),
     appliedAtText: fmtMMDDHHmm(r.appliedAt),
   };
 }
@@ -136,6 +277,28 @@ function toDetailItem(t) {
   };
 }
 
+/** 一项对照：数值大者胜，相等为平；diffText 只在有差距时给 */
+function compareRow(label, myVal, taVal, fmt) {
+  const state = myVal === taVal ? 'tie' : myVal > taVal ? 'win' : 'lose';
+  return {
+    label,
+    myText: fmt(myVal),
+    taText: fmt(taVal),
+    state,
+    diffText: state === 'tie' ? '' : `差 ${fmt(Math.abs(myVal - taVal))}`,
+  };
+}
+
+/** 我 vs TA：只对比距离（页面算好给进来）。点自己或没有我的汇总时返回 null。
+ *  次数＝明细条数（「共 N 条」）、时长＝明细各行累计，都不再单占一行对照。 */
+function toCompare(member, my) {
+  if (!member || !my) return null;
+  if (String(member.userId) === myUserId()) return null;
+  return {
+    rows: [compareRow('距离', Number(my.distance) || 0, member.distance || 0, (v) => `${fmtKm(v)} km`)],
+  };
+}
+
 /**
  * 成员 / 发起人专属视图的一键清空（错误态与游客态共用）：非成员屏上不得残留上一场的成员数据
  * （蓝色「我的贡献」条带着旧数字、开着的成员抽屉、审核 / 小程序码弹窗）。
@@ -145,14 +308,22 @@ function viewerCleanPatch() {
     isMember: false,
     canLeave: false,
     canEdit: false,
+    canInvite: false,
+    canDissolve: false,
     totals: null,
     members: [],
     memberTotal: 0, // 成员总数（joined 人数），驱动「加载更多」；老服务端不下发时按已显示数兜底
     memberLoadingMore: false,
     panel: null,
+    trend: null,
+    trendBy: 'person', // 清空时档位也回「按人」，别把上一场的选择带到下一场
+    progress: null,
+    type: '',
+    typeOptions: [],
     sheetVisible: false, // 抽屉必须同时关掉
     sheetMember: null,
     sheetDetail: null,
+    sheetCompare: null,
     isCreator: false,
     pendingRows: [],
     pendingCount: 0,
@@ -168,9 +339,12 @@ Page({
     notFound: false, // 活动不存在（id 解不出 / 服务端 404）
     error: '', // 首屏加载失败原因（屏上错误态 + 重试）
     head: null, // 顶部信息
+    progress: null, // 赛程进度（进行中 / 未开始显示；已结束为 null）
     isMember: false, // myState === 'joined'
     canLeave: false, // 非发起人成员才有的「退出活动」入口（isMember && !isCreator）
     canEdit: false, // 发起人才有的「编辑活动」入口（已解散后收回）
+    canInvite: false, // 邀请只在活动仍可参加时有意义（已结束 / 已解散收回）
+    canDissolve: false, // 解散同理（已结束仍从「我的活动」里留着，允许发起人清理）
     cta: null, // joinCta 结果（成员为 null）
     ctaHint: '', // 按钮下方的显式提示（可点 / 不可点）
     stateNote: '', // 身份说明行
@@ -178,11 +352,18 @@ Page({
     members: [], // 成员列表＝排行榜行（仅成员，随「加载更多」追加）
     memberTotal: 0, // joined 总数，驱动「加载更多」；老服务端不下发 total 时按已显示数兜底
     memberLoadingMore: false,
-    panel: null, // 底部悬浮面板：我的 myPanel
+    metric: 'distance', // 排行榜当前指标（distance / count / duration）
+    metricOptions: METRIC_OPTIONS,
+    type: '', // 排行榜当前运动类型筛选（空＝全部；仅白名单 ≥2 类时给 chip）
+    typeOptions: [],
+    trend: null, // 累计趋势（按人＝我 vs 前三 / 按类型＝全队分线；无成绩时为 null）
+    trendBy: 'person', // 趋势档位：person＝按人（缺省），type＝按运动类型
+    panel: null, // 底部悬浮面板：我的 myPanel（+ 第几名 / 距上一名）
     // 成员信息半屏：明细（sheetDetail）对活动内成员一律可看，由 loadMemberDetail 拉
     sheetVisible: false,
     sheetMember: null,
     sheetDetail: null,
+    sheetCompare: null, // 「我 vs TA」三项对照（点自己时为 null）
     // 发起人专属（Task 11）：待审批徽标 / 审核抽屉 / 解散
     isCreator: false,
     pendingCount: 0,
@@ -256,6 +437,8 @@ Page({
     if (!this.data.loggedIn) this.setData({ loggedIn: true });
     // 请求序号守卫（R25）：onShow 与下拉刷新可能并发，只允许最后一次的响应落地
     const seq = (this._seq = (this._seq || 0) + 1);
+    // 切指标 / 切类型发起的单列表刷新，遇到整页刷新必须作废（否则旧指标的行会接进新列表）
+    this._boardSeq = (this._boardSeq || 0) + 1;
     if (!this.data.head) this.setData({ loading: !silent });
 
     let detail;
@@ -282,11 +465,22 @@ Page({
     if (seq !== this._seq) return;
 
     // 排行榜只对成员拉：非成员服务端 403；失败不拖垮整页（成员列表退化为空，底部面板仍用 myPanel）
-    // 刷新一律回第 1 页：屏上的列表会被 applyDetail 整个换掉，继续留在第 N 页只会显示不全
+    // 刷新一律回第 1 页：屏上的列表会被 applyDetail 整个换掉，继续留在第 N 页只会显示不全。
+    // 指标 / 类型筛选在刷新后保留；活动被编辑到不含当前类型时回落到「全部」。
+    const allowed = Array.isArray(detail.allowedTypes) ? detail.allowedTypes : [];
+    const metric = this.data.metric || 'distance';
+    const type = allowed.includes(this.data.type) ? this.data.type : '';
     let board = null;
+    let trend = null;
     if (detail.myState === 'joined') {
-      board = await api.get(`/campaigns/${id}/leaderboard?page=1&pageSize=${MEMBER_PAGE_SIZE}`).catch((e) => {
+      board = await api.get(leaderboardPath(id, 1, metric, type)).catch((e) => {
         console.warn('[campaign-detail] 排行榜加载失败', e);
+        return null;
+      });
+      if (seq !== this._seq) return;
+      // 趋势与排行榜同源但独立降级：老服务端没有这个接口时安静收起，不影响整页
+      trend = await api.get(trendPath(id, type, this.data.trendBy)).catch((e) => {
+        console.warn('[campaign-detail] 趋势加载失败', e);
         return null;
       });
       if (seq !== this._seq) return;
@@ -303,15 +497,19 @@ Page({
       if (seq !== this._seq) return;
     }
 
-    this.applyDetail(detail, board, pending);
+    this.applyDetail(detail, board, pending, trend, { metric, type });
     this._loaded = true;
   },
 
-  /** 详情（+ 排行榜 + 待审批）→ 视图：一处分流，避免 WXML 里散落身份判断 */
-  applyDetail(detail, board, pending = null) {
+  /** 详情（+ 排行榜 + 待审批 + 趋势）→ 视图：一处分流，避免 WXML 里散落身份判断 */
+  applyDetail(detail, board, pending = null, trend = null, filters = {}) {
     const isMember = detail.myState === 'joined';
     const isCreator = isCreatorOf(detail) && isMember;
     const me = myUserId();
+    const metric = filters.metric || this.data.metric || 'distance';
+    const allowed = Array.isArray(detail.allowedTypes) ? detail.allowedTypes : [];
+    const rawType = filters.type !== undefined ? filters.type : this.data.type;
+    const type = rawType && allowed.includes(rawType) ? rawType : '';
     const rows = board && Array.isArray(board.rows) ? board.rows : [];
     // 「加载更多」的判据是 total，不是本页行数（本页满 20 不代表后面没人）。
     // 老服务端不下发 total → 按「已显示的就是全部」兜底：宁可少一个入口，也不给一个点了没反应的按钮。
@@ -326,27 +524,39 @@ Page({
     const pendingRows = isCreator
       ? (pending === null ? this.data.pendingRows : (pending.rows || []).map(toPendingRow))
       : [];
+    const ongoing = detail.status === 'active' || detail.status === 'upcoming';
+    // 导航栏标题＝当前活动名（json 里的「活动详情」只作首屏兜底，详情落地后改写）
+    if (detail.title) wx.setNavigationBarTitle({ title: detail.title });
     this._memberPage = 1; // 成员分页页码只在 JS 用，不进 data
+    this._myStats = isMember ? detail.myPanel || null : null;
     this.setData({
       loading: false,
       notFound: false,
       error: '',
       head: toHead(detail),
+      progress: toProgress(detail),
       isMember,
-      canLeave: isMember && !isCreator, // 退出活动：我不是发起人（发起人出路是解散）
+      canLeave: isMember && !isCreator && detail.status !== 'dissolved', // 已解散没有可做的成员动作；已结束仍可退出（从我的列表移走）
       isCreator,
       // 编辑：只认发起人，且**未开始 / 进行中**都给入口——已结束 / 已解散才收回（服务端 PUT 同口径）。
-      // 未开始正是最该调时间与标题的阶段，挡在它身上没有理由。
-      // 状态由服务端下发，端上不拿 startAt / endAt 跟 now 自己比，避免两处判据分叉。
-      canEdit: isCreator && (detail.status === 'active' || detail.status === 'upcoming'),
+      canEdit: isCreator && ongoing,
+      // 邀请 / 解散：活动已经跑完或解散后再给入口只会制造无效操作，直接收回
+      canInvite: isMember && ongoing,
+      canDissolve: isCreator && ongoing,
       cta,
       ctaHint: cta ? (cta.disabled ? '当前不可加入' : `点击「${cta.text}」`) : '',
       stateNote: STATE_NOTE[detail.myState] || '',
       totals: isMember && detail.totals ? fmtPanel(detail.totals) : null,
-      members: isMember ? rows.map((r) => toMemberRow(r, isCreator && String(r.userId) !== me)) : [],
+      metric,
+      type,
+      typeOptions: allowed.length > 1 ? [{ key: '', label: '全部' }].concat(
+        allowed.map((t) => ({ key: t, label: TYPE_LABEL[t] || t })),
+      ) : [],
+      trend: isMember ? toTrendView(trend) : null,
+      members: isMember ? rows.map((r) => toMemberRow(r, isCreator && String(r.userId) !== me, metric, String(r.userId) === me)) : [],
       memberTotal: isMember ? memberTotal : 0,
       memberLoadingMore: false,
-      panel: isMember && detail.myPanel ? fmtPanel(detail.myPanel) : null,
+      panel: isMember && detail.myPanel ? toPanel(detail.myPanel) : null,
       pendingRows,
       pendingCount: pendingRows.length,
       reviewVisible: this.data.reviewVisible && pendingRows.length > 0,
@@ -354,6 +564,7 @@ Page({
       sheetVisible: false,
       sheetMember: null,
       sheetDetail: null,
+      sheetCompare: null,
     });
   },
 
@@ -406,15 +617,17 @@ Page({
     const seq = this._seq;
     this.setData({ memberLoadingMore: true });
     try {
-      const board = await api.get(
-        `/campaigns/${this._id}/leaderboard?page=${memberPage + 1}&pageSize=${MEMBER_PAGE_SIZE}`,
-      );
+      const board = await api.get(leaderboardPath(this._id, memberPage + 1, this.data.metric, this.data.type));
       if (seq !== this._seq) return;
       const rows = board && Array.isArray(board.rows) ? board.rows : [];
       const me = myUserId();
       this._memberPage = memberPage + 1;
       this.setData({
-        members: members.concat(rows.map((r) => toMemberRow(r, isCreator && String(r.userId) !== me))),
+        members: members.concat(
+          rows.map((r) =>
+            toMemberRow(r, isCreator && String(r.userId) !== me, this.data.metric, String(r.userId) === me),
+          ),
+        ),
         memberTotal: typeof board.total === 'number' ? board.total : members.length + rows.length,
         memberLoadingMore: false,
       });
@@ -426,17 +639,92 @@ Page({
     }
   },
 
-  /** 点成员行 → 成员信息半屏，并拉该成员的分页明细（明细对**活动内成员**开放，队友与本人同样可看） */
+  /** 点成员行 → 成员信息半屏，并拉该成员的分页明细（明细对**活动内成员**开放，队友与本人同样可看）。
+   *  同时算好「我 vs TA」三项对照；点自己时对照为 null（没有「我 vs 我」）。 */
   openMember(e) {
     const idx = Number(e.currentTarget.dataset.idx);
     const member = this.data.members[idx];
     if (!member) return;
-    this.setData({ sheetVisible: true, sheetMember: member, sheetDetail: null });
+    this.setData({
+      sheetVisible: true,
+      sheetMember: member,
+      sheetDetail: null,
+      sheetCompare: toCompare(member, this._myStats),
+    });
     this.loadMemberDetail(member.userId, 1);
   },
 
   closeMemberSheet() {
-    this.setData({ sheetVisible: false, sheetDetail: null });
+    this.setData({ sheetVisible: false, sheetDetail: null, sheetCompare: null });
+  },
+
+  /** 切排行榜指标：服务端重排后整列换掉（端上不重排） */
+  onMetricTap(e) {
+    const metric = e.currentTarget.dataset.metric;
+    if (!metric || metric === this.data.metric || !this.data.isMember) return;
+    this.setData({ metric });
+    return this.reloadBoard(false);
+  },
+
+  /** 切运动类型：排行榜与趋势一起按新类型重拉（趋势只有距离口径，与指标无关） */
+  onTypeTap(e) {
+    const type = String(e.currentTarget.dataset.type || '');
+    if (type === this.data.type || !this.data.isMember) return;
+    this.setData({ type });
+    return this.reloadBoard(true);
+  },
+
+  /** 切趋势档位（按人 / 按类型）：只重拉趋势那一条，排行榜与头部不动 */
+  onTrendByTap(e) {
+    const by = String(e.currentTarget.dataset.by || '');
+    if (by !== 'person' && by !== 'type') return;
+    if (by === this.data.trendBy || !this.data.isMember) return;
+    this.setData({ trendBy: by });
+    return this.loadTrend();
+  },
+
+  /** 单列表刷新（切指标 / 切类型）：只换成员行，不动头部与底部面板 */
+  async reloadBoard(withTrend) {
+    if (!this.data.isMember) return;
+    const seq = (this._boardSeq = (this._boardSeq || 0) + 1);
+    try {
+      const board = await api.get(leaderboardPath(this._id, 1, this.data.metric, this.data.type));
+      if (seq !== this._boardSeq) return;
+      this.applyBoard(board || {});
+      if (withTrend) await this.loadTrend();
+    } catch (e) {
+      if (seq !== this._boardSeq) return;
+      wx.showToast({ title: (e && e.message) || '加载失败', icon: 'none' });
+    }
+  },
+
+  /** 把一页排行榜响应落到成员列表（名次由服务端给，端上不重排） */
+  applyBoard(board) {
+    const rows = board && Array.isArray(board.rows) ? board.rows : [];
+    const metric = this.data.metric;
+    const me = myUserId();
+    this._memberPage = 1;
+    this.setData({
+      members: rows.map((r) =>
+        toMemberRow(r, this.data.isCreator && String(r.userId) !== me, metric, String(r.userId) === me),
+      ),
+      memberTotal: typeof board.total === 'number' ? board.total : rows.length,
+      memberLoadingMore: false,
+    });
+  },
+
+  /** 趋势单独降级：老服务端没有 /trend 时安静收起，不影响整页 */
+  async loadTrend() {
+    const seq = (this._trendSeq = (this._trendSeq || 0) + 1);
+    try {
+      const t = await api.get(trendPath(this._id, this.data.type, this.data.trendBy));
+      if (seq !== this._trendSeq) return;
+      this.setData({ trend: toTrendView(t) });
+    } catch (e) {
+      if (seq !== this._trendSeq) return;
+      console.warn('[campaign-detail] 趋势加载失败', e);
+      this.setData({ trend: null });
+    }
   },
 
   /**
@@ -597,7 +885,7 @@ Page({
   },
 
   onDissolve() {
-    if (!this.data.isCreator || this._dissolving) return;
+    if (!this.data.canDissolve || this._dissolving) return;
     wx.showModal({
       title: '解散活动',
       content: '解散后活动页只读，确定？',
@@ -624,7 +912,7 @@ Page({
 
   /** 邀请（仅 joined；服务端也拦非成员 403）：生成小程序码 → 展示弹窗，可长按识别 / 保存 */
   onInvite() {
-    if (!this.data.isMember || this._codeLoading) return;
+    if (!this.data.canInvite || this._codeLoading) return;
     this.doInvite();
   },
 

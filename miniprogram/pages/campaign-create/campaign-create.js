@@ -21,6 +21,8 @@ const MAX_TITLE = 30;
 const MAX_DESC = 120;
 const MAX_MEMBERS = 500;
 const DEFAULT_MEMBERS = 100; // 人数上限的默认值（页面预填；清空＝不限制）
+/** 活动最长跨度（含首尾的日历日），与服务端 assertCampaignSpan 同一条线 */
+const MAX_SPAN_DAYS = 365;
 
 // 可见性两选一（key 与后端 enum 一一对应）
 const VISIBILITY_OPTIONS = [
@@ -33,6 +35,21 @@ function localToday() {
   const d = new Date();
   const p = (n) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+/** YYYY-MM-DD ± n 个日历日：走 UTC 算，避开本机时区（中国无夏令时，但跨日界仍会错一天） */
+function plusDays(dateStr, n) {
+  const t = Date.parse(`${dateStr}T00:00:00Z`);
+  if (Number.isNaN(t)) return '';
+  return new Date(t + n * 86400000).toISOString().slice(0, 10);
+}
+
+/** 含首尾的天数（与服务端同口径：endAt 是「结束日 24:00」，差值即天数） */
+function spanDays(startDate, endDate) {
+  const a = Date.parse(`${startDate}T00:00:00Z`);
+  const b = Date.parse(`${endDate}T00:00:00Z`);
+  if (Number.isNaN(a) || Number.isNaN(b)) return 0;
+  return Math.round((b - a) / 86400000) + 1;
 }
 
 /**
@@ -60,6 +77,7 @@ Page({
     startDateText: '', // 展示值（YYYY/MM/DD），只给 wxml 看
     endDateText: '',
     dateError: '', // 起止倒置的即时提示（onSubmit 仍会兜底再判一次）
+    maxEndDate: '', // 结束日期可选上界＝开始日期 + 364 天（含首尾正好一年），跟着 startDate 挪
     submitting: false,
     canSubmit: false, // 必填项未填完 → 「发起活动」保持不可点
     isEdit: false, // 带 ?id= 进页即编辑模式
@@ -79,7 +97,13 @@ Page({
       return;
     }
     const today = localToday();
-    this.setData({ startDate: today, endDate: today, startDateText: slashDate(today), endDateText: slashDate(today) });
+    this.setData({
+      startDate: today,
+      endDate: today,
+      startDateText: slashDate(today),
+      endDateText: slashDate(today),
+      maxEndDate: plusDays(today, MAX_SPAN_DAYS - 1),
+    });
   },
 
   /** 编辑模式预填：日期直接取服务端下发的 YYYY-MM-DD 串（端上不做时区换算），chips 跟着 allowedTypes 点亮 */
@@ -98,6 +122,7 @@ Page({
         endDate: d.endDate,
         startDateText: slashDate(d.startDate),
         endDateText: slashDate(d.endDate),
+        maxEndDate: plusDays(d.startDate, MAX_SPAN_DAYS - 1),
         canSubmit: canSubmitOf(d.title),
       });
     } catch (e) {
@@ -140,7 +165,13 @@ Page({
   },
 
   onStartDate(e) {
-    this.setData({ startDate: e.detail.value, startDateText: slashDate(e.detail.value) });
+    const startDate = e.detail.value;
+    // 上界跟着挪：不然改了开始日期，结束日期选择器还卡在旧上界上
+    this.setData({
+      startDate,
+      startDateText: slashDate(startDate),
+      maxEndDate: plusDays(startDate, MAX_SPAN_DAYS - 1),
+    });
     this.refreshDateError();
   },
   onEndDate(e) {
@@ -177,6 +208,14 @@ Page({
     if (endDate < startDate) {
       return wx.showToast({
         title: `结束日期不能早于开始日期（${slashDate(endDate)} < ${slashDate(startDate)}）`,
+        icon: 'none',
+      });
+    }
+    // 镜像服务端的跨度上限：超了就是一个请求都不发，提示带实际天数（picker 的 end 已挡住大多数，
+    // 这里兜编辑态预填和手改）
+    if (spanDays(startDate, endDate) > MAX_SPAN_DAYS) {
+      return wx.showToast({
+        title: `活动最长 ${MAX_SPAN_DAYS} 天：${slashDate(startDate)} ~ ${slashDate(endDate)} 跨 ${spanDays(startDate, endDate)} 天`,
         icon: 'none',
       });
     }

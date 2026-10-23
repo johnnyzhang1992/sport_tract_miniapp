@@ -72,9 +72,9 @@ test('CL4 卡片字段：带标签时间行 + 头像堆叠（前 3）+ 人数', 
           myStats: { count: 2, distance: 12340, duration: 600 },
           memberCount: 5,
           memberAvatars: [
-            { avatarUrl: 'https://x/a.png?sig=1', avatarPreset: 'default-1' },
-            { avatarUrl: '', avatarPreset: 'default-2' },
-            { avatarUrl: '', avatarPreset: '' },
+            { avatarUrl: 'https://x/a.png?sig=1', avatarPreset: 'default-1', nickname: '阿迹' },
+            { avatarUrl: '', avatarPreset: 'default-2', nickname: '周末爬山小队长' },
+            { avatarUrl: '', avatarPreset: '', nickname: '小美' },
           ],
         },
       ],
@@ -90,11 +90,11 @@ test('CL4 卡片字段：带标签时间行 + 头像堆叠（前 3）+ 人数', 
   assert.equal(card.timeText, '开始 2026/10/01 · 结束 2026/10/07');
   assert.equal(card.memberText, '5 人已加入');
   assert.deepEqual(card.avatarList, [
-    { key: 0, src: 'https://x/a.png?sig=1' },
-    { key: 1, src: '/assets/avatars/default-2.png' },
-    { key: 2, src: '' },
+    { key: 0, src: 'https://x/a.png?sig=1', text: '阿' },
+    { key: 1, src: '/assets/avatars/default-2.png', text: '周' },
+    { key: 2, src: '', text: '小' }, // 两级兜底都落空 → 端上拿这个首字画占位圆
   ]);
-  assert.equal(card.statsText, '我的运动 2 次 · 12.34 km · 10min');
+  assert.equal(card.statsText, '我的运动 2 次 · 12.34 km · 10分钟');
   assert.equal(card.statusTag, 'campaign-tag--active', '卡片也要带共享修饰类');
 });
 

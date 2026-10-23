@@ -1,34 +1,43 @@
-<!-- 活动成员信息半屏：汇总三项 + 该成员在本活动内计入的轨迹明细（分页）。
+<!-- 活动成员信息半屏：头像昵称 + 「我 vs TA」（仅距离）+ 该成员在本活动内计入的轨迹明细（分页）。
      对活动内成员一律开放（队友与本人同样可看，服务端闸门＝viewer 当前是否 joined）；明细行不可点，
      只到「类型 / 时间 / 距离 / 时长 / 爬升」这一级，不跳到轨迹详情。
      明细数据（detail）与翻页都由页面负责，组件只渲染 + 抛 loadmore / close 事件（见 JS 头注释）。 -->
 <view wx:if="{{visible && member}}" class="mask" catchtouchmove="noop" bindtap="onClose">
   <view class="sheet" catchtap="noop">
+    <!-- 标题行直接给头像+昵称（不再写死「成员明细」），下面就是这位成员的对照与轨迹明细 -->
     <view class="sheet-head">
-      <view class="sheet-title">成员明细</view>
-      <view class="sheet-close" catchtap="onClose">✕</view>
-    </view>
-
-    <view class="member-head">
       <image wx:if="{{member.avatarSrc}}" class="member-avatar" src="{{member.avatarSrc}}" mode="aspectFill" />
       <view wx:else class="member-avatar member-avatar-text">{{member.avatarText}}</view>
       <view class="member-name">{{member.name}}</view>
+      <view class="sheet-close" catchtap="onClose">✕</view>
     </view>
 
-    <!-- 汇总三项：概况以明细接口的 stats 为准（与排行榜同源，数值应当一致）；未拿到前先用列表行的值 -->
-    <view class="stat-row">
-      <view class="stat-cell">
-        <view class="stat-value">{{detail.stats ? detail.stats.countText : member.countText}}</view>
-        <view class="stat-label">次数</view>
+    <!-- 「我 vs TA」：同一活动口径的距离对照（页面算好给进来；点自己时没有对照，compare 为 null）。
+         TA 的三个数字原本在这里和汇总卡各出现一次；现在只对比距离，次数＝「共 N 条」、时长＝明细累计，
+         有对照时不再重复一张汇总卡 —— 省下的高度全给明细列表。 -->
+    <view class="cmp" wx:if="{{compare}}">
+      <view class="cmp-head">
+        <view class="cmp-title">我 vs TA</view>
       </view>
-      <view class="stat-cell">
-        <view class="stat-value">{{detail.stats ? detail.stats.distanceText : member.distanceText}}</view>
-        <view class="stat-label">距离 (km)</view>
+      <view class="cmp-row" wx:for="{{compare.rows}}" wx:key="label">
+        <view class="cmp-label">{{item.label}}</view>
+        <view class="cmp-vals">
+          <view class="cmp-val cmp-val-me {{item.state === 'win' ? 'cmp-val-hi' : ''}}">{{item.myText}}</view>
+          <text class="cmp-vs">vs</text>
+          <view class="cmp-val cmp-val-ta {{item.state === 'lose' ? 'cmp-val-hi' : ''}}">{{item.taText}}</view>
+        </view>
+        <view class="cmp-diff">{{item.diffText}}</view>
       </view>
-      <view class="stat-cell">
-        <view class="stat-value">{{detail.stats ? detail.stats.durationText : member.durationText}}</view>
-        <view class="stat-label">时长</view>
-      </view>
+    </view>
+
+    <!-- 点自己时没有对照（compare 为 null），用一行紧凑汇总顶上。
+         数值以明细接口的 stats 为准（与排行榜同源）；未拿到前先用列表行的值。 -->
+    <view class="stat-line" wx:if="{{!compare}}">
+      <text class="stat-line-item">{{detail.stats ? detail.stats.countText : member.countText}} 次</text>
+      <text class="stat-line-dot">·</text>
+      <text class="stat-line-item">{{detail.stats ? detail.stats.distanceText : member.distanceText}} km</text>
+      <text class="stat-line-dot">·</text>
+      <text class="stat-line-item">{{detail.stats ? detail.stats.durationText : member.durationText}}</text>
     </view>
 
     <!-- TA 在本活动内计入的轨迹（GET /:id/members/:uid，分页） -->
