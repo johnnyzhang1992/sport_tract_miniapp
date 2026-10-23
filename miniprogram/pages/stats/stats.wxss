@@ -67,7 +67,7 @@
   padding: 12rpx 0;
 }
 .ov-item {
-  width: 33.33%;
+  width: 25%;
   text-align: center;
   padding: 12rpx 0;
 }
@@ -457,8 +457,13 @@
 .sheet-body {
   max-height: 60vh;
 }
-/* 全部纪录：两列宫格 */
-.record-grid,
+/* 全部纪录：两列宫格（紧凑） */
+.record-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12rpx;
+  padding: 4rpx 0 16rpx;
+}
 .trophy-sheet-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -468,10 +473,10 @@
 .record-cell {
   display: flex;
   align-items: center;
-  gap: 14rpx;
+  gap: 10rpx;
   min-width: 0;
   box-sizing: border-box;
-  padding: 18rpx 16rpx;
+  padding: 12rpx;
   background: #f7f8fa;
   border-radius: 16rpx;
 }
@@ -479,8 +484,8 @@
   opacity: 0.75;
 }
 .record-icon {
-  width: 40rpx;
-  height: 40rpx;
+  width: 32rpx;
+  height: 32rpx;
   flex-shrink: 0;
 }
 .record-info {
@@ -488,15 +493,15 @@
   min-width: 0;
 }
 .record-label {
-  font-size: 22rpx;
+  font-size: 20rpx;
   color: #667080;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .record-value {
-  margin-top: 4rpx;
-  font-size: 28rpx;
+  margin-top: 2rpx;
+  font-size: 26rpx;
   font-weight: 600;
   color: #1f2329;
   white-space: nowrap;
@@ -504,9 +509,12 @@
   text-overflow: ellipsis;
 }
 .record-type {
-  margin-top: 2rpx;
-  font-size: 20rpx;
+  margin-top: 0;
+  font-size: 18rpx;
   color: #8a93a6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 /* 奖杯详情卡 */
 .trophy-sheet-card {

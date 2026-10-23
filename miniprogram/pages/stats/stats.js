@@ -3,11 +3,21 @@
  * 概览（今日/本周/本月/累计）+ 近 7/30 天距离/时长趋势柱状图
  */
 const api = require('../../services/api');
-const { formatDuration, formatPaceParts } = require('../../utils/format');
+const { formatDuration, formatPaceParts, formatDurationStat, formatThousands } = require('../../utils/format');
 const { calcDiff } = require('../../utils/diff');
 const { buildTrophies } = require('../../utils/trophy');
 const { buildTrendCompare } = require('../../utils/trend-compare');
 const { bjDate } = require('../../utils/bj-date');
+
+const DAY_MS = 86400000;
+
+/** 当前纪录保持天数：今天达成 / 已保持 N 天（缺时间返回空串） */
+function heldTextOf(startTime) {
+  const t = Number(startTime);
+  if (!Number.isFinite(t) || t <= 0) return '';
+  const days = Math.max(0, Math.floor((Date.now() - t) / DAY_MS));
+  return days === 0 ? '今天达成' : `已保持 ${days} 天`;
+}
 
 Page({
   data: {
@@ -36,6 +46,8 @@ Page({
     best: null, // 个人最佳纪录
     trophies: [], // 里程碑奖杯墙（1K/5K/10K/半马/全马）
     percentile: null, // 累计距离全站分位（仅全站 ≥2 人时展示）
+    typeCount: 0, // 有记录的运动类型数（累计卡）
+    provinceCount: null, // 点亮省份数（由 lit-map 组件加载后回传，保持同一口径）
     typeSummary: [], // 分类型汇总（各类型总距离/总时长/次数）
     sheetVisible: false, // 半屏弹窗：全部纪录 / 奖杯详情
     sheetType: 'best', // best | trophy
@@ -88,6 +100,7 @@ Page({
         best: this.decorateBest(best),
         trophies: this.decorateTrophies(best),
         percentile: this.decoratePercentile(percentile),
+        typeCount: typeSummary.length,
         typeSummary,
         trendActivityTypes: [
           { value: '', label: '全部' },
@@ -105,6 +118,12 @@ Page({
     } finally {
       this.setData({ loading: false });
     }
+  },
+
+  /** 点亮地图组件加载完成：把省份数回填到顶部累计卡（与地图同一口径） */
+  onLitMapLoaded(e) {
+    const n = Number(e && e.detail && e.detail.provinceCount);
+    this.setData({ provinceCount: Number.isFinite(n) ? n : 0 });
   },
 
   /** 趋势请求 query：窗口 + 可选运动类型 */
@@ -187,13 +206,16 @@ Page({
     };
   },
 
-  /** 概览数据装饰：距离转公里、时长转文本 */
+  /** 概览数据装饰：距离转公里、时长按分钟/小时/天、大数字千分位 */
   decorateOverview(o) {
-    const sec = (s) => ({
-      ...s,
-      distanceKm: (s.distance / 1000).toFixed(2),
-      durationText: formatDuration(s.duration),
-    });
+    const sec = (s) => {
+      const d = formatDurationStat(s.duration);
+      return {
+        ...s,
+        distanceKm: (s.distance / 1000).toFixed(2),
+        durationText: `${d.num}${d.unit}`,
+      };
+    };
     return {
       today: sec(o.today),
       week: sec(o.week),
@@ -202,6 +224,8 @@ Page({
       total: {
         ...sec(o.total),
         calories: Math.round(o.total.calories || 0),
+        caloriesText: formatThousands(o.total.calories),
+        elevationGainText: formatThousands(o.total.elevationGain),
         activeDays: o.total.activeDays || 0,
         streakCurrent: o.total.streakCurrent || 0,
         streakLongest: o.total.streakLongest || 0,
@@ -240,19 +264,19 @@ Page({
     // 表现分（最高，按类型；社区逆向估算非官方 ITRA 分）
     (b.maxPerfScoreByType || []).forEach((r) => {
       if (!(r.perfScore > 0)) return;
-      cards.push({ key: `pi${cards.length}`, id: r.id, label: '表现分', value: `${r.perfScore} ${perfLevel(r.perfScore)}`, icon: iconOf(r.type), typeLabel: typeLabelOf(r.type) });
+      cards.push({ key: `pi${cards.length}`, id: r.id, label: '表现分', value: `${r.perfScore} ${perfLevel(r.perfScore)}`, icon: iconOf(r.type), typeLabel: typeLabelOf(r.type), heldText: heldTextOf(r.startTime) });
     });
     // 距离里程碑 PB（服务端只下发当前纪录）：5 公里 PB / 10 公里 PB …
     (b.fastestDistanceByKm || [])
       .slice()
       .sort((a, b2) => a.km - b2.km || a.type.localeCompare(b2.type))
-      .forEach((r) => cards.push({ key: `pb${cards.length}`, id: r.id, label: `${r.km} 公里 PB`, value: formatDuration(r.sec), icon: iconOf(r.type), typeLabel: typeLabelOf(r.type) }));
+      .forEach((r) => cards.push({ key: `pb${cards.length}`, id: r.id, label: `${r.km} 公里 PB`, value: formatDuration(r.sec), icon: iconOf(r.type), typeLabel: typeLabelOf(r.type), heldText: heldTextOf(r.startTime) }));
     // 各类型 4 项指标
     const byType = {};
     const put = (rows, label, valFn) => {
       (rows || []).forEach((r) => {
         if (!byType[r.type]) byType[r.type] = [];
-        byType[r.type].push({ label, value: valFn(r), id: r.id, typeLabel: typeLabelOf(r.type) });
+        byType[r.type].push({ label, value: valFn(r), id: r.id, typeLabel: typeLabelOf(r.type), heldText: heldTextOf(r.startTime) });
       });
     };
     put(b.maxDistanceByType, '最远距离', (r) => `${(r.distance / 1000).toFixed(1)}km`);

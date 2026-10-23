@@ -5,9 +5,12 @@
 const api = require('../../services/api');
 const loading = require('../../utils/loading');
 const config = require('../../config/index');
-const { formatDuration, formatDurationStat, formatPaceParts, compact } = require('../../utils/format');
+const { formatDuration, formatDurationStat, formatPaceParts, formatThousands, formatCompactCn } = require('../../utils/format');
 const { calcDiff } = require('../../utils/diff');
 const { posterViewHeight } = require('../../utils/poster-layout');
+
+/** 最快 1 公里的物理可信下限（秒/公里）：与后端 MIN_PLAUSIBLE_PACE_SEC_PER_KM 同口径 */
+const MIN_FASTEST_KM_SEC = 130;
 
 /** 时长带单位（分钟/小时/天） */
 const durText = (sec) => {
@@ -450,20 +453,22 @@ Page({
       if (seq !== this._fetchSeq) return;
       // 日期汇总改由后端按东八区分桶下发（避免前端日期运算出错）
       const ds = overview.dateSummary || { title: '', label: '', rows: [] };
+      // 无运动的桶不展示：否则整张表/图全是 0，反而看不出哪几天真正有数据
+      const dsRows = (ds.rows || []).filter((r) => (r.count || 0) > 0);
       this.setData({
         summary: this.buildSummary(overview),
         typeSummary: this.buildTypeSummary(overview.tracks || []),
-        dateSummary: (ds.rows || []).map((r) => ({
+        dateSummary: dsRows.map((r) => ({
           key: r.key,
           label: r.label,
           count: r.count,
           distanceKm: (r.distance / 1000).toFixed(1),
           durationText: durText(r.duration),
-          kcal: compact(Math.round(r.calories || 0)),
+          kcal: formatCompactCn(r.calories || 0),
           from: r.from,
           to: r.to,
         })),
-        dateChartData: (ds.rows || []).map((r) => ({
+        dateChartData: dsRows.map((r) => ({
           label: r.label,
           value: Math.round((r.distance / 1000) * 100) / 100,
         })),
@@ -507,13 +512,13 @@ Page({
       distanceKm: distanceKm.toFixed(1),
       durationText: durText(durationSec), // 带单位（分钟/小时/天）
       calories: o.totalCalories || 0,
+      caloriesText: formatThousands(o.totalCalories || 0),
       elevationGain: o.totalElevationGain || 0,
+      elevationGainText: formatThousands(o.totalElevationGain || 0),
       avgDistanceKm: avgPer.toFixed(1),
       avgDurationText: count > 0 ? durText(Math.round(durationSec / count)) : '—',
       activeDays: days,
       dailyKm: (distanceKm / dayCount).toFixed(2),
-      // 平均配速：净时长 ÷ 总距离（duration 已扣暂停/静止，与详情页同口径）
-      avgPace: distanceKm > 0 && durationSec > 0 ? formatPaceParts(durationSec / distanceKm) : null,
       hasData: count > 0,
     };
   },
@@ -588,7 +593,7 @@ Page({
 
     const longest = list.reduce((a, b) => (b.distance > a.distance ? b : a));
     const climbed = list.reduce((a, b) => ((b.elevationGain || 0) > (a.elevationGain || 0) ? b : a));
-    const paced = list.filter((t) => t.fastestKm > 0);
+    const paced = list.filter((t) => t.fastestKm >= MIN_FASTEST_KM_SEC);
     const fastest = paced.length ? paced.reduce((a, b) => (b.fastestKm < a.fastestKm ? b : a)) : null;
     const counts = {};
     list.forEach((t) => {

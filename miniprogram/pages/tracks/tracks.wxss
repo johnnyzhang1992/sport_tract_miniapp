@@ -42,14 +42,12 @@
   height: 40rpx;
 }
 
-/* 2 列网格（图片模式） */
-.track-grid {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
+/* 地图模式：一行一条（地图左 / 数据概况右） */
+.map-list {
+  width: 100%;
 }
-.grid-item {
-  width: calc(50% - 8rpx);
+.map-item {
+  width: 100%;
   margin-bottom: 16rpx;
 }
 
@@ -247,7 +245,7 @@
   color: #6f6857;
 }
 
-/* 卡片（缩略图在上，信息在下） */
+/* 卡片（列表模式 / 地图模式共用） */
 .track-card {
   background: #fff;
   border-radius: 16rpx;
@@ -258,52 +256,172 @@
   opacity: 0.7;
 }
 
-/* 轨迹缩略图 */
-.track-thumb {
+/* 地图卡片：左侧真实地图 + 右侧概况 */
+.map-card {
+  display: flex;
+  align-items: stretch;
+  padding: 16rpx;
+}
+.map-wrap {
+  position: relative;
+  width: 220rpx;
+  height: 170rpx;
+  flex-shrink: 0;
+  border-radius: 12rpx;
+  overflow: hidden;
+  background: #f2f3f5;
+}
+.track-map-mini {
   width: 100%;
-  height: 156rpx;
-  display: block;
+  height: 100%;
+  border-radius: 12rpx;
 }
-
-/* 卡片信息区 */
-.track-body {
-  padding: 16rpx 20rpx 20rpx;
+.map-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6rpx;
 }
-.track-head {
+.map-placeholder-icon {
+  font-size: 36rpx;
+  opacity: 0.55;
+}
+.map-placeholder-icon-img {
+  width: 44rpx;
+  height: 44rpx;
+  opacity: 0.5;
+}
+.map-placeholder-text {
+  font-size: 20rpx;
+  color: #667080;
+}
+.map-info {
+  flex: 1;
+  min-width: 0;
+  margin-left: 20rpx;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.map-info-head {
   display: flex;
   align-items: center;
-  margin-bottom: 12rpx;
-}
-.cell-icon {
-  width: 30rpx;
-  height: 30rpx;
-  margin-right: 10rpx;
-  flex-shrink: 0;
-}
-.track-type {
-  font-size: 24rpx;
-  font-weight: 500;
-  color: #1f2329;
-  margin-right: auto; /* 把时长推到行右侧 */
-}
-.track-duration {
-  font-size: 22rpx;
-  color: #667080;
-  flex-shrink: 0;
-}
-.track-foot {
-  display: flex;
   justify-content: space-between;
-  align-items: baseline;
 }
-.track-dist {
-  font-size: 28rpx;
+.map-type-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  flex-shrink: 0;
+  margin-left: 8rpx;
+}
+.map-icon {
+  width: 26rpx;
+  height: 26rpx;
+  flex-shrink: 0;
+}
+.map-type {
+  font-size: 22rpx;
+  color: #4e5969;
+}
+.map-date {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #1f2329;
+  white-space: nowrap;
+}
+.map-sub {
+  font-size: 20rpx;
+  color: #667080;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.map-city {
+  color: #667080;
+}
+.map-dist-row {
+  display: flex;
+  align-items: baseline;
+  min-width: 0;
+}
+.map-dist {
+  font-size: 42rpx;
   font-weight: 600;
   color: #2b6cf6;
+  line-height: 1.1;
 }
-.track-time {
+.map-dist-unit {
   font-size: 22rpx;
-  color: #667080;
+  color: #2b6cf6;
+  margin-left: 6rpx;
+  margin-right: auto;
+}
+.map-best {
+  display: flex;
+  align-items: center;
+  max-width: 220rpx;
+  margin-left: 8rpx;
+  padding: 2rpx 6rpx;
+  border-radius: 999rpx;
+  background: #fdf6e3;
+  flex-shrink: 1;
+  min-width: 0;
+}
+.map-best-former {
+  background: #f2f3f5;
+}
+.map-best-ear {
+  width: 12rpx;
+  height: 24rpx;
+  flex-shrink: 0;
+}
+.map-best-text {
+  font-size: 18rpx;
+  color: #8a5f12;
+  letter-spacing: 1rpx;
+  margin: 0 2rpx;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.map-best-former .map-best-text {
+  color: #6f6857;
+}
+.map-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12rpx;
+}
+.map-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  min-width: 0;
+}
+.map-meta-icon {
+  width: 26rpx;
+  height: 26rpx;
+  flex-shrink: 0;
+}
+.map-meta-value {
+  font-size: 22rpx;
+  font-weight: 600;
+  color: #1f2329;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.map-arrow {
+  align-self: center;
+  flex-shrink: 0;
+  margin-left: 6rpx;
+  font-size: 32rpx;
+  line-height: 1;
+  color: #8a93a6;
 }
 
 .loading-tip {
@@ -334,8 +452,16 @@
   background: #eef4ff;
 }
 .province-bar-text {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
   font-size: 26rpx;
   color: #2b6cf6;
+}
+.bar-icon {
+  width: 26rpx;
+  height: 26rpx;
+  flex-shrink: 0;
 }
 .province-bar-close {
   padding: 4rpx 12rpx;

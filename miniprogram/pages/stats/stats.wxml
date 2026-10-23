@@ -16,36 +16,24 @@
         <view class="ov-label">次数</view>
       </view>
       <view class="ov-item">
-        <view class="ov-num">{{overview.total.elevationGain}}</view>
+        <view class="ov-num">{{overview.total.elevationGainText}}</view>
         <view class="ov-label">爬升 m</view>
       </view>
       <view class="ov-item">
-        <view class="ov-num">{{overview.total.calories}}</view>
+        <view class="ov-num">{{overview.total.caloriesText}}</view>
         <view class="ov-label">千卡</view>
       </view>
       <view class="ov-item">
         <view class="ov-num">{{overview.total.activeDays}}</view>
         <view class="ov-label">活跃天数</view>
       </view>
-    </view>
-  </view>
-
-  <!-- 周期明细 -->
-  <view class="card">
-    <view class="period-row">
-      <view class="period-item">
-        <view class="period-num">{{overview.today.distanceKm}}</view>
-        <view class="period-label">今日 km</view>
+      <view class="ov-item">
+        <view class="ov-num">{{typeCount}}</view>
+        <view class="ov-label">运动类型</view>
       </view>
-      <view class="period-item">
-        <view class="period-num">{{overview.week.distanceKm}}</view>
-        <view class="period-label">本周 km</view>
-        <view class="period-diff period-diff-{{compare.week.cls}}" wx:if="{{compare.week}}">{{compare.week.text}} 较上周</view>
-      </view>
-      <view class="period-item">
-        <view class="period-num">{{overview.month.distanceKm}}</view>
-        <view class="period-label">本月 km</view>
-        <view class="period-diff period-diff-{{compare.month.cls}}" wx:if="{{compare.month}}">{{compare.month.text}} 较上月</view>
+      <view class="ov-item">
+        <view class="ov-num">{{provinceCount === null ? '—' : provinceCount}}</view>
+        <view class="ov-label">点亮省份</view>
       </view>
     </view>
   </view>
@@ -64,7 +52,27 @@
       </view>
       <view class="streak-item" wx:if="{{percentile}}">
         <view class="streak-num">{{percentile.percentile}}%</view>
-        <view class="streak-label">累计距离超越全站</view>
+        <view class="streak-label">累计距离超越迹路者</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 周期明细（放在累计/坚持之后） -->
+  <view class="card">
+    <view class="period-row">
+      <view class="period-item">
+        <view class="period-num">{{overview.today.distanceKm}}</view>
+        <view class="period-label">今日 km</view>
+      </view>
+      <view class="period-item">
+        <view class="period-num">{{overview.week.distanceKm}}</view>
+        <view class="period-label">本周 km</view>
+        <view class="period-diff period-diff-{{compare.week.cls}}" wx:if="{{compare.week}}">{{compare.week.text}} 较上周</view>
+      </view>
+      <view class="period-item">
+        <view class="period-num">{{overview.month.distanceKm}}</view>
+        <view class="period-label">本月 km</view>
+        <view class="period-diff period-diff-{{compare.month.cls}}" wx:if="{{compare.month}}">{{compare.month.text}} 较上月</view>
       </view>
     </view>
   </view>
@@ -194,7 +202,7 @@
   </view>
 
   <!-- 点亮地图 + 点亮城市（分包组件，主包页面按异步化引用） -->
-  <lit-map id="litMap" />
+  <lit-map id="litMap" bind:loaded="onLitMapLoaded" />
 
   <!-- 互跳：轨迹热图（全年分布） -->
   <view class="card link-row" hover-class="card-hover" hover-stay-time="100" bindtap="goHeatmap">
@@ -238,7 +246,7 @@
             <view class="record-info">
               <view class="record-label">{{item.label}}</view>
               <view class="record-value">{{item.value}}</view>
-              <view class="record-type" wx:if="{{item.typeLabel}}">{{item.typeLabel}}</view>
+              <view class="record-type" wx:if="{{item.typeLabel || item.heldText}}">{{item.typeLabel}}<text wx:if="{{item.heldText}}"> · {{item.heldText}}</text></view>
             </view>
           </view>
         </view>

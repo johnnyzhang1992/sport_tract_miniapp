@@ -34,12 +34,10 @@
   <view class="card">
     <view class="summary-head">
       <view class="section-title">汇总</view>
-      <view class="poster-link" wx:if="{{activeRange !== 'all'}}" hover-class="poster-link-hover" bindtap="openPoster">🖼 生成海报</view>
-    </view>
-    <view class="avg-pace" wx:if="{{summary.avgPace}}">
-      <text class="avg-pace-label">平均配速</text>
-      <text class="avg-pace-value">{{summary.avgPace.value}}</text>
-      <text class="avg-pace-unit">{{summary.avgPace.unit}}</text>
+      <view class="poster-link" wx:if="{{activeRange !== 'all'}}" hover-class="poster-link-hover" bindtap="openPoster">
+        <image class="poster-link-icon" src="/assets/icons/lucide-image-blue.png" mode="aspectFit" />
+        <text>生成海报</text>
+      </view>
     </view>
     <view class="summary-grid">
       <view class="sum-item">
@@ -55,11 +53,11 @@
         <view class="sum-label">总时长</view>
       </view>
       <view class="sum-item">
-        <view class="sum-num">{{summary.calories}}</view>
+        <view class="sum-num">{{summary.caloriesText}}</view>
         <view class="sum-label">消耗 千卡</view>
       </view>
       <view class="sum-item">
-        <view class="sum-num">{{summary.elevationGain}}</view>
+        <view class="sum-num">{{summary.elevationGainText}}</view>
         <view class="sum-label">总爬升 m</view>
       </view>
       <view class="sum-item">

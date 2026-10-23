@@ -142,7 +142,7 @@
 
     <!-- 一起运动活动区块：标题行右侧「查看更多」常驻（全为已结束/已解散时它是进列表页的唯一入口）；
          有活动 → 横滑卡片（半宽容器里一屏只放得下一条，多了左右滑），无 → 发起引导 -->
-    <view class="card duo-cell">
+    <view class="card duo-cell {{campaigns.length > 0 ? '' : 'campaign-cell-empty'}}">
       <view class="section-head">
         <view class="section-title section-title-flat">组队运动</view>
         <view class="campaign-more" hover-class="campaign-more-hover" hover-stay-time="80" bindtap="goCampaignList"><text class="campaign-more-text">查看更多</text><text class="campaign-more-arrow">›</text></view>

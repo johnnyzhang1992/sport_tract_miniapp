@@ -17,11 +17,22 @@ function formatKm(meters) {
   return (meters / 1000).toFixed(2);
 }
 
-/** 数字缩写：≥10000 → 1.22W，≥1000 → 1.22K，否则去尾零保留2位 */
-function compact(v) {
-  if (v >= 10000) return (v / 10000).toFixed(2).replace(/\.?0+$/, '') + 'W';
-  if (v >= 1000) return (v / 1000).toFixed(2).replace(/\.?0+$/, '') + 'K';
-  return String(Math.round(v * 100) / 100);
+/** 整数千分位：16982 → "16,982"；空值按 0 */
+function formatThousands(v) {
+  return String(Math.round(Number(v) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+/** 中文缩写：≥1亿 → 1.2亿；≥1万 → 1.7万；否则千分位（保留至多 2 位小数） */
+function formatCompactCn(v) {
+  const n = Number(v) || 0;
+  const abs = Math.abs(n);
+  const trim1 = (x) => String(Math.round(x * 10) / 10);
+  if (abs >= 1e8) return `${trim1(n / 1e8)}亿`;
+  if (abs >= 1e4) return `${trim1(n / 1e4)}万`;
+  const fixed = String(Math.round(n * 100) / 100);
+  const [int, frac] = fixed.split('.');
+  const intText = int.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return frac ? `${intText}.${frac}` : intText;
 }
 
 /** 总时长统计：≤999分钟→分钟；≤999小时→小时；否则→天（返回 { num, unit }） */
@@ -52,4 +63,12 @@ function formatPaceParts(secPerKm) {
   return { value: `${m}'${String(s).padStart(2, '0')}"`, unit: '/公里' };
 }
 
-module.exports = { formatDuration, formatKm, formatPace, formatPaceParts, compact, formatDurationStat };
+module.exports = {
+  formatDuration,
+  formatKm,
+  formatPace,
+  formatPaceParts,
+  formatDurationStat,
+  formatThousands,
+  formatCompactCn,
+};

@@ -49,7 +49,7 @@ const CATEGORIES = {
 };
 
 /** 地图页浮层按钮用的字形（黑色透明底，按钮白底由 CSS 给；search 覆盖掉早期的灰版资产） */
-const PLAIN = ['sliders-horizontal', 'plus', 'search', 'layers', 'pencil', 'trash-2', 'map-pinned', 'building-2', 'bell', 'trending-up', 'trending-down'];
+const PLAIN = ['sliders-horizontal', 'plus', 'search', 'layers', 'pencil', 'trash-2', 'map-pinned', 'building-2', 'bell', 'trending-up', 'trending-down', 'clock', 'mountain', 'flame', 'pin', 'image'];
 /** 逐字形的额外内缩（CSS px，SIZE=96 口径）：lucide 各家字形在 24 网格里占位不同，
  *  统一 inset 0 会让「占格多的」在按钮里明显大一号。实测墨迹宽：sliders/justify 80px、plus 64px，
  *  layers 的菱形盘、pencil 的斜杆都跨 22 格 → 满幅出到 88px，故各内缩 4.5 拉回 80px 与同排一致
@@ -60,6 +60,8 @@ const PLAIN_STROKE = {
   'trash-2': { color: '#e54d42', suffix: '-red' },
   'trending-up': { color: '#2bb673', suffix: '-green' },
   'trending-down': { color: '#e54d42', suffix: '-red' },
+  pin: { color: '#2b6cf6', suffix: '-blue' },
+  image: { color: '#1a56d6', suffix: '-blue' },
 };
 
 /** 运动类型图标（config/index.js 的 ACTIVITY_TYPES[].iconImg）：144px 画布，与既有 activity-*.png 同尺寸。

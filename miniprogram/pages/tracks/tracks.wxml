@@ -16,13 +16,19 @@
 
   <!-- 省份筛选条（足迹地图跳转带入） -->
   <view class="province-bar" wx:if="{{provinceFilter}}">
-    <text class="province-bar-text">📍 {{provinceFilter}}</text>
+    <view class="province-bar-text">
+      <image class="bar-icon" src="/assets/icons/lucide-pin-blue.png" mode="aspectFit" />
+      <text>{{provinceFilter}}</text>
+    </view>
     <view class="province-bar-close" hover-class="province-bar-close-hover" bindtap="clearProvince">✕</view>
   </view>
 
   <!-- 精确时间范围条（报告页「日期汇总」点行下钻带入） -->
   <view class="range-bar" wx:if="{{rangeFilter}}">
-    <text class="province-bar-text">📅 {{rangeFilter.label}}</text>
+    <view class="province-bar-text">
+      <image class="bar-icon" src="/assets/icons/lucide-calendar-blue.png" mode="aspectFit" />
+      <text>{{rangeFilter.label}}</text>
+    </view>
     <view class="province-bar-close" hover-class="province-bar-close-hover" bindtap="clearRange">✕</view>
   </view>
 
@@ -148,33 +154,82 @@
     </view>
   </block>
 
-  <!-- 图片模式：2 列网格（轨迹缩略图卡片） -->
-  <view class="track-grid" wx:else>
-    <view class="grid-item" wx:for="{{items}}" wx:key="id">
+  <!-- 地图模式：一行一条（左侧真实地图，右侧数据概况）；地图点按视口懒加载 -->
+  <view class="map-list" wx:else>
+    <view class="map-item" id="map-item-{{item.id}}" wx:for="{{items}}" wx:key="id" data-id="{{item.id}}">
       <t-swipe-cell
         right="{{[{ text: '删除', className: 'del-action' }]}}"
         data-id="{{item.id}}"
         bind:click="onDeleteTap"
       >
         <view
-          class="track-card"
+          class="track-card map-card"
           hover-class="track-card-hover"
           hover-stay-time="80"
           data-id="{{item.id}}"
           bindtap="onTapItem"
         >
-          <track-thumb class="track-thumb" points="{{item.previewPoints}}" color="{{item.color}}" />
-          <view class="track-body">
-            <view class="track-head">
-              <image class="cell-icon" src="{{item.iconImg}}" mode="aspectFit"></image>
-              <text class="track-type">{{item.label}}</text>
-              <text class="track-duration">{{item.durationText}}</text>
-            </view>
-            <view class="track-foot">
-              <text class="track-dist">{{item.distanceKm}}公里</text>
-              <text class="track-time">{{item.timeText}}</text>
+          <view class="map-wrap">
+            <map
+              wx:if="{{item.mapReady && item.mapCenter}}"
+              id="track-map-{{item.id}}"
+              class="track-map-mini"
+              latitude="{{item.mapCenter.latitude}}"
+              longitude="{{item.mapCenter.longitude}}"
+              scale="15"
+              polyline="{{item.mapPolyline}}"
+              include-points="{{item.mapIncludePoints}}"
+              data-id="{{item.id}}"
+              bindtap="onTapItem"
+              enable-zoom="{{false}}"
+              enable-scroll="{{false}}"
+              enable-rotate="{{false}}"
+              enable-overlooking="{{false}}"
+              enable-satellite="{{false}}"
+              show-location="{{false}}"
+              enable-traffic="{{false}}"
+              enable-poi="{{false}}"
+            />
+            <view wx:else class="map-placeholder">
+              <image wx:if="{{item.iconImg}}" class="map-placeholder-icon-img" src="{{item.iconImg}}" mode="aspectFit" />
+              <text wx:else class="map-placeholder-icon">—</text>
+              <text class="map-placeholder-text">{{item.mapEmpty ? '暂无轨迹' : item.mapFailed ? '地图加载失败' : '地图加载中…'}}</text>
             </view>
           </view>
+          <view class="map-info">
+            <view class="map-info-head">
+              <text class="map-date">{{item.dateText}}</text>
+              <view class="map-type-wrap">
+                <image class="map-icon" src="{{item.iconImg}}" mode="aspectFit" />
+                <text class="map-type">{{item.label}}</text>
+              </view>
+            </view>
+            <view class="map-sub">{{item.timeRangeText}}<text wx:if="{{item.cityText}}" class="map-city"> · {{item.cityText}}</text></view>
+            <view class="map-dist-row">
+              <text class="map-dist">{{item.distanceKm}}</text>
+              <text class="map-dist-unit">公里</text>
+              <view class="map-best {{item.bestFormer ? 'map-best-former' : ''}}" wx:if="{{item.bestText}}">
+                <view class="laurel-ear map-best-ear {{item.bestFormer ? 'laurel-ear-grey' : ''}}"></view>
+                <text class="map-best-text">{{item.bestText}}</text>
+                <view class="laurel-ear map-best-ear laurel-ear-r {{item.bestFormer ? 'laurel-ear-grey' : ''}}"></view>
+              </view>
+            </view>
+            <view class="map-meta">
+              <view class="map-meta-item">
+                <image class="map-meta-icon" src="/assets/icons/lucide-clock.png" mode="aspectFit" aria-label="时长" />
+                <text class="map-meta-value">{{item.durationText}}</text>
+              </view>
+              <view class="map-meta-item">
+                <image class="map-meta-icon" src="/assets/icons/lucide-mountain.png" mode="aspectFit" aria-label="爬升" />
+                <text class="map-meta-value">{{item.elevationGain}}m</text>
+              </view>
+              <view class="map-meta-item">
+                <image class="map-meta-icon" src="/assets/icons/lucide-flame.png" mode="aspectFit" aria-label="千卡" />
+                <text class="map-meta-value">{{item.caloriesText}}</text>
+              </view>
+            </view>
+          </view>
+          <view class="map-arrow">›</view>
         </view>
       </t-swipe-cell>
     </view>

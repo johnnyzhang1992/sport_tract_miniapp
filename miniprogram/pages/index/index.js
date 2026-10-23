@@ -1,9 +1,4 @@
-/** 数字缩写：≥10000 → 1.22W，≥1000 → 1.22K，否则去尾零保留2位 */
-function compact(v) {
-  if (v >= 10000) return (v / 10000).toFixed(2).replace(/\.?0+$/, '') + 'W';
-  if (v >= 1000) return (v / 1000).toFixed(2).replace(/\.?0+$/, '') + 'K';
-  return String(Math.round(v * 100) / 100);
-}
+const { formatCompactCn } = require('../../utils/format');
 
 /** 时长格式化：≤999分钟→分钟；≤999小时→小时；否则→天 */
 function formatDuration(seconds) {
@@ -405,7 +400,7 @@ Page({
         const prev = this.data.totalOverview || {};
         patch.totalOverview = {
           trackCount: total.count || 0,
-          totalKm: compact((total.distance || 0) / 1000), // 公里/千卡 K·W 缩写
+          totalKm: formatCompactCn((total.distance || 0) / 1000), // 公里/千卡 中文缩写（万/亿）
           // 省市来自另一段：它失败就留着屏上旧值，别把「3 省」刷成 0
           provinceCount: failed.footprint ? prev.provinceCount || 0 : sections.footprint.data.provinceCount,
           cityCount: failed.footprint ? prev.cityCount || 0 : sections.footprint.data.cityCount,

@@ -352,6 +352,14 @@
   border-radius: 14rpx;
   background: #f5f7fb;
 }
+/* 空态：与左侧运动榜卡片等高时，把「和好友来场PK」压到卡片底部 */
+.campaign-cell-empty {
+  display: flex;
+  flex-direction: column;
+}
+.campaign-cell-empty .campaign-row {
+  margin-top: auto;
+}
 /* 空态引导行：借用 .lb-title 的排版，但它是「一句号召」不是卡片标题，
    所以压一档字号、去掉加粗，并强制一行走完（半屏宽里换行会把卡片撑高）。
    必须声明在 .lb-title 之后——同权重靠源码顺序才能盖掉 28rpx/600。 */

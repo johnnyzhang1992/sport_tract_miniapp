@@ -230,6 +230,11 @@ Component({
           regionRows: regionList.buildRegionRows(this._provinces, this.data.expandedRegions),
           regionSummary: regionList.regionSummaryText(this._provinces),
         });
+        // 通知宿主页（统计页顶部累计卡复用同一个口径，避免重复请求）
+        this.triggerEvent('loaded', {
+          provinceCount: res.provinceCount || 0,
+          cityCount: res.cityCount || 0,
+        });
         // 更新地图高亮
         const mapData = (res.provinces || []).map((p) => ({ name: p.name, value: p.count }));
         this._mapData = mapData;
