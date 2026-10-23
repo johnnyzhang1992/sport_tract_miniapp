@@ -30,32 +30,16 @@
     </view>
   </view>
 
-  <!-- 日期汇总：按当前维度切桶（周→按天 / 月→按自然周 / 年→按月 / 全部→按半年），后端聚合下发 -->
-  <view class="card" wx:if="{{dateSummary.length > 0}}">
-    <view class="section-title">日期汇总 · {{dateSummaryTitle}}</view>
-    <view class="best-table">
-      <view class="bt-head">
-        <view class="bt-th bt-col-type">{{dateBucketLabel}}</view>
-        <view class="bt-th">次数</view>
-        <view class="bt-th">距离 km</view>
-        <view class="bt-th">时间</view>
-        <view class="bt-th">千卡</view>
-      </view>
-      <view class="bt-row" wx:for="{{dateSummary}}" wx:key="key">
-        <view class="bt-td bt-col-type ds-label">{{item.label}}</view>
-        <view class="bt-td">{{item.count}}</view>
-        <view class="bt-td">{{item.distanceKm}}</view>
-        <view class="bt-td">{{item.durationText}}</view>
-        <view class="bt-td">{{item.kcal}}</view>
-      </view>
-    </view>
-  </view>
-
-  <!-- 汇总 -->
+  <!-- 汇总：本期最重要的数字放最前 -->
   <view class="card">
     <view class="summary-head">
       <view class="section-title">汇总</view>
       <view class="poster-link" wx:if="{{activeRange !== 'all'}}" hover-class="poster-link-hover" bindtap="openPoster">🖼 生成海报</view>
+    </view>
+    <view class="avg-pace" wx:if="{{summary.avgPace}}">
+      <text class="avg-pace-label">平均配速</text>
+      <text class="avg-pace-value">{{summary.avgPace.value}}</text>
+      <text class="avg-pace-unit">{{summary.avgPace.unit}}</text>
     </view>
     <view class="summary-grid">
       <view class="sum-item">
@@ -97,6 +81,21 @@
     </view>
   </view>
 
+  <!-- 本期亮点：从本期轨迹里挑出四个「最」 -->
+  <view class="card" wx:if="{{highlights.length > 0}}">
+    <view class="section-title">本期亮点</view>
+    <view class="hl-grid">
+      <view class="hl-item" wx:for="{{highlights}}" wx:key="key">
+        <view class="hl-head">
+          <image class="hl-icon" src="{{item.icon}}" mode="aspectFit" />
+          <text class="hl-label">{{item.label}}</text>
+        </view>
+        <view class="hl-value">{{item.value}}</view>
+        <view class="hl-sub">{{item.sub}}</view>
+      </view>
+    </view>
+  </view>
+
   <!-- 周期对比（当前周期 vs 上一周期） -->
   <view class="card" wx:if="{{compare.length > 0}}">
     <view class="section-title">周期对比</view>
@@ -133,6 +132,53 @@
         <view class="bt-td">{{item.count}}</view>
       </view>
     </view>
+  </view>
+
+  <!-- 日期汇总：按当前维度切桶（周→按天 / 月→按自然周 / 年→按月 / 全部→按半年），后端聚合下发 -->
+  <view class="card" wx:if="{{dateSummary.length > 0}}">
+    <view class="summary-head">
+      <view class="section-title">日期汇总 · {{dateSummaryTitle}}</view>
+      <view class="date-view-toggle">
+        <view class="dv-btn {{dateView === 'table' ? 'dv-btn-active' : ''}}" data-view="table" bindtap="onDateViewChange">表</view>
+        <view class="dv-btn {{dateView === 'chart' ? 'dv-btn-active' : ''}}" data-view="chart" bindtap="onDateViewChange">图</view>
+      </view>
+    </view>
+    <view wx:if="{{dateView === 'table'}}" class="best-table">
+      <view class="bt-head">
+        <view class="bt-th bt-col-type">{{dateBucketLabel}}</view>
+        <view class="bt-th">次数</view>
+        <view class="bt-th">距离 km</view>
+        <view class="bt-th">时间</view>
+        <view class="bt-th">千卡</view>
+      </view>
+      <view
+        class="bt-row ds-row"
+        hover-class="ds-row-hover"
+        wx:for="{{dateSummary}}"
+        wx:key="key"
+        data-from="{{item.from}}"
+        data-to="{{item.to}}"
+        data-label="{{item.label}}"
+        bindtap="onDateRowTap"
+      >
+        <view class="bt-td bt-col-type ds-label">{{item.label}}</view>
+        <view class="bt-td">{{item.count}}</view>
+        <view class="bt-td">{{item.distanceKm}}</view>
+        <view class="bt-td">{{item.durationText}}</view>
+        <view class="bt-td">{{item.kcal}}</view>
+      </view>
+      <view class="ds-hint">点任意一行可查看该时段的轨迹</view>
+    </view>
+    <stat-chart wx:else id="dateChart" data="{{dateChartData}}" type="bar" unit="km" height="{{230}}" empty-text="该时段暂无运动记录" />
+  </view>
+
+  <!-- 互跳：累计看板 -->
+  <view class="card link-row" hover-class="card-hover" hover-stay-time="100" bindtap="goStats">
+    <view class="link-info">
+      <view class="link-title">数据统计</view>
+      <view class="link-sub">累计看板 · 个人最佳 · 点亮地图</view>
+    </view>
+    <view class="link-arrow">›</view>
   </view>
 
   <view wx:if="{{!loading && summary && summary.count === 0}}" class="loading-tip">该时间段还没有运动记录</view>

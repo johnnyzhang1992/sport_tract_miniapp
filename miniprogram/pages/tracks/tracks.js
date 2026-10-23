@@ -49,6 +49,7 @@ Page({
     ),
     activeFilter: '',
     provinceFilter: '', // 省份筛选（足迹地图跳转带入）
+    rangeFilter: null, // 精确时间范围（报告页日期汇总下钻带入）：{ from, to, label }
     viewMode: 'list', // 展示模式：list 单行列表（默认，按月分组）/ grid 图片（轨迹缩略图卡片）
     items: [],
     totalCount: 0, // 当前筛选命中的总条数（接口 total，非已加载条数）
@@ -79,8 +80,25 @@ Page({
   },
 
   onShow() {
-    // 足迹地图"查看该省轨迹"入口：tab 页不能带参，经 globalData 传递
     const app = getApp();
+    // 报告页「日期汇总」下钻：tab 页不能带参，经 globalData 传精确时间范围
+    if (app.globalData.pendingTracksRange) {
+      const range = app.globalData.pendingTracksRange;
+      app.globalData.pendingTracksRange = null;
+      const from = Number(range && range.from);
+      const to = Number(range && range.to);
+      if (Number.isFinite(from) && Number.isFinite(to) && to > from) {
+        this.setData({
+          rangeFilter: { from, to, label: (range && range.label) || '指定时间' },
+          page: 1,
+          items: [],
+          hasMore: true,
+        });
+        this.refresh();
+        return;
+      }
+    }
+    // 足迹地图"查看该省轨迹"入口：tab 页不能带参，经 globalData 传递
     if (app.globalData.pendingTracksProvince) {
       const province = app.globalData.pendingTracksProvince;
       app.globalData.pendingTracksProvince = '';
@@ -103,6 +121,12 @@ Page({
   /** 清除省份筛选 */
   clearProvince() {
     this.setData({ provinceFilter: '', page: 1, items: [], hasMore: true });
+    this.refresh();
+  },
+
+  /** 清掉报告页带入的时间范围，回到默认列表 */
+  clearRange() {
+    this.setData({ rangeFilter: null, page: 1, items: [], hasMore: true });
     this.refresh();
   },
 
@@ -266,6 +290,10 @@ Page({
     }
     if (this.data.provinceFilter) {
       params.province = this.data.provinceFilter;
+    }
+    if (this.data.rangeFilter) {
+      params.from = this.data.rangeFilter.from;
+      params.to = this.data.rangeFilter.to;
     }
     return params;
   },

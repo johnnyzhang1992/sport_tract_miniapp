@@ -94,6 +94,7 @@ Component({
       // 5 条水平网格 + Y 轴刻度（四等分：max / 3/4 / mid / 1/4 / min）
       ctx.textAlign = 'right';
       ctx.textBaseline = 'middle';
+      let prevText = null;
       labels.forEach((v, i) => {
         const y = padTop + (chartH * i) / 4;
         // 网格线
@@ -103,10 +104,13 @@ Component({
         ctx.moveTo(padLeft, y);
         ctx.lineTo(width - padRight, y);
         ctx.stroke();
-        // 刻度文字
-        ctx.fillStyle = '#999';
+        // 刻度文字：整数指标（次数）四等分会算出重复值，重复的不再画第二次
+        ctx.fillStyle = '#667080';
         const text = this.formatValue(v);
-        ctx.fillText(text, padLeft - 6, y);
+        if (text !== prevText) {
+          ctx.fillText(text, padLeft - 6, y);
+          prevText = text;
+        }
       });
 
       return { padLeft, padRight, padTop, padBottom, chartW, chartH, maxV, minV };

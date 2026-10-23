@@ -419,3 +419,115 @@
   font-size: 28rpx;
   border-radius: 12rpx;
 }
+
+/* 平均配速：汇总卡顶部一行（净时长口径，与详情页一致） */
+.avg-pace {
+  display: flex;
+  align-items: baseline;
+  gap: 6rpx;
+  margin-bottom: 12rpx;
+}
+.avg-pace-label {
+  font-size: 22rpx;
+  color: #667080;
+}
+.avg-pace-value {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #1f2329;
+}
+.avg-pace-unit {
+  font-size: 22rpx;
+  color: #667080;
+}
+
+/* 本期亮点：2×2 网格 */
+.hl-grid {
+  display: flex;
+  flex-wrap: wrap;
+}
+.hl-item {
+  width: 50%;
+  padding: 10rpx 0 16rpx;
+  box-sizing: border-box;
+}
+.hl-head {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+.hl-icon {
+  width: 28rpx;
+  height: 28rpx;
+  flex-shrink: 0;
+}
+.hl-label {
+  font-size: 22rpx;
+  color: #667080;
+}
+.hl-value {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #1f2329;
+  margin-top: 8rpx;
+}
+.hl-sub {
+  font-size: 20rpx;
+  color: #667080;
+  margin-top: 4rpx;
+}
+
+/* 日期汇总：表/图切换 + 行可点 */
+.date-view-toggle {
+  display: flex;
+  background: #f2f3f5;
+  border-radius: 999rpx;
+  padding: 4rpx;
+}
+.dv-btn {
+  padding: 4rpx 18rpx;
+  border-radius: 999rpx;
+  font-size: 22rpx;
+  color: #4e5969;
+}
+.dv-btn-active {
+  background: #fff;
+  color: #1a56d6;
+  font-weight: 600;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
+}
+.ds-row-hover {
+  background: #f7f8fa;
+}
+.ds-hint {
+  font-size: 20rpx;
+  color: #667080;
+  padding-top: 12rpx;
+}
+
+/* 互跳：累计看板 */
+.link-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.link-info {
+  flex: 1;
+}
+.link-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+.link-sub {
+  font-size: 24rpx;
+  color: #667080;
+  margin-top: 6rpx;
+}
+.link-arrow {
+  font-size: 40rpx;
+  color: #667080;
+  margin-left: 12rpx;
+  flex-shrink: 0;
+  line-height: 1;
+}

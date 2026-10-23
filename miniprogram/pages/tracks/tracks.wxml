@@ -20,6 +20,12 @@
     <view class="province-bar-close" hover-class="province-bar-close-hover" bindtap="clearProvince">✕</view>
   </view>
 
+  <!-- 精确时间范围条（报告页「日期汇总」点行下钻带入） -->
+  <view class="range-bar" wx:if="{{rangeFilter}}">
+    <text class="province-bar-text">📅 {{rangeFilter.label}}</text>
+    <view class="province-bar-close" hover-class="province-bar-close-hover" bindtap="clearRange">✕</view>
+  </view>
+
   <!-- 展示模式切换：列表（text-align-justify）/ 图片（layout-grid） -->
   <view class="mode-bar">
     <text class="mode-bar-title">{{totalCount}} 条轨迹</text>

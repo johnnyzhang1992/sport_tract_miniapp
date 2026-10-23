@@ -323,7 +323,8 @@
 }
 
 /* 省份筛选条 */
-.province-bar {
+.province-bar,
+.range-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;

@@ -32,7 +32,8 @@ global.wx = {
 };
 let pageDef = null;
 global.Page = (def) => { pageDef = def; };
-global.getApp = () => ({ globalData: { loggedIn: true }, hasSession: () => true });
+const fakeApp = { globalData: { loggedIn: true }, hasSession: () => true };
+global.getApp = () => fakeApp;
 
 require('../miniprogram/pages/tracks/tracks.js');
 assert.ok(pageDef, 'tracks.js 应通过 Page() 交出页面对象');
@@ -95,4 +96,41 @@ test('删除一条轨迹后标题条数本地减 1', async () => {
   p.setData({ items: [{ id: 'a1', label: '跑步', startTimeText: '9/1 08:00' }] });
   await p.onDeleteTap({ currentTarget: { dataset: { id: 'a1' } } });
   assert.equal(p.data.totalCount, 2, '删除成功后条数应减 1');
+});
+
+test('报告下钻：globalData 的范围被 onShow 消费并落到请求；非法值忽略', async () => {
+  activitiesRespond = () => Promise.resolve({ items: [], total: 0, monthlyStats: [] });
+  const app = fakeApp;
+  app.globalData.pendingTracksRange = { from: 1700000000000, to: 1700604800000, label: '11/15' };
+  const p = makePage();
+  p.onShow();
+  await flush();
+  assert.deepEqual(p.data.rangeFilter, { from: 1700000000000, to: 1700604800000, label: '11/15' });
+  const params = lastActivities().params;
+  assert.equal(params.from, 1700000000000);
+  assert.equal(params.to, 1700604800000);
+  assert.equal(app.globalData.pendingTracksRange, null, '消费后要清掉，避免下次进页重复套用');
+
+  const badApp = fakeApp;
+  badApp.globalData.pendingTracksRange = { from: 'abc', to: 'nope' };
+  const bad = makePage();
+  bad.onShow();
+  await flush();
+  assert.equal(bad.data.rangeFilter, null, '非法 from/to 不应设置筛选');
+});
+
+test('清除时间范围条：后续请求不再带 from/to', async () => {
+  activitiesRespond = () => Promise.resolve({ items: [], total: 0, monthlyStats: [] });
+  const app = fakeApp;
+  app.globalData.pendingTracksRange = { from: 1000, to: 2000, label: '测试' };
+  const p = makePage();
+  p.onShow();
+  await flush();
+  await p.refresh();
+  p.clearRange();
+  await flush();
+  assert.equal(p.data.rangeFilter, null);
+  const params = lastActivities().params;
+  assert.ok(!('from' in params), '清除后不应再带 from');
+  assert.ok(!('to' in params), '清除后不应再带 to');
 });

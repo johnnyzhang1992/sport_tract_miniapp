@@ -5,7 +5,7 @@
 const api = require('../../services/api');
 const loading = require('../../utils/loading');
 const config = require('../../config/index');
-const { formatDuration, formatDurationStat, compact } = require('../../utils/format');
+const { formatDuration, formatDurationStat, formatPaceParts, compact } = require('../../utils/format');
 const { calcDiff } = require('../../utils/diff');
 const { posterViewHeight } = require('../../utils/poster-layout');
 
@@ -87,10 +87,13 @@ Page({
     periodLabel: '',
     canGoNext: false,
     summary: null, // 汇总
+    highlights: [], // 本期亮点：最长单次 / 最快 1 公里 / 最大爬升 / 最活跃类型
     typeSummary: [], // 分类型汇总（各类型总距离/总时长/次数）
     dateSummary: [], // 日期汇总（按当前维度日期桶聚合：次数/距离/时长/千卡）
     dateSummaryTitle: '', // 桶粒度文案：按天/按周/按月/按半年（后端下发）
     dateBucketLabel: '', // 桶列头：日期/星期/月份/半年
+    dateView: 'table', // 日期汇总形态：table 表 / chart 柱状图
+    dateChartData: [], // 日期汇总柱状图数据（距离 km）
     compare: [], // 周期对比（当前周期 vs 上一周期）
     loading: true,
     showPeriodPicker: false, // 周期选择弹窗
@@ -457,9 +460,16 @@ Page({
           distanceKm: (r.distance / 1000).toFixed(1),
           durationText: durText(r.duration),
           kcal: compact(Math.round(r.calories || 0)),
+          from: r.from,
+          to: r.to,
+        })),
+        dateChartData: (ds.rows || []).map((r) => ({
+          label: r.label,
+          value: Math.round((r.distance / 1000) * 100) / 100,
         })),
         dateSummaryTitle: ds.title,
         dateBucketLabel: ds.label,
+        highlights: this.buildHighlights(overview.tracks || []),
         compare: this.buildCompare(overview, prevOverview || null),
       });
     } catch (e) {
@@ -502,6 +512,8 @@ Page({
       avgDurationText: count > 0 ? durText(Math.round(durationSec / count)) : '—',
       activeDays: days,
       dailyKm: (distanceKm / dayCount).toFixed(2),
+      // 平均配速：净时长 ÷ 总距离（duration 已扣暂停/静止，与详情页同口径）
+      avgPace: distanceKm > 0 && durationSec > 0 ? formatPaceParts(durationSec / distanceKm) : null,
       hasData: count > 0,
     };
   },
@@ -531,5 +543,90 @@ Page({
         };
       });
   },
+  /** 日期汇总：表 / 图切换 */
+  onDateViewChange(e) {
+    const view = e.currentTarget.dataset.view;
+    if (!view || view === this.data.dateView) return;
+    this.setData({ dateView: view });
+    if (view === 'chart') {
+      // 图表组件是 wx:else 才挂载的：ready 时容器宽度可能还是 0，等布局完成再画一次
+      wx.nextTick(() => {
+        const chart = this.selectComponent('#dateChart');
+        if (chart && chart.renderChart) chart.renderChart();
+      });
+    }
+  },
 
+  /** 日期汇总行 → 轨迹列表（带该桶的精确时间范围）。
+   *  轨迹页是 tab 页，switchTab 不能带参 → 经 globalData 传，由轨迹页 onShow 消费。 */
+  onDateRowTap(e) {
+    const { from, to, label } = e.currentTarget.dataset;
+    if (!from || !to) return;
+    getApp().globalData.pendingTracksRange = {
+      from: Number(from),
+      to: Number(to),
+      label: String(label || ''),
+    };
+    wx.switchTab({ url: '/pages/tracks/tracks' });
+  },
+
+  /** 互跳：累计看板（数据统计） */
+  goStats() {
+    wx.navigateTo({ url: '/pages/stats/stats' });
+  },
+
+  /** 本期亮点：从本期轨迹里取四个「最」（轨迹元数据由 /overview 的 lean 模式下发） */
+  buildHighlights(tracks) {
+    const list = (tracks || []).filter((t) => t && t.distance > 0);
+    if (!list.length) return [];
+    const metaOf = (type) => config.ACTIVITY_TYPES.find((x) => x.type === type) || {};
+    const dayText = (ms) => {
+      const d = new Date(ms);
+      return `${d.getMonth() + 1}/${d.getDate()}`;
+    };
+    const subOf = (t) => `${metaOf(t.type).label || t.type} · ${dayText(t.startTime)}`;
+
+    const longest = list.reduce((a, b) => (b.distance > a.distance ? b : a));
+    const climbed = list.reduce((a, b) => ((b.elevationGain || 0) > (a.elevationGain || 0) ? b : a));
+    const paced = list.filter((t) => t.fastestKm > 0);
+    const fastest = paced.length ? paced.reduce((a, b) => (b.fastestKm < a.fastestKm ? b : a)) : null;
+    const counts = {};
+    list.forEach((t) => {
+      counts[t.type] = (counts[t.type] || 0) + 1;
+    });
+    const topType = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
+
+    return [
+      {
+        key: 'longest',
+        icon: metaOf(longest.type).iconImg || '',
+        label: '最长单次',
+        value: `${(longest.distance / 1000).toFixed(1)} km`,
+        sub: subOf(longest),
+      },
+      fastest
+        ? {
+            key: 'fastest',
+            icon: metaOf(fastest.type).iconImg || '',
+            label: '最快 1 公里',
+            value: (formatPaceParts(fastest.fastestKm) || {}).value || '—',
+            sub: subOf(fastest),
+          }
+        : null,
+      {
+        key: 'climb',
+        icon: metaOf(climbed.type).iconImg || '',
+        label: '最大爬升',
+        value: `${Math.round(climbed.elevationGain || 0)} m`,
+        sub: subOf(climbed),
+      },
+      {
+        key: 'topType',
+        icon: metaOf(topType).iconImg || '',
+        label: '最活跃类型',
+        value: `${counts[topType]} 次`,
+        sub: metaOf(topType).label || topType,
+      },
+    ].filter(Boolean);
+  },
 });

@@ -3,7 +3,11 @@
  * 概览（今日/本周/本月/累计）+ 近 7/30 天距离/时长趋势柱状图
  */
 const api = require('../../services/api');
-const { formatDuration } = require('../../utils/format');
+const { formatDuration, formatPaceParts } = require('../../utils/format');
+const { calcDiff } = require('../../utils/diff');
+const { buildTrophies } = require('../../utils/trophy');
+const { buildTrendCompare } = require('../../utils/trend-compare');
+const { bjDate } = require('../../utils/bj-date');
 
 Page({
   data: {
@@ -17,9 +21,24 @@ Page({
     ],
     chartData: [], // 柱状图数据 [{label, value}]
     chartUnit: 'km',
+    chartTitle: '距离趋势',
+    trendMetric: 'distance', // 趋势指标：distance 距离 / duration 时长 / count 次数
+    trendMetrics: [
+      { value: 'distance', label: '距离' },
+      { value: 'duration', label: '时长' },
+      { value: 'count', label: '次数' },
+    ],
+    trendActivityType: '', // 趋势按运动类型筛选（'' = 全部）
+    trendActivityTypes: [{ value: '', label: '全部' }],
+    trendCompare: null, // 近 90 天 vs 近 365 天日均（距离）
+    compare: { week: null, month: null }, // 本周 vs 上周、本月 vs 上月（距离 ±%）
     loading: true,
     best: null, // 个人最佳纪录
+    trophies: [], // 里程碑奖杯墙（1K/5K/10K/半马/全马）
+    percentile: null, // 累计距离全站分位（仅全站 ≥2 人时展示）
     typeSummary: [], // 分类型汇总（各类型总距离/总时长/次数）
+    sheetVisible: false, // 半屏弹窗：全部纪录 / 奖杯详情
+    sheetType: 'best', // best | trophy
   },
 
   onShow() {
@@ -47,20 +66,33 @@ Page({
     if (!app.globalData.loggedIn) return;
     try {
       this.setData({ loading: true });
-      const [overview, trend, best] = await Promise.all([
+      const typeQuery = this.activityTypeQuery();
+      const [overview, trend, best, percentile, daily] = await Promise.all([
         api.get('/stats/overview'),
-        api.get(`/stats/trend?type=${this.data.trendType}`),
+        api.get(`/stats/trend${this.trendQuery()}`),
         api.get('/stats/best').catch(() => null),
+        api.get('/stats/percentile').catch(() => null),
+        api.get(`/stats/trend?days=365${typeQuery}`).catch(() => null),
       ]);
       const decorated = this.decorateOverview(overview);
+      const typeSummary = this.decorateTypeSummary(overview.total && overview.total.byType);
+      this._trendRows = trend.data;
       this.setData({
         overview: decorated,
-        chartData: trend.data.map((d) => ({
-          label: this.trendLabel(d.date),
-          value: Math.round((d.distance / 1000) * 100) / 100, // 公里
-        })),
+        ...this.buildTrendView(this.data.trendMetric),
+        trendCompare: this.decorateTrendCompare(daily ? buildTrendCompare(daily.data) : null),
+        compare: {
+          week: calcDiff(overview.week.distance || 0, overview.prevWeek ? overview.prevWeek.distance : 0),
+          month: calcDiff(overview.month.distance || 0, overview.prevMonth ? overview.prevMonth.distance : 0),
+        },
         best: this.decorateBest(best),
-        typeSummary: this.decorateTypeSummary(overview.total && overview.total.byType),
+        trophies: this.decorateTrophies(best),
+        percentile: this.decoratePercentile(percentile),
+        typeSummary,
+        trendActivityTypes: [
+          { value: '', label: '全部' },
+          ...typeSummary.map((r) => ({ value: r.type, label: r.typeLabel })),
+        ],
       });
       // 缓存原始 best 数据（记录页打破纪录提示用）
       if (best) {
@@ -75,6 +107,86 @@ Page({
     }
   },
 
+  /** 趋势请求 query：窗口 + 可选运动类型 */
+  trendQuery() {
+    return `?type=${this.data.trendType}${this.activityTypeQuery()}`;
+  },
+
+  activityTypeQuery() {
+    const t = this.data.trendActivityType;
+    return t ? `&activityType=${encodeURIComponent(t)}` : '';
+  },
+
+  /** 趋势窗口/类型切换：只重拉趋势与近一年日均，不整页重载 */
+  async loadTrend() {
+    const seq = (this._trendSeq = (this._trendSeq || 0) + 1);
+    try {
+      const [trend, daily] = await Promise.all([
+        api.get(`/stats/trend${this.trendQuery()}`),
+        api.get(`/stats/trend?days=365${this.activityTypeQuery()}`),
+      ]);
+      if (seq !== this._trendSeq) return; // 快速切换时丢弃过期响应
+      this._trendRows = trend.data;
+      this.setData({
+        ...this.buildTrendView(this.data.trendMetric),
+        trendCompare: this.decorateTrendCompare(buildTrendCompare(daily.data)),
+      });
+    } catch (e) {
+      console.error('加载趋势失败', e);
+    }
+  },
+
+  decorateTrendCompare(c) {
+    if (!c) return null;
+    const arrow = c.dir === 'up' ? '↑' : c.dir === 'down' ? '↓' : '→';
+    const sign = c.diffPct > 0 ? '+' : '';
+    const tip = c.dir === 'up' ? '保持这个节奏' : c.dir === 'down' ? '慢慢找回状态' : '状态稳定';
+    return { ...c, arrow, diffText: `${sign}${c.diffPct}%`, tip };
+  },
+
+  /** 奖杯墙：固定五项，未达成的置灰；图标取该项成绩对应的运动类型 */
+  decorateTrophies(best) {
+    const TYPE_META = require('../../config/index').ACTIVITY_TYPES || [];
+    const iconOf = (t) => (TYPE_META.find((x) => x.type === t) || {}).iconImg || '';
+    const labelOf = (t) => (TYPE_META.find((x) => x.type === t) || {}).label || t;
+    return buildTrophies(best && best.milestones).map((t) => ({
+      ...t,
+      icon: t.type ? iconOf(t.type) : '',
+      value: t.unlocked ? formatDuration(t.sec) : '未解锁',
+      typeLabel: t.type ? labelOf(t.type) : '',
+      dateText: t.unlocked ? (bjDate(t.startTime) || '').replace(/-/g, '/') : '',
+      heldText: t.unlocked ? (t.heldDays === 0 ? '今天达成' : `已保持 ${t.heldDays} 天`) : '',
+    }));
+  },
+
+  /** 全站分位：仅全站 ≥2 人时展示（独自一人时 0% 没有意义） */
+  decoratePercentile(p) {
+    if (!p || !(p.usersTotal > 1)) return null;
+    return { percentile: p.percentile, usersTotal: p.usersTotal };
+  },
+
+  /** 趋势指标切换：距离（km）/ 时长（分钟）/ 次数（次），标签随窗口粒度取名 */
+  onTrendMetricChange(e) {
+    const metric = e.currentTarget.dataset.value;
+    if (!metric || metric === this.data.trendMetric) return;
+    this.setData({ trendMetric: metric, ...this.buildTrendView(metric) });
+  },
+
+  buildTrendView(metric) {
+    const rows = this._trendRows || [];
+    const pick = {
+      distance: { unit: 'km', title: '距离趋势', map: (d) => Math.round((d.distance / 1000) * 100) / 100 },
+      duration: { unit: '分钟', title: '时长趋势', map: (d) => Math.round(d.duration / 60) },
+      count: { unit: '次', title: '次数趋势', map: (d) => d.count },
+    }[metric] || null;
+    if (!pick) return {};
+    return {
+      chartTitle: pick.title,
+      chartUnit: pick.unit,
+      chartData: rows.map((d) => ({ label: this.trendLabel(d.date), value: pick.map(d) })),
+    };
+  },
+
   /** 概览数据装饰：距离转公里、时长转文本 */
   decorateOverview(o) {
     const sec = (s) => ({
@@ -87,7 +199,13 @@ Page({
       week: sec(o.week),
       month: sec(o.month),
       year: sec(o.year),
-      total: sec(o.total),
+      total: {
+        ...sec(o.total),
+        calories: Math.round(o.total.calories || 0),
+        activeDays: o.total.activeDays || 0,
+        streakCurrent: o.total.streakCurrent || 0,
+        streakLongest: o.total.streakLongest || 0,
+      },
     };
   },
 
@@ -117,23 +235,24 @@ Page({
     const { perfLevel } = require('../../utils/perf-score');
     const TYPE_META = require('../../config/index').ACTIVITY_TYPES || [];
     const iconOf = (t) => (TYPE_META.find((x) => x.type === t) || {}).iconImg || '';
+    const typeLabelOf = (t) => (TYPE_META.find((x) => x.type === t) || {}).label || t;
     const cards = [];
     // 表现分（最高，按类型；社区逆向估算非官方 ITRA 分）
     (b.maxPerfScoreByType || []).forEach((r) => {
       if (!(r.perfScore > 0)) return;
-      cards.push({ key: `pi${cards.length}`, label: '表现分', value: `${r.perfScore} ${perfLevel(r.perfScore)}`, icon: iconOf(r.type) });
+      cards.push({ key: `pi${cards.length}`, id: r.id, label: '表现分', value: `${r.perfScore} ${perfLevel(r.perfScore)}`, icon: iconOf(r.type), typeLabel: typeLabelOf(r.type) });
     });
     // 距离里程碑 PB（服务端只下发当前纪录）：5 公里 PB / 10 公里 PB …
     (b.fastestDistanceByKm || [])
       .slice()
       .sort((a, b2) => a.km - b2.km || a.type.localeCompare(b2.type))
-      .forEach((r) => cards.push({ key: `pb${cards.length}`, label: `${r.km} 公里 PB`, value: formatDuration(r.sec), icon: iconOf(r.type) }));
+      .forEach((r) => cards.push({ key: `pb${cards.length}`, id: r.id, label: `${r.km} 公里 PB`, value: formatDuration(r.sec), icon: iconOf(r.type), typeLabel: typeLabelOf(r.type) }));
     // 各类型 4 项指标
     const byType = {};
     const put = (rows, label, valFn) => {
       (rows || []).forEach((r) => {
         if (!byType[r.type]) byType[r.type] = [];
-        byType[r.type].push({ label, value: valFn(r) });
+        byType[r.type].push({ label, value: valFn(r), id: r.id, typeLabel: typeLabelOf(r.type) });
       });
     };
     put(b.maxDistanceByType, '最远距离', (r) => `${(r.distance / 1000).toFixed(1)}km`);
@@ -151,7 +270,15 @@ Page({
     const value = e.currentTarget.dataset.value;
     if (value === this.data.trendType) return;
     this.setData({ trendType: value });
-    this.loadAll();
+    this.loadTrend();
+  },
+
+  /** 趋势运动类型筛选（'' = 全部） */
+  onTrendActivityChange(e) {
+    const value = e.currentTarget.dataset.value || '';
+    if (value === this.data.trendActivityType) return;
+    this.setData({ trendActivityType: value });
+    this.loadTrend();
   },
 
   /** 趋势标签：周/月 → MM-DD；6个月 → 周号；年 → M月 */
@@ -165,6 +292,42 @@ Page({
     }
     return date.slice(5); // MM-DD
   },
+
+  /** 最佳记录卡 → 对应轨迹详情（卡片若没有 id 则不跳） */
+  goTrack(e) {
+    const id = e.currentTarget.dataset.id;
+    if (id) wx.navigateTo({ url: `/pages/track-detail/track-detail?id=${id}` });
+  },
+
+  /** 互跳：运动报告（周期报告 + 海报） */
+  goReport() {
+    wx.navigateTo({ url: '/pages/report/report' });
+  },
+
+  /** 轨迹热图：全年运动分布（轨迹合集页的聚合视图） */
+  goHeatmap() {
+    wx.navigateTo({ url: '/pages/overview/overview' });
+  },
+
+  /** 半屏弹窗：全部纪录 / 奖杯详情（宫格） */
+  openSheet(e) {
+    const type = e.currentTarget.dataset.type === 'trophy' ? 'trophy' : 'best';
+    this.setData({ sheetType: type, sheetVisible: true });
+  },
+
+  closeSheet() {
+    this.setData({ sheetVisible: false });
+  },
+
+  /** 弹窗内点卡片：未解锁（无 id）不跳；已解锁先关弹窗再进轨迹详情 */
+  onSheetTrack(e) {
+    const id = e.currentTarget.dataset.id;
+    if (!id) return;
+    this.closeSheet();
+    wx.navigateTo({ url: `/pages/track-detail/track-detail?id=${id}` });
+  },
+
+  noop() {},
 
   /** 分享给朋友 */
   onShareAppMessage() {

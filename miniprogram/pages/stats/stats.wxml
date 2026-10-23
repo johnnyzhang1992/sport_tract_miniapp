@@ -19,6 +19,14 @@
         <view class="ov-num">{{overview.total.elevationGain}}</view>
         <view class="ov-label">爬升 m</view>
       </view>
+      <view class="ov-item">
+        <view class="ov-num">{{overview.total.calories}}</view>
+        <view class="ov-label">千卡</view>
+      </view>
+      <view class="ov-item">
+        <view class="ov-num">{{overview.total.activeDays}}</view>
+        <view class="ov-label">活跃天数</view>
+      </view>
     </view>
   </view>
 
@@ -32,20 +40,79 @@
       <view class="period-item">
         <view class="period-num">{{overview.week.distanceKm}}</view>
         <view class="period-label">本周 km</view>
+        <view class="period-diff period-diff-{{compare.week.cls}}" wx:if="{{compare.week}}">{{compare.week.text}} 较上周</view>
       </view>
       <view class="period-item">
         <view class="period-num">{{overview.month.distanceKm}}</view>
         <view class="period-label">本月 km</view>
+        <view class="period-diff period-diff-{{compare.month.cls}}" wx:if="{{compare.month}}">{{compare.month.text}} 较上月</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 坚持与排名：连续天数 + 累计距离全站分位 -->
+  <view class="card">
+    <view class="section-title">坚持与排名</view>
+    <view class="streak-row">
+      <view class="streak-item">
+        <view class="streak-num">{{overview.total.streakCurrent}}</view>
+        <view class="streak-label">当前连续天数</view>
+      </view>
+      <view class="streak-item">
+        <view class="streak-num">{{overview.total.streakLongest}}</view>
+        <view class="streak-label">最长连续天数</view>
+      </view>
+      <view class="streak-item" wx:if="{{percentile}}">
+        <view class="streak-num">{{percentile.percentile}}%</view>
+        <view class="streak-label">累计距离超越全站</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 里程碑奖杯墙：1K/5K/10K/半马/全马，未达成置灰 -->
+  <view class="card" wx:if="{{trophies.length}}">
+    <view class="section-title-row">
+      <view class="section-title">里程碑奖杯</view>
+      <view class="more-link" hover-class="more-link-hover" hover-stay-time="80" data-type="trophy" bindtap="openSheet">
+        <text>查看更多</text>
+        <text class="more-arrow">›</text>
+      </view>
+    </view>
+    <view class="trophy-grid">
+      <view
+        class="trophy-item {{item.unlocked ? '' : 'trophy-locked'}}"
+        hover-class="{{item.unlocked ? 'trophy-hover' : ''}}"
+        hover-stay-time="80"
+        wx:for="{{trophies}}"
+        wx:key="key"
+        data-id="{{item.id}}"
+        bindtap="goTrack"
+      >
+        <view class="trophy-badge" wx:if="{{item.unlocked}}">
+          <image wx:if="{{item.icon}}" class="trophy-icon" src="{{item.icon}}" mode="aspectFit" />
+          <text wx:else class="trophy-check">✓</text>
+        </view>
+        <view class="trophy-badge trophy-badge-locked" wx:else>
+          <text class="trophy-lock">—</text>
+        </view>
+        <text class="trophy-label">{{item.label}}</text>
+        <text class="trophy-value">{{item.value}}</text>
       </view>
     </view>
   </view>
 
   <!-- 最佳记录：横滑卡片（穗枝环住类型图标 + 名称 + 数值），距离PB在前、其后按类型列指标 -->
   <view class="best-section" wx:if="{{best && best.bestCards.length}}">
-    <view class="section-title">最佳记录</view>
+    <view class="section-title-row">
+      <view class="section-title">最佳记录</view>
+      <view class="more-link" hover-class="more-link-hover" hover-stay-time="80" data-type="best" bindtap="openSheet">
+        <text>查看更多</text>
+        <text class="more-arrow">›</text>
+      </view>
+    </view>
     <scroll-view class="best-scroll" scroll-x enhanced show-scrollbar="{{false}}">
       <view class="best-cards">
-        <view class="best-card" wx:for="{{best.bestCards}}" wx:key="key">
+        <view class="best-card" hover-class="best-card-hover" hover-stay-time="80" data-id="{{item.id}}" bindtap="goTrack" wx:for="{{best.bestCards}}" wx:key="key">
           <view class="bc-badge">
             <view class="laurel-ear bc-ear"></view>
             <image class="bc-icon" src="{{item.icon}}" mode="aspectFit" />
@@ -83,7 +150,7 @@
   <!-- 趋势柱状图 -->
   <view class="card">
     <view class="chart-head">
-      <view class="section-title">距离趋势（公里）</view>
+      <view class="section-title">{{chartTitle}}（{{chartUnit}}）</view>
       <view class="days-toggle">
         <view
           wx:for="{{trendTypes}}"
@@ -94,9 +161,120 @@
         >{{item.label}}</view>
       </view>
     </view>
-    <stat-chart data="{{chartData}}" type="bar" unit="km" height="{{230}}" empty-text="暂无运动数据" />
+    <view class="metric-row">
+      <view
+        wx:for="{{trendMetrics}}"
+        wx:key="value"
+        class="metric-btn {{trendMetric === item.value ? 'metric-btn-active' : ''}}"
+        data-value="{{item.value}}"
+        bindtap="onTrendMetricChange"
+      >{{item.label}}</view>
+    </view>
+    <scroll-view class="type-chips" scroll-x enhanced show-scrollbar="{{false}}" wx:if="{{trendActivityTypes.length > 1}}">
+      <view class="type-chip-list">
+        <view
+          wx:for="{{trendActivityTypes}}"
+          wx:key="value"
+          class="type-chip {{trendActivityType === item.value ? 'type-chip-active' : ''}}"
+          data-value="{{item.value}}"
+          bindtap="onTrendActivityChange"
+        >{{item.label}}</view>
+      </view>
+    </scroll-view>
+    <stat-chart data="{{chartData}}" type="bar" unit="{{chartUnit}}" height="{{230}}" empty-text="暂无运动数据" />
+    <!-- 近 90 天 vs 近 365 天日均（Apple 式趋势箭头） -->
+    <view class="trend-compare" wx:if="{{trendCompare}}">
+      <view class="tc-arrow tc-arrow-{{trendCompare.dir}}">{{trendCompare.arrow}}</view>
+      <view class="tc-info">
+        <view class="tc-main">近 90 天日均 {{trendCompare.avg90}} km</view>
+        <view class="tc-sub">过去一年日均 {{trendCompare.avg365}} km · <text class="tc-diff tc-diff-{{trendCompare.dir}}">{{trendCompare.diffText}}</text></view>
+      </view>
+      <view class="tc-tip">{{trendCompare.tip}}</view>
+    </view>
   </view>
 
   <!-- 点亮地图 + 点亮城市（分包组件，主包页面按异步化引用） -->
   <lit-map id="litMap" />
+
+  <!-- 互跳：轨迹热图（全年分布） -->
+  <view class="card link-row" hover-class="card-hover" hover-stay-time="100" bindtap="goHeatmap">
+    <view class="link-info">
+      <view class="link-title">轨迹热图</view>
+      <view class="link-sub">全年运动分布 · 聚合轨迹图</view>
+    </view>
+    <view class="link-arrow">›</view>
+  </view>
+
+  <!-- 互跳：运动报告（单周期深挖 + 海报） -->
+  <view class="card link-row" hover-class="card-hover" hover-stay-time="100" bindtap="goReport">
+    <view class="link-info">
+      <view class="link-title">运动报告</view>
+      <view class="link-sub">周/月/年周期汇总 · 环比 · 海报</view>
+    </view>
+    <view class="link-arrow">›</view>
+  </view>
+
+  <!-- 半屏弹窗：全部纪录 / 奖杯详情（宫格） -->
+  <view wx:if="{{sheetVisible}}" class="sheet-mask" catchtouchmove="noop" bindtap="closeSheet">
+    <view class="sheet" catchtap="noop">
+      <view class="sheet-head">
+        <view class="sheet-title">{{sheetType === 'trophy' ? '里程碑奖杯' : '全部纪录'}}</view>
+        <view class="sheet-close" catchtap="closeSheet">✕</view>
+      </view>
+
+      <scroll-view scroll-y class="sheet-body" enhanced show-scrollbar="{{false}}">
+        <!-- 最佳记录：全部卡片两列宫格（图标 + 名称 + 数值 + 运动类型） -->
+        <view wx:if="{{sheetType === 'best'}}" class="record-grid">
+          <view
+            class="record-cell"
+            hover-class="record-cell-hover"
+            hover-stay-time="80"
+            wx:for="{{best.bestCards}}"
+            wx:key="key"
+            data-id="{{item.id}}"
+            bindtap="onSheetTrack"
+          >
+            <image wx:if="{{item.icon}}" class="record-icon" src="{{item.icon}}" mode="aspectFit" />
+            <view class="record-info">
+              <view class="record-label">{{item.label}}</view>
+              <view class="record-value">{{item.value}}</view>
+              <view class="record-type" wx:if="{{item.typeLabel}}">{{item.typeLabel}}</view>
+            </view>
+          </view>
+        </view>
+
+        <!-- 奖杯：达成详情（类型 / 日期 / 保持天数）+ 未解锁要求 -->
+        <view wx:if="{{sheetType === 'trophy'}}" class="trophy-sheet-grid">
+          <view
+            class="trophy-sheet-card {{item.unlocked ? '' : 'trophy-sheet-locked'}}"
+            hover-class="{{item.unlocked ? 'record-cell-hover' : ''}}"
+            hover-stay-time="80"
+            wx:for="{{trophies}}"
+            wx:key="key"
+            data-id="{{item.id}}"
+            bindtap="onSheetTrack"
+          >
+            <view class="ts-head">
+              <view class="trophy-badge ts-badge" wx:if="{{item.unlocked}}">
+                <image wx:if="{{item.icon}}" class="ts-icon" src="{{item.icon}}" mode="aspectFit" />
+                <text wx:else class="trophy-check">✓</text>
+              </view>
+              <view class="trophy-badge trophy-badge-locked ts-badge" wx:else>
+                <text class="trophy-lock">—</text>
+              </view>
+              <view class="ts-info">
+                <view class="ts-title">{{item.label}}</view>
+                <view class="ts-value">{{item.value}}</view>
+              </view>
+            </view>
+            <block wx:if="{{item.unlocked}}">
+              <view class="ts-meta">{{item.typeLabel}} · {{item.dateText}}</view>
+              <view class="ts-meta">{{item.heldText}}</view>
+            </block>
+            <view class="ts-meta ts-lock" wx:else>{{item.requirementText}}</view>
+          </view>
+        </view>
+      </scroll-view>
+    </view>
+  </view>
 </view>

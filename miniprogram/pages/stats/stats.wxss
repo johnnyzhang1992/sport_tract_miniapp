@@ -61,13 +61,15 @@
 }
 .overview-grid {
   display: flex;
+  flex-wrap: wrap;
   background: #f7f8fa;
   border-radius: 12rpx;
-  padding: 24rpx 0;
+  padding: 12rpx 0;
 }
 .ov-item {
-  flex: 1;
+  width: 33.33%;
   text-align: center;
+  padding: 12rpx 0;
 }
 .ov-num {
   font-size: 32rpx;
@@ -76,7 +78,7 @@
 }
 .ov-label {
   font-size: 22rpx;
-  color: #999;
+  color: #667080;
   margin-top: 4rpx;
 }
 .period-row {
@@ -89,6 +91,19 @@
 .period-num {
   font-size: 30rpx;
   font-weight: 600;
+}
+.period-diff {
+  font-size: 20rpx;
+  margin-top: 4rpx;
+}
+.period-diff-up {
+  color: #15804f;
+}
+.period-diff-down {
+  color: #c02a30;
+}
+.period-diff-flat {
+  color: #667080;
 }
 .period-label {
   font-size: 22rpx;
@@ -121,6 +136,178 @@
   color: #2b6cf6;
   font-weight: 600;
   box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
+}
+/* 趋势指标切换（距离/时长/次数）：与窗口档同一套胶囊，放第二行 */
+.metric-row {
+  display: flex;
+  gap: 12rpx;
+  margin: 14rpx 0 6rpx;
+}
+.metric-btn {
+  padding: 6rpx 20rpx;
+  border-radius: 999rpx;
+  font-size: 22rpx;
+  color: #4e5969;
+  background: #f2f3f5;
+}
+.metric-btn-active {
+  background: #eef4ff;
+  color: #1a56d6;
+  font-weight: 600;
+}
+/* 趋势运动类型筛选：横滑胶囊 */
+.type-chips {
+  width: 100%;
+  margin: 4rpx 0 8rpx;
+}
+.type-chip-list {
+  display: inline-flex;
+  gap: 12rpx;
+  padding: 2rpx 0;
+}
+.type-chip {
+  flex-shrink: 0;
+  padding: 6rpx 18rpx;
+  border-radius: 999rpx;
+  font-size: 22rpx;
+  color: #4e5969;
+  background: #f2f3f5;
+}
+.type-chip-active {
+  background: #eef4ff;
+  color: #1a56d6;
+  font-weight: 600;
+}
+/* 近 90 天 vs 近 365 天日均对比 */
+.trend-compare {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-top: 18rpx;
+  padding: 16rpx 18rpx;
+  background: #f7f8fa;
+  border-radius: 12rpx;
+}
+.tc-arrow {
+  font-size: 34rpx;
+  font-weight: 700;
+  line-height: 1;
+}
+.tc-arrow-up,
+.tc-diff-up {
+  color: #15804f;
+}
+.tc-arrow-down,
+.tc-diff-down {
+  color: #c02a30;
+}
+.tc-arrow-flat,
+.tc-diff-flat {
+  color: #667080;
+}
+.tc-info {
+  flex: 1;
+  min-width: 0;
+}
+.tc-main {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+.tc-sub {
+  font-size: 22rpx;
+  color: #667080;
+  margin-top: 4rpx;
+}
+.tc-diff {
+  font-weight: 600;
+}
+.tc-tip {
+  font-size: 22rpx;
+  color: #667080;
+  flex-shrink: 0;
+}
+/* 坚持与排名 */
+.streak-row {
+  display: flex;
+}
+.streak-item {
+  flex: 1;
+  text-align: center;
+}
+.streak-num {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #2b6cf6;
+}
+.streak-label {
+  font-size: 22rpx;
+  color: #667080;
+  margin-top: 4rpx;
+}
+/* 里程碑奖杯墙：五项等分，未达成置灰 */
+.trophy-grid {
+  display: flex;
+  gap: 10rpx;
+}
+.trophy-item {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 18rpx 0 16rpx;
+  background: #f7f8fa;
+  border-radius: 16rpx;
+}
+.trophy-hover {
+  opacity: 0.75;
+}
+.trophy-locked {
+  opacity: 0.55;
+}
+.trophy-badge {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.06);
+}
+.trophy-badge-locked {
+  background: #eceef2;
+  box-shadow: none;
+}
+.trophy-icon {
+  width: 38rpx;
+  height: 38rpx;
+}
+.trophy-check {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #15804f;
+}
+.trophy-lock {
+  font-size: 28rpx;
+  color: #8a93a6;
+  line-height: 1;
+}
+.trophy-label {
+  font-size: 22rpx;
+  font-weight: 600;
+  color: #1f2329;
+  margin-top: 10rpx;
+}
+.trophy-value {
+  font-size: 20rpx;
+  color: #667080;
+  margin-top: 4rpx;
+  white-space: nowrap;
+}
+.best-card-hover {
+  opacity: 0.75;
 }
 
 /* 个人最佳表格 */
@@ -172,4 +359,208 @@
 }
 .bt-td {
   white-space: nowrap;
+}
+
+/* 互跳入口：与「我的」页同款行卡 */
+.link-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.link-info {
+  flex: 1;
+}
+.link-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+.link-sub {
+  font-size: 24rpx;
+  color: #667080;
+  margin-top: 6rpx;
+}
+.link-arrow {
+  font-size: 40rpx;
+  color: #667080;
+  margin-left: 12rpx;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+/* 标题栏右侧「查看更多」：点击区 ≥76rpx，箭头与文字同组 */
+.section-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8rpx;
+}
+.section-title-row .section-title {
+  margin-bottom: 0;
+}
+.more-link {
+  display: flex;
+  align-items: center;
+  gap: 2rpx;
+  min-height: 76rpx;
+  padding-left: 20rpx;
+  box-sizing: border-box;
+  font-size: 22rpx;
+  color: #667080;
+}
+.more-link-hover {
+  opacity: 0.7;
+}
+.more-arrow {
+  font-size: 28rpx;
+  line-height: 1;
+  color: #8a93a6;
+}
+
+/* 半屏弹窗：与成员明细宫格同一套 mask/sheet 观感 */
+.sheet-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: flex-end;
+}
+.sheet {
+  width: 100%;
+  box-sizing: border-box;
+  background: #fff;
+  border-radius: 24rpx 24rpx 0 0;
+  padding: 0 32rpx calc(24rpx + env(safe-area-inset-bottom));
+}
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28rpx 0 12rpx;
+}
+.sheet-title {
+  flex: 1;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+.sheet-close {
+  flex: none;
+  padding: 8rpx 0 8rpx 24rpx;
+  font-size: 30rpx;
+  color: #666;
+}
+.sheet-body {
+  max-height: 60vh;
+}
+/* 全部纪录：两列宫格 */
+.record-grid,
+.trophy-sheet-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16rpx;
+  padding: 8rpx 0 24rpx;
+}
+.record-cell {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 18rpx 16rpx;
+  background: #f7f8fa;
+  border-radius: 16rpx;
+}
+.record-cell-hover {
+  opacity: 0.75;
+}
+.record-icon {
+  width: 40rpx;
+  height: 40rpx;
+  flex-shrink: 0;
+}
+.record-info {
+  flex: 1;
+  min-width: 0;
+}
+.record-label {
+  font-size: 22rpx;
+  color: #667080;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.record-value {
+  margin-top: 4rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1f2329;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.record-type {
+  margin-top: 2rpx;
+  font-size: 20rpx;
+  color: #8a93a6;
+}
+/* 奖杯详情卡 */
+.trophy-sheet-card {
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 20rpx 18rpx;
+  background: #f7f8fa;
+  border-radius: 16rpx;
+}
+.trophy-sheet-locked {
+  opacity: 0.6;
+}
+.trophy-sheet-locked .ts-value {
+  color: #667080;
+}
+.ts-head {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+.ts-badge {
+  width: 56rpx;
+  height: 56rpx;
+  flex-shrink: 0;
+  box-shadow: none;
+}
+.ts-icon {
+  width: 34rpx;
+  height: 34rpx;
+}
+.ts-info {
+  flex: 1;
+  min-width: 0;
+}
+.ts-title {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+.ts-value {
+  margin-top: 2rpx;
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #2b6cf6;
+  font-variant-numeric: tabular-nums;
+}
+.ts-meta {
+  margin-top: 8rpx;
+  font-size: 20rpx;
+  color: #667080;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ts-lock {
+  color: #8a93a6;
 }
