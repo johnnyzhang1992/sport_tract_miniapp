@@ -51,6 +51,21 @@ Component({
     },
 
     /**
+     * Y 轴五个刻度值。常规序列按 min~max 四等分；
+     * **全等序列**（例如配速每天都是 6.3）没有区间，退回 max→0——柱高本来就按 v/max 画，
+     * 否则刻度会算出比最大值还大的数（6.3 / 7.05 / 6.8 / 6.55 / 6.3），读着是错的。
+     */
+    axisLabels(values) {
+      const maxV = Math.max(...values);
+      const minV = Math.min(...values);
+      if (maxV === minV) {
+        return [maxV, (maxV * 3) / 4, maxV / 2, maxV / 4, 0].map((v) => Math.round(v * 100) / 100);
+      }
+      const span = maxV - minV;
+      return [maxV, minV + span * 0.75, minV + span / 2, minV + span * 0.25, minV];
+    },
+
+    /**
      * X 标签抽稀步长（单位＝格）：按**像素留位**算，不是按个数写死。
      * 旧口径写死「>12 就每 3 个画一个」，一年活动 53 个周桶会画出 18 个标签互相盖字。
      * chartW 拿不到时退回「最多 LABEL_MAX 个」的兜底，不硬画也不炸。
@@ -124,15 +139,8 @@ Component({
       const padBottom = 26; // X 标签区
       const maxV = Math.max(...values);
       const minV = Math.min(...values);
-      const span = maxV - minV || 1;
       ctx.font = '9px sans-serif';
-      const labels = [
-        maxV,
-        minV + span * 0.75,
-        minV + span / 2,
-        minV + span * 0.25,
-        minV,
-      ];
+      const labels = this.axisLabels(values);
       // Y 轴刻度区宽度按最大刻度文字动态计算（防 devtools/长数值溢出画面左缘）
       const labelTexts = labels.map((v) => this.formatValue(v));
       const maxLabelW = Math.max(...labelTexts.map((t) => ctx.measureText(t).width));

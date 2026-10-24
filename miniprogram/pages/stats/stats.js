@@ -6,7 +6,8 @@ const api = require('../../services/api');
 const { formatDuration, formatPaceParts, formatDurationStat, formatThousands } = require('../../utils/format');
 const { calcDiff } = require('../../utils/diff');
 const { buildTrophies } = require('../../utils/trophy');
-const { buildTrendCompare } = require('../../utils/trend-compare');
+const { buildMetricCards, buildTrendChart, ARROW_ICON } = require('../../utils/stats-metrics');
+const { buildMonthGrid, shiftMonth, compareMonth, WEEKDAYS } = require('../../utils/activity-calendar');
 const { bjDate } = require('../../utils/bj-date');
 
 const DAY_MS = 86400000;
@@ -29,18 +30,21 @@ Page({
       { value: 'week6', label: '6个月' },
       { value: 'year', label: '年' },
     ],
-    chartData: [], // 柱状图数据 [{label, value}]
-    chartUnit: 'km',
-    chartTitle: '距离趋势',
-    trendMetric: 'distance', // 趋势指标：distance 距离 / duration 时长 / count 次数
-    trendMetrics: [
-      { value: 'distance', label: '距离' },
-      { value: 'duration', label: '时长' },
-      { value: 'count', label: '次数' },
-    ],
+    // 运动日历（近 365 天数据摊成月历，默认当月）
+    calWeekdays: WEEKDAYS,
+    calYear: 0,
+    calMonth: 0,
+    calTitle: '',
+    calWeeks: [],
+    calCaption: '',
+    calPrevDisabled: true,
+    calNextDisabled: true,
+    // 运动趋势：五张变化卡（近 30 天 vs 前 30 天）+ 点卡开半屏看柱状图
+    metricCards: [],
+    sheetMetric: 'distance', // 半屏当前指标：distance/duration/count/pace/calories
+    sheetTrend: null, // { title, unit, note, data }（柱状图所需全在这里）
     trendActivityType: '', // 趋势按运动类型筛选（'' = 全部）
     trendActivityTypes: [{ value: '', label: '全部' }],
-    trendCompare: null, // 近 90 天 vs 近 365 天日均（距离）
     compare: { week: null, month: null }, // 本周 vs 上周、本月 vs 上月（距离 ±%）
     loading: true,
     best: null, // 个人最佳纪录
@@ -78,24 +82,25 @@ Page({
     if (!app.globalData.loggedIn) return;
     try {
       this.setData({ loading: true });
-      const typeQuery = this.activityTypeQuery();
       const [overview, trend, best, percentile, daily] = await Promise.all([
         api.get('/stats/overview'),
         api.get(`/stats/trend${this.trendQuery()}`),
         api.get('/stats/best').catch(() => null),
         api.get('/stats/percentile').catch(() => null),
-        api.get(`/stats/trend?days=365${typeQuery}`).catch(() => null),
+        // 五张卡固定「全部类型」：这个 365 天序列不带 activityType，半屏里的类型筛选不影响卡片
+        api.get('/stats/trend?days=365').catch(() => null),
       ]);
+      this._dailyRows = daily && Array.isArray(daily.data) ? daily.data : [];
       const decorated = this.decorateOverview(overview);
       const typeSummary = this.decorateTypeSummary(overview.total && overview.total.byType);
       this._trendRows = trend.data;
       this.setData({
         overview: decorated,
-        ...this.buildTrendView(this.data.trendMetric),
-        trendCompare: this.decorateTrendCompare(daily ? buildTrendCompare(daily.data) : null),
+        metricCards: daily ? buildMetricCards(daily.data) : [],
+        ...this.applyCalendar(this.data.calYear || this.currentMonth().year, this.data.calMonth || this.currentMonth().month),
         compare: {
-          week: calcDiff(overview.week.distance || 0, overview.prevWeek ? overview.prevWeek.distance : 0),
-          month: calcDiff(overview.month.distance || 0, overview.prevMonth ? overview.prevMonth.distance : 0),
+          week: this.decorateCompare(calcDiff(overview.week.distance || 0, overview.prevWeek ? overview.prevWeek.distance : 0), '上周'),
+          month: this.decorateCompare(calcDiff(overview.month.distance || 0, overview.prevMonth ? overview.prevMonth.distance : 0), '上月'),
         },
         best: this.decorateBest(best),
         trophies: this.decorateTrophies(best),
@@ -142,25 +147,80 @@ Page({
     try {
       const [trend, daily] = await Promise.all([
         api.get(`/stats/trend${this.trendQuery()}`),
-        api.get(`/stats/trend?days=365${this.activityTypeQuery()}`),
+        api.get('/stats/trend?days=365'), // 同上：卡片口径不跟半屏的类型筛选走
       ]);
       if (seq !== this._trendSeq) return; // 快速切换时丢弃过期响应
       this._trendRows = trend.data;
-      this.setData({
-        ...this.buildTrendView(this.data.trendMetric),
-        trendCompare: this.decorateTrendCompare(buildTrendCompare(daily.data)),
-      });
+      this._dailyRows = daily && Array.isArray(daily.data) ? daily.data : [];
+      const patch = {
+        metricCards: buildMetricCards(daily.data),
+        ...this.applyCalendar(this.data.calYear, this.data.calMonth),
+      };
+      if (this.data.sheetVisible && this.data.sheetType === 'trend') {
+        Object.assign(patch, this.buildSheetTrend(this.data.sheetMetric));
+      }
+      this.setData(patch);
     } catch (e) {
       console.error('加载趋势失败', e);
     }
   },
 
-  decorateTrendCompare(c) {
+  /** 当前月（东八区）：日历默认停在这里，也是「下一月」箭头的上限 */
+  currentMonth() {
+    const d = bjDate(Date.now());
+    return { year: Number(String(d).slice(0, 4)), month: Number(String(d).slice(5, 7)) };
+  },
+
+  /** 近 365 天里最早能翻到的月份（再往前没有数据） */
+  oldestMonth() {
+    const rows = this._dailyRows || [];
+    if (!rows.length) return this.currentMonth();
+    const d = String(rows[0].date || '');
+    return { year: Number(d.slice(0, 4)), month: Number(d.slice(5, 7)) };
+  },
+
+  /** 摊当月格子：数据源是近 365 天的每日 count；翻月只是换 year/month，不再请求 */
+  applyCalendar(year, month) {
+    const rows = this._dailyRows || [];
+    const grid = buildMonthGrid(rows, year, month, bjDate(Date.now()));
+    // 最早那个月只有部分天数在 365 天窗口里，直接报「N 天」会像「只运动了 N 天」
+    const firstDate = rows.length ? String(rows[0].date) : '';
+    const monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
+    const partialFrom = firstDate && monthStart < firstDate ? `（${firstDate.slice(5).replace('-', '/')} 起）` : '';
+    return {
+      calYear: year,
+      calMonth: month,
+      calTitle: `${year} 年 ${month} 月`,
+      calWeeks: grid.weeks,
+      calCaption: `${month} 月累计运动 ${grid.activeDays} 天${partialFrom}`,
+      calPrevDisabled: compareMonth({ year, month }, this.oldestMonth()) <= 0,
+      calNextDisabled: compareMonth({ year, month }, this.currentMonth()) >= 0,
+    };
+  },
+
+  onCalPrev() {
+    if (this.data.calPrevDisabled) return;
+    const { year, month } = shiftMonth(this.data.calYear, this.data.calMonth, -1);
+    this.setData(this.applyCalendar(year, month));
+  },
+
+  onCalNext() {
+    if (this.data.calNextDisabled) return;
+    const { year, month } = shiftMonth(this.data.calYear, this.data.calMonth, 1);
+    this.setData(this.applyCalendar(year, month));
+  },
+
+  /** 周/本月对比：与趋势卡同一套箭头图标与「涨跌 + 比谁」文案（新增/持平不接后缀） */
+  decorateCompare(c, label) {
     if (!c) return null;
-    const arrow = c.dir === 'up' ? '↑' : c.dir === 'down' ? '↓' : '→';
-    const sign = c.diffPct > 0 ? '+' : '';
-    const tip = c.dir === 'up' ? '保持这个节奏' : c.dir === 'down' ? '慢慢找回状态' : '状态稳定';
-    return { ...c, arrow, diffText: `${sign}${c.diffPct}%`, tip };
+    const plain = c.text === '新增' || c.text === '—' || c.text === '持平';
+    return { ...c, arrowIcon: ARROW_ICON[c.cls] || '', diffText: plain ? c.text : `${c.text} 较${label}` };
+  },
+
+  /** 半屏趋势图：数据/单位/标题都由纯函数给，页面只负责把结果塞进 data */
+  buildSheetTrend(metric) {
+    const chart = buildTrendChart(this._trendRows || [], metric, this.data.trendType);
+    return chart ? { sheetTrend: chart } : {};
   },
 
   /** 奖杯墙：固定五项，未达成的置灰；图标取该项成绩对应的运动类型 */
@@ -184,28 +244,6 @@ Page({
     return { percentile: p.percentile, usersTotal: p.usersTotal };
   },
 
-  /** 趋势指标切换：距离（km）/ 时长（分钟）/ 次数（次），标签随窗口粒度取名 */
-  onTrendMetricChange(e) {
-    const metric = e.currentTarget.dataset.value;
-    if (!metric || metric === this.data.trendMetric) return;
-    this.setData({ trendMetric: metric, ...this.buildTrendView(metric) });
-  },
-
-  buildTrendView(metric) {
-    const rows = this._trendRows || [];
-    const pick = {
-      distance: { unit: 'km', title: '距离趋势', map: (d) => Math.round((d.distance / 1000) * 100) / 100 },
-      duration: { unit: '分钟', title: '时长趋势', map: (d) => Math.round(d.duration / 60) },
-      count: { unit: '次', title: '次数趋势', map: (d) => d.count },
-    }[metric] || null;
-    if (!pick) return {};
-    return {
-      chartTitle: pick.title,
-      chartUnit: pick.unit,
-      chartData: rows.map((d) => ({ label: this.trendLabel(d.date), value: pick.map(d) })),
-    };
-  },
-
   /** 概览数据装饰：距离转公里、时长按分钟/小时/天、大数字千分位 */
   decorateOverview(o) {
     const sec = (s) => {
@@ -217,7 +255,6 @@ Page({
       };
     };
     return {
-      today: sec(o.today),
       week: sec(o.week),
       month: sec(o.month),
       year: sec(o.year),
@@ -305,18 +342,6 @@ Page({
     this.loadTrend();
   },
 
-  /** 趋势标签：周/月 → MM-DD；6个月 → 周号；年 → M月 */
-  trendLabel(date) {
-    if (this.data.trendType === 'year') {
-      return `${Number(date.slice(5, 7))}月`;
-    }
-    if (this.data.trendType === 'week6') {
-      const m = date.match(/-W(\d+)/);
-      return m ? `W${m[1]}` : date.slice(5);
-    }
-    return date.slice(5); // MM-DD
-  },
-
   /** 最佳记录卡 → 对应轨迹详情（卡片若没有 id 则不跳） */
   goTrack(e) {
     const id = e.currentTarget.dataset.id;
@@ -337,6 +362,19 @@ Page({
   openSheet(e) {
     const type = e.currentTarget.dataset.type === 'trophy' ? 'trophy' : 'best';
     this.setData({ sheetType: type, sheetVisible: true });
+  },
+
+  /** 运动趋势卡 → 半屏（复用页面里同一个 .sheet，sheetType 加一档 trend） */
+  openTrendSheet(e) {
+    const metric = e.currentTarget.dataset.key;
+    const card = (this.data.metricCards || []).find((c) => c.key === metric);
+    if (!card) return;
+    this.setData({
+      sheetMetric: metric,
+      ...this.buildSheetTrend(metric),
+      sheetType: 'trend',
+      sheetVisible: true,
+    });
   },
 
   closeSheet() {

@@ -38,9 +38,9 @@
     </view>
   </view>
 
-  <!-- 坚持与排名：连续天数 + 累计距离全站分位 -->
+  <!-- 运动日历：连续天数 + 全站分位 + 月历（原「坚持与排名」卡） -->
   <view class="card">
-    <view class="section-title">坚持与排名</view>
+    <view class="section-title">运动日历</view>
     <view class="streak-row">
       <view class="streak-item">
         <view class="streak-num">{{overview.total.streakCurrent}}</view>
@@ -55,24 +55,91 @@
         <view class="streak-label">累计距离超越迹路者</view>
       </view>
     </view>
+
+    <!-- 运动日历：近 365 天数据摊成月历，有运动的天打勾；只换月份不重新请求 -->
+    <view class="cal-head">
+      <view
+        class="cal-arrow {{calPrevDisabled ? 'cal-arrow-off' : ''}}"
+        hover-class="cal-arrow-hover"
+        hover-stay-time="80"
+        bindtap="onCalPrev"
+      >‹</view>
+      <view class="cal-title">{{calTitle}}</view>
+      <view
+        class="cal-arrow {{calNextDisabled ? 'cal-arrow-off' : ''}}"
+        hover-class="cal-arrow-hover"
+        hover-stay-time="80"
+        bindtap="onCalNext"
+      >›</view>
+    </view>
+    <view class="cal-week cal-week-head">
+      <text class="cal-weekday" wx:for="{{calWeekdays}}" wx:key="*this">{{item}}</text>
+    </view>
+    <view class="cal-week" wx:for="{{calWeeks}}" wx:key="index" wx:for-item="week">
+      <view class="cal-cell" wx:for="{{week}}" wx:key="index" wx:for-item="cell">
+        <view class="cal-day {{cell.inMonth ? '' : 'cal-day-out'}} {{cell.isToday ? 'cal-day-today' : ''}}">{{cell.day}}</view>
+        <view wx:if="{{cell.hasActivity}}" class="cal-check cal-check-on {{cell.inMonth ? '' : 'cal-check-out'}}">✓</view>
+        <view wx:else class="cal-check"></view>
+      </view>
+    </view>
+    <view class="cal-caption">{{calCaption}}</view>
   </view>
 
-  <!-- 周期明细（放在累计/坚持之后） -->
-  <view class="card">
+  <!-- 运动趋势：五张变化卡（近 30 天 vs 前 30 天），点卡开半屏看柱状图 -->
+  <view class="card" wx:if="{{metricCards.length}}">
+    <view class="section-title-row">
+      <view class="section-title">运动趋势</view>
+      <view class="trend-sub">近 30 天 vs 前 30 天</view>
+    </view>
+    <!-- 今日/本周/本月快照：原来是独立一张卡，占一整行高度，合进趋势卡省一块留白 -->
     <view class="period-row">
-      <view class="period-item">
-        <view class="period-num">{{overview.today.distanceKm}}</view>
-        <view class="period-label">今日 km</view>
+      <view class="period-item metric-card">
+        <view class="metric-badge">
+          <image wx:if="{{compare.week.arrowIcon}}" class="metric-badge-icon" src="{{compare.week.arrowIcon}}" mode="aspectFit" />
+        </view>
+        <view class="metric-body">
+          <text class="metric-label">本周</text>
+          <view class="metric-value-line">
+            <text class="metric-value">{{overview.week.distanceKm}}</text><text class="metric-unit">km</text>
+          </view>
+          <view class="metric-foot metric-diff-{{compare.week.cls}}" wx:if="{{compare.week}}">{{compare.week.diffText}}</view>
+        </view>
       </view>
-      <view class="period-item">
-        <view class="period-num">{{overview.week.distanceKm}}</view>
-        <view class="period-label">本周 km</view>
-        <view class="period-diff period-diff-{{compare.week.cls}}" wx:if="{{compare.week}}">{{compare.week.text}} 较上周</view>
+      <view class="period-item metric-card">
+        <view class="metric-badge">
+          <image wx:if="{{compare.month.arrowIcon}}" class="metric-badge-icon" src="{{compare.month.arrowIcon}}" mode="aspectFit" />
+        </view>
+        <view class="metric-body">
+          <text class="metric-label">本月</text>
+          <view class="metric-value-line">
+            <text class="metric-value">{{overview.month.distanceKm}}</text><text class="metric-unit">km</text>
+          </view>
+          <view class="metric-foot metric-diff-{{compare.month.cls}}" wx:if="{{compare.month}}">{{compare.month.diffText}}</view>
+        </view>
       </view>
-      <view class="period-item">
-        <view class="period-num">{{overview.month.distanceKm}}</view>
-        <view class="period-label">本月 km</view>
-        <view class="period-diff period-diff-{{compare.month.cls}}" wx:if="{{compare.month}}">{{compare.month.text}} 较上月</view>
+    </view>
+
+    <view class="metric-grid">
+      <view
+        class="metric-card"
+        hover-class="metric-card-hover"
+        hover-stay-time="80"
+        wx:for="{{metricCards}}"
+        wx:key="key"
+        data-key="{{item.key}}"
+        bindtap="openTrendSheet"
+      >
+        <!-- 左列＝圆圈图标（垂直居中），右侧三行左对齐：名目 / 数值+单位 / 涨跌 -->
+        <view class="metric-badge">
+          <image wx:if="{{item.arrowIcon}}" class="metric-badge-icon" src="{{item.arrowIcon}}" mode="aspectFit" />
+        </view>
+        <view class="metric-body">
+          <text class="metric-label">{{item.label}}</text>
+          <view class="metric-value-line">
+            <text class="metric-value">{{item.value}}</text><text class="metric-unit">{{item.unit}}</text>
+          </view>
+          <view class="metric-foot metric-diff-{{item.dir}}">{{item.diffText ? '较前 30 天 ' + item.diffText : '暂无对比'}}</view>
+        </view>
       </view>
     </view>
   </view>
@@ -110,7 +177,7 @@
   </view>
 
   <!-- 最佳记录：横滑卡片（穗枝环住类型图标 + 名称 + 数值），距离PB在前、其后按类型列指标 -->
-  <view class="best-section" wx:if="{{best && best.bestCards.length}}">
+  <view class="card" wx:if="{{best && best.bestCards.length}}">
     <view class="section-title-row">
       <view class="section-title">最佳记录</view>
       <view class="more-link" hover-class="more-link-hover" hover-stay-time="80" data-type="best" bindtap="openSheet">
@@ -155,52 +222,6 @@
     </view>
   </view>
 
-  <!-- 趋势柱状图 -->
-  <view class="card">
-    <view class="chart-head">
-      <view class="section-title">{{chartTitle}}（{{chartUnit}}）</view>
-      <view class="days-toggle">
-        <view
-          wx:for="{{trendTypes}}"
-          wx:key="value"
-          class="day-btn {{trendType === item.value ? 'day-btn-active' : ''}}"
-          data-value="{{item.value}}"
-          bindtap="onTrendTypeChange"
-        >{{item.label}}</view>
-      </view>
-    </view>
-    <view class="metric-row">
-      <view
-        wx:for="{{trendMetrics}}"
-        wx:key="value"
-        class="metric-btn {{trendMetric === item.value ? 'metric-btn-active' : ''}}"
-        data-value="{{item.value}}"
-        bindtap="onTrendMetricChange"
-      >{{item.label}}</view>
-    </view>
-    <scroll-view class="type-chips" scroll-x enhanced show-scrollbar="{{false}}" wx:if="{{trendActivityTypes.length > 1}}">
-      <view class="type-chip-list">
-        <view
-          wx:for="{{trendActivityTypes}}"
-          wx:key="value"
-          class="type-chip {{trendActivityType === item.value ? 'type-chip-active' : ''}}"
-          data-value="{{item.value}}"
-          bindtap="onTrendActivityChange"
-        >{{item.label}}</view>
-      </view>
-    </scroll-view>
-    <stat-chart data="{{chartData}}" type="bar" unit="{{chartUnit}}" height="{{230}}" empty-text="暂无运动数据" />
-    <!-- 近 90 天 vs 近 365 天日均（Apple 式趋势箭头） -->
-    <view class="trend-compare" wx:if="{{trendCompare}}">
-      <view class="tc-arrow tc-arrow-{{trendCompare.dir}}">{{trendCompare.arrow}}</view>
-      <view class="tc-info">
-        <view class="tc-main">近 90 天日均 {{trendCompare.avg90}} km</view>
-        <view class="tc-sub">过去一年日均 {{trendCompare.avg365}} km · <text class="tc-diff tc-diff-{{trendCompare.dir}}">{{trendCompare.diffText}}</text></view>
-      </view>
-      <view class="tc-tip">{{trendCompare.tip}}</view>
-    </view>
-  </view>
-
   <!-- 点亮地图 + 点亮城市（分包组件，主包页面按异步化引用） -->
   <lit-map id="litMap" bind:loaded="onLitMapLoaded" />
 
@@ -226,11 +247,37 @@
   <view wx:if="{{sheetVisible}}" class="sheet-mask" catchtouchmove="noop" bindtap="closeSheet">
     <view class="sheet" catchtap="noop">
       <view class="sheet-head">
-        <view class="sheet-title">{{sheetType === 'trophy' ? '里程碑奖杯' : '全部纪录'}}</view>
+        <view class="sheet-title">{{sheetType === 'trend' ? sheetTrend.title : (sheetType === 'trophy' ? '里程碑奖杯' : '全部纪录')}}</view>
         <view class="sheet-close" catchtap="closeSheet">✕</view>
       </view>
 
       <scroll-view scroll-y class="sheet-body" enhanced show-scrollbar="{{false}}">
+        <!-- 运动趋势详情：维度 + 运动类型筛选 + 柱状图（配速低于 5km 的空桶已被跳过） -->
+        <view wx:if="{{sheetType === 'trend'}}">
+          <view class="days-toggle sheet-days">
+            <view
+              wx:for="{{trendTypes}}"
+              wx:key="value"
+              class="day-btn {{trendType === item.value ? 'day-btn-active' : ''}}"
+              data-value="{{item.value}}"
+              bindtap="onTrendTypeChange"
+            >{{item.label}}</view>
+          </view>
+          <scroll-view class="type-chips" scroll-x enhanced show-scrollbar="{{false}}" wx:if="{{trendActivityTypes.length > 1}}">
+            <view class="type-chip-list">
+              <view
+                wx:for="{{trendActivityTypes}}"
+                wx:key="value"
+                class="type-chip {{trendActivityType === item.value ? 'type-chip-active' : ''}}"
+                data-value="{{item.value}}"
+                bindtap="onTrendActivityChange"
+              >{{item.label}}</view>
+            </view>
+          </scroll-view>
+          <stat-chart data="{{sheetTrend.data}}" type="bar" unit="{{sheetTrend.unit}}" height="{{240}}" empty-text="暂无运动数据" />
+          <view class="sheet-trend-note" wx:if="{{sheetTrend.note}}">{{sheetTrend.note}}</view>
+        </view>
+
         <!-- 最佳记录：全部卡片两列宫格（图标 + 名称 + 数值 + 运动类型） -->
         <view wx:if="{{sheetType === 'best'}}" class="record-grid">
           <view

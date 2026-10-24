@@ -103,3 +103,28 @@ test('SC6 三条绘制路径（柱 / 单系列折线 / 多系列折线）共用�
     '三条路径都要把绘图区宽度传进来（漏一个就静默走兜底）',
   );
 });
+
+/* ------------------------------ Y 轴刻度 ------------------------------ */
+
+test('AL1 常规序列：max 到 min 四等分（回归，别被全等分支带偏）', () => {
+  assert.deepEqual(methods.axisLabels([0, 10, 4]), [10, 7.5, 5, 2.5, 0]);
+});
+
+test('AL2 全等序列：退回 max→0，刻度严格递减且不超过最大值', () => {
+  const labels = methods.axisLabels([6.3, 6.3, 6.3]);
+  assert.equal(labels.length, 5, '仍是 5 条网格');
+  assert.equal(labels[0], 6.3, '顶格就是最大值');
+  assert.equal(labels[4], 0, '底格是 0（柱高按 v/max 画，刻度得跟柱对得上）');
+  assert.ok(Math.max(...labels) <= 6.3, '不能出现比最大值还大的刻度');
+  for (let i = 1; i < labels.length; i++) assert.ok(labels[i] < labels[i - 1], '必须严格递减');
+  // 不改写死的小数：只要求 2 位精度内的四等分
+  labels.forEach((v, i) => {
+    const want = 6.3 * (1 - i / 4);
+    assert.ok(Math.abs(v - want) < 0.01, `第 ${i} 格 ${v} 应接近 ${want}`);
+  });
+});
+
+test('AL3 只有一个桶时同样按全等处理（不能除出 NaN）', () => {
+  const labels = methods.axisLabels([5]);
+  assert.deepEqual(labels, [5, 3.75, 2.5, 1.25, 0]);
+});

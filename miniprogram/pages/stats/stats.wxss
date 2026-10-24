@@ -8,10 +8,8 @@
   font-weight: 600;
   margin-bottom: 20rpx;
 }
-/* 最佳记录：横滑卡片（白卡浮于灰底，穗枝环住类型图标），距离PB在前 */
-.best-section {
-  margin-bottom: 24rpx;
-}
+/* 最佳记录：横滑卡片（穗枝环住类型图标），距离PB在前；
+   外壳与「里程碑奖杯」一样用全局 .card，里面的小卡也跟着改成灰底，两块长得一致 */
 .best-scroll {
   width: 100%;
 }
@@ -23,38 +21,40 @@
 .best-card {
   width: 220rpx;
   flex-shrink: 0;
-  background: #fff;
+  /* 与 .trophy-item 同一套：灰底 16rpx 圆角、不加投影 */
+  background: #f7f8fa;
   border-radius: 16rpx;
-  padding: 28rpx 24rpx 24rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+  /* 与上面「里程碑奖杯」同档的观感：纵向留白与徽章高度各收一档，宽度不动
+     （180rpx 会让「1000 精英级」这类值折行，white-space:nowrap 会直接裁掉） */
+  padding: 22rpx 20rpx 18rpx;
   box-sizing: border-box;
 }
 .bc-badge {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  margin-bottom: 20rpx;
+  margin-bottom: 12rpx;
 }
 .bc-ear {
-  width: 18rpx;
-  height: 40rpx;
+  width: 16rpx;
+  height: 30rpx;
 }
 .bc-icon {
-  width: 40rpx;
-  height: 40rpx;
+  width: 32rpx;
+  height: 32rpx;
   margin: 0 3rpx;
 }
 .bc-label {
   display: block;
-  font-size: 26rpx;
+  font-size: 24rpx;
   font-weight: 500;
   color: #1f2329;
   white-space: nowrap;
 }
 .bc-value {
   display: block;
-  margin-top: 8rpx;
-  font-size: 32rpx;
+  margin-top: 4rpx;
+  font-size: 28rpx;
   font-weight: 600;
   color: #1f2329;
   white-space: nowrap;
@@ -63,7 +63,7 @@
   display: flex;
   flex-wrap: wrap;
   background: #f7f8fa;
-  border-radius: 12rpx;
+  border-radius: 16rpx;
   padding: 12rpx 0;
 }
 .ov-item {
@@ -83,32 +83,196 @@
 }
 .period-row {
   display: flex;
+  gap: 16rpx;
+  /* 合进「运动趋势」卡后，与下面五张变化卡之间留一档（原来是两张卡，靠卡底/卡头留白） */
+  margin-bottom: 16rpx;
 }
 .period-item {
+  /* 盒子直接复用 .metric-card（底色/圆角/内边距/高度全同），这里只负责在行内等分 */
+  flex: 1;
+  min-width: 0;
+}
+/* 运动日历卡内：月切换 + 周标题 + 7 列格子，有运动的天绿底白勾 */
+.cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 20rpx;
+  padding-top: 16rpx;
+  border-top: 1rpx solid #f2f3f5;
+}
+.cal-arrow {
+  width: 56rpx;
+  height: 56rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32rpx;
+  color: #4e5969;
+}
+.cal-arrow-hover {
+  background: #f2f3f5;
+  border-radius: 50%;
+}
+.cal-arrow-off {
+  color: #d4d8e0;
+}
+.cal-title {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+.cal-week {
+  display: flex;
+}
+.cal-week-head {
+  margin-top: 8rpx;
+}
+.cal-weekday {
   flex: 1;
   text-align: center;
+  font-size: 22rpx;
+  color: #8a93a6;
 }
-.period-num {
-  font-size: 30rpx;
-  font-weight: 600;
+.cal-cell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4rpx 0;
 }
-.period-diff {
+.cal-day {
+  font-size: 24rpx;
+  color: #1f2329;
+  font-variant-numeric: tabular-nums;
+}
+.cal-day-out {
+  color: #c8cdd6;
+}
+.cal-day-today {
+  font-weight: 700;
+  color: #2b6cf6;
+}
+.cal-check {
+  width: 32rpx;
+  height: 32rpx;
+  margin-top: 2rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 20rpx;
-  margin-top: 4rpx;
+  font-weight: 700;
+  color: #fff;
 }
-.period-diff-up {
+.cal-check-on {
+  background: #2bb673;
+}
+/* 补位格（上/下月的日子）打勾也淡一档，别抢当月的视线 */
+.cal-check-out {
+  opacity: 0.35;
+}
+.cal-caption {
+  margin-top: 12rpx;
+  font-size: 22rpx;
+  color: #8a93a6;
+}
+/* 运动趋势：五张变化卡（2 列，第 5 张占左列，右下自然留白）；卡内两行＝名目行 + 数值行 */
+.trend-sub {
+  font-size: 22rpx;
+  color: #8a93a6;
+}
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16rpx;
+  margin-top: 16rpx;
+}
+/* 卡内结构：左列圆圈图标（垂直居中）+ 右侧三行左对齐（名目 / 数值+单位 / 涨跌） */
+.metric-card {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 16rpx 18rpx;
+  background: #f7f8fa;
+  border-radius: 16rpx;
+  box-sizing: border-box;
+}
+.metric-card-hover {
+  background: #eef1f6;
+}
+/* 圆圈底与 .trophy-badge 同口径：白底 + 有向色图标，方向语义只靠图标颜色 */
+.metric-badge {
+  width: 64rpx;
+  height: 64rpx;
+  flex: none;
+  border-radius: 50%;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.metric-badge-icon {
+  width: 34rpx;
+  height: 34rpx;
+}
+.metric-body {
+  flex: 1;
+  min-width: 0;
+}
+.metric-label {
+  display: block;
+  font-size: 22rpx;
+  color: #4e5969;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.metric-value-line {
+  display: flex;
+  align-items: baseline;
+  gap: 4rpx;
+  margin-top: 2rpx;
+}
+.metric-value {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #1f2329;
+  font-variant-numeric: tabular-nums;
+}
+.metric-unit {
+  font-size: 20rpx;
+  font-weight: 400;
+  color: #8a93a6;
+}
+.metric-foot {
+  margin-top: 2rpx;
+  font-size: 20rpx;
+  color: #8a93a6;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.metric-diff-up {
   color: #15804f;
 }
-.period-diff-down {
+.metric-diff-down {
   color: #c02a30;
 }
-.period-diff-flat {
-  color: #667080;
+.metric-diff-flat {
+  color: #8a93a6;
 }
-.period-label {
+/* 半屏内：维度条与配速注脚 */
+.sheet-days {
+  margin-left: 0;
+  margin-bottom: 14rpx;
+}
+.sheet-trend-note {
+  margin-top: 10rpx;
   font-size: 22rpx;
-  color: #999;
-  margin-top: 4rpx;
+  color: #8a93a6;
+  text-align: right;
 }
 .chart-head {
   display: flex;
@@ -137,24 +301,6 @@
   font-weight: 600;
   box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
 }
-/* 趋势指标切换（距离/时长/次数）：与窗口档同一套胶囊，放第二行 */
-.metric-row {
-  display: flex;
-  gap: 12rpx;
-  margin: 14rpx 0 6rpx;
-}
-.metric-btn {
-  padding: 6rpx 20rpx;
-  border-radius: 999rpx;
-  font-size: 22rpx;
-  color: #4e5969;
-  background: #f2f3f5;
-}
-.metric-btn-active {
-  background: #eef4ff;
-  color: #1a56d6;
-  font-weight: 600;
-}
 /* 趋势运动类型筛选：横滑胶囊 */
 .type-chips {
   width: 100%;
@@ -178,62 +324,19 @@
   color: #1a56d6;
   font-weight: 600;
 }
-/* 近 90 天 vs 近 365 天日均对比 */
-.trend-compare {
-  display: flex;
-  align-items: center;
-  gap: 16rpx;
-  margin-top: 18rpx;
-  padding: 16rpx 18rpx;
-  background: #f7f8fa;
-  border-radius: 12rpx;
-}
-.tc-arrow {
-  font-size: 34rpx;
-  font-weight: 700;
-  line-height: 1;
-}
-.tc-arrow-up,
-.tc-diff-up {
-  color: #15804f;
-}
-.tc-arrow-down,
-.tc-diff-down {
-  color: #c02a30;
-}
-.tc-arrow-flat,
-.tc-diff-flat {
-  color: #667080;
-}
-.tc-info {
-  flex: 1;
-  min-width: 0;
-}
-.tc-main {
-  font-size: 26rpx;
-  font-weight: 600;
-  color: #1f2329;
-}
-.tc-sub {
-  font-size: 22rpx;
-  color: #667080;
-  margin-top: 4rpx;
-}
-.tc-diff {
-  font-weight: 600;
-}
-.tc-tip {
-  font-size: 22rpx;
-  color: #667080;
-  flex-shrink: 0;
-}
-/* 坚持与排名 */
+/* 运动日历卡：连续/最长/分位三格 */
 .streak-row {
   display: flex;
+  gap: 16rpx;
 }
 .streak-item {
   flex: 1;
+  min-width: 0;
   text-align: center;
+  /* 与 .period-item / .metric-card 同一套灰底小卡：整页的统计小组都长一个样 */
+  background: #f7f8fa;
+  border-radius: 16rpx;
+  padding: 16rpx 8rpx 14rpx;
 }
 .streak-num {
   font-size: 34rpx;
@@ -524,8 +627,10 @@
   background: #f7f8fa;
   border-radius: 16rpx;
 }
+/* 未解锁别用整卡 opacity：0.6 会把里面的灰字压到 1.8:1（实测「完成 42.2 km」几乎看不见），
+   层级改用底色 + 文字色两档表达 */
 .trophy-sheet-locked {
-  opacity: 0.6;
+  background: #f4f5f7; /* 比已解锁深一档即可：#667080 在其上仍有 4.56:1 */
 }
 .trophy-sheet-locked .ts-value {
   color: #667080;
@@ -564,11 +669,12 @@
 .ts-meta {
   margin-top: 8rpx;
   font-size: 20rpx;
-  color: #667080;
+  /* 20rpx 的小字在 #f7f8fa 上用 #667080 只有 4.7:1，实测偏淡；压深一档到 6.7:1 */
+  color: #4e5969;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .ts-lock {
-  color: #8a93a6;
+  color: #667080; /* 未解锁比已解锁再浅一档，但仍在 4.5 以上 */
 }
