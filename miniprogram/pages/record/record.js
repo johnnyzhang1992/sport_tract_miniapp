@@ -309,6 +309,7 @@ Page({
         lat: point.lat,
         lng: point.lng,
         pauseGap: !!point.pauseGap,
+        vehicle: !!point.vehicle,
       });
       // 计算运动方向（正北顺时针角度）
       let heading = this.data.heading;
@@ -716,6 +717,7 @@ Page({
       lat: p.lat,
       lng: p.lng,
       pauseGap: !!p.pauseGap,
+      vehicle: !!p.vehicle,
     }));
     const last = this.tracker.lastPoint;
     let heading = this.data.heading;

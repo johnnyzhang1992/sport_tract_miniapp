@@ -44,6 +44,15 @@ const MAX_POINTS = 20000;
 /** 反转漂移过滤：判定为“移动缓慢”的速度上限（m/s） */
 const REVERSE_SLOW_SPEED_MPS = 2;
 
+/** 巨步弦判定的最短单步间隔（秒）：与服务端 vehicle.ts 的 VEHICLE_MAX_STEP_SEC 同口径。
+ *  连续超过该时长没有任何采样（隧道/挂起/挂机），重现点一步跨过的直线视为被运载 */
+const CHORD_MIN_GAP_SEC = 120;
+
+/** 精度差抽稀保留：距上一保留点间隔超过该值（毫秒）才再收一个差精度点 */
+const ACC_BAD_KEEP_GAP_MS = 10000;
+/** 精度差抽稀保留：距上一保留点位移超过该值（米）才再收一个（弱信号下移动时保轨迹形状） */
+const ACC_BAD_KEEP_DIST_M = 30;
+
 /** Haversine 球面距离（米），兼容 {lat,lng} 与 {latitude,longitude} 两种字段 */
 function haversine(a, b) {
   const toRad = (deg) => (deg * Math.PI) / 180;
@@ -86,6 +95,8 @@ class Tracker {
     this.pausedMs = 0;
     /** 静止累计（毫秒）：判"要不要自动暂停"的那个量，走动即归零，触发后也归零 */
     this.autoPausedMs = 0;
+    /** 坐车步累计时长（毫秒）：超速/巨步弦标记的步不计入运动时长（与纠偏 vehicleMs 同口径） */
+    this._vehicleMs = 0;
     /** 自动暂停触发时回拨并进 pausedMs 的那段静止时长——上传时要减掉，服务端仍按 still 段扣 */
     this._backdatedMs = 0;
     /** 这一次暂停是谁按的：auto=系统（静止挂机/切后台）→ 走动可自动接回；manual=用户 → 只能用户接回 */
@@ -144,34 +155,57 @@ class Tracker {
       return null;
     }
 
-    // 精度过滤：accuracy 超阈值（按类型，室内/弱信号）直接丢弃，避免轨迹乱跳
-    if (typeof loc.accuracy === 'number' && loc.accuracy > this._typeCfg.maxAccuracyM) return null;
-
     // 防御：模拟器/部分机型 timestamp 可能是字符串，统一转数字
     const now = Number(loc.timestamp) || this.now();
 
     // 后台恢复预热：回前台后短时间内 GPS 冷启动漂移大，丢弃窗口内的点（等重新收敛）
     if (this._resumeWarmupUntil && this.now() < this._resumeWarmupUntil) return null;
 
+    // 精度差不整批丢弃（决策：异常点标记保留）：accuracy 超类型阈值只说明位置可信度低，
+    // 全丢会让弱信号段（高架/林荫/地下口）轨迹断线没法渲染。抽稀保留：距上一保留点
+    // ≥10s 或 ≥30m 才收一个，密度有上限；保留点标 accBad 供纠偏/渲染使用。
+    const badAcc = typeof loc.accuracy === 'number' && loc.accuracy > this._typeCfg.maxAccuracyM;
+
+    let d = 0;
+    let dt = 0;
     if (this.lastPoint) {
-      const d = haversine(this.lastPoint, loc);
-      const dt = (now - this.lastSampleTime) / 1000;
-      // 时间/距离双阈值节流（F9：位置未变不重复采点）
-      if (d < MIN_DISTANCE_M && dt < MIN_INTERVAL_MS / 1000) return null;
-      // 漂移过滤：瞬时速度超阈值
-      if (dt > 0 && d / dt > this._typeCfg.maxAbsSpeed) return null;
-      // 反转漂移过滤：GPS 乱跳典型特征 = 方向大反转 + 低速（室内漂移来回弹）
-      if (this.prevDirection != null && d >= MIN_DISTANCE_M) {
-        const bearing = this._bearing(this.lastPoint, loc);
+      d = haversine(this.lastPoint, loc);
+      dt = (now - this.lastSampleTime) / 1000;
+      if (badAcc) {
+        if (dt * 1000 < ACC_BAD_KEEP_GAP_MS && d < ACC_BAD_KEEP_DIST_M) return null;
+      } else if (d < MIN_DISTANCE_M && dt < MIN_INTERVAL_MS / 1000) {
+        // 时间/距离双阈值节流（F9：位置未变不重复采点）
+        return null;
+      }
+    }
+
+    // 超速也不再丢弃：折算速度超类型物理上限的一步视为「坐车」，保留坐标并标 vehicle
+    // （与 finish/纠偏/渲染的 vehicle 语义同口径：该步位移不计入距离、连线灰显）。
+    // 全丢会让乘车段前后直连成弦——距离照样虚高，原始轨迹却没了，事后无从分析。
+    const overSpeed = this.lastPoint != null && dt > 0 && d / dt > this._typeCfg.maxAbsSpeed;
+
+    // 巨步弦（隧道/地下车库/挂机等长时间无定位后的重现点）：一步跨过 >120s 意味着这段
+    // 完全没有采样，落点间直线是被运载/凭空连出来的 → 标 vehicle：灰线、距离与时长都不计入。
+    // 暂停恢复后的首点不判：那段时长已由 pausedMs 扣过，再剔就是双扣。
+    const chordGap = this.lastPoint != null && dt > CHORD_MIN_GAP_SEC && !this._pendingGap;
+    const vehicleMark = overSpeed || chordGap;
+
+    // 反转漂移过滤（方向大反转 + 低速 = 室内 GPS 乱跳）：抽稀保留而不是丢弃——
+    // 距上一保留点 ≥10s 或 ≥30m 才收一个并标 accBad，一直室内也有点可渲染；
+    // 恢复正常（转角/速度达标）后照常逐点采。漂移点不更新方向（避免连续误杀后方向丢失）。
+    let driftKept = false;
+    if (!badAcc && d >= MIN_DISTANCE_M) {
+      const bearing = this._bearing(this.lastPoint, loc);
+      if (this.prevDirection != null) {
         let turn = Math.abs(bearing - this.prevDirection) % 360;
         if (turn > 180) turn = 360 - turn;
         const speed = dt > 0 ? d / dt : 0;
         if (turn > REVERSE_TURN_DEG && speed < REVERSE_SLOW_SPEED_MPS) {
-          // 丢弃该点，但不更新方向（避免连续误杀后方向丢失）
-          return null;
+          if (dt * 1000 < ACC_BAD_KEEP_GAP_MS && d < ACC_BAD_KEEP_DIST_M) return null;
+          driftKept = true;
         }
-        this.prevDirection = bearing;
       }
+      if (!driftKept) this.prevDirection = bearing;
     }
 
     const point = {
@@ -184,6 +218,11 @@ class Tracker {
       accuracy: typeof loc.accuracy === 'number' ? Math.round(loc.accuracy) : null,
       timestamp: now,
     };
+    // 异常标记只 true 时携带（稀疏存储，紧凑化/上传/服务端同口径）
+    if (vehicleMark) point.vehicle = true;
+    if (badAcc || driftKept) point.accBad = true;
+    // 坐车步的时长不计入运动时长（实时显示与纠偏 vehicleMs 同口径）
+    if (vehicleMark) this._vehicleMs += Math.max(0, dt) * 1000;
 
     // 海拔突变过滤（GPS 误差）：短时间变化率过大 → 该点海拔视为无效置 null
     if (point.altitude != null && this.lastPoint && this.lastPoint.altitude != null) {
@@ -202,7 +241,8 @@ class Tracker {
 
     if (this.lastPoint) {
       const prevDist = this.distance;
-      this.distance += haversine(this.lastPoint, point);
+      // 坐车步的位移不计入（该步是被运载的，与 calcStats/纠偏同口径）
+      if (!point.vehicle) this.distance += haversine(this.lastPoint, point);
       // 整公里检测：跨越公里界 → 回调（分段用时扣除本窗口内的暂停时长）
       if (Math.floor(this.distance / 1000) > Math.floor(prevDist / 1000) && this.onKilometer) {
         const km = Math.floor(this.distance / 1000);
@@ -266,20 +306,35 @@ class Tracker {
         if (v1 > spikeV && v2 > spikeV && this._turnAngle(a, b, point) > 110) {
           // 剔除 b：距离重算（去掉 a→b、b→c，改用 a→c）；爬升近似回退（尖刺海拔大跳
           // 多已被突变过滤置空，走到这里的 b 海拔平稳，扣未确认 pending 即可）
-          this.distance = Math.max(0, this.distance - d1 - d2 + haversine(a, point));
+          // 坐车步的入步本就没计入距离/时长，回退时不能重复扣
+          this.distance = Math.max(
+            0,
+            this.distance - (b.vehicle ? 0 : d1) - (point.vehicle ? 0 : d2) + haversine(a, point),
+          );
+          if (b.vehicle) this._vehicleMs = Math.max(0, this._vehicleMs - dt1 * 1000);
+          if (point.vehicle) this._vehicleMs = Math.max(0, this._vehicleMs - dt2 * 1000);
           if (b.altitude != null && a.altitude != null && b.altitude > a.altitude) {
             this._pendingClimb = Math.max(0, this._pendingClimb - (b.altitude - a.altitude));
           }
           this.points.pop();
           this.points.pop();
+          // 回滚后有效前驱变成 a：a→c 一步按类型上限重新定性（原 b→c 步的标记不再成立）
+          const acV = haversine(a, point) / ((point.timestamp - a.timestamp) / 1000);
+          if (acV > this._typeCfg.maxAbsSpeed) {
+            point.vehicle = true;
+            this._vehicleMs += (dt1 + dt2) * 1000;
+          } else {
+            delete point.vehicle;
+          }
           this.points.push(point);
           this.lastPoint = point;
         }
       }
     }
 
-    // 局部速度窗口（最近 6 个瞬时速度，尖刺判定用）
-    if (this.points.length >= 2) {
+    // 局部速度窗口（最近 6 个瞬时速度，尖刺判定用）；坐车步不进窗口——
+    // 否则中位数被抬上天，后续真尖刺漏判（旧行为里这些点不存在，窗口保持干净）
+    if (this.points.length >= 2 && !point.vehicle) {
       const prev = this.points[this.points.length - 2];
       const dt = (point.timestamp - prev.timestamp) / 1000;
       if (dt > 0) {
@@ -364,6 +419,7 @@ class Tracker {
     this._climbEma = null;
     this._pendingClimb = 0;
     this._climbUpSteps = 0;
+    this._vehicleMs = 0;
     this._kmMark = { dist: 0, ts: this.startTime };
     this._kmWindowPauseMs = 0; // 历史点无法还原每个公里的暂停分布，恢复后从零累计
     this._vehicle = createVehicleWatcher(this.type); // 观察器整块重建：重放时命中的提示值直接吞掉，不补发历史提示
@@ -383,11 +439,16 @@ class Tracker {
       }
       if (i > 0) {
         const prev = this.points[i - 1];
-        const prevDist = this.distance;
-        this.distance += haversine(prev, p);
-        // 整公里标记回放：恢复现场后播报从下一整公里继续
-        if (Math.floor(this.distance / 1000) > Math.floor(prevDist / 1000)) {
-          this._kmMark = { dist: this.distance, ts: p.timestamp };
+        if (p.vehicle) {
+          // 坐车步：距离不计，时长计入 _vehicleMs（与实时累计同口径）
+          this._vehicleMs += Math.max(0, p.timestamp - prev.timestamp);
+        } else {
+          const prevDist = this.distance;
+          this.distance += haversine(prev, p);
+          // 整公里标记回放：恢复现场后播报从下一整公里继续
+          if (Math.floor(this.distance / 1000) > Math.floor(prevDist / 1000)) {
+            this._kmMark = { dist: this.distance, ts: p.timestamp };
+          }
         }
         this._vehicle.step(prev, p); // 让观察器的连续时长与真实轨迹对齐（返回值在此不用）
       }
@@ -489,10 +550,10 @@ class Tracker {
     }
   }
 
-  /** 运动时长（秒，扣除暂停） */
+  /** 运动时长（秒，扣除暂停与坐车步） */
   getDurationSec() {
     const end = this.paused ? this.pausedAt : this.now();
-    return Math.max(0, (end - this.startTime - this.pausedMs) / 1000);
+    return Math.max(0, (end - this.startTime - this.pausedMs - this._vehicleMs) / 1000);
   }
 
   /** 完整指标（UI 展示 + finish 提交共用） */

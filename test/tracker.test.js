@@ -39,7 +39,7 @@ test('节流：近距离 + 短时间间隔的点被过滤', () => {
   assert.equal(t.points.length, before);
 });
 
-test('漂移过滤：瞬时速度超阈值（>30m/s）的点被过滤', () => {
+test('异常点保留：瞬时速度超阈值的点不再丢弃，标 vehicle 且该步距离不计', () => {
   let clock = 0;
   const t = new Tracker('running', 60, () => clock);
   t.addPoint(P(31.2304, 121.4737));
@@ -47,7 +47,9 @@ test('漂移过滤：瞬时速度超阈值（>30m/s）的点被过滤', () => {
   const before = t.points.length;
   clock += 500; // 0.5s
   t.addPoint(P(31.2315, 121.4749)); // ~150m / 0.5s = 300m/s
-  assert.equal(t.points.length, before);
+  assert.equal(t.points.length, before + 1, '超速点保留');
+  assert.equal(t.points[t.points.length - 1].vehicle, true);
+  assert.equal(t.distance, 0, '坐车步位移不计入');
 });
 
 test('指标：配速/卡路里/最高海拔', () => {
@@ -177,13 +179,14 @@ test('暂停恢复：首个有效点带 pauseGap 标记（被过滤的点不消�
   let clock = 0;
   const t = new Tracker('walking', 60, () => clock);
   t.addPoint(P(30, 120));
-  clock += 5000;
+  clock += 1000;
   t.pause();
-  clock += 10000;
+  clock += 1000;
   t.resume();
-  // 恢复后第一个点被漂移过滤丢弃（0.5s 瞬移 15km）→ 标记不消耗
+  // 恢复后第一个点原地抖动被节流丢弃（dt<3s 且 d<3m）→ 标记不消耗
+  // （超速点现在保留并作为首个被接受点带走 pauseGap，见 tracker-anomaly TA6）
   clock += 500;
-  t.addPoint(P(30.1, 120.1));
+  t.addPoint(P(30, 120));
   assert.equal(t.points.length, 1);
   // 下一个正常点应带 pauseGap
   clock += 5000;
