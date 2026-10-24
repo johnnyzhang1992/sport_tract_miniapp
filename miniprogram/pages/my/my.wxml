@@ -44,11 +44,11 @@
     </view>
   </view>
 
-  <!-- 运动报告入口（周/月/年汇总 + 个人最佳 + 轨迹记录） -->
+  <!-- 运动报告入口（汇总 + 亮点 + 环比 + 分类型/日期明细 + 海报；个人最佳与轨迹记录已迁走） -->
   <view class="card link-row" hover-class="card-hover" hover-stay-time="100" bindtap="goReport">
     <view class="switch-info">
       <view class="switch-title">运动报告</view>
-      <view class="text-muted">周/月/年运动汇总 · 个人最佳 · 轨迹记录</view>
+      <view class="text-muted">周/月/年汇总 · 环比与亮点 · 分类型/日期明细</view>
     </view>
     <view class="link-arrow">›</view>
   </view>

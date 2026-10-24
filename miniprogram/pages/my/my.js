@@ -124,7 +124,7 @@ Page({
     wx.navigateTo({ url: '/pages/stats/stats' });
   },
 
-  /** 运动报告（周/月/年汇总 + 个人最佳 + 轨迹记录） */
+  /** 运动报告（周/月/年汇总 + 本期亮点 + 周期对比 + 分类型/日期明细 + 海报） */
   goReport() {
     wx.navigateTo({ url: '/pages/report/report' });
   },
