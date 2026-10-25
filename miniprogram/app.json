@@ -26,7 +26,9 @@
     "pages/notification-list/notification-list",
     "pages/points/points",
     "pages/points-records/points-records",
-    "pages/points-rules/points-rules"
+    "pages/points-rules/points-rules",
+    "pages/points-item/points-item",
+    "pages/points-exchanges/points-exchanges"
   ],
   "window": {
     "navigationBarBackgroundColor": "#ffffff",

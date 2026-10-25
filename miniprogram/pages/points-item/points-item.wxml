@@ -1,0 +1,51 @@
+<view class="page">
+  <view wx:if="{{loading}}" class="state">加载中…</view>
+  <view wx:elif="{{failed}}" class="state state-tap" bindtap="onRetry">加载失败，点击重试</view>
+  <view wx:elif="{{!loggedIn}}" class="state state-tap" bindtap="onLoginTap">登录后兑换补签卡</view>
+  <block wx:elif="{{item}}">
+    <view class="hero">
+      <view class="hero-icon">签</view>
+      <text class="hero-name">{{item.name}}</text>
+      <text class="hero-sub">{{item.subtitle}}</text>
+      <view class="hero-price">
+        <text class="price">{{item.price}}</text>
+        <text class="price-unit">积分</text>
+      </view>
+    </view>
+
+    <view class="card card-first">
+      <view class="section-title">商品介绍</view>
+      <text class="desc">{{item.description}}</text>
+      <view class="meta-row">
+        <text class="meta-label">有效期</text>
+        <text class="meta-value">兑换后 {{item.validDays}} 天</text>
+      </view>
+      <view class="meta-row">
+        <text class="meta-label">我的补签卡</text>
+        <text class="meta-value">{{cards}} 张</text>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="section-title">兑换说明</view>
+      <view class="note">· 每张补签卡仅可使用一次，每个漏签日最多补一次</view>
+      <view class="note">· 只能补签昨天（前一天）的签到，且需要前天已签到</view>
+      <view class="note">· 兑换后 30 天内有效，过期作废</view>
+      <view class="note">· 兑换后不退积分</view>
+    </view>
+
+    <view class="links">
+      <text class="link" bindtap="goExchanges">兑换记录 ›</text>
+      <text class="link" wx:if="{{cards > 0}}" bindtap="goMakeup">去补签昨天 ›</text>
+    </view>
+
+    <view class="buy-space"></view>
+    <view class="buy-bar">
+      <view class="buy-hint" wx:if="{{balance < item.price}}">还差 {{item.price - balance}} 积分，去签到或做任务赚积分</view>
+      <view class="buy-btn {{balance >= item.price && !busy ? '' : 'off'}}" bindtap="onExchange">
+        <text wx:if="{{busy}}">兑换中…</text>
+        <text wx:else>{{priceText}}</text>
+      </view>
+    </view>
+  </block>
+</view>

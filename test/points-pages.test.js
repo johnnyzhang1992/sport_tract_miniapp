@@ -16,7 +16,7 @@ const path = require('node:path');
 
 const root = path.join(__dirname, '..');
 const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
-const { bjDate } = require('../miniprogram/utils/bj-date');
+const { bjDate, bjDateTime } = require('../miniprogram/utils/bj-date');
 
 /* ------------------------------- 结构断言 ------------------------------- */
 
@@ -39,6 +39,7 @@ test('PP2 积分页：签到/任务/兑换入口存在', () => {
 
 const apiCalls = [];
 let summaryRespond = null;
+let postRespond = null;
 
 const summaryFixture = () => ({
   balance: 42,
@@ -56,9 +57,9 @@ const fakeApi = {
     apiCalls.push({ method: 'GET', url: p, params });
     return summaryRespond(p, params);
   },
-  post(p) {
-    apiCalls.push({ method: 'POST', url: p });
-    return Promise.resolve({});
+  post(p, data) {
+    apiCalls.push({ method: 'POST', url: p, data });
+    return postRespond(p, data);
   },
 };
 
@@ -152,6 +153,7 @@ function reset({ loggedIn = true } = {}) {
   loginAnswer = true;
   appLoggedIn = loggedIn;
   summaryRespond = () => Promise.resolve(summaryFixture());
+  postRespond = () => Promise.resolve({});
   currentAd = makeAd();
   adCreates = 0;
 }
@@ -566,4 +568,256 @@ test('PP20 积分两页向 ensureLogin 传积分文案（默认足迹文案保�
     read('miniprogram/utils/login-gate.js').includes("content || '登录后才能记录你的足迹。'"),
     '不传文案时仍用足迹默认口径',
   );
+});
+
+/* --------------------- 补签卡详情页 / 兑换记录页（T11） --------------------- */
+
+const ITEM_JS = 'miniprogram/pages/points-item/points-item.js';
+const ITEM_WXML = 'miniprogram/pages/points-item/points-item.wxml';
+const EX_JS = 'miniprogram/pages/points-exchanges/points-exchanges.js';
+const EX_WXML = 'miniprogram/pages/points-exchanges/points-exchanges.wxml';
+
+const itemFixture = () => ({
+  key: 'makeup_card',
+  name: '补签卡',
+  subtitle: '恢复连续打卡记录',
+  price: 200,
+  validDays: 30,
+  description: '每张仅可使用一次；仅用于补签昨天；兑换后 30 天内有效',
+});
+
+/** 商品页同时依赖 /points/items 与 /points/summary，按路径分流 */
+function itemPageRespond({ balance = 200, cards = 0 } = {}) {
+  return (p) => {
+    if (p === '/points/items') return Promise.resolve([itemFixture()]);
+    if (p === '/points/summary') return Promise.resolve({ balance, signin: { cards }, tasks: [] });
+    return Promise.resolve({});
+  };
+}
+
+const exchangeRow = (over = {}) => Object.assign({
+  id: 'e1',
+  itemKey: 'makeup_card',
+  cost: 200,
+  cardId: 'c1',
+  status: 'unused',
+  statusText: '未使用',
+  usedForDate: '',
+  expiresAt: Date.now() + 86400000,
+  createdAt: Date.UTC(2026, 9, 22, 2, 30),
+}, over);
+
+test('PP21 app.json 注册补签卡详情与兑换记录页；两页接入正确接口', () => {
+  const app = JSON.parse(read('miniprogram/app.json'));
+  assert.ok(app.pages.includes('pages/points-item/points-item'));
+  assert.ok(app.pages.includes('pages/points-exchanges/points-exchanges'));
+
+  const item = read(ITEM_JS);
+  assert.ok(item.includes('makeup_card/exchange'));
+  assert.ok(item.includes('requestId'));
+  assert.ok(read(EX_JS).includes('/points/exchanges'));
+});
+
+test('PP22 商品页：/points/items + /points/summary 映射价格/余额/卡数，兑换说明与兑换记录入口', async () => {
+  reset();
+  summaryRespond = itemPageRespond({ balance: 260, cards: 2 });
+  const def = loadPage(ITEM_JS);
+  const p = bootWith(def);
+  await tick();
+  assert.deepEqual(calls(), ['GET /points/items', 'GET /points/summary']);
+  assert.equal(p.data.loggedIn, true);
+  assert.equal(p.data.loading, false);
+  assert.equal(p.data.failed, false);
+  assert.equal(p.data.item.price, 200);
+  assert.equal(p.data.item.validDays, 30);
+  assert.equal(p.data.balance, 260);
+  assert.equal(p.data.cards, 2);
+  assert.equal(p.data.priceText, '200 积分兑换');
+
+  const wxml = read(ITEM_WXML);
+  assert.ok(wxml.includes('{{priceText}}'), '底部按钮文案由接口价格拼出「200 积分兑换」');
+  ['每张', '昨天', '30 天', '不退'].forEach((s) => assert.ok(wxml.includes(s), `兑换说明缺少「${s}」`));
+  assert.ok(wxml.includes('我的补签卡'), '已有未使用卡时展示「我的补签卡 N 张」');
+  assert.ok(wxml.includes('兑换记录'));
+  assert.ok(wxml.includes('bindtap="goExchanges"'));
+
+  p.goExchanges();
+  assert.deepEqual(navs, ['/pages/points-exchanges/points-exchanges']);
+});
+
+test('PP23 商品页兑换：POST 带一次性 requestId、busy 期间连点不重复提交、成功后刷新', async () => {
+  reset();
+  summaryRespond = itemPageRespond({ balance: 200 });
+  let resolvePost = null;
+  postRespond = () => new Promise((r) => {
+    resolvePost = r;
+  });
+  const def = loadPage(ITEM_JS);
+  const p = bootWith(def);
+  await tick();
+  apiCalls.length = 0;
+
+  const pending = p.onExchange();
+  assert.equal(p.data.busy, true);
+  await p.onExchange();
+  assert.equal(apiCalls.length, 1, 'busy 中的连点不能再发请求');
+  assert.equal(apiCalls[0].method, 'POST');
+  assert.equal(apiCalls[0].url, '/points/items/makeup_card/exchange');
+  const firstId = apiCalls[0].data.requestId;
+  assert.match(firstId, /^\d+-[a-z0-9]+$/, 'requestId 形如 ${Date.now()}-${random}');
+
+  resolvePost({ cardId: 'c1', balance: 0 });
+  await pending;
+  await tick();
+  assert.equal(p.data.busy, false);
+  assert.deepEqual(calls(), [
+    'POST /points/items/makeup_card/exchange',
+    'GET /points/items',
+    'GET /points/summary',
+  ]);
+  assert.ok(toasts.includes('兑换成功'));
+
+  // 再次兑换必须换新的 requestId（服务端按 requestId 幂等，复用会变成「点了没反应」）
+  apiCalls.length = 0;
+  summaryRespond = itemPageRespond({ balance: 200 });
+  postRespond = () => Promise.resolve({ cardId: 'c2', balance: 0 });
+  await p.onExchange();
+  await tick();
+  const secondId = apiCalls.find((c) => c.method === 'POST').data.requestId;
+  assert.notEqual(secondId, firstId);
+  assert.equal(p.data.busy, false);
+});
+
+test('PP24 商品页余额不足：不请求，提示当前与所需积分', async () => {
+  reset();
+  summaryRespond = itemPageRespond({ balance: 199 });
+  const def = loadPage(ITEM_JS);
+  const p = bootWith(def);
+  await tick();
+  assert.equal(p.data.balance, 199);
+  assert.ok(read(ITEM_WXML).includes('还差'), '余额不足要提示差额');
+
+  apiCalls.length = 0;
+  await p.onExchange();
+  assert.deepEqual(calls(), [], '余额不足不能发兑换请求');
+  assert.ok(toasts.some((t) => t.includes('当前 199')));
+  assert.ok(toasts.some((t) => t.includes('需要 200')));
+  assert.equal(p.data.busy, false);
+});
+
+test('PP25 商品页游客：不弹登录不发请求；点引导登录成功后才请求', async () => {
+  reset({ loggedIn: false });
+  const def = loadPage(ITEM_JS);
+  const p = bootWith(def);
+  await tick();
+  assert.equal(loginCalls, 0);
+  assert.deepEqual(calls(), []);
+  assert.equal(p.data.loggedIn, false);
+  assert.equal(p.data.loading, false);
+  assert.ok(read(ITEM_WXML).includes('登录后'));
+
+  loginAnswer = false;
+  await p.onLoginTap();
+  await tick();
+  assert.equal(loginCalls, 1);
+  assert.deepEqual(calls(), [], '取消登录不发请求');
+
+  loginAnswer = true;
+  appLoggedIn = true;
+  summaryRespond = itemPageRespond({ balance: 200 });
+  await p.onLoginTap();
+  await tick();
+  assert.deepEqual(calls(), ['GET /points/items', 'GET /points/summary']);
+  assert.equal(p.data.loggedIn, true);
+  assert.equal(p.data.item.price, 200);
+});
+
+test('PP26 商品页请求失败：failed 置位可点击重试，重试成功后恢复', async () => {
+  reset();
+  summaryRespond = () => Promise.reject(new Error('boom'));
+  const def = loadPage(ITEM_JS);
+  const p = bootWith(def);
+  await tick();
+  assert.equal(p.data.failed, true);
+  assert.equal(p.data.loading, false);
+  assert.ok(read(ITEM_WXML).includes('bindtap="onRetry"'));
+
+  summaryRespond = itemPageRespond({ balance: 200 });
+  await p.onRetry();
+  await tick();
+  assert.equal(p.data.failed, false);
+  assert.equal(p.data.item.price, 200);
+  assert.equal(p.data.balance, 200);
+});
+
+test('PP27 兑换记录页：状态映射、去补签条件（未使用且未过期）、时间与消耗格式化', async () => {
+  reset();
+  const future = Date.now() + 86400000;
+  const past = Date.now() - 86400000;
+  const rows = [
+    exchangeRow({ id: 'e1', status: 'unused', statusText: '未使用', expiresAt: future }),
+    // 服务端已把过期未使用推导成 expired；页面再兜一层
+    exchangeRow({ id: 'e2', status: 'unused', statusText: '未使用', expiresAt: past }),
+    exchangeRow({ id: 'e3', status: 'used', statusText: '已使用', usedForDate: '2026-10-21', expiresAt: future }),
+    exchangeRow({ id: 'e4', status: 'expired', statusText: '已过期', expiresAt: past }),
+  ];
+  summaryRespond = () => Promise.resolve(rows);
+  const def = loadPage(EX_JS);
+  const p = bootWith(def);
+  await tick();
+  assert.deepEqual(calls(), ['GET /points/exchanges']);
+  assert.equal(p.data.loggedIn, true);
+  assert.equal(p.data.loading, false);
+  assert.deepEqual(p.data.items.map((i) => i.statusText), ['未使用', '已过期', '已使用', '已过期']);
+  assert.deepEqual(p.data.items.map((i) => i.canMakeup), [true, false, false, false]);
+
+  const ts = rows[0].createdAt;
+  assert.equal(p.data.items[0].timeText, bjDateTime(ts));
+  assert.equal(p.data.items[0].expiresText, bjDate(future));
+  assert.equal(p.data.items[0].costText, '-200 积分');
+  assert.equal(p.data.items[2].usedForDate, '2026-10-21');
+
+  const wxml = read(EX_WXML);
+  assert.ok(wxml.includes('bindtap="goMakeup"'), '未使用且未过期要有「去补签」入口');
+  assert.ok(wxml.includes('去补签'));
+  assert.ok(wxml.includes('兑换时间'));
+
+  p.goMakeup();
+  assert.deepEqual(navs, ['/pages/points/points']);
+});
+
+test('PP28 兑换记录页：游客不请求、空态文案、失败可重试', async () => {
+  reset({ loggedIn: false });
+  const def = loadPage(EX_JS);
+  const p = bootWith(def);
+  await tick();
+  assert.equal(loginCalls, 0);
+  assert.deepEqual(calls(), []);
+  assert.equal(p.data.loggedIn, false);
+  assert.equal(p.data.loading, false);
+  assert.ok(read(EX_WXML).includes('登录后查看兑换记录'));
+
+  loginAnswer = true;
+  appLoggedIn = true;
+  summaryRespond = () => Promise.resolve([]);
+  await p.onLoginTap();
+  await tick();
+  assert.equal(loginCalls, 1);
+  assert.deepEqual(calls(), ['GET /points/exchanges']);
+  assert.equal(p.data.items.length, 0);
+  assert.ok(read(EX_WXML).includes('还没有兑换记录'));
+
+  reset();
+  summaryRespond = () => Promise.reject(new Error('boom'));
+  const q = bootWith(def);
+  await tick();
+  assert.equal(q.data.failed, true);
+  assert.equal(q.data.loading, false);
+
+  summaryRespond = () => Promise.resolve([exchangeRow()]);
+  await q.onRetry();
+  await tick();
+  assert.equal(q.data.failed, false);
+  assert.equal(q.data.items.length, 1);
+  assert.equal(q.data.items[0].canMakeup, true);
 });

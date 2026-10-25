@@ -1,0 +1,125 @@
+.page {
+  min-height: 100vh;
+  background: #f5f6f8;
+  padding: 24rpx 24rpx 48rpx;
+  box-sizing: border-box;
+}
+
+.state {
+  padding: 160rpx 24rpx;
+  text-align: center;
+  font-size: 28rpx;
+  color: #8a93a6;
+}
+
+.state-tap {
+  color: #2b6cf6;
+}
+
+.card {
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 8rpx 28rpx;
+}
+
+/* 列表包裹层：让 .exchange-row:last-child 真正命中末行去分隔线 */
+.exchange-list {
+  display: block;
+}
+
+.exchange-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
+  padding: 26rpx 0;
+  border-bottom: 1rpx solid #f2f3f5;
+}
+
+.exchange-row:last-child {
+  border-bottom: none;
+}
+
+.exchange-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.exchange-head {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.exchange-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+
+.exchange-status {
+  padding: 2rpx 14rpx;
+  border-radius: 999rpx;
+  font-size: 20rpx;
+  background: #f2f3f5;
+  color: #8a93a6;
+}
+
+.exchange-status.status-unused {
+  background: #fff4cc;
+  color: #b07d00;
+}
+
+.exchange-status.status-used {
+  background: #eef4ff;
+  color: #2b6cf6;
+}
+
+.exchange-time,
+.exchange-expire,
+.exchange-used {
+  font-size: 22rpx;
+  color: #8a93a6;
+}
+
+.exchange-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12rpx;
+}
+
+.exchange-cost {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #8a93a6;
+}
+
+.exchange-action {
+  padding: 10rpx 26rpx;
+  border-radius: 999rpx;
+  background: #ffd633;
+  color: #1f2329;
+  font-size: 22rpx;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16rpx;
+  padding: 180rpx 0;
+}
+
+.empty-title {
+  font-size: 26rpx;
+  color: #8a93a6;
+}
+
+.empty-link {
+  font-size: 24rpx;
+  color: #2b6cf6;
+}

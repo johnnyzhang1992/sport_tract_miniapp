@@ -1,0 +1,165 @@
+.page {
+  min-height: 100vh;
+  background: #f5f6f8;
+  padding-bottom: 24rpx;
+}
+
+.state {
+  padding: 160rpx 48rpx;
+  text-align: center;
+  font-size: 28rpx;
+  color: #8a93a6;
+}
+
+.state-tap {
+  color: #2b6cf6;
+}
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10rpx;
+  background: linear-gradient(160deg, #ffd633, #ffcc00);
+  padding: 48rpx 32rpx 76rpx;
+}
+
+.hero-icon {
+  width: 128rpx;
+  height: 128rpx;
+  border-radius: 32rpx;
+  background: #fff;
+  color: #e6a100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 56rpx;
+  font-weight: 700;
+}
+
+.hero-name {
+  margin-top: 12rpx;
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #1f2329;
+}
+
+.hero-sub {
+  font-size: 24rpx;
+  color: #4e5969;
+}
+
+.hero-price {
+  display: flex;
+  align-items: baseline;
+  gap: 6rpx;
+  margin-top: 8rpx;
+}
+
+.price {
+  font-size: 56rpx;
+  font-weight: 700;
+  color: #1f2329;
+}
+
+.price-unit {
+  font-size: 24rpx;
+  color: #4e5969;
+}
+
+.card {
+  background: #fff;
+  border-radius: 20rpx;
+  margin: 20rpx 24rpx 0;
+  padding: 28rpx;
+}
+
+.card-first {
+  margin-top: -52rpx;
+}
+
+.section-title {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #1f2329;
+  margin-bottom: 12rpx;
+}
+
+.desc {
+  font-size: 26rpx;
+  color: #4e5969;
+  line-height: 1.7;
+}
+
+.meta-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 18rpx 0;
+  border-bottom: 1rpx solid #f2f3f5;
+  font-size: 26rpx;
+}
+
+.meta-row:last-child {
+  border-bottom: none;
+}
+
+.meta-label {
+  color: #8a93a6;
+}
+
+.meta-value {
+  color: #1f2329;
+}
+
+.note {
+  font-size: 24rpx;
+  color: #4e5969;
+  line-height: 1.9;
+}
+
+.links {
+  display: flex;
+  justify-content: center;
+  gap: 48rpx;
+  padding: 28rpx 0 8rpx;
+  font-size: 24rpx;
+  color: #2b6cf6;
+}
+
+.buy-space {
+  height: 140rpx;
+}
+
+.buy-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 16rpx 32rpx 32rpx;
+  background: #fff;
+  box-shadow: 0 -2rpx 12rpx rgba(31, 35, 41, 0.06);
+}
+
+.buy-hint {
+  text-align: center;
+  font-size: 22rpx;
+  color: #e8791e;
+  padding-bottom: 12rpx;
+}
+
+.buy-btn {
+  height: 88rpx;
+  border-radius: 999rpx;
+  background: #ffd633;
+  color: #1f2329;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.buy-btn.off {
+  background: #f2f3f5;
+  color: #8a93a6;
+}

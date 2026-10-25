@@ -1,0 +1,30 @@
+<view class="page">
+  <view wx:if="{{loading}}" class="state">加载中…</view>
+  <view wx:elif="{{failed}}" class="state state-tap" bindtap="onRetry">加载失败，点击重试</view>
+  <view wx:elif="{{!loggedIn}}" class="state state-tap" bindtap="onLoginTap">登录后查看兑换记录</view>
+  <block wx:else>
+    <view wx:if="{{items.length}}" class="card">
+      <view class="exchange-list">
+        <view wx:for="{{items}}" wx:key="id" class="exchange-row">
+          <view class="exchange-main">
+            <view class="exchange-head">
+              <text class="exchange-title">{{item.title}}</text>
+              <text class="exchange-status status-{{item.status}}">{{item.statusText}}</text>
+            </view>
+            <text class="exchange-time">兑换时间 {{item.timeText}}</text>
+            <text class="exchange-expire">有效期至 {{item.expiresText}}</text>
+            <text class="exchange-used" wx:if="{{item.usedForDate}}">已补签 {{item.usedForDate}}</text>
+          </view>
+          <view class="exchange-side">
+            <text class="exchange-cost">{{item.costText}}</text>
+            <view class="exchange-action" wx:if="{{item.canMakeup}}" bindtap="goMakeup">去补签</view>
+          </view>
+        </view>
+      </view>
+    </view>
+    <view wx:else class="empty">
+      <text class="empty-title">还没有兑换记录</text>
+      <text class="empty-link" bindtap="goItem">去兑换补签卡 ›</text>
+    </view>
+  </block>
+</view>
