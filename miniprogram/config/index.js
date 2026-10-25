@@ -222,4 +222,7 @@ module.exports = {
 
   /** 有效运动最小轨迹点数：与后端 MIN_EFFECTIVE_POINTS 一致，少于该值保存时被自动作废 */
   MIN_EFFECTIVE_POINTS: 3,
+
+  /** 激励视频广告位（积分页每日任务） */
+  REWARDED_VIDEO_AD_UNIT_ID: 'adunit-cc234d90b3f66388',
 };
