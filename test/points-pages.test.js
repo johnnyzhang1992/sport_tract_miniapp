@@ -126,7 +126,7 @@ function makeAd() {
 let currentAd = null;
 let adCreates = 0;
 const adPath = require.resolve('../miniprogram/utils/rewarded-ad.js');
-const { isAdRewardEligible } = require(adPath); // 完播判定用真实实现
+const { isAdRewardEligible } = require('../miniprogram/utils/rewarded-ad.js'); // 完播判定用真实实现
 require.cache[adPath] = {
   id: adPath,
   filename: adPath,
@@ -589,7 +589,17 @@ test('PP36 七格「今天」由东八区 dateKey 比对：页面把 bjDate(Date
 
 /* --------------------------- 明细页 / 规则页回归 --------------------------- */
 
-/** 单独加载某个页面（页面模块在 require 时通过 Page() 交出定义） */
+/** 单独加载某个页面（页面模块在 require 时通过 Page() 交出定义）。
+ *  require 一律字面量路径（安全门禁把变量 require 判成动态注入）；新增页面先在下表登记 */
+const PAGE_LOADERS = {
+  'miniprogram/pages/points-records/points-records.js': () =>
+    require('../miniprogram/pages/points-records/points-records.js'),
+  'miniprogram/pages/points-item/points-item.js': () =>
+    require('../miniprogram/pages/points-item/points-item.js'),
+  'miniprogram/pages/points-exchanges/points-exchanges.js': () =>
+    require('../miniprogram/pages/points-exchanges/points-exchanges.js'),
+};
+
 function loadPage(relPath) {
   let def = null;
   const prev = global.Page;
@@ -598,7 +608,9 @@ function loadPage(relPath) {
   };
   const abs = require.resolve(path.join(root, relPath));
   delete require.cache[abs];
-  require(abs);
+  const load = PAGE_LOADERS[relPath];
+  assert.ok(load, `loadPage 未登记的页面：${relPath}`);
+  load(); // 缓存已删，字面量 require 会重新执行页面模块
   global.Page = prev;
   assert.ok(def, `${relPath} 应通过 Page() 交出页面对象`);
   return def;
