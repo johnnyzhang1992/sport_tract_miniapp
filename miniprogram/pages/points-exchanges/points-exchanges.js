@@ -8,7 +8,7 @@
  * - 登录闸门走触点级：进页不弹登录、游客不发请求，点引导才 ensureLogin。
  */
 const api = require('../../services/api');
-const { ensureLogin } = require('../../utils/login-gate');
+const { ensureLogin, waitSession } = require('../../utils/login-gate');
 const { bjDate, bjDateTime } = require('../../utils/bj-date');
 
 const STATUS_TEXT = { unused: '未使用', used: '已使用', expired: '已过期' };
@@ -52,13 +52,18 @@ Page({
   },
 
   onShow() {
-    // 从积分页补签回来时刷新状态；首屏 onLoad 后紧跟的 onShow 不重复请求
-    if (this.data.loggedIn) this.fetch();
+    // onLoad 后紧跟的首次 onShow 不重复请求；之后每次回到本页都重拉（含在积分页补签后回来）
+    if (!this.entered) {
+      this.entered = true;
+      return;
+    }
+    this.fetch();
   },
 
   async fetch() {
     this.setData({ loading: true, failed: false });
-    if (!getApp().globalData.loggedIn) {
+    // 冷启动直达本页时，onLaunch 的静默登录可能还没回来，先等它，别把已登录用户当游客
+    if (!(await waitSession())) {
       this.setData({ loading: false, loggedIn: false });
       return;
     }

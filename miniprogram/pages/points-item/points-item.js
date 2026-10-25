@@ -8,7 +8,7 @@
  * - 兑换成功后刷新卡数与余额，可去「补签昨天」或「兑换记录」。
  */
 const api = require('../../services/api');
-const { ensureLogin } = require('../../utils/login-gate');
+const { ensureLogin, waitSession } = require('../../utils/login-gate');
 
 Page({
   data: {
@@ -27,14 +27,18 @@ Page({
   },
 
   onShow() {
-    // 从兑换记录/积分页返回时刷新卡数与余额；首屏 onLoad 后紧跟的 onShow 不重复请求
-    if (this.data.loggedIn) this.fetch();
+    // onLoad 后紧跟的首次 onShow 不重复请求；之后每次回到本页都重拉（含在别处登录后回到本页）
+    if (!this.entered) {
+      this.entered = true;
+      return;
+    }
+    this.fetch();
   },
 
   async fetch() {
     this.setData({ loading: true, failed: false });
-    // 登录闸门走触点级：进页不自动弹登录，游客先看引导，也不发请求
-    if (!getApp().globalData.loggedIn) {
+    // 登录闸门走触点级：进页不自动弹登录，游客不发请求；冷启动直达时先等 onLaunch 那次静默登录
+    if (!(await waitSession())) {
       this.setData({ loading: false, loggedIn: false });
       return;
     }

@@ -68,13 +68,10 @@
   color: #8a93a6;
 }
 
+/* 状态胶囊按 app.wxss .campaign-tag 的约定：基类＝中性灰，所以「已使用」「已过期」都落回基类，
+   只有还能用的「未使用」才加修饰类（用全局的 active 蓝，不是参考稿的黄） */
 .exchange-status.status-unused {
-  background: #fff4cc;
-  color: #b07d00;
-}
-
-.exchange-status.status-used {
-  background: #eef4ff;
+  background: #eaf1ff;
   color: #2b6cf6;
 }
 
@@ -95,14 +92,14 @@
 .exchange-cost {
   font-size: 28rpx;
   font-weight: 700;
-  color: #8a93a6;
+  color: #667080; /* 与积分明细页的支出行同色，别在两个页给出两种「花掉」的深浅 */
 }
 
 .exchange-action {
   padding: 10rpx 26rpx;
   border-radius: 999rpx;
-  background: #ffd633;
-  color: #1f2329;
+  background: #2b6cf6;
+  color: #fff;
   font-size: 22rpx;
 }
 

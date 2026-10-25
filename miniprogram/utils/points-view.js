@@ -21,10 +21,24 @@ function buildSigninStrip(signin, todayMs) {
 }
 
 function buildTaskRows(tasks) {
-  return (tasks || []).map((t) => ({
+  const rows = (tasks || []).map((t) => ({
     key: t.key, title: t.title, points: t.points, status: t.status,
     actionText: t.actionText, disabled: t.status !== 'claimable',
   }));
+  // 未完成的排前面（含 locked/expired），已领取沉底；两组内部都保持接口原序（新手→每日）
+  return rows.filter((r) => r.status !== 'claimed').concat(rows.filter((r) => r.status === 'claimed'));
 }
 
-module.exports = { buildSigninStrip, buildTaskRows };
+/** 道具卡：接口下发整张商品表，卡片图位用名称首字（与头像首字占位同一套做法） */
+function buildItemCards(items) {
+  return (items || []).map((it) => ({
+    key: it.key,
+    name: it.name,
+    subtitle: it.subtitle,
+    price: it.price,
+    validDays: it.validDays,
+    glyph: (it.name || '').charAt(0),
+  }));
+}
+
+module.exports = { buildSigninStrip, buildTaskRows, buildItemCards };

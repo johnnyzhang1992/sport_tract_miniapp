@@ -1,6 +1,6 @@
 const api = require('../../services/api');
-const { ensureLogin } = require('../../utils/login-gate');
-const { buildSigninStrip, buildTaskRows } = require('../../utils/points-view');
+const { ensureLogin, waitSession } = require('../../utils/login-gate');
+const { buildSigninStrip, buildTaskRows, buildItemCards } = require('../../utils/points-view');
 const { createRewardedAd, isAdRewardEligible } = require('../../utils/rewarded-ad');
 
 Page({
@@ -13,7 +13,7 @@ Page({
     strip: [],
     streakText: '',
     tasks: [],
-    item: null,
+    items: [],
     cards: 0,
     videoBusy: false,
   },
@@ -24,7 +24,13 @@ Page({
   },
 
   onShow() {
-    if (this.data.loggedIn) this.fetch();
+    // onLoad 后紧跟的首次 onShow 不重复请求；之后每次回到本页都重拉，
+    // 顺带覆盖「上次停在游客引导、现在已在别处登录」这种状态
+    if (!this.entered) {
+      this.entered = true;
+      return;
+    }
+    this.fetch();
   },
 
   onUnload() {
@@ -33,8 +39,8 @@ Page({
 
   async fetch() {
     this.setData({ loading: true, failed: false });
-    // 登录闸门走触点级：进页不自动弹登录，游客先看引导
-    if (!getApp().globalData.loggedIn) {
+    // 登录闸门走触点级：进页不自动弹登录，游客先看引导；但冷启动直达时先等 onLaunch 那次静默登录
+    if (!(await waitSession())) {
       this.setData({ loading: false, loggedIn: false });
       return;
     }
@@ -51,7 +57,7 @@ Page({
         // 连签 ≥7 天七格全勾后，还要按需求 §4.2 显示「已连续 N 天 · 每日 7 分」
         streakText: streakDay >= 7 ? `已连续 ${streakDay} 天 · 每日 7 分` : '',
         tasks: buildTaskRows(data.tasks || []),
-        item: data.item || null,
+        items: buildItemCards(data.items),
         cards: signin.cards || 0,
       });
     } catch (e) {

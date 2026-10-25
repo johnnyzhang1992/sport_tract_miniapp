@@ -31,4 +31,20 @@ function ensureLogin(content) {
   });
 }
 
-module.exports = { ensureLogin };
+/**
+ * 等一次「已在飞行中的静默登录」，不新起登录。
+ *
+ * 冷启动直达子页（分享/小程序码/编译直达）时，app.onLaunch 的静默登录是个网络请求，
+ * 页面 onLoad 早于它返回，直接读 globalData.loggedIn 会把老用户当游客、停在登录引导上
+ * 且之后不再自查。这里只 join 那次已发起的恢复（onLaunch 才会调 login()），
+ * 没有 in-flight 且未登录就是真游客，闸门行为不变。
+ */
+function waitSession() {
+  const app = getApp();
+  if (app.globalData.loggedIn) return Promise.resolve(true);
+  const pending = app.globalData.loginPromise;
+  if (!pending) return Promise.resolve(false);
+  return pending.then(() => true).catch(() => false);
+}
+
+module.exports = { ensureLogin, waitSession };

@@ -1,5 +1,5 @@
 const api = require('../../services/api');
-const { ensureLogin } = require('../../utils/login-gate');
+const { ensureLogin, waitSession } = require('../../utils/login-gate');
 const { bjDate } = require('../../utils/bj-date');
 
 const PAGE_SIZE = 20;
@@ -28,9 +28,21 @@ Page({
     this.fetch(1);
   },
 
+  onShow() {
+    // onLoad 后紧跟的首次 onShow 不重复请求；之后回到本页重拉第一页
+    if (!this.entered) {
+      this.entered = true;
+      return;
+    }
+    this.fetch(1);
+  },
+
   async fetch(page) {
-    // 登录闸门走触点级：进页不自动弹登录，游客先看引导，也不发请求
-    if (!getApp().globalData.loggedIn) {
+    // 加载态先落（翻页只亮底栏，不把整页打回「加载中」），再过登录闸门
+    if (page === 1) this.setData({ loading: true, failed: false, loadMoreFailed: false });
+    else this.setData({ loadingMore: true, loadMoreFailed: false });
+    // 登录闸门走触点级：游客不发请求；冷启动直达时先等 onLaunch 那次静默登录
+    if (!(await waitSession())) {
       this.setData({
         loggedIn: false,
         loading: false,
@@ -40,8 +52,6 @@ Page({
       });
       return;
     }
-    if (page === 1) this.setData({ loading: true, failed: false, loadMoreFailed: false });
-    else this.setData({ loadingMore: true, loadMoreFailed: false });
     try {
       const data = await api.get('/points/records', { page, pageSize: PAGE_SIZE });
       const items = (data.items || []).map((it) => ({

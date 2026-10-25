@@ -25,7 +25,7 @@
         </view>
       </view>
       <view wx:if="{{streakText}}" class="streak-note">{{streakText}}</view>
-      <view class="signin-btn" wx:if="{{!signin.todaySigned}}" bindtap="onSignIn">今日签到领 {{signin.nextReward}} 积分</view>
+      <view class="signin-btn" wx:if="{{!signin.todaySigned}}" bindtap="onSignIn">今日签到</view>
       <view class="signin-btn off" wx:else>明日签到领 {{signin.nextReward}} 积分</view>
       <view wx:if="{{signin.canMakeUp && signin.makeupCardId}}" class="makeup-link" bindtap="onMakeup">补签昨天 {{signin.makeupDate}}（剩 {{cards}} 张卡）</view>
       <view wx:elif="{{signin.makeupDate && !signin.canMakeUp}}" class="makeup-link" bindtap="goItem">去兑换补签卡</view>
@@ -42,12 +42,24 @@
       </view>
     </view>
 
-    <view class="card exchange-card" bindtap="goItem">
-      <view>
-        <text class="section-title">补签卡</text>
-        <text class="muted">{{item.price}} 积分 · {{item.validDays}} 天有效</text>
+    <!-- 道具区：接口下发整张商品表，一个道具一张卡（图位＝名称首字，与头像首字占位同一套做法） -->
+    <view class="card" wx:if="{{items.length}}">
+      <view class="section-title">积分兑换</view>
+      <view wx:for="{{items}}" wx:key="key" class="item-card" bindtap="goItem">
+        <view class="item-glyph">{{item.glyph}}</view>
+        <view class="item-body">
+          <view class="item-name-row">
+            <text class="item-name">{{item.name}}</text>
+            <text class="item-owned" wx:if="{{cards > 0}}">持有 {{cards}} 张</text>
+          </view>
+          <text class="item-sub">{{item.subtitle}} · {{item.validDays}} 天有效</text>
+        </view>
+        <view class="item-side">
+          <text class="item-price">{{item.price}}</text>
+          <text class="item-price-unit">积分</text>
+        </view>
+        <text class="link-arrow">›</text>
       </view>
-      <text class="link-arrow">›</text>
     </view>
   </block>
   <view wx:else class="empty" bindtap="onLoginTap">登录后查看积分</view>

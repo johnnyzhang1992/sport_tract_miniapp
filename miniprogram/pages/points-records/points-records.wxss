@@ -15,24 +15,25 @@
   color: #2b6cf6;
 }
 
+/* 顶部余额区与积分页同一套蓝渐变英雄区（points.wxss .balance-card），白字最浅处 4.59:1 */
 .summary {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8rpx;
-  background: linear-gradient(160deg, #ffd633, #ffcc00);
+  background: linear-gradient(135deg, #1a56d6, #2b6cf6);
   padding: 40rpx 32rpx 72rpx;
 }
 
 .summary-label {
   font-size: 24rpx;
-  color: #4e5969;
+  color: #fff;
 }
 
 .summary-balance {
   font-size: 72rpx;
   font-weight: 700;
-  color: #1f2329;
+  color: #fff;
 }
 
 .card {
@@ -90,11 +91,11 @@
 }
 
 .record-delta.positive {
-  color: #e6a100;
+  color: #8a5f12; /* 得分＝荣誉金（与积分页任务分值同色）；支出保留中性灰，不抢红的语义 */
 }
 
 .record-delta.negative {
-  color: #8a93a6;
+  color: #667080;
 }
 
 .record-after {

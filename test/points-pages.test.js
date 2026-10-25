@@ -50,11 +50,12 @@ const summaryFixture = () => ({
     makeupDate: '2026-10-23', cards: 2, makeupCardId: 'card-1',
   },
   tasks: [
+    // 故意把已领取的放最前：接口原序如此，页面要把它沉到末尾（未完成在前）
+    { key: 'daily_activity', title: '每日运动', points: 5, status: 'claimed', actionText: '已领取' },
     { key: 'profile', title: '完善资料', points: 10, status: 'claimable', actionText: '领取' },
     { key: 'daily_video', title: '每日看视频', points: 5, status: 'claimable', actionText: '去观看' },
-    { key: 'daily_activity', title: '每日运动', points: 5, status: 'claimed', actionText: '已领取' },
   ],
-  item: { key: 'makeup_card', price: 30, validDays: 30 },
+  items: [{ key: 'makeup_card', name: '补签卡', subtitle: '恢复连续打卡记录', price: 30, validDays: 30 }],
 });
 
 const fakeApi = {
@@ -83,6 +84,8 @@ require.cache[loginGatePath] = {
       loginCalls += 1;
       return Promise.resolve(loginAnswer);
     },
+    // 页面闸门改成异步等会话后，桩件按「当前 appLoggedIn」即时回答，语义与真实实现一致
+    waitSession: () => Promise.resolve(!!appLoggedIn),
   },
   children: [],
   paths: [],
@@ -209,8 +212,12 @@ test('PP4 登录用户进页：只读一次汇总并映射余额/签到条/任�
   assert.deepEqual(
     p.data.tasks.map((t) => [t.key, t.actionText, t.disabled]),
     [['profile', '领取', false], ['daily_video', '去观看', false], ['daily_activity', '已领取', true]],
+    '接口把已领取排在最前，页面要按「未完成在前」重排',
   );
-  assert.equal(p.data.item.price, 30);
+  assert.equal(p.data.items.length, 1);
+  assert.deepEqual(p.data.items[0], {
+    key: 'makeup_card', name: '补签卡', subtitle: '恢复连续打卡记录', price: 30, validDays: 30, glyph: '补',
+  });
 });
 
 test('PP5 游客点登录引导：取消不请求，登录成功才拉汇总', async () => {
@@ -232,6 +239,32 @@ test('PP5 游客点登录引导：取消不请求，登录成功才拉汇总', a
   assert.equal(loginCalls, 2);
   assert.deepEqual(calls(), ['GET /points/summary']);
   assert.equal(p.data.loggedIn, true);
+});
+
+test('PP5b 冷启动竞态：首屏停在游客引导，回到本页时会话已恢复就自动补拉', async () => {
+  reset({ loggedIn: false });
+  const p = boot();
+  await tick();
+  assert.equal(p.data.loggedIn, false, 'onLoad 时会话还没恢复完，按游客渲染');
+  assert.deepEqual(calls(), [], '游客态一个请求都不发');
+
+  appLoggedIn = true; // onLaunch 的静默登录随后才回来
+  p.onShow();
+  await tick();
+  assert.deepEqual(calls(), [], 'onLoad 后紧跟的首次 onShow 不重复请求');
+
+  p.onShow(); // 用户从别的页面回到本页
+  await tick();
+  assert.deepEqual(calls(), ['GET /points/summary']);
+  assert.equal(p.data.loggedIn, true, '回到本页要自己补拉，不能继续要用户点引导');
+});
+
+test('PP5c 道具区是卡片列表：一个道具一张卡，图位用名称首字', () => {
+  const wxml = read('miniprogram/pages/points/points.wxml');
+  assert.ok(/wx:for="{{items}}"/.test(wxml), '道具区要按接口下发的商品表循环，不能写死一张');
+  assert.ok(wxml.includes('class="item-card"'), '每个道具一张卡（不是原来那行「标题+箭头」）');
+  assert.ok(wxml.includes('{{item.glyph}}'), '卡上图位用派生好的首字，不在 wxml 里拼字符串');
+  assert.ok(wxml.includes('持有 {{cards}} 张'), '持卡数要在卡上带出来，兑换前就该知道自己有几张');
 });
 
 test('PP6 签到：POST /points/sign-in 后刷新汇总', async () => {
@@ -421,6 +454,7 @@ test('PP32 积分页首屏加载中：显示加载态，不出现游客引导', 
   assert.ok(wxml.includes('wx:if="{{loading && !loggedIn}}"'), '首屏无数据时才显示整页加载态');
   assert.ok(wxml.includes('加载中'), '加载态要有文案，不能空白');
 
+  await tick(); // 闸门（等静默登录）放行后请求才发出
   release();
   await tick();
   assert.equal(p.data.loading, false);
@@ -680,6 +714,7 @@ test('PP18 明细页：首屏 loading 与翻页 loadingMore 分离，翻页中�
   assert.equal(p.data.loadingMore, true, '翻页只进 loadingMore');
   assert.equal(p.data.loading, false, '翻页不能把整页打回「加载中」');
   assert.equal(p.data.items.length, 20, '翻页期间已渲染的 20 行不能被清掉');
+  await tick(); // 闸门放行后第 2 页请求才发出
   assert.equal(p.onReachBottom(), undefined, '翻页在飞时不重复请求');
   assert.equal(apiCalls.length, 2);
   assert.ok(
