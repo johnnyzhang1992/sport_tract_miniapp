@@ -1,0 +1,326 @@
+/**
+ * 积分主页（pages/points/points）与个人中心入口回归：
+ * 1) 结构：app.json 注册路由、我的页有入口、积分页有签到/任务/补签卡/明细/规则；
+ * 2) 登录闸门走触点级：游客进页不弹登录、不发请求，只有点「登录后查看积分」才 ensureLogin + 拉汇总；
+ * 3) 汇总只读 /points/summary，映射余额/签到条/任务行/补签卡；
+ * 4) 签到与任务领取走 POST；激励视频只有完播（isEnded===true）才领分，提前关闭/广告失败都不发分。
+ * 运行：node --test test/points-pages.test.js；桩：wx / Page / getApp 就地 stub，
+ * services/api、utils/login-gate、utils/rewarded-ad 用 require.cache 注入假实现（isAdRewardEligible 用真实实现）。
+ */
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+
+const root = path.join(__dirname, '..');
+const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
+
+/* ------------------------------- 结构断言 ------------------------------- */
+
+test('PP1 app.json 注册积分页面，我的页有入口', () => {
+  const app = JSON.parse(read('miniprogram/app.json'));
+  assert.ok(app.pages.includes('pages/points/points'));
+  assert.ok(read('miniprogram/pages/my/my.wxml').includes('我的积分'));
+  assert.ok(read('miniprogram/pages/my/my.js').includes('/pages/points/points'));
+});
+
+test('PP2 积分页：签到/任务/兑换入口存在', () => {
+  const wxml = read('miniprogram/pages/points/points.wxml');
+  assert.ok(wxml.includes('今日签到') || wxml.includes('明日签到'));
+  assert.ok(wxml.includes('补签卡'));
+  assert.ok(wxml.includes('积分规则'));
+  assert.ok(wxml.includes('积分明细'));
+});
+
+/* --------------------------------- 环境桩 --------------------------------- */
+
+const apiCalls = [];
+let summaryRespond = null;
+
+const summaryFixture = () => ({
+  balance: 42,
+  signin: { todaySigned: false, streakDay: 2, nextReward: 3, canMakeUp: true, makeupDate: '2026-10-23', cards: 2 },
+  tasks: [
+    { key: 'profile', title: '完善资料', points: 10, status: 'claimable', actionText: '领取' },
+    { key: 'daily_video', title: '每日看视频', points: 5, status: 'claimable', actionText: '去观看' },
+    { key: 'daily_activity', title: '每日运动', points: 5, status: 'claimed', actionText: '已领取' },
+  ],
+  item: { key: 'makeup_card', price: 30, validDays: 30 },
+});
+
+const fakeApi = {
+  get(p) {
+    apiCalls.push({ method: 'GET', url: p });
+    return summaryRespond(p);
+  },
+  post(p) {
+    apiCalls.push({ method: 'POST', url: p });
+    return Promise.resolve({});
+  },
+};
+
+const apiPath = require.resolve('../miniprogram/services/api.js');
+require.cache[apiPath] = { id: apiPath, filename: apiPath, loaded: true, exports: fakeApi, children: [], paths: [] };
+
+let loginCalls = 0;
+let loginAnswer = true;
+const loginGatePath = require.resolve('../miniprogram/utils/login-gate.js');
+require.cache[loginGatePath] = {
+  id: loginGatePath,
+  filename: loginGatePath,
+  loaded: true,
+  exports: {
+    ensureLogin: () => {
+      loginCalls += 1;
+      return Promise.resolve(loginAnswer);
+    },
+  },
+  children: [],
+  paths: [],
+};
+
+/** 假激励视频实例：记录 onClose 监听，show 行为可按用例替换 */
+function makeAd() {
+  const ad = {
+    listeners: [],
+    onClose(fn) {
+      ad.listeners.push(fn);
+    },
+    offClose(fn) {
+      ad.listeners = ad.listeners.filter((f) => f !== fn);
+    },
+    show() {
+      return ad.showImpl ? ad.showImpl() : Promise.resolve();
+    },
+    load() {
+      return Promise.resolve();
+    },
+  };
+  return ad;
+}
+
+let currentAd = null;
+let adCreates = 0;
+const adPath = require.resolve('../miniprogram/utils/rewarded-ad.js');
+const { isAdRewardEligible } = require(adPath); // 完播判定用真实实现
+require.cache[adPath] = {
+  id: adPath,
+  filename: adPath,
+  loaded: true,
+  exports: {
+    isAdRewardEligible,
+    createRewardedAd: () => {
+      adCreates += 1;
+      return currentAd;
+    },
+  },
+  children: [],
+  paths: [],
+};
+
+const toasts = [];
+const navs = [];
+global.wx = {
+  showToast: (o) => toasts.push(o && o.title),
+  navigateTo: (o) => navs.push(o && o.url),
+};
+
+let appLoggedIn = true;
+global.getApp = () => ({ globalData: { loggedIn: appLoggedIn } });
+
+let pageDef = null;
+global.Page = (def) => {
+  pageDef = def;
+};
+
+require('../miniprogram/pages/points/points.js');
+assert.ok(pageDef, 'points.js 应通过 Page() 交出页面对象');
+
+/* --------------------------------- 页面装配 --------------------------------- */
+
+const tick = () => new Promise((r) => setImmediate(r));
+const calls = () => apiCalls.map((c) => `${c.method} ${c.url}`);
+
+function reset({ loggedIn = true } = {}) {
+  apiCalls.length = 0;
+  toasts.length = 0;
+  navs.length = 0;
+  loginCalls = 0;
+  loginAnswer = true;
+  appLoggedIn = loggedIn;
+  summaryRespond = () => Promise.resolve(summaryFixture());
+  currentAd = makeAd();
+  adCreates = 0;
+}
+
+/** 起一个页面实例（onLoad 里的 fetch 不等返回值，调用方用 tick() 等它落地） */
+function boot() {
+  const p = Object.assign({}, pageDef);
+  p.data = JSON.parse(JSON.stringify(pageDef.data));
+  p.setData = (patch = {}) => Object.assign(p.data, patch);
+  p.onLoad();
+  return p;
+}
+
+/* ---------------------------------- 用例 ---------------------------------- */
+
+test('PP3 游客进页：不弹登录、不发请求，展示登录引导', async () => {
+  reset({ loggedIn: false });
+  const p = boot();
+  await tick();
+  assert.equal(loginCalls, 0);
+  assert.deepEqual(calls(), []);
+  assert.equal(p.data.loggedIn, false);
+  assert.equal(p.data.loading, false);
+  assert.ok(read('miniprogram/pages/points/points.wxml').includes('登录后查看积分'));
+});
+
+test('PP4 登录用户进页：只读一次汇总并映射余额/签到条/任务/补签卡', async () => {
+  reset();
+  const p = boot();
+  await tick();
+  assert.deepEqual(calls(), ['GET /points/summary']);
+  assert.equal(p.data.loggedIn, true);
+  assert.equal(p.data.loading, false);
+  assert.equal(p.data.balance, 42);
+  assert.equal(p.data.cards, 2);
+  assert.equal(p.data.signin.streakDay, 2);
+  assert.equal(p.data.strip.length, 7);
+  assert.equal(p.data.strip[1].done, true);
+  assert.equal(p.data.strip[2].current, true);
+  assert.deepEqual(
+    p.data.tasks.map((t) => [t.key, t.actionText, t.disabled]),
+    [['profile', '领取', false], ['daily_video', '去观看', false], ['daily_activity', '已领取', true]],
+  );
+  assert.equal(p.data.item.price, 30);
+});
+
+test('PP5 游客点登录引导：取消不请求，登录成功才拉汇总', async () => {
+  reset({ loggedIn: false });
+  const p = boot();
+  await tick();
+  assert.deepEqual(calls(), []);
+
+  loginAnswer = false;
+  await p.onLoginTap();
+  await tick();
+  assert.equal(loginCalls, 1);
+  assert.deepEqual(calls(), []);
+
+  loginAnswer = true;
+  appLoggedIn = true;
+  await p.onLoginTap();
+  await tick();
+  assert.equal(loginCalls, 2);
+  assert.deepEqual(calls(), ['GET /points/summary']);
+  assert.equal(p.data.loggedIn, true);
+});
+
+test('PP6 签到：POST /points/sign-in 后刷新汇总', async () => {
+  reset();
+  const p = boot();
+  await tick();
+  apiCalls.length = 0;
+  await p.onSignIn();
+  await tick();
+  assert.deepEqual(calls(), ['POST /points/sign-in', 'GET /points/summary']);
+  assert.ok(toasts.includes('签到成功'));
+});
+
+test('PP7 任务：不可领的行不请求，可领的行 POST 领取接口', async () => {
+  reset();
+  const p = boot();
+  await tick();
+
+  apiCalls.length = 0;
+  await p.onClaim({ currentTarget: { dataset: { key: 'daily_activity' } } });
+  await tick();
+  assert.deepEqual(calls(), [], '已领取任务点不动，也不能发请求');
+
+  await p.onClaim({ currentTarget: { dataset: { key: 'profile' } } });
+  await tick();
+  assert.deepEqual(calls(), ['POST /points/tasks/profile/claim', 'GET /points/summary']);
+  assert.ok(toasts.includes('领取成功'));
+});
+
+test('PP8 视频任务：广告实例只建一次，完播才领分，回调用完就解绑', async () => {
+  reset();
+  const p = boot();
+  await tick();
+  apiCalls.length = 0;
+  const claim = () => p.onClaim({ currentTarget: { dataset: { key: 'daily_video' } } });
+
+  await claim();
+  await tick();
+  assert.equal(adCreates, 1);
+  assert.equal(currentAd.listeners.length, 1);
+  assert.equal(p.data.videoBusy, true);
+  assert.deepEqual(calls(), [], '广告还没关，不能发领取请求');
+
+  currentAd.listeners[0]({ isEnded: true });
+  await tick();
+  assert.deepEqual(calls(), ['POST /points/tasks/daily_video/claim', 'GET /points/summary']);
+  assert.equal(p.data.videoBusy, false);
+  assert.equal(currentAd.listeners.length, 0, 'onClose 用完必须解绑');
+
+  // 第二次观看复用同一个广告实例；提前关闭不发分
+  apiCalls.length = 0;
+  await claim();
+  await tick();
+  assert.equal(adCreates, 1, '广告实例应缓存复用，不能每次重建');
+  currentAd.listeners[0]({ isEnded: false });
+  await tick();
+  assert.deepEqual(calls(), []);
+  assert.equal(p.data.videoBusy, false);
+});
+
+test('PP9 视频任务：提前关闭与广告加载失败都不发分，并复位 busy', async () => {
+  reset();
+  const p = boot();
+  await tick();
+  apiCalls.length = 0;
+  await p.onClaim({ currentTarget: { dataset: { key: 'daily_video' } } });
+  await tick();
+  currentAd.listeners[0]({});
+  await tick();
+  assert.deepEqual(calls(), []);
+  assert.ok(toasts.some((t) => t.includes('未看完')));
+  assert.equal(p.data.videoBusy, false);
+
+  // 新页 + 广告拉取失败：show/load/show 全失败 → 提示并复位
+  const q = boot();
+  await tick();
+  apiCalls.length = 0;
+  currentAd = makeAd();
+  currentAd.showImpl = () => Promise.reject(new Error('no fill'));
+  await q.onClaim({ currentTarget: { dataset: { key: 'daily_video' } } });
+  await tick();
+  assert.deepEqual(calls(), []);
+  assert.ok(toasts.some((t) => t.includes('广告加载失败')));
+  assert.equal(q.data.videoBusy, false);
+});
+
+test('PP10 入口跳转：明细/规则/补签卡/带 makeup 参数的补签页', async () => {
+  reset();
+  const p = boot();
+  await tick();
+  p.goRecords();
+  p.goRules();
+  p.goItem();
+  p.onMakeup();
+  assert.deepEqual(navs, [
+    '/pages/points-records/points-records',
+    '/pages/points-rules/points-rules',
+    '/pages/points-item/points-item',
+    '/pages/points-item/points-item?makeup=1',
+  ]);
+});
+
+test('PP11 汇总失败：failed 置位但页面不崩', async () => {
+  reset();
+  summaryRespond = () => Promise.reject(new Error('boom'));
+  const p = boot();
+  await tick();
+  assert.equal(p.data.failed, true);
+  assert.equal(p.data.loading, false);
+});

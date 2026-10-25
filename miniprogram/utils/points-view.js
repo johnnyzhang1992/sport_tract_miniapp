@@ -1,15 +1,16 @@
-const { bjDate } = require('./bj-date');
 const pad = (n) => String(n).padStart(2, '0');
 
 function buildSigninStrip(signin, todayMs) {
   const streak = Math.min(Number(signin && signin.streakDay) || 0, 7);
   const signed = !!(signin && signin.todaySigned);
   const currentDay = signed ? streak : Math.min(streak + 1, 7);
+  // 连签已满 7 天且今天没签：没有「当前格」，否则第 7 格会同时 done + current（同一格显示两个态）
+  const currentAt = !signed && streak < 7 ? currentDay : 0;
   const base = new Date(todayMs + 8 * 3600000);
   const out = [];
   for (let i = 1; i <= 7; i++) {
     const done = i <= streak;
-    const current = !signed && i === currentDay;
+    const current = i === currentAt;
     const date = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), base.getUTCDate() + (i - currentDay)));
     let sub = `${pad(date.getUTCMonth() + 1)}.${pad(date.getUTCDate())}`;
     if (current) sub = '今天';

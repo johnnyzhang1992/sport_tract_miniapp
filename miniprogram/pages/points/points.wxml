@@ -1,0 +1,43 @@
+<view class="page">
+  <block wx:if="{{loggedIn}}">
+    <view class="balance-card">
+      <text class="balance">{{balance}}</text>
+      <view class="balance-actions">
+        <text bindtap="goRecords">积分明细 ›</text>
+        <text bindtap="goRules">积分规则</text>
+      </view>
+    </view>
+
+    <view class="card signin-card">
+      <view class="signin-strip">
+        <view wx:for="{{strip}}" wx:key="reward" class="signin-cell {{item.done ? 'done' : ''}} {{item.current ? 'current' : ''}}">
+          <view class="dot">{{item.done ? '✓' : item.label}}</view>
+          <text class="sub">{{item.sub || item.label}}</text>
+        </view>
+      </view>
+      <view class="signin-btn" wx:if="{{!signin.todaySigned}}" bindtap="onSignIn">今日签到领 {{signin.nextReward}} 积分</view>
+      <view class="signin-btn off" wx:else>明日签到领 {{signin.nextReward}} 积分</view>
+      <view wx:if="{{signin.canMakeUp}}" class="makeup-link" bindtap="onMakeup">补签昨天 {{signin.makeupDate}}（剩 {{cards}} 张卡）</view>
+    </view>
+
+    <view class="card">
+      <view class="section-title">新手与每日任务</view>
+      <view wx:for="{{tasks}}" wx:key="key" class="task-row">
+        <view>
+          <text class="task-title">{{item.title}}</text>
+          <text class="task-points">+{{item.points}}</text>
+        </view>
+        <view class="task-action {{item.disabled ? 'off' : ''}}" data-key="{{item.key}}" bindtap="onClaim">{{item.actionText}}</view>
+      </view>
+    </view>
+
+    <view class="card exchange-card" bindtap="goItem">
+      <view>
+        <text class="section-title">补签卡</text>
+        <text class="muted">{{item.price}} 积分 · 30 天有效</text>
+      </view>
+      <text class="link-arrow">›</text>
+    </view>
+  </block>
+  <view wx:elif="{{!loggedIn && !loading}}" class="empty" bindtap="onLoginTap">登录后查看积分</view>
+</view>

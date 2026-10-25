@@ -23,7 +23,8 @@
     "pages/campaign-create/campaign-create",
     "pages/campaign-detail/campaign-detail",
     "pages/notification/notification",
-    "pages/notification-list/notification-list"
+    "pages/notification-list/notification-list",
+    "pages/points/points"
   ],
   "window": {
     "navigationBarBackgroundColor": "#ffffff",

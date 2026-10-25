@@ -124,6 +124,11 @@ Page({
     wx.navigateTo({ url: '/pages/stats/stats' });
   },
 
+  /** 我的积分（签到 / 任务 / 补签卡） */
+  goPoints() {
+    wx.navigateTo({ url: '/pages/points/points' });
+  },
+
   /** 运动报告（周/月/年汇总 + 本期亮点 + 周期对比 + 分类型/日期明细 + 海报） */
   goReport() {
     wx.navigateTo({ url: '/pages/report/report' });

@@ -73,6 +73,10 @@
       <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-download.png" mode="aspectFit" />
       <view slot="right-icon" class="link-arrow">›</view>
     </t-cell>
+    <t-cell title="我的积分" t-class-left="cell-left" t-class-title="cell-title" bind:click="goPoints">
+      <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-coins.png" mode="aspectFit" />
+      <view slot="right-icon" class="link-arrow">›</view>
+    </t-cell>
     <t-cell title="设置" t-class-left="cell-left" t-class-title="cell-title" bind:click="goSettings">
       <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-settings.png" mode="aspectFit" />
       <view slot="right-icon" class="link-arrow">›</view>
