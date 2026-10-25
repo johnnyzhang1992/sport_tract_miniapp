@@ -907,7 +907,13 @@ test('PP22 商品页：/points/items + /points/summary 映射价格/余额/卡�
 
   const wxml = read(ITEM_WXML);
   assert.ok(wxml.includes('{{priceText}}'), '底部按钮文案由接口价格拼出「200 积分兑换」');
-  ['每张', '昨天', '不退'].forEach((s) => assert.ok(wxml.includes(s), `兑换说明缺少「${s}」`));
+  // round 1 收紧：兑换说明钉在 note 行本身，不再对全文取裸子串——wxml 注释里出现「昨天」
+  // 顶不掉断言，旧「只能补签昨天」静态说明（与同屏服务端描述矛盾）若复活必红。
+  const notes = [...wxml.matchAll(/<view class="note">([\s\S]*?)<\/view>/g)].map((m) => m[1]).join(' ');
+  assert.ok(notes.includes('每张补签卡仅可使用一次'), '兑换说明须保留「每张补签卡仅可使用一次」note');
+  assert.ok(notes.includes('不退积分'), '兑换说明须保留「不退积分」note');
+  assert.ok(!notes.includes('昨天'), 'note 行不得再出现「只能补签昨天」旧窗口口径——可补范围以服务端下发描述为准');
+  assert.ok(!wxml.includes('只能补签昨天'), '静态旧文案「只能补签昨天」不得以任何节点复活');
   assert.ok(wxml.includes('{{item.validDays}} 天内有效'), '有效期天数由接口 validDays 拼出，不写死 30');
   assert.ok(!wxml.includes('30 天'), 'WXML 里不能再硬编码 30 天');
   assert.ok(wxml.includes('我的补签卡'), '已有未使用卡时展示「我的补签卡 N 张」');
