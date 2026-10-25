@@ -11,6 +11,7 @@ Page({
     balance: 0,
     signin: {},
     strip: [],
+    streakText: '',
     tasks: [],
     item: null,
     cards: 0,
@@ -39,19 +40,29 @@ Page({
     }
     try {
       const data = await api.get('/points/summary');
+      const signin = data.signin || {};
+      const streakDay = Number(signin.streakDay) || 0;
       this.setData({
         loggedIn: true,
         loading: false,
         balance: data.balance ?? 0,
-        signin: data.signin || {},
-        strip: buildSigninStrip(data.signin || {}, Date.now()),
+        signin,
+        strip: buildSigninStrip(signin, Date.now()),
+        // 连签 ≥7 天七格全勾后，还要按需求 §4.2 显示「已连续 N 天 · 每日 7 分」
+        streakText: streakDay >= 7 ? `已连续 ${streakDay} 天 · 每日 7 分` : '',
         tasks: buildTaskRows(data.tasks || []),
         item: data.item || null,
-        cards: (data.signin && data.signin.cards) || 0,
+        cards: signin.cards || 0,
       });
     } catch (e) {
+      // WXML 里 failed 分支排在已登录内容与游客引导之前：请求失败只会看到重试块，
+      // 不会掉回「登录后查看积分」（游客引导是最后兜底支，且只在未登录时可达）。
       this.setData({ loading: false, failed: true });
     }
+  },
+
+  onRetry() {
+    this.fetch();
   },
 
   /** 游客点「登录后查看积分」：登录成功才拉汇总（不在进页时弹登录） */
@@ -71,10 +82,12 @@ Page({
     await this.post(`/points/tasks/${key}/claim`, '领取成功');
   },
 
+  /** okText 可传函数：按服务端响应拼文案（如视频任务用返回的 credited，不在端上写死分值） */
   async post(url, okText) {
     try {
-      await api.post(url);
-      wx.showToast({ title: okText, icon: 'success' });
+      const data = await api.post(url);
+      const text = typeof okText === 'function' ? okText(data) : okText;
+      wx.showToast({ title: text, icon: 'success' });
       this.fetch();
     } catch (e) {
       wx.showToast({ title: (e && e.message) || '操作失败', icon: 'none' });
@@ -95,8 +108,13 @@ Page({
     const onClose = (res) => {
       ad.offClose(onClose);
       this.setData({ videoBusy: false });
-      if (isAdRewardEligible(res)) this.post('/points/tasks/daily_video/claim', '积分 +5');
-      else wx.showToast({ title: '未看完广告，本次不发积分', icon: 'none' });
+      if (isAdRewardEligible(res)) {
+        // 分值由服务端下发：只信 claim 返回的 credited，不在端上写死 +5
+        this.post('/points/tasks/daily_video/claim', (data) => {
+          const credited = (data && data.credited) || 0;
+          return credited > 0 ? `积分 +${credited}` : '领取成功';
+        });
+      } else wx.showToast({ title: '未看完广告，本次不发积分', icon: 'none' });
     };
     const onFail = () => {
       ad.offClose(onClose);

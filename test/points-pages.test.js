@@ -27,12 +27,14 @@ test('PP1 app.json 注册积分页面，我的页有入口', () => {
   assert.ok(read('miniprogram/pages/my/my.js').includes('/pages/points/points'));
 });
 
-test('PP2 积分页：签到/任务/兑换入口存在', () => {
+test('PP2 积分页：签到/任务/兑换入口存在，有效期由接口 validDays 渲染', () => {
   const wxml = read('miniprogram/pages/points/points.wxml');
   assert.ok(wxml.includes('今日签到') || wxml.includes('明日签到'));
   assert.ok(wxml.includes('补签卡'));
   assert.ok(wxml.includes('积分规则'));
   assert.ok(wxml.includes('积分明细'));
+  assert.ok(wxml.includes('{{item.validDays}} 天有效'), '兑换卡有效期要渲染接口下发的 validDays');
+  assert.ok(!wxml.includes('30 天有效'), '不能在 WXML 写死 30 天');
 });
 
 /* --------------------------------- 环境桩 --------------------------------- */
@@ -261,6 +263,7 @@ test('PP7 任务：不可领的行不请求，可领的行 POST 领取接口', a
 
 test('PP8 视频任务：广告实例只建一次，完播才领分，回调用完就解绑', async () => {
   reset();
+  postRespond = () => Promise.resolve({ credited: 7 });
   const p = boot();
   await tick();
   apiCalls.length = 0;
@@ -276,6 +279,8 @@ test('PP8 视频任务：广告实例只建一次，完播才领分，回调用�
   currentAd.listeners[0]({ isEnded: true });
   await tick();
   assert.deepEqual(calls(), ['POST /points/tasks/daily_video/claim', 'GET /points/summary']);
+  assert.ok(toasts.includes('积分 +7'), '奖励文案用 claim 返回的 credited，不写死 +5');
+  assert.ok(!read('miniprogram/pages/points/points.js').includes("'积分 +5'"), 'JS 里不能再硬编码视频分值');
   assert.equal(p.data.videoBusy, false);
   assert.equal(currentAd.listeners.length, 0, 'onClose 用完必须解绑');
 
@@ -400,6 +405,105 @@ test('PP31 积分页补签：服务端 400 原样提示并刷新最新状态', a
   assert.deepEqual(calls(), ['POST /points/cards/card-1/use', 'GET /points/summary']);
   assert.deepEqual(toasts, ['补签卡不可用或已过期'], '400 直接展示服务端文案');
   assert.equal(p.makeupBusy, false);
+});
+
+test('PP32 积分页首屏加载中：显示加载态，不出现游客引导', async () => {
+  reset();
+  let release = null;
+  summaryRespond = () => new Promise((resolve) => {
+    release = () => resolve(summaryFixture());
+  });
+  const p = boot();
+  assert.equal(p.data.loading, true);
+  assert.equal(p.data.failed, false);
+
+  const wxml = read('miniprogram/pages/points/points.wxml');
+  assert.ok(wxml.includes('wx:if="{{loading && !loggedIn}}"'), '首屏无数据时才显示整页加载态');
+  assert.ok(wxml.includes('加载中'), '加载态要有文案，不能空白');
+
+  release();
+  await tick();
+  assert.equal(p.data.loading, false);
+  assert.equal(p.data.loggedIn, true);
+  assert.equal(p.data.balance, 42);
+});
+
+test('PP33 登录用户汇总失败：显示重试块（不是游客引导），点重试恢复', async () => {
+  reset();
+  summaryRespond = () => Promise.reject(new Error('boom'));
+  const p = boot();
+  await tick();
+  assert.equal(p.data.failed, true);
+  assert.equal(p.data.loading, false);
+  assert.deepEqual(calls(), ['GET /points/summary']);
+
+  const wxml = read('miniprogram/pages/points/points.wxml');
+  assert.ok(wxml.includes('wx:elif="{{failed}}"'), '失败态单独一支');
+  assert.ok(wxml.includes('bindtap="onRetry"'), '重试块整块可点');
+  assert.ok(wxml.includes('点击重试'));
+  assert.ok(
+    wxml.indexOf('wx:elif="{{failed}}"') < wxml.indexOf('wx:elif="{{loggedIn}}"'),
+    '失败分支必须排在已登录内容之前',
+  );
+
+  // 游客引导必须挂在 wx:else（即 未加载/未失败/未登录 之后的兜底支）
+  const guestIdx = wxml.indexOf('登录后查看积分');
+  const guestTag = wxml.slice(wxml.lastIndexOf('<view', guestIdx), guestIdx);
+  assert.ok(guestTag.includes('wx:else'), '游客引导只能是兜底支，失败态不能落到这里');
+  assert.ok(!guestTag.includes('failed'), '失败态不能与游客引导同支');
+
+  // 点重试重新拉汇总并恢复
+  summaryRespond = () => Promise.resolve(summaryFixture());
+  await p.onRetry();
+  await tick();
+  assert.equal(p.data.failed, false);
+  assert.equal(p.data.loggedIn, true);
+  assert.equal(p.data.balance, 42);
+  assert.deepEqual(calls(), ['GET /points/summary', 'GET /points/summary']);
+});
+
+test('PP34 连签 ≥7：显示「已连续 N 天 · 每日 7 分」，未满 7 天不显示', async () => {
+  reset();
+  summaryRespond = () => Promise.resolve(Object.assign({}, summaryFixture(), {
+    signin: {
+      todaySigned: true, streakDay: 9, todayReward: 7, nextReward: 7,
+      canMakeUp: false, makeupDate: '', cards: 0, makeupCardId: '',
+    },
+  }));
+  const p = boot();
+  await tick();
+  assert.equal(p.data.streakText, '已连续 9 天 · 每日 7 分');
+  assert.ok(read('miniprogram/pages/points/points.wxml').includes('{{streakText}}'), '签到卡内要渲染连续天数文案');
+
+  reset(); // fixture 只有连签 2 天
+  const q = boot();
+  await tick();
+  assert.equal(q.data.streakText, '', '未满 7 天不显示该文案');
+});
+
+test('PP35 昨天漏签+前天已签但无卡：显示「去兑换补签卡」入口到商品页', async () => {
+  reset();
+  summaryRespond = () => Promise.resolve(Object.assign({}, summaryFixture(), {
+    signin: {
+      todaySigned: false, streakDay: 2, nextReward: 3,
+      canMakeUp: false, makeupDate: '2026-10-23', cards: 0, makeupCardId: '',
+    },
+  }));
+  const p = boot();
+  await tick();
+  assert.equal(p.data.signin.canMakeUp, false);
+  assert.equal(p.data.signin.makeupDate, '2026-10-23');
+
+  const wxml = read('miniprogram/pages/points/points.wxml');
+  assert.ok(wxml.includes('去兑换补签卡'), '无卡时要有兑换引导');
+  assert.ok(
+    wxml.includes('wx:elif="{{signin.makeupDate && !signin.canMakeUp}}"'),
+    '只有存在可补日期且不能直接补时才引导兑换',
+  );
+
+  navs.length = 0;
+  p.goItem();
+  assert.deepEqual(navs, ['/pages/points-item/points-item']);
 });
 
 /* --------------------------- 明细页 / 规则页回归 --------------------------- */

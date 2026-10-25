@@ -1,5 +1,14 @@
 <view class="page">
-  <block wx:if="{{loggedIn}}">
+  <block wx:if="{{loading && !loggedIn}}">
+    <view class="state-block">加载中…</view>
+  </block>
+  <block wx:elif="{{failed}}">
+    <view class="state-block" bindtap="onRetry">
+      <text>积分加载失败</text>
+      <text class="retry-link">点击重试</text>
+    </view>
+  </block>
+  <block wx:elif="{{loggedIn}}">
     <view class="balance-card">
       <text class="balance">{{balance}}</text>
       <view class="balance-actions">
@@ -15,9 +24,11 @@
           <text class="sub">{{item.sub || item.label}}</text>
         </view>
       </view>
+      <view wx:if="{{streakText}}" class="streak-note">{{streakText}}</view>
       <view class="signin-btn" wx:if="{{!signin.todaySigned}}" bindtap="onSignIn">今日签到领 {{signin.nextReward}} 积分</view>
       <view class="signin-btn off" wx:else>明日签到领 {{signin.nextReward}} 积分</view>
       <view wx:if="{{signin.canMakeUp && signin.makeupCardId}}" class="makeup-link" bindtap="onMakeup">补签昨天 {{signin.makeupDate}}（剩 {{cards}} 张卡）</view>
+      <view wx:elif="{{signin.makeupDate && !signin.canMakeUp}}" class="makeup-link" bindtap="goItem">去兑换补签卡</view>
     </view>
 
     <view class="card">
@@ -34,10 +45,10 @@
     <view class="card exchange-card" bindtap="goItem">
       <view>
         <text class="section-title">补签卡</text>
-        <text class="muted">{{item.price}} 积分 · 30 天有效</text>
+        <text class="muted">{{item.price}} 积分 · {{item.validDays}} 天有效</text>
       </view>
       <text class="link-arrow">›</text>
     </view>
   </block>
-  <view wx:elif="{{!loggedIn && !loading}}" class="empty" bindtap="onLoginTap">登录后查看积分</view>
+  <view wx:else class="empty" bindtap="onLoginTap">登录后查看积分</view>
 </view>
