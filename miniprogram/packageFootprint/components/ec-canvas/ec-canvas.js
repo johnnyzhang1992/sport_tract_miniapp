@@ -46,7 +46,9 @@ Component({
   },
 
   data: {
-    isUseNewCanvas: false
+    // 默认走 2d：旧版 canvas 若先渲染一帧，开发者工具会报「建议切换 canvas 2d」，
+    // 且首帧多建一个旧画布。init() 仍会按基础库版本校正（<2.9.0 或强制旧版才回落）
+    isUseNewCanvas: true
   },
 
   ready: function () {
