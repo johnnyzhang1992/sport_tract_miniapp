@@ -43,7 +43,10 @@ let postRespond = null;
 
 const summaryFixture = () => ({
   balance: 42,
-  signin: { todaySigned: false, streakDay: 2, nextReward: 3, canMakeUp: true, makeupDate: '2026-10-23', cards: 2 },
+  signin: {
+    todaySigned: false, streakDay: 2, nextReward: 3, canMakeUp: true,
+    makeupDate: '2026-10-23', cards: 2, makeupCardId: 'card-1',
+  },
   tasks: [
     { key: 'profile', title: '完善资料', points: 10, status: 'claimable', actionText: '领取' },
     { key: 'daily_video', title: '每日看视频', points: 5, status: 'claimable', actionText: '去观看' },
@@ -124,9 +127,15 @@ require.cache[adPath] = {
 
 const toasts = [];
 const navs = [];
+const modals = [];
+let modalAnswer = true;
 global.wx = {
   showToast: (o) => toasts.push(o && o.title),
   navigateTo: (o) => navs.push(o && o.url),
+  showModal: (o) => {
+    modals.push(o);
+    if (o && typeof o.success === 'function') o.success({ confirm: modalAnswer });
+  },
 };
 
 let appLoggedIn = true;
@@ -149,6 +158,8 @@ function reset({ loggedIn = true } = {}) {
   apiCalls.length = 0;
   toasts.length = 0;
   navs.length = 0;
+  modals.length = 0;
+  modalAnswer = true;
   loginCalls = 0;
   loginAnswer = true;
   appLoggedIn = loggedIn;
@@ -305,20 +316,22 @@ test('PP9 视频任务：提前关闭与广告加载失败都不发分，并复�
   assert.equal(q.data.videoBusy, false);
 });
 
-test('PP10 入口跳转：明细/规则/补签卡/带 makeup 参数的补签页', async () => {
+test('PP10 入口跳转：明细/规则/补签卡兑换页，补签不再用 makeup=1 跳商品页', async () => {
   reset();
   const p = boot();
   await tick();
   p.goRecords();
   p.goRules();
   p.goItem();
-  p.onMakeup();
   assert.deepEqual(navs, [
     '/pages/points-records/points-records',
     '/pages/points-rules/points-rules',
     '/pages/points-item/points-item',
-    '/pages/points-item/points-item?makeup=1',
   ]);
+
+  const js = read('miniprogram/pages/points/points.js');
+  assert.ok(js.includes('/points/cards/'), '补签要直接调 POST /points/cards/:id/use');
+  assert.ok(!js.includes('makeup=1'), 'makeup=1 的死链要删掉');
 });
 
 test('PP11 汇总失败：failed 置位但页面不崩', async () => {
@@ -328,6 +341,65 @@ test('PP11 汇总失败：failed 置位但页面不崩', async () => {
   await tick();
   assert.equal(p.data.failed, true);
   assert.equal(p.data.loading, false);
+});
+
+test('PP29 积分页补签：确认弹窗 → POST /points/cards/:id/use → 刷新（不跳商品页）', async () => {
+  reset();
+  postRespond = () => Promise.resolve({ credited: 3, balance: 45 });
+  const p = boot();
+  await tick();
+  apiCalls.length = 0;
+  toasts.length = 0;
+  navs.length = 0;
+
+  p.onMakeup();
+  assert.equal(modals.length, 1, '补签必须先弹确认');
+  assert.ok(modals[0].content.includes('2026-10-23'), '确认文案带补签日期');
+  await tick();
+
+  assert.deepEqual(calls(), ['POST /points/cards/card-1/use', 'GET /points/summary']);
+  assert.ok(toasts.some((t) => t.includes('补签成功')), '成功后要提示');
+  assert.deepEqual(navs, [], '补签不能跳商品页');
+  assert.equal(p.makeupBusy, false);
+});
+
+test('PP30 积分页补签：取消确认不发请求；没有可用卡 id 回落兑换页', async () => {
+  reset();
+  modalAnswer = false;
+  const p = boot();
+  await tick();
+  apiCalls.length = 0;
+  p.onMakeup();
+  await tick();
+  assert.equal(modals.length, 1);
+  assert.deepEqual(calls(), [], '取消确认不能发补签请求');
+  assert.deepEqual(navs, []);
+
+  reset();
+  const q = boot();
+  await tick();
+  q.setData({ signin: Object.assign({}, q.data.signin, { makeupCardId: '' }) });
+  apiCalls.length = 0;
+  q.onMakeup();
+  await tick();
+  assert.equal(modals.length, 0, '没有可用卡不弹确认');
+  assert.deepEqual(calls(), [], '没有卡不能猜 id 发请求');
+  assert.deepEqual(navs, ['/pages/points-item/points-item'], '没有卡回落兑换页');
+});
+
+test('PP31 积分页补签：服务端 400 原样提示并刷新最新状态', async () => {
+  reset();
+  postRespond = () => Promise.reject(Object.assign(new Error('补签卡不可用或已过期'), { statusCode: 400 }));
+  const p = boot();
+  await tick();
+  apiCalls.length = 0;
+  toasts.length = 0;
+
+  p.onMakeup();
+  await tick();
+  assert.deepEqual(calls(), ['POST /points/cards/card-1/use', 'GET /points/summary']);
+  assert.deepEqual(toasts, ['补签卡不可用或已过期'], '400 直接展示服务端文案');
+  assert.equal(p.makeupBusy, false);
 });
 
 /* --------------------------- 明细页 / 规则页回归 --------------------------- */
@@ -636,7 +708,9 @@ test('PP22 商品页：/points/items + /points/summary 映射价格/余额/卡�
 
   const wxml = read(ITEM_WXML);
   assert.ok(wxml.includes('{{priceText}}'), '底部按钮文案由接口价格拼出「200 积分兑换」');
-  ['每张', '昨天', '30 天', '不退'].forEach((s) => assert.ok(wxml.includes(s), `兑换说明缺少「${s}」`));
+  ['每张', '昨天', '不退'].forEach((s) => assert.ok(wxml.includes(s), `兑换说明缺少「${s}」`));
+  assert.ok(wxml.includes('{{item.validDays}} 天内有效'), '有效期天数由接口 validDays 拼出，不写死 30');
+  assert.ok(!wxml.includes('30 天'), 'WXML 里不能再硬编码 30 天');
   assert.ok(wxml.includes('我的补签卡'), '已有未使用卡时展示「我的补签卡 N 张」');
   assert.ok(wxml.includes('兑换记录'));
   assert.ok(wxml.includes('bindtap="goExchanges"'));
@@ -645,9 +719,19 @@ test('PP22 商品页：/points/items + /points/summary 映射价格/余额/卡�
   assert.deepEqual(navs, ['/pages/points-exchanges/points-exchanges']);
 });
 
-test('PP23 商品页兑换：POST 带一次性 requestId、busy 期间连点不重复提交、成功后刷新', async () => {
+test('PP23 商品页兑换：POST 带一次性 requestId、busy 期间连点不重复提交、刷新落地后才清 busy', async () => {
   reset();
-  summaryRespond = itemPageRespond({ balance: 200 });
+  let summaryFetches = 0;
+  let resolveSummary = null;
+  summaryRespond = (p) => {
+    if (p === '/points/items') return Promise.resolve([itemFixture()]);
+    summaryFetches += 1;
+    if (summaryFetches === 1) return Promise.resolve({ balance: 200, signin: { cards: 0 }, tasks: [] });
+    // 兑换成功后的那次刷新先挂起，用来验证 busy 不会被提前清掉
+    return new Promise((r) => {
+      resolveSummary = () => r({ balance: 200, signin: { cards: 1 }, tasks: [] });
+    });
+  };
   let resolvePost = null;
   postRespond = () => new Promise((r) => {
     resolvePost = r;
@@ -667,8 +751,11 @@ test('PP23 商品页兑换：POST 带一次性 requestId、busy 期间连点不�
   assert.match(firstId, /^\d+-[a-z0-9]+$/, 'requestId 形如 ${Date.now()}-${random}');
 
   resolvePost({ cardId: 'c1', balance: 0 });
-  await pending;
   await tick();
+  assert.equal(p.data.busy, true, '成功刷新还没落地，busy 不能提前清掉');
+  assert.equal(typeof resolveSummary, 'function', 'POST 成功后应立即发起刷新');
+  resolveSummary();
+  await pending;
   assert.equal(p.data.busy, false);
   assert.deepEqual(calls(), [
     'POST /points/items/makeup_card/exchange',
@@ -760,6 +847,8 @@ test('PP27 兑换记录页：状态映射、去补签条件（未使用且未过
     exchangeRow({ id: 'e2', status: 'unused', statusText: '未使用', expiresAt: past }),
     exchangeRow({ id: 'e3', status: 'used', statusText: '已使用', usedForDate: '2026-10-21', expiresAt: future }),
     exchangeRow({ id: 'e4', status: 'expired', statusText: '已过期', expiresAt: past }),
+    // 未知状态不能当「未使用」放出补签入口，按已过期兜底
+    exchangeRow({ id: 'e5', status: 'mystery', statusText: '未使用', expiresAt: future }),
   ];
   summaryRespond = () => Promise.resolve(rows);
   const def = loadPage(EX_JS);
@@ -768,8 +857,8 @@ test('PP27 兑换记录页：状态映射、去补签条件（未使用且未过
   assert.deepEqual(calls(), ['GET /points/exchanges']);
   assert.equal(p.data.loggedIn, true);
   assert.equal(p.data.loading, false);
-  assert.deepEqual(p.data.items.map((i) => i.statusText), ['未使用', '已过期', '已使用', '已过期']);
-  assert.deepEqual(p.data.items.map((i) => i.canMakeup), [true, false, false, false]);
+  assert.deepEqual(p.data.items.map((i) => i.statusText), ['未使用', '已过期', '已使用', '已过期', '已过期']);
+  assert.deepEqual(p.data.items.map((i) => i.canMakeup), [true, false, false, false, false]);
 
   const ts = rows[0].createdAt;
   assert.equal(p.data.items[0].timeText, bjDateTime(ts));

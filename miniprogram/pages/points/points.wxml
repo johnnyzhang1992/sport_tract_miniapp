@@ -17,7 +17,7 @@
       </view>
       <view class="signin-btn" wx:if="{{!signin.todaySigned}}" bindtap="onSignIn">今日签到领 {{signin.nextReward}} 积分</view>
       <view class="signin-btn off" wx:else>明日签到领 {{signin.nextReward}} 积分</view>
-      <view wx:if="{{signin.canMakeUp}}" class="makeup-link" bindtap="onMakeup">补签昨天 {{signin.makeupDate}}（剩 {{cards}} 张卡）</view>
+      <view wx:if="{{signin.canMakeUp && signin.makeupCardId}}" class="makeup-link" bindtap="onMakeup">补签昨天 {{signin.makeupDate}}（剩 {{cards}} 张卡）</view>
     </view>
 
     <view class="card">

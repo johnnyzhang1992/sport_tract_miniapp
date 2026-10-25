@@ -108,8 +108,40 @@ Page({
     ad.show().catch(() => ad.load().then(() => ad.show()).catch(onFail));
   },
 
+  /**
+   * 补签昨天：有可用卡时确认后直接 POST /points/cards/:id/use（不再跳商品页）；
+   * 没有可用卡（旧服务/卡刚好过期）回落兑换页。
+   */
   onMakeup() {
-    wx.navigateTo({ url: `/pages/points-item/points-item?makeup=1` });
+    const signin = this.data.signin || {};
+    if (!signin.canMakeUp || !signin.makeupCardId) {
+      this.goItem();
+      return;
+    }
+    wx.showModal({
+      title: '补签昨天',
+      content: `使用 1 张补签卡补签 ${signin.makeupDate}？`,
+      success: (res) => {
+        if (res && res.confirm) this.useMakeupCard(signin.makeupCardId);
+      },
+    });
+  },
+
+  async useMakeupCard(cardId) {
+    if (this.makeupBusy) return;
+    this.makeupBusy = true;
+    try {
+      const data = await api.post(`/points/cards/${cardId}/use`);
+      const credited = (data && data.credited) || 0;
+      wx.showToast({ title: credited > 0 ? `补签成功 +${credited} 积分` : '补签成功', icon: 'success' });
+      await this.fetch();
+    } catch (e) {
+      // 400 原样提示服务端文案（今天已签/卡已用/卡过期等），并刷新拿最新签到与卡状态
+      wx.showToast({ title: (e && e.message) || '补签失败', icon: 'none' });
+      if (e && e.statusCode === 400) await this.fetch();
+    } finally {
+      this.makeupBusy = false;
+    }
   },
 
   goRecords() {

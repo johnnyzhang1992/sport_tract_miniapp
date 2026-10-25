@@ -3,7 +3,7 @@
  *
  * - 只读 GET /points/exchanges（按兑换时间倒序），状态取服务端推导值；
  *   服务端已把「卡仍 unused 但过了有效期」推导成 expired，页面再兜一层，避免过期的卡还能「去补签」；
- * - 状态映射 unused → 未使用 / used → 已使用 / expired → 已过期；
+ * - 状态映射 unused → 未使用 / used → 已使用 / 其余（含 expired 与未知值）→ 已过期；
  * - 未使用且未过期给「去补签」入口（回积分页补昨天），已使用/已过期只读；
  * - 登录闸门走触点级：进页不弹登录、游客不发请求，点引导才 ensureLogin。
  */
@@ -23,7 +23,8 @@ function toMs(v) {
 /** 兑现行：状态归一 + 可补签判定（未使用且未过期） */
 function toRow(r, now) {
   const expiresAt = toMs(r.expiresAt);
-  let status = r.status === 'used' || r.status === 'expired' ? r.status : 'unused';
+  // 只有明确 unused/used 才采信；未知状态按已过期兜底，避免脏数据给出「去补签」
+  let status = r.status === 'unused' || r.status === 'used' ? r.status : 'expired';
   if (status === 'unused' && expiresAt <= now) status = 'expired';
   return {
     id: r.id,

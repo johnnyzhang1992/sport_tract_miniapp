@@ -78,7 +78,8 @@ Page({
     try {
       await api.post('/points/items/makeup_card/exchange', { requestId });
       wx.showToast({ title: '兑换成功', icon: 'success' });
-      this.fetch();
+      // 等刷新落地再清 busy，避免卡数/余额还是旧值时按钮先恢复可点
+      await this.fetch();
     } catch (e) {
       wx.showToast({ title: (e && e.message) || '兑换失败', icon: 'none' });
     } finally {

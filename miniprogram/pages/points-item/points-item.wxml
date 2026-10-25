@@ -30,7 +30,7 @@
       <view class="section-title">兑换说明</view>
       <view class="note">· 每张补签卡仅可使用一次，每个漏签日最多补一次</view>
       <view class="note">· 只能补签昨天（前一天）的签到，且需要前天已签到</view>
-      <view class="note">· 兑换后 30 天内有效，过期作废</view>
+      <view class="note">· 兑换后 {{item.validDays}} 天内有效，过期作废</view>
       <view class="note">· 兑换后不退积分</view>
     </view>
 
