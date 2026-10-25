@@ -55,6 +55,7 @@
   width: 52rpx;
   height: 52rpx;
   border-radius: 50%;
+  box-sizing: border-box; /* makeup 格有 2rpx 虚线圈：不加会把 52rpx 圆撑大（wxml 格子被挤歪） */
   background: #f2f3f5;
   color: #8a93a6;
   display: flex;
@@ -63,16 +64,25 @@
   font-size: 20rpx;
 }
 
-/* 七格进度：done＝实心品牌蓝（已完成），current＝今天那格用浅蓝底 + 深蓝字（待签，最抢眼球
-   但不是已完成色），未来/漏签＝灰底灰字——三态只靠底色区分，不用 opacity 压整格 */
-.signin-cell.done .dot {
+/* 七格五态由服务端 cells.state 驱动（spec §5.1）：signed＝实心品牌蓝（已完成），
+   today＝浅蓝底 + 深蓝字（待签，最抢眼球但不是已完成色），
+   makeup＝灰底金色虚线圈（可操作，与胶囊同色系），
+   missed/future＝灰底灰字——走 .dot 默认样式，三态只靠底色区分，不用 opacity 压整格 */
+.signin-cell.signed .dot {
   background: #2b6cf6;
   color: #fff;
 }
 
-.signin-cell.current .dot {
+.signin-cell.today .dot {
   background: #eef4ff;
   color: #1a56d6;
+  font-weight: 700;
+}
+
+.signin-cell.makeup .dot {
+  background: #f7f8fa;
+  color: #8a5f12;
+  border: 2rpx dashed #8a5f12;
   font-weight: 700;
 }
 
@@ -101,11 +111,45 @@
   color: #fff;
 }
 
-.makeup-link {
+/* 补签胶囊：热区 min-height 76rpx（本项目点击区口径，勿缩小），尾文案「›」提示可点；
+   底色复用运动榜「破纪录」暖底 #fdf6e3 + 荣誉金描边，与 makeup 格虚线圈同一套观感，不引新色值 */
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  margin-top: 20rpx;
+}
+
+.makeup-chip {
+  flex: 1 1 auto;
+  min-height: 76rpx;
+  padding: 10rpx 24rpx;
+  border-radius: 999rpx;
+  box-sizing: border-box;
+  background: #fdf6e3;
+  border: 2rpx solid #8a5f12;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.chip-label {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #8a5f12;
+}
+
+.chip-sub {
+  font-size: 20rpx;
+  color: #8a5f12;
+}
+
+.makeup-note {
   text-align: center;
-  font-size: 22rpx;
-  color: #2b6cf6;
-  margin-top: 14rpx;
+  font-size: 20rpx;
+  color: #8a93a6;
+  margin-top: 16rpx;
 }
 
 .streak-note {

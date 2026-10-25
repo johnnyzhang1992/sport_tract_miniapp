@@ -19,16 +19,23 @@
 
     <view class="card signin-card">
       <view class="signin-strip">
-        <view wx:for="{{strip}}" wx:key="reward" class="signin-cell {{item.done ? 'done' : ''}} {{item.current ? 'current' : ''}}">
-          <view class="dot">{{item.done ? '✓' : item.label}}</view>
-          <text class="sub">{{item.sub || item.label}}</text>
+        <view wx:for="{{strip}}" wx:key="dateKey" class="signin-cell {{item.state}}">
+          <view class="dot">{{item.dot}}</view>
+          <text class="sub">{{item.sub}}</text>
         </view>
       </view>
       <view wx:if="{{streakText}}" class="streak-note">{{streakText}}</view>
       <view class="signin-btn" wx:if="{{!signin.todaySigned}}" bindtap="onSignIn">今日签到</view>
       <view class="signin-btn off" wx:else>明日签到领 {{signin.nextReward}} 积分</view>
-      <view wx:if="{{signin.canMakeUp && signin.makeupCardId}}" class="makeup-link" bindtap="onMakeup">补签昨天 {{signin.makeupDate}}（剩 {{cards}} 张卡）</view>
-      <view wx:elif="{{signin.makeupDate && !signin.canMakeUp}}" class="makeup-link" bindtap="goItem">去兑换补签卡</view>
+      <!-- 补签胶囊行：每个 makeup 格一颗（与七格同源，cells 没给就不渲染），点一颗消耗一张卡 -->
+      <view class="chip-row" wx:if="{{chips.length}}">
+        <view wx:for="{{chips}}" wx:key="dateKey" class="makeup-chip"
+              data-date-key="{{item.dateKey}}" bindtap="onMakeup">
+          <text class="chip-label">{{item.label}}</text>
+          <text class="chip-sub">{{item.sub}} ›</text>
+        </view>
+      </view>
+      <view class="makeup-note" wx:if="{{chips.length}}">1 张补签卡补 1 格 · 补完连签重排</view>
     </view>
 
     <view class="card">

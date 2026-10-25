@@ -1,7 +1,9 @@
 const api = require('../../services/api');
 const { ensureLogin, waitSession } = require('../../utils/login-gate');
-const { buildSigninStrip, buildTaskRows, buildItemCards } = require('../../utils/points-view');
+const { buildSigninStrip, buildMakeupChips, buildTaskRows, buildItemCards } = require('../../utils/points-view');
 const { createRewardedAd, isAdRewardEligible } = require('../../utils/rewarded-ad');
+// cells 的 dateKey 是东八区 YYYY-MM-DD，「今天」比对键必须同口径：用 bjDate，不再写一份时区偏移
+const { bjDate } = require('../../utils/bj-date');
 
 Page({
   data: {
@@ -11,6 +13,7 @@ Page({
     balance: 0,
     signin: {},
     strip: [],
+    chips: [],
     streakText: '',
     tasks: [],
     items: [],
@@ -48,12 +51,15 @@ Page({
       const data = await api.get('/points/summary');
       const signin = data.signin || {};
       const streakDay = Number(signin.streakDay) || 0;
+      // 只格式化、不推导：位置/分值/可补性一律来自服务端 cells（spec §5.1），state==='makeup' 是唯一入口判据
+      const cells = signin.cells || [];
       this.setData({
         loggedIn: true,
         loading: false,
         balance: data.balance ?? 0,
         signin,
-        strip: buildSigninStrip(signin, Date.now()),
+        strip: buildSigninStrip(cells, bjDate(Date.now())),
+        chips: buildMakeupChips(cells, signin.cards || 0),
         // 连签 ≥7 天七格全勾后，还要按需求 §4.2 显示「已连续 N 天 · 每日 7 分」
         streakText: streakDay >= 7 ? `已连续 ${streakDay} 天 · 每日 7 分` : '',
         tasks: buildTaskRows(data.tasks || []),
@@ -133,36 +139,43 @@ Page({
   },
 
   /**
-   * 补签昨天：有可用卡时确认后直接 POST /points/cards/:id/use（不再跳商品页）；
-   * 没有可用卡（旧服务/卡刚好过期）回落兑换页。
+   * 补某个漏签日（点胶囊，dateKey 由 data-date-key 回传）：有卡 → 确认后 POST；无卡 → 落兑换页、不发请求。
+   * 卡由服务端挑（spec §5.2），请求体只有 { dateKey }；可补判定的唯一来源是 cells 里的 makeup 格。
    */
-  onMakeup() {
-    const signin = this.data.signin || {};
-    if (!signin.canMakeUp || !signin.makeupCardId) {
+  onMakeup(e) {
+    const dateKey = e.currentTarget.dataset.dateKey;
+    const chip = this.data.chips.find((c) => c.dateKey === dateKey);
+    if (!chip) return;
+    if (!chip.hasCard) {
       this.goItem();
       return;
     }
     wx.showModal({
-      title: '补签昨天',
-      content: `使用 1 张补签卡补签 ${signin.makeupDate}？`,
+      title: '补签该日',
+      // 日期用胶囊自带的 MM.DD label，与七格 sub 同一格式，不打 ISO 日期给用户看
+      content: `使用 1 张补签卡${chip.label}？补完连签将重排，今天可拿 ${chip.todayRewardAfter} 分`,
       success: (res) => {
-        if (res && res.confirm) this.useMakeupCard(signin.makeupCardId);
+        if (res && res.confirm) this.useMakeupCard(dateKey);
       },
     });
   },
 
-  async useMakeupCard(cardId) {
+  async useMakeupCard(dateKey) {
     if (this.makeupBusy) return;
     this.makeupBusy = true;
     try {
-      const data = await api.post(`/points/cards/${cardId}/use`);
+      const data = await api.post('/points/signin/makeup', { dateKey });
       const credited = (data && data.credited) || 0;
-      wx.showToast({ title: credited > 0 ? `补签成功 +${credited} 积分` : '补签成功', icon: 'success' });
+      const topped = (data && data.toppedUp) || 0;
+      wx.showToast({
+        title: topped > 0 ? `补签成功 +${credited}，另补发 ${topped} 分` : `补签成功 +${credited}`,
+        icon: 'success',
+      });
       await this.fetch();
-    } catch (e) {
-      // 400 原样提示服务端文案（今天已签/卡已用/卡过期等），并刷新拿最新签到与卡状态
-      wx.showToast({ title: (e && e.message) || '补签失败', icon: 'none' });
-      if (e && e.statusCode === 400) await this.fetch();
+    } catch (err) {
+      // 400 的 message 原样 toast（文案归服务端，spec §5.3），成败都重拉让格子回到最新状态
+      wx.showToast({ title: (err && err.message) || '补签失败', icon: 'none' });
+      await this.fetch();
     } finally {
       this.makeupBusy = false;
     }
