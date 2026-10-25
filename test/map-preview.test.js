@@ -24,11 +24,54 @@ test('MV1 普通轨迹：一条折线 + 全部点用于自适应视野', () => {
   assert.ok(Math.max(...lats) > 30.3, '下方留白');
   assert.ok(Math.min(...lngs) < 120.1, '左侧留白');
   assert.ok(Math.max(...lngs) > 120.3, '右侧留白');
-  assert.deepEqual(view.center, { latitude: 30.1, longitude: 120.1 });
+  assert.ok(Math.abs(view.center.latitude - 30.2) < 1e-9, '中心取包围盒中心（起点在边缘会闪）');
+  assert.ok(Math.abs(view.center.longitude - 120.2) < 1e-9);
   assert.equal(view.fitPoints.length, 4, '紧贴合包围盒（供 includePoints 留白用）');
   const fitLats = view.fitPoints.map((p) => p.latitude);
   assert.equal(Math.min(...fitLats), 30.1, 'fitPoints 不再额外内缩');
   assert.equal(Math.max(...fitLats), 30.3);
+  // scale 预算：0.2° 跨度 + 留白，110×85px 容器 → 约 8~9 档；合法区间 + 整数档
+  // （渲染层折线抽稀按整数档查 maxSimplifyZoom，小数 scale 会在渲染层抛错）
+  assert.ok(Number.isFinite(view.scale) && view.scale >= 5 && view.scale <= 19, `scale=${view.scale}`);
+  assert.equal(view.scale, Math.floor(view.scale), '整数档（渲染层要求）');
+});
+
+test('MV1b scale 预算：跨度越大 scale 越小；容器越大 scale 越大；极小轨迹顶到上限', () => {
+  const small = buildMapView(
+    [
+      { lat: 30.1, lng: 120.1 },
+      { lat: 30.11, lng: 120.11 },
+    ],
+    'walking',
+    { width: 110, height: 85 },
+  );
+  const large = buildMapView(
+    [
+      { lat: 30, lng: 120 },
+      { lat: 30.5, lng: 120.5 },
+    ],
+    'walking',
+    { width: 110, height: 85 },
+  );
+  assert.ok(small.scale > large.scale, `小轨迹 scale=${small.scale} 应大于大轨迹 ${large.scale}`);
+  const bigScreen = buildMapView(
+    [
+      { lat: 30, lng: 120 },
+      { lat: 30.5, lng: 120.5 },
+    ],
+    'walking',
+    { width: 220, height: 170 },
+  );
+  assert.ok(bigScreen.scale > large.scale, '同轨迹容器翻倍 → scale 更高');
+  // 几乎零跨度（原地）：mpp 兜底 1e-6 不产生 NaN/Infinity，且顶到上限
+  const stationary = buildMapView(
+    [
+      { lat: 30.5, lng: 114.4 },
+      { lat: 30.5, lng: 114.4 },
+    ],
+    'walking',
+  );
+  assert.ok(Number.isFinite(stationary.scale) && stationary.scale <= 19, `scale=${stationary.scale}`);
 });
 
 test('MV2 暂停/断档点切开折线，断点本身保留', () => {

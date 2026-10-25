@@ -19,9 +19,11 @@ function toCoord(p) {
 /**
  * @param {Array<{lat:number,lng:number,timestamp?:number|null,pauseGap?:boolean,gapJump?:boolean,vehicle?:boolean}>} points
  * @param {string} [activityType] 运动类型（决定配速绝对刻度）
- * @returns {{polyline:Array, includePoints:Array, fitPoints:Array, center:{latitude:number,longitude:number}}|null}
+ * @param {{width?:number,height?:number}} [opts] 地图容器像素尺寸（估算 scale 用；
+ *        缺省按 220×170rpx 卡片在 375pt 屏上的实际大小）
+ * @returns {{polyline:Array, includePoints:Array, fitPoints:Array, center:{latitude:number,longitude:number}, scale:number}|null}
  */
-function buildMapView(points, activityType) {
+function buildMapView(points, activityType, opts) {
   const valid = (Array.isArray(points) ? points : []).filter(
     (p) =>
       p &&
@@ -120,11 +122,32 @@ function buildMapView(points, activityType) {
     { latitude: minLat - padLat, longitude: maxLng + padLng },
   ];
 
+  // 中心点取包围盒中心：起点常在包围盒边缘，首帧用它 + 写死 scale 会让 include-points
+  // 产生一次明显的缩放跳变（卡片地图"闪一下"的主因）
+  const center = {
+    latitude: (minLat + maxLat) / 2,
+    longitude: (minLng + maxLng) / 2,
+  };
+
+  // 预算"能容纳整个留白包围盒"的 scale（与 Web zoom 同语义，微信 map 3~20 档）：
+  // 首帧即正确视野，include-points / MapContext.includePoints 只做 ≤一档的收尾校准。
+  // 必须向下取整：渲染层的折线抽稀配置按整数档查（maxSimplifyZoom），小数 scale 会
+  // 直接抛渲染层错误（lib 3.17.4 实测）；取整方向宁大勿小（视野略大不切轨迹）。
+  const width = Math.max(1, (opts && opts.width) || 110);
+  const height = Math.max(1, (opts && opts.height) || 85);
+  const latMid = (minLat + maxLat) / 2;
+  const cosLat = Math.max(0.01, Math.cos((latMid * Math.PI) / 180));
+  const mppLng = ((maxLng - minLng) + padLng * 2) * 111320 * cosLat / width;
+  const mppLat = ((maxLat - minLat) + padLat * 2) * 111320 / height;
+  const mpp = Math.max(mppLng, mppLat, 1e-6);
+  const scale = Math.min(19, Math.max(5, Math.floor(Math.log2((40075016.686 * cosLat) / (mpp * 256)))));
+
   return {
     polyline,
     includePoints,
     fitPoints,
-    center: toCoord(valid[0]),
+    center,
+    scale,
   };
 }
 
