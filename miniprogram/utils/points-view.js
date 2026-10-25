@@ -1,23 +1,43 @@
-const pad = (n) => String(n).padStart(2, '0');
+/** dateKey 'YYYY-MM-DD' → 'MM.DD'：七格 sub 与胶囊 label 共用它，保证两处显示永远同格式 */
+const md = (dateKey) => dateKey.slice(5).replace('-', '.');
 
-function buildSigninStrip(signin, todayMs) {
-  const streak = Math.min(Number(signin && signin.streakDay) || 0, 7);
-  const signed = !!(signin && signin.todaySigned);
-  const currentDay = signed ? streak : Math.min(streak + 1, 7);
-  // 连签已满 7 天且今天没签：没有「当前格」，否则第 7 格会同时 done + current（同一格显示两个态）
-  const currentAt = !signed && streak < 7 ? currentDay : 0;
-  const base = new Date(todayMs + 8 * 3600000);
-  const out = [];
-  for (let i = 1; i <= 7; i++) {
-    const done = i <= streak;
-    const current = i === currentAt;
-    const date = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), base.getUTCDate() + (i - currentDay)));
-    let sub = `${pad(date.getUTCMonth() + 1)}.${pad(date.getUTCDate())}`;
-    if (current) sub = '今天';
-    else if (i === currentDay + 1) sub = '明天';
-    out.push({ reward: i, label: `+${i}`, sub, done, current });
-  }
-  return out;
+/**
+ * 七格：只做「状态 → 显示」的映射，位置、分值与可补判定一律由服务端 cells 决定（spec §5.1）。
+ * 客户端不再自推当前格/断口——以前前后各推一遍、两边口径对不上，正是这次改版的收口点。
+ */
+function buildSigninStrip(cells, todayKey) {
+  return (cells || []).map((c) => {
+    const dot = c.state === 'signed' ? '✓'
+      : c.state === 'makeup' ? '补'
+        : c.state === 'missed' ? '未'
+          : `+${c.reward}`;
+    // 「今天/明天」按 dateKey 比对：起点会被可补格往前挪，今天不一定落在第 7 格
+    let sub = md(c.dateKey);
+    if (c.dateKey === todayKey) sub = '今天';
+    else if (c.dateKey === shiftDateKey(todayKey, 1)) sub = '明天';
+    return { dateKey: c.dateKey, state: c.state, dot, sub, reward: c.reward };
+  });
+}
+
+/** 补签胶囊：state === 'makeup' 是可补判定的唯一来源，每个可补日一颗；todayRewardAfter 供弹窗文案「补完今天可拿 N 分」 */
+function buildMakeupChips(cells, cards) {
+  // cards 由 summary 以数字下发；`> 0` 对 undefined/null/0 一律 false，端上不再做 Number 收口
+  const hasCard = cards > 0;
+  return (cells || [])
+    .filter((c) => c.state === 'makeup')
+    .map((c) => ({
+      dateKey: c.dateKey,
+      label: `补签 ${md(c.dateKey)}`,
+      sub: hasCard ? `剩 ${cards} 张卡` : '去兑换',
+      hasCard,
+      todayRewardAfter: c.todayRewardAfter || 0,
+    }));
+}
+
+/** 'YYYY-MM-DD' ± delta 天：纯 UTC 算术，不因本地时区漂日（dateKey 的东八区归属由服务端/bjDate 负责） */
+function shiftDateKey(dateKey, delta) {
+  const [y, m, d] = dateKey.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + delta)).toISOString().slice(0, 10);
 }
 
 function buildTaskRows(tasks) {
@@ -41,4 +61,4 @@ function buildItemCards(items) {
   }));
 }
 
-module.exports = { buildSigninStrip, buildTaskRows, buildItemCards };
+module.exports = { buildSigninStrip, buildMakeupChips, shiftDateKey, buildTaskRows, buildItemCards };
