@@ -153,11 +153,11 @@
   border-top: 1rpx solid #f2f3f5;
 }
 .act-pill {
-  font-size: 24rpx;
+  font-size: 22rpx;
   color: #2b6cf6;
   background: #eaf1ff;
   border-radius: 999rpx;
-  padding: 10rpx 28rpx;
+  padding: 6rpx 24rpx;
 }
 .act-pill-badge {
   color: #fff;
@@ -247,11 +247,11 @@
   margin-bottom: 20rpx;
 }
 .filter-chip {
-  font-size: 24rpx;
+  font-size: 22rpx;
   color: #4e5969;
   background: #f2f3f5;
   border-radius: 999rpx;
-  padding: 8rpx 24rpx;
+  padding: 6rpx 20rpx;
 }
 /* 小一号：挪进卡头（挨着 30rpx 标题）时用，免得把卡头撑高 */
 .filter-chip-sm {
