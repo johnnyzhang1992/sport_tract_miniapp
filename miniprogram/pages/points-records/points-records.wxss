@@ -1,0 +1,112 @@
+.page {
+  min-height: 100vh;
+  background: #f5f6f8;
+  padding-bottom: 24rpx;
+}
+
+.state {
+  padding: 160rpx 48rpx;
+  text-align: center;
+  font-size: 28rpx;
+  color: #8a93a6;
+}
+
+.state-tap {
+  color: #2b6cf6;
+}
+
+.summary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+  background: linear-gradient(160deg, #ffd633, #ffcc00);
+  padding: 40rpx 32rpx 72rpx;
+}
+
+.summary-label {
+  font-size: 24rpx;
+  color: #4e5969;
+}
+
+.summary-balance {
+  font-size: 72rpx;
+  font-weight: 700;
+  color: #1f2329;
+}
+
+.card {
+  background: #fff;
+  border-radius: 20rpx;
+  margin: -44rpx 24rpx 0;
+  padding: 8rpx 24rpx;
+}
+
+.record-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx 0;
+  border-bottom: 1rpx solid #f2f3f5;
+}
+
+.record-row:last-child {
+  border-bottom: none;
+}
+
+.record-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  min-width: 0;
+}
+
+.record-title {
+  font-size: 28rpx;
+  color: #1f2329;
+}
+
+.record-date {
+  font-size: 22rpx;
+  color: #8a93a6;
+}
+
+.record-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8rpx;
+}
+
+.record-delta {
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.record-delta.positive {
+  color: #e6a100;
+}
+
+.record-delta.negative {
+  color: #8a93a6;
+}
+
+.record-after {
+  font-size: 22rpx;
+  color: #8a93a6;
+}
+
+.empty {
+  padding: 120rpx 0;
+  text-align: center;
+  font-size: 26rpx;
+  color: #8a93a6;
+}
+
+.more {
+  padding: 24rpx 0;
+  text-align: center;
+  font-size: 24rpx;
+  color: #8a93a6;
+}

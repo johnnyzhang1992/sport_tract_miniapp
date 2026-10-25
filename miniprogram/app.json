@@ -24,7 +24,9 @@
     "pages/campaign-detail/campaign-detail",
     "pages/notification/notification",
     "pages/notification-list/notification-list",
-    "pages/points/points"
+    "pages/points/points",
+    "pages/points-records/points-records",
+    "pages/points-rules/points-rules"
   ],
   "window": {
     "navigationBarBackgroundColor": "#ffffff",

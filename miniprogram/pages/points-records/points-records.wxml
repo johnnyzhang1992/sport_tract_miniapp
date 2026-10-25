@@ -1,0 +1,26 @@
+<view class="page">
+  <view wx:if="{{loading}}" class="state">加载中…</view>
+  <view wx:elif="{{failed}}" class="state state-tap" bindtap="onRetry">加载失败，点击重试</view>
+  <view wx:elif="{{!loggedIn}}" class="state state-tap" bindtap="onLoginTap">登录后查看积分明细</view>
+  <block wx:else>
+    <view class="summary">
+      <text class="summary-label">当前积分</text>
+      <text class="summary-balance">{{balance}}</text>
+    </view>
+    <view class="card">
+      <view wx:for="{{items}}" wx:key="id" class="record-row">
+        <view class="record-main">
+          <text class="record-title">{{item.title}}</text>
+          <text class="record-date">{{item.dateText}}</text>
+        </view>
+        <view class="record-side">
+          <text class="record-delta {{item.positive ? 'positive' : 'negative'}}">{{item.deltaText}}</text>
+          <text class="record-after">余额 {{item.balanceAfter}}</text>
+        </view>
+      </view>
+      <view wx:if="{{!items.length}}" class="empty">暂无积分记录</view>
+      <view wx:if="{{items.length && hasMore}}" class="more">上拉加载更多</view>
+      <view wx:elif="{{items.length}}" class="more">没有更多了</view>
+    </view>
+  </block>
+</view>

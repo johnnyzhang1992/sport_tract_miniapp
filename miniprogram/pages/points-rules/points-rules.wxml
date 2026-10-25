@@ -1,0 +1,60 @@
+<view class="page">
+  <view class="intro">
+    <text class="intro-title">积分规则</text>
+    <text class="intro-sub">签到、做任务都能获得积分，积分可在积分商城兑换补签卡。</text>
+  </view>
+
+  <view class="card">
+    <view class="section-title">如何获得积分</view>
+
+    <view class="qa">
+      <text class="q">连续签到怎么算积分？</text>
+      <text class="a">连续签到第 N 天可得 min(N, 7) 分：第 1 天 1 分，第 2 天 2 分，逐日递增；第 7 天及以后每天 7 分。</text>
+    </view>
+
+    <view class="qa">
+      <text class="q">断签会怎样？</text>
+      <text class="a">断签后连续签到天数重置为 1，重新从 1 分开始累计，之前的天数不再保留。</text>
+    </view>
+
+    <view class="qa">
+      <text class="q">任务积分怎么领取？</text>
+      <text class="a">新手任务仅可领取一次；每日任务每天 0 点刷新，需在当天领取，次日 0 点未领取即失效，不能补领。</text>
+    </view>
+
+    <view class="qa">
+      <text class="q">看视频能得积分吗？</text>
+      <text class="a">每日看视频奖励每天仅限一次，需完整看完广告后领取；提前关闭广告不发积分。</text>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="section-title">积分使用与有效期</view>
+
+    <view class="qa">
+      <text class="q">积分会过期吗？</text>
+      <text class="a">积分自获得之日起，在次年年底（东八区 12 月 31 日 24:00）过期，过期积分自动扣除，请及时使用。</text>
+    </view>
+
+    <view class="qa">
+      <text class="q">每天最多能获得多少积分？</text>
+      <text class="a">每个自然日最多获得 100 积分，达到上限后当日不再入账，签到、任务与补签都计入上限。</text>
+    </view>
+
+    <view class="qa">
+      <text class="q">补签卡怎么兑换和使用？</text>
+      <text class="a">补签卡需 200 积分兑换，自兑换起 30 天内有效；只能补签昨天（前一天）的签到，且要求前天已签到。补签卡兑换后不退不换，过期作废。</text>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="section-title">其他说明</view>
+
+    <view class="qa">
+      <text class="q">违规会怎么处理？</text>
+      <text class="a">禁止作弊、刷分等违规行为，一经发现将清零积分并视情况限制账号，最终解释权归开发者所有。</text>
+    </view>
+  </view>
+
+  <view class="footer">积分规则可能随活动调整，以页面最新说明为准。</view>
+</view>
