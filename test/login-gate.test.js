@@ -98,3 +98,19 @@ test('G5 登录失败但错误没带信息 + 弹窗自身 fail：兜底文案与
   assert.equal(await p, false, '弹窗都开不出来 → 视为未获授权，不能放行写操作');
   assert.equal(loginCalls, 0);
 });
+
+test('G6 可选文案：传 content 用页面自己的话，不传仍是足迹默认口径', async () => {
+  reset();
+  appStub.globalData.loggedIn = false;
+  let p = ensureLogin('登录后查看积分记录。');
+  assert.equal(modals[0].content, '登录后查看积分记录。');
+  modals[0].success({ confirm: false });
+  assert.equal(await p, false);
+
+  reset();
+  appStub.globalData.loggedIn = false;
+  p = ensureLogin();
+  assert.equal(modals[0].content, '登录后才能记录你的足迹。', '足迹各页不传参时文案不变');
+  modals[0].success({ confirm: false });
+  assert.equal(await p, false);
+});

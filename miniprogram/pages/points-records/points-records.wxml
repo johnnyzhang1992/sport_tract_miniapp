@@ -8,18 +8,23 @@
       <text class="summary-balance">{{balance}}</text>
     </view>
     <view class="card">
-      <view wx:for="{{items}}" wx:key="id" class="record-row">
-        <view class="record-main">
-          <text class="record-title">{{item.title}}</text>
-          <text class="record-date">{{item.dateText}}</text>
-        </view>
-        <view class="record-side">
-          <text class="record-delta {{item.positive ? 'positive' : 'negative'}}">{{item.deltaText}}</text>
-          <text class="record-after">余额 {{item.balanceAfter}}</text>
+      <view wx:if="{{items.length}}" class="record-list">
+        <view wx:for="{{items}}" wx:key="id" class="record-row">
+          <view class="record-main">
+            <text class="record-title">{{item.title}}</text>
+            <text class="record-date">{{item.dateText}}</text>
+          </view>
+          <view class="record-side">
+            <text class="record-delta {{item.positive ? 'positive' : 'negative'}}">{{item.deltaText}}</text>
+            <text class="record-after">余额 {{item.balanceAfter}}</text>
+          </view>
         </view>
       </view>
-      <view wx:if="{{!items.length}}" class="empty">暂无积分记录</view>
-      <view wx:if="{{items.length && hasMore}}" class="more">上拉加载更多</view>
+      <view wx:elif="{{!items.length}}" class="empty">暂无积分记录</view>
+      <!-- 翻页状态只占底栏，不清已渲染行：加载中 / 失败重试 / 可继续 / 到底 -->
+      <view wx:if="{{loadingMore}}" class="more">加载中…</view>
+      <view wx:elif="{{loadMoreFailed}}" class="more more-retry" bindtap="onMoreRetry">加载失败，点击重试</view>
+      <view wx:elif="{{items.length && hasMore}}" class="more">上拉加载更多</view>
       <view wx:elif="{{items.length}}" class="more">没有更多了</view>
     </view>
   </block>

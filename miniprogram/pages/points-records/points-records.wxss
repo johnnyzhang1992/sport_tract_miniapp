@@ -42,6 +42,11 @@
   padding: 8rpx 24rpx;
 }
 
+/* 列表包裹层：让 .record-row:last-child 的末行去分隔线真正命中（底栏 .more/.empty 在包裹层外） */
+.record-list {
+  display: block;
+}
+
 .record-row {
   display: flex;
   align-items: center;
@@ -109,4 +114,8 @@
   text-align: center;
   font-size: 24rpx;
   color: #8a93a6;
+}
+
+.more-retry {
+  color: #2b6cf6;
 }

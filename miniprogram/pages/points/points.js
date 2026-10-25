@@ -56,7 +56,7 @@ Page({
 
   /** 游客点「登录后查看积分」：登录成功才拉汇总（不在进页时弹登录） */
   async onLoginTap() {
-    if (await ensureLogin()) this.fetch();
+    if (await ensureLogin('登录后查看积分。')) this.fetch();
   },
 
   async onSignIn() {

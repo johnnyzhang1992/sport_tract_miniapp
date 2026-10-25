@@ -479,3 +479,91 @@ test('PP17 规则页覆盖连续签到/第 7 天/断签/次日/视频/次年/每
   });
   assert.ok(rules.includes('min(N, 7)'), '连续签到奖励应写明 min(N, 7)');
 });
+
+test('PP18 明细页：首屏 loading 与翻页 loadingMore 分离，翻页中保留已渲染行', async () => {
+  reset();
+  const makeItems = (n, prefix) =>
+    Array.from({ length: n }, (_, i) => recordItem({ id: `${prefix}${i}`, createdAt: 1790000000000 + i }));
+  let resolveMore = null;
+  summaryRespond = (p, params) => {
+    if (params.page === 1) return Promise.resolve({ balance: 100, total: 25, items: makeItems(20, 'a') });
+    return new Promise((resolve) => {
+      resolveMore = () => resolve({ balance: 100, total: 25, items: makeItems(5, 'b') });
+    });
+  };
+  const def = loadPage('miniprogram/pages/points-records/points-records.js');
+  const p = bootWith(def);
+  await tick();
+  assert.equal(p.data.loading, false, '首屏落地后整页加载态结束');
+  assert.equal(p.data.loadingMore, false);
+  assert.equal(p.data.items.length, 20);
+
+  const pending = p.onReachBottom();
+  assert.equal(p.data.loadingMore, true, '翻页只进 loadingMore');
+  assert.equal(p.data.loading, false, '翻页不能把整页打回「加载中」');
+  assert.equal(p.data.items.length, 20, '翻页期间已渲染的 20 行不能被清掉');
+  assert.equal(p.onReachBottom(), undefined, '翻页在飞时不重复请求');
+  assert.equal(apiCalls.length, 2);
+  assert.ok(
+    read('miniprogram/pages/points-records/points-records.wxml').includes('wx:if="{{loadingMore}}"'),
+    '底栏要有内联「加载中…」',
+  );
+
+  resolveMore();
+  await pending;
+  assert.equal(p.data.loadingMore, false);
+  assert.equal(p.data.items.length, 25);
+  assert.equal(p.data.hasMore, false);
+});
+
+test('PP19 明细页：第 2 页失败保留已有 20 行与 hasMore，底栏重试仍翻第 2 页', async () => {
+  reset();
+  const makeItems = (n, prefix) =>
+    Array.from({ length: n }, (_, i) => recordItem({ id: `${prefix}${i}`, createdAt: 1790000000000 + i }));
+  let failMore = true;
+  summaryRespond = (p, params) => {
+    if (params.page === 1) return Promise.resolve({ balance: 100, total: 25, items: makeItems(20, 'a') });
+    if (failMore) return Promise.reject(new Error('boom'));
+    return Promise.resolve({ balance: 100, total: 25, items: makeItems(5, 'b') });
+  };
+  const def = loadPage('miniprogram/pages/points-records/points-records.js');
+  const p = bootWith(def);
+  await tick();
+
+  await p.onReachBottom();
+  await tick();
+  assert.equal(p.data.items.length, 20, '翻页失败不能丢已有行');
+  assert.equal(p.data.hasMore, true, '翻页失败后仍可重试下一页');
+  assert.equal(p.data.page, 1, '失败的那页不能推进页码');
+  assert.equal(p.data.loading, false);
+  assert.equal(p.data.loadingMore, false);
+  assert.equal(p.data.loadMoreFailed, true);
+  assert.equal(p.data.failed, false, '翻页失败不能顶成整页失败态');
+
+  failMore = false;
+  await p.onMoreRetry();
+  await tick();
+  assert.deepEqual(apiCalls.map((c) => c.params.page), [1, 2, 2], '底栏重试要重拉失败的第 2 页');
+  assert.equal(p.data.items.length, 25);
+  assert.equal(p.data.hasMore, false);
+  assert.equal(p.data.loadMoreFailed, false);
+
+  const wxml = read('miniprogram/pages/points-records/points-records.wxml');
+  assert.ok(wxml.includes('bindtap="onMoreRetry"'), '底栏要有翻页失败重试入口');
+  assert.ok(wxml.includes('record-list'), '行要有包裹层，末行分隔线才去得掉');
+});
+
+test('PP20 积分两页向 ensureLogin 传积分文案（默认足迹文案保持不变）', () => {
+  assert.ok(
+    read('miniprogram/pages/points-records/points-records.js').includes("ensureLogin('登录后查看积分记录。')"),
+    '明细页要传「登录后查看积分记录。」',
+  );
+  assert.ok(
+    read('miniprogram/pages/points/points.js').includes("ensureLogin('登录后查看积分。')"),
+    '积分主页要传「登录后查看积分。」',
+  );
+  assert.ok(
+    read('miniprogram/utils/login-gate.js').includes("content || '登录后才能记录你的足迹。'"),
+    '不传文案时仍用足迹默认口径',
+  );
+});
