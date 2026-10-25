@@ -1,4 +1,5 @@
-/** dateKey 'YYYY-MM-DD' → 'MM.DD'：七格 sub 与胶囊 label 共用它，保证两处显示永远同格式 */
+/** dateKey 'YYYY-MM-DD' → 'MM.DD'：七格 sub 与胶囊 label 共用它，保证两处显示永远同格式；
+ *  导出给兑换记录页的「已补签 MM.DD」复用——同一张日期别让一处 10-24 一处 10.24（Task 8 收口） */
 const md = (dateKey) => dateKey.slice(5).replace('-', '.');
 
 /**
@@ -61,4 +62,4 @@ function buildItemCards(items) {
   }));
 }
 
-module.exports = { buildSigninStrip, buildMakeupChips, shiftDateKey, buildTaskRows, buildItemCards };
+module.exports = { buildSigninStrip, buildMakeupChips, shiftDateKey, buildTaskRows, buildItemCards, md };

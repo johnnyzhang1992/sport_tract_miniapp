@@ -36,7 +36,8 @@
 
     <view class="links">
       <text class="link" bindtap="goExchanges">兑换记录 ›</text>
-      <text class="link" wx:if="{{cards > 0}}" bindtap="goMakeup">去补签昨天 ›</text>
+      <!-- 入口判据来自 summary 的 cells（有 makeup 格才显示），不再看持卡数：能补的不止昨天 -->
+      <text class="link" wx:if="{{canMakeup}}" bindtap="goMakeup">去补签 ›</text>
     </view>
 
     <view class="buy-space"></view>

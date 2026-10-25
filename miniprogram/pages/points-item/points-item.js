@@ -5,7 +5,8 @@
  * - 兑换走 POST /points/items/makeup_card/exchange，body 带每次点击新生成的 requestId，
  *   服务端按 (userId, requestId) 幂等：连点只扣一次分、只发一张卡；
  * - 登录闸门走触点级：进页不弹登录、游客不发请求，点引导才 ensureLogin；
- * - 兑换成功后刷新卡数与余额，可去「补签昨天」或「兑换记录」。
+ * - 兑换成功后刷新卡数与余额；「去补签」入口以 summary 的 cells 为准（有 state==='makeup' 的格才给），
+ *   手里有卡但当下没有可补的日子不再把用户引进补不成的流程（spec §7 入口收口）。
  */
 const api = require('../../services/api');
 const { ensureLogin, waitSession } = require('../../utils/login-gate');
@@ -18,6 +19,7 @@ Page({
     item: null,
     balance: 0,
     cards: 0,
+    canMakeup: false,
     busy: false,
     priceText: '',
   },
@@ -56,6 +58,9 @@ Page({
         priceText: item ? `${item.price} 积分兑换` : '',
         balance: (summary && summary.balance) || 0,
         cards: (summary && summary.signin && summary.signin.cards) || 0,
+        // 补签入口以服务端 cells 为准：手里有卡但当前没有可补日时，不该再给入口（判据只有 state === 'makeup'）
+        canMakeup: ((summary && summary.signin && summary.signin.cells) || [])
+          .some((c) => c.state === 'makeup'),
       });
     } catch (e) {
       this.setData({ loading: false, failed: true });

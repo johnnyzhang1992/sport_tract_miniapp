@@ -6,7 +6,9 @@
  * 4) 签到与任务领取走 POST；补签走 POST /points/signin/makeup {dateKey}（卡由服务端挑，前端不传卡 id）；
  *    激励视频只有完播（isEnded===true）才领分，提前关闭/广告失败都不发分；
  * 5) 积分明细页（PP12–PP16）：触点到 /points/records 才发请求、分页 20 条、+N/-N 与余额、失败重试；
- * 6) 积分规则页（PP12/PP17）：静态 Q&A 覆盖连续签到/次日失效/有效期/每日上限/补签卡。
+ * 6) 积分规则页（PP12/PP17）：静态 Q&A 覆盖连续签到/次日失效/有效期/每日上限/补签卡；
+ * 7) 补签入口收口（PP37/PP38）：商品页「去补签」以 summary 的 cells 为准（有 makeup 格才出现），
+ *    兑换记录页去掉行内补签入口（单一入口在积分页胶囊），已用的卡仍按 MM.DD 显示补了哪天。
  * 运行：node --test test/points-pages.test.js；桩：wx / Page / getApp 就地 stub，
  * services/api、utils/login-gate、utils/rewarded-ad 用 require.cache 注入假实现（isAdRewardEligible 用真实实现）。
  */
@@ -832,6 +834,7 @@ const ITEM_JS = 'miniprogram/pages/points-item/points-item.js';
 const ITEM_WXML = 'miniprogram/pages/points-item/points-item.wxml';
 const EX_JS = 'miniprogram/pages/points-exchanges/points-exchanges.js';
 const EX_WXML = 'miniprogram/pages/points-exchanges/points-exchanges.wxml';
+const EX_WXSS = 'miniprogram/pages/points-exchanges/points-exchanges.wxss';
 
 const itemFixture = () => ({
   key: 'makeup_card',
@@ -1021,7 +1024,7 @@ test('PP26 商品页请求失败：failed 置位可点击重试，重试成功�
   assert.equal(p.data.balance, 200);
 });
 
-test('PP27 兑换记录页：状态映射、去补签条件（未使用且未过期）、时间与消耗格式化', async () => {
+test('PP27 兑换记录页：状态映射、未知状态兜底、时间与消耗格式化（行内补签入口已收口，见 PP38）', async () => {
   reset();
   const future = Date.now() + 86400000;
   const past = Date.now() - 86400000;
@@ -1031,7 +1034,7 @@ test('PP27 兑换记录页：状态映射、去补签条件（未使用且未过
     exchangeRow({ id: 'e2', status: 'unused', statusText: '未使用', expiresAt: past }),
     exchangeRow({ id: 'e3', status: 'used', statusText: '已使用', usedForDate: '2026-10-21', expiresAt: future }),
     exchangeRow({ id: 'e4', status: 'expired', statusText: '已过期', expiresAt: past }),
-    // 未知状态不能当「未使用」放出补签入口，按已过期兜底
+    // 未知状态不能当「未使用」；入口虽已删，状态归一（含过期兜底）仍是列表正确渲染的前提
     exchangeRow({ id: 'e5', status: 'mystery', statusText: '未使用', expiresAt: future }),
   ];
   summaryRespond = () => Promise.resolve(rows);
@@ -1042,21 +1045,17 @@ test('PP27 兑换记录页：状态映射、去补签条件（未使用且未过
   assert.equal(p.data.loggedIn, true);
   assert.equal(p.data.loading, false);
   assert.deepEqual(p.data.items.map((i) => i.statusText), ['未使用', '已过期', '已使用', '已过期', '已过期']);
-  assert.deepEqual(p.data.items.map((i) => i.canMakeup), [true, false, false, false, false]);
+  assert.deepEqual(p.data.items.map((i) => i.status), ['unused', 'expired', 'used', 'expired', 'expired']);
+  assert.ok(p.data.items.every((i) => i.canMakeup === undefined), '行数据不再自带可补判定——入口判据收口到积分页 cells');
 
   const ts = rows[0].createdAt;
   assert.equal(p.data.items[0].timeText, bjDateTime(ts));
   assert.equal(p.data.items[0].expiresText, bjDate(future));
   assert.equal(p.data.items[0].costText, '-200 积分');
-  assert.equal(p.data.items[2].usedForDate, '2026-10-21');
+  assert.equal(p.data.items[2].usedForDateText, '10.21', '补掉的哪天：与积分页七格/胶囊同为 MM.DD 口径');
 
   const wxml = read(EX_WXML);
-  assert.ok(wxml.includes('bindtap="goMakeup"'), '未使用且未过期要有「去补签」入口');
-  assert.ok(wxml.includes('去补签'));
   assert.ok(wxml.includes('兑换时间'));
-
-  p.goMakeup();
-  assert.deepEqual(navs, ['/pages/points/points']);
 });
 
 test('PP28 兑换记录页：游客不请求、空态文案、失败可重试', async () => {
@@ -1092,5 +1091,80 @@ test('PP28 兑换记录页：游客不请求、空态文案、失败可重试', 
   await tick();
   assert.equal(q.data.failed, false);
   assert.equal(q.data.items.length, 1);
-  assert.equal(q.data.items[0].canMakeup, true);
+  assert.equal(q.data.items[0].status, 'unused');
+});
+
+/* ------------- Task 8：其它两页补签入口按 cells 收口（spec §7 最后一条） ------------- */
+
+test('PP37 商品页「去补签」入口以 cells 为准：有 makeup 格才出现，手里有卡但无可补日不出现', async () => {
+  const bootItemPage = () => bootWith(loadPage(ITEM_JS));
+  /** 商品页两路请求分流：/points/items 固定回商品，/points/summary 回指定 DTO */
+  const summaryAs = (summary) => (p) => (p === '/points/items'
+    ? Promise.resolve([itemFixture()])
+    : Promise.resolve(summary));
+  const signedAll = Object.assign({}, summaryFixture(), {
+    signin: Object.assign({}, summaryFixture().signin, {
+      cells: summaryFixture().signin.cells.map((c) => ({ ...c, state: 'signed' })),
+    }),
+  });
+
+  reset();
+  // ① fixture 的 cells 有 10-19/10-24 两颗 makeup 格 → 入口在
+  summaryRespond = summaryAs(summaryFixture());
+  const p = bootItemPage();
+  await tick();
+  assert.equal(p.data.failed, false);
+  assert.equal(p.data.canMakeup, true, '有可补日 → 入口在');
+
+  // ② 七格全已签、手里仍剩 2 张卡：没有可补的日子就不该再给入口（旧判据 cards > 0 正是本用例修的 bug）
+  summaryRespond = summaryAs(signedAll);
+  const q = bootItemPage();
+  await tick();
+  assert.equal(q.data.cards, 2, '卡还在手里，只是当下没得补');
+  assert.equal(q.data.canMakeup, false, '有卡但无 makeup 格 → 入口不在');
+
+  // ③ summary 缺 signin / 整个为空：按「无入口」处理，不能把整页顶成失败态
+  summaryRespond = summaryAs({ balance: 10 });
+  const r = bootItemPage();
+  await tick();
+  assert.equal(r.data.failed, false, 'signin 缺失不是页面失败');
+  assert.equal(r.data.canMakeup, false);
+  summaryRespond = summaryAs(null);
+  const s = bootItemPage();
+  await tick();
+  assert.equal(s.data.failed, false);
+  assert.equal(s.data.canMakeup, false);
+
+  // ④ wxml 钉牢：链接的显示条件绑 canMakeup（由 cells 派生），文案不再写死「昨天」
+  const wxml = read(ITEM_WXML);
+  assert.ok(
+    wxml.includes('<text class="link" wx:if="{{canMakeup}}" bindtap="goMakeup">去补签 ›</text>'),
+    '链接整标签匹配：wx:if 是 canMakeup、文案是「去补签」（能补的不止昨天）',
+  );
+  assert.ok(!wxml.includes('去补签昨天'), '旧文案「去补签昨天」要删');
+});
+
+test('PP38 兑换记录页去掉行内「去补签」入口：按钮/判据/handler/wxss 一并收口，已用的卡仍显示补了哪天', async () => {
+  reset();
+  const future = Date.now() + 86400000;
+  summaryRespond = () => Promise.resolve([
+    exchangeRow({ id: 'e1', status: 'unused', expiresAt: future }),
+    exchangeRow({ id: 'e3', status: 'used', usedForDate: '2026-10-21', expiresAt: future }),
+  ]);
+  const p = bootWith(loadPage(EX_JS));
+  await tick();
+  assert.equal(p.data.items[0].canMakeup, undefined, '行内入口的判据整个拿掉：行数据不带 canMakeup');
+  assert.equal(p.data.items[1].usedForDateText, '10.21', '补签日期与积分页 cells/胶囊同用 MM.DD，不留一处 10-21 一处 10.21');
+
+  const wxml = read(EX_WXML);
+  const js = read(EX_JS);
+  const wxss = read(EX_WXSS);
+  assert.ok(!wxml.includes('exchange-action'), '行内补签按钮要删掉，它此前只看持卡状态');
+  assert.ok(!js.includes('goMakeup') && !js.includes('canMakeup'), 'js 里的 goMakeup/canMakeup 一并删除');
+  assert.ok(!wxss.includes('exchange-action'), '对应 wxss 规则同步删除，不留孤儿规则');
+  assert.ok(wxml.includes('已补签'), '已用的卡仍要显示补了哪天');
+  assert.ok(
+    /<text class="exchange-used" wx:if="\{\{item\.usedForDateText\}\}">已补签 \{\{item\.usedForDateText\}\}<\/text>/.test(wxml),
+    '「已补签 MM.DD」合成一句渲染：wx:if 与内容都走格式化字段，不在 wxml 里自拼',
+  );
 });

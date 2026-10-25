@@ -2,14 +2,16 @@
  * 兑换记录页（pages/points-exchanges/points-exchanges）
  *
  * - 只读 GET /points/exchanges（按兑换时间倒序），状态取服务端推导值；
- *   服务端已把「卡仍 unused 但过了有效期」推导成 expired，页面再兜一层，避免过期的卡还能「去补签」；
+ *   服务端已把「卡仍 unused 但过了有效期」推导成 expired，页面再兜一层；
  * - 状态映射 unused → 未使用 / used → 已使用 / 其余（含 expired 与未知值）→ 已过期；
- * - 未使用且未过期给「去补签」入口（回积分页补昨天），已使用/已过期只读；
+ * - 本页不再提供补签入口（Task 8 收口，spec §7）：逐日补签的唯一入口是积分页的补签胶囊，
+ *   此前行内「去补签」只看持卡状态、不看 cells，会邀请用户进补不成的流程；已用的卡仍显示补了哪天（MM.DD）；
  * - 登录闸门走触点级：进页不弹登录、游客不发请求，点引导才 ensureLogin。
  */
 const api = require('../../services/api');
 const { ensureLogin, waitSession } = require('../../utils/login-gate');
 const { bjDate, bjDateTime } = require('../../utils/bj-date');
+const { md } = require('../../utils/points-view');
 
 const STATUS_TEXT = { unused: '未使用', used: '已使用', expired: '已过期' };
 
@@ -20,10 +22,10 @@ function toMs(v) {
   return Number.isNaN(ms) ? 0 : ms;
 }
 
-/** 兑现行：状态归一 + 可补签判定（未使用且未过期） */
+/** 兑现行：只做状态归一与显示格式化，不推导可补性——补签入口判据收口到积分页 cells */
 function toRow(r, now) {
   const expiresAt = toMs(r.expiresAt);
-  // 只有明确 unused/used 才采信；未知状态按已过期兜底，避免脏数据给出「去补签」
+  // 只有明确 unused/used 才采信；未知状态按已过期兜底，列表不能把脏数据当「未使用」渲染
   let status = r.status === 'unused' || r.status === 'used' ? r.status : 'expired';
   if (status === 'unused' && expiresAt <= now) status = 'expired';
   return {
@@ -32,10 +34,10 @@ function toRow(r, now) {
     costText: `-${r.cost} 积分`,
     status,
     statusText: STATUS_TEXT[status],
-    canMakeup: status === 'unused' && expiresAt > now,
     timeText: bjDateTime(toMs(r.createdAt)),
     expiresText: bjDate(expiresAt),
-    usedForDate: r.usedForDate || '',
+    // 服务端下发 YYYY-MM-DD，展示走 points-view 的 md()：与积分页七格/胶囊一律 MM.DD
+    usedForDateText: r.usedForDate ? md(r.usedForDate) : '',
   };
 }
 
@@ -86,10 +88,6 @@ Page({
 
   onRetry() {
     return this.fetch();
-  },
-
-  goMakeup() {
-    wx.navigateTo({ url: '/pages/points/points' });
   },
 
   goItem() {

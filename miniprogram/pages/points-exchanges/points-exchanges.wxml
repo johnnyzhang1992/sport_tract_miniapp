@@ -13,11 +13,10 @@
             </view>
             <text class="exchange-time">兑换时间 {{item.timeText}}</text>
             <text class="exchange-expire">有效期至 {{item.expiresText}}</text>
-            <text class="exchange-used" wx:if="{{item.usedForDate}}">已补签 {{item.usedForDate}}</text>
+            <text class="exchange-used" wx:if="{{item.usedForDateText}}">已补签 {{item.usedForDateText}}</text>
           </view>
           <view class="exchange-side">
             <text class="exchange-cost">{{item.costText}}</text>
-            <view class="exchange-action" wx:if="{{item.canMakeup}}" bindtap="goMakeup">去补签</view>
           </view>
         </view>
       </view>
