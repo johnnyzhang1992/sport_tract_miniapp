@@ -1,0 +1,6 @@
+.thumb-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  background: #fff; /* 与轨迹卡片同色（白底） */
+}

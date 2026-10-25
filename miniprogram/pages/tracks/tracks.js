@@ -4,12 +4,9 @@ const { getBestCache, setBestCache } = require('../../services/storage');
 const { matchBest } = require('../../utils/best-records');
 const config = require('../../config/index');
 const { markHomeDirty } = require('../../utils/home-refresh');
-const { buildMapView, visibleMapIds, selectMapEvictions } = require('../../utils/map-preview');
 
 const PAGE_SIZE = 20;
 const VIEW_MODE_KEY = 'tracksViewMode';
-/** 地图模式最多保活的 map 节点数：峰值 15 张；超过后从最久未见的非可视行开始淘汰 */
-const MAX_MOUNTED_MAPS = 15;
 const pad2 = (n) => String(n).padStart(2, '0');
 
 /** 秒 → h:mm:ss（月度统计用） */
@@ -49,7 +46,7 @@ Page({
     activeFilter: '',
     provinceFilter: '', // 省份筛选（足迹地图跳转带入）
     rangeFilter: null, // 精确时间范围（报告页日期汇总下钻带入）：{ from, to, label }
-    viewMode: 'list', // 展示模式：list 单行列表（默认，按月分组）/ grid 地图（一行一条：左地图右概况）
+    viewMode: 'list', // 展示模式：list 单行列表（默认，按月分组）/ grid 卡片（左侧 canvas 轨迹 + 右侧概况）
     items: [],
     totalCount: 0, // 当前筛选命中的总条数（接口 total，非已加载条数）
     groups: [], // 列表模式按月分组：[{ key: '2026-9', label: '2026年9月', items }]
@@ -76,196 +73,6 @@ Page({
     try {
       wx.setStorageSync(VIEW_MODE_KEY, mode);
     } catch (err) {}
-    this.scheduleMapSync();
-  },
-
-  /**
-   * 地图模式：卡片进入视口（上下各留 240px）才挂载原生 map 并拉抽稀点。
-   * 20 行同时挂 map 太重；离开视野后卸载地图节点（点数据留在 items 里，回来即挂）。
-   * 用页面滚动 + boundingClientRect 同步（多节点 IntersectionObserver 实测只回调首行）。
-   */
-  scheduleMapSync(delay = 60) {
-    if (this.data.viewMode !== 'grid') {
-      this.clearMapTimers();
-      this.unmountMaps();
-      return;
-    }
-    if (this._mapSyncTimer) clearTimeout(this._mapSyncTimer);
-    this._mapSyncTimer = setTimeout(() => {
-      this._mapSyncTimer = null;
-      this.syncVisibleMaps();
-    }, delay);
-  },
-
-  syncVisibleMaps() {
-    if (this.data.viewMode !== 'grid' || !wx.createSelectorQuery) return;
-    wx.createSelectorQuery()
-      .in(this)
-      .selectAll('.map-item')
-      .boundingClientRect((rects) => {
-        const info = wx.getWindowInfo
-          ? wx.getWindowInfo()
-          : wx.getSystemInfoSync
-            ? wx.getSystemInfoSync()
-            : {};
-        const ids = visibleMapIds(rects, info.windowHeight || 667, 240);
-        // 严格视口（不含预加载带）：切页时只保留这几张地图节点
-        this._viewportIds = visibleMapIds(rects, info.windowHeight || 667, 0);
-        if (!this._mapSeen) this._mapSeen = new Map();
-        const now = Date.now();
-        ids.forEach((id) => this._mapSeen.set(id, now));
-        const patch = {};
-        let changed = false;
-        const mountedAfter = new Set();
-        this.data.items.forEach((item, idx) => {
-          if (ids.has(item.id)) {
-            if (!item.mapReady && item.mapCenter) {
-              patch[`items[${idx}].mapReady`] = true;
-              changed = true;
-              if (item.mapFitPoints && item.mapFitPoints.length) this.fitItemMap(item.id);
-            }
-            if (item.mapReady || item.mapCenter) mountedAfter.add(item.id);
-            this.loadItemMap(item.id);
-          } else if (item.mapReady) {
-            mountedAfter.add(item.id);
-          }
-        });
-        // 超过保活上限才淘汰最久未见的非可视行；短距离来回滚动不卸载
-        const evict = selectMapEvictions({
-          mounted: mountedAfter,
-          visible: ids,
-          seen: this._mapSeen,
-          cap: MAX_MOUNTED_MAPS,
-        });
-        if (evict.size) {
-          this.data.items.forEach((item, idx) => {
-            if (!evict.has(item.id)) return;
-            patch[`items[${idx}].mapReady`] = false;
-            changed = true;
-          });
-        }
-        if (changed) this.setData(patch);
-      })
-      .exec();
-  },
-
-  /** 滚动节流：120ms 内只同步一次可视行 */
-  onPageScroll() {
-    if (this.data.viewMode !== 'grid' || this._mapScrollTimer) return;
-    this._mapScrollTimer = setTimeout(() => {
-      this._mapScrollTimer = null;
-      this.syncVisibleMaps();
-    }, 120);
-  },
-
-  clearMapTimers() {
-    if (this._mapSyncTimer) {
-      clearTimeout(this._mapSyncTimer);
-      this._mapSyncTimer = null;
-    }
-    if (this._mapScrollTimer) {
-      clearTimeout(this._mapScrollTimer);
-      this._mapScrollTimer = null;
-    }
-  },
-
-  /** 地图从视野外回收：避免来回切模式时一次性挂满 20 个 map */
-  unmountMaps() {
-    if (!this.data.items.some((i) => i.mapReady)) return;
-    const patch = {};
-    this.data.items.forEach((it, idx) => {
-      if (it.mapReady) patch[`items[${idx}].mapReady`] = false;
-    });
-    this.setData(patch);
-  },
-
-  /** 切页时只保留严格视口内的地图，卸载视口外的保活节点 */
-  trimMountedMapsToViewport() {
-    if (this.data.viewMode !== 'grid') {
-      this.unmountMaps();
-      return;
-    }
-    const keep = this._viewportIds;
-    if (!keep || !keep.size) {
-      this.unmountMaps();
-      return;
-    }
-    const patch = {};
-    let changed = false;
-    this.data.items.forEach((item, idx) => {
-      if (item.mapReady && !keep.has(item.id)) {
-        patch[`items[${idx}].mapReady`] = false;
-        changed = true;
-      }
-    });
-    if (changed) this.setData(patch);
-  },
-
-  async loadItemMap(id) {
-    const item = this.data.items.find((i) => i.id === id);
-    if (!item || item.mapDetail || item.mapLoading || item.mapFailed) return;
-    this._mapCache = this._mapCache || {};
-    if (Object.prototype.hasOwnProperty.call(this._mapCache, id)) {
-      this.applyItemMap(id, this._mapCache[id]);
-      return;
-    }
-    this.updateItem(id, { mapLoading: true });
-    try {
-      const data = await api.get(`/activities/${id}/map-points`);
-      const view = buildMapView((data && data.points) || [], item.type);
-      this._mapCache[id] = view;
-      this.applyItemMap(id, view);
-    } catch (e) {
-      this.updateItem(id, { mapLoading: false, mapFailed: true });
-    }
-  },
-
-  applyItemMap(id, view) {
-    if (!view) {
-      this.updateItem(id, { mapLoading: false, mapDetail: true, mapEmpty: true });
-      return;
-    }
-    this.updateItem(id, {
-      mapLoading: false,
-      mapDetail: true,
-      mapFailed: false,
-      mapEmpty: false,
-      mapReady: true,
-      mapPolyline: view.polyline,
-      mapIncludePoints: view.includePoints,
-      mapFitPoints: view.fitPoints,
-      mapCenter: view.center,
-    });
-    this.fitItemMap(id);
-  },
-
-  /**
-   * 主动把轨迹包进地图视野并留 12px 边距：
-   * 属性 include-points 只能紧贴边，轨迹会顶到圆角/版权字上；MapContext 的 padding 才稳。
-   */
-  fitItemMap(id) {
-    if (!wx.createMapContext) return;
-    setTimeout(() => {
-      const item = this.data.items.find((i) => i.id === id);
-      if (!item || !item.mapReady || !item.mapFitPoints || !item.mapFitPoints.length) return;
-      try {
-        const ctx = wx.createMapContext(`track-map-${id}`, this);
-        if (ctx && ctx.includePoints) {
-          ctx.includePoints({ points: item.mapFitPoints, padding: [12, 12, 12, 12] });
-        }
-      } catch (e) {}
-    }, 60);
-  },
-
-  /** 单行更新（路径 setData）：地图点返回时不重渲染整页与其它 map */
-  updateItem(id, patch) {
-    const idx = this.data.items.findIndex((i) => i.id === id);
-    if (idx < 0) return;
-    const data = {};
-    Object.keys(patch).forEach((k) => {
-      data[`items[${idx}].${k}`] = patch[k];
-    });
-    this.setData(data);
   },
 
   onShow() {
@@ -305,19 +112,7 @@ Page({
     }
     if (!this.data.initialized) {
       this.refresh();
-    } else {
-      this.scheduleMapSync();
     }
-  },
-
-  onHide() {
-    this.clearMapTimers();
-    // 切 tab / 切页：只留视口内的地图节点（约 5–6 张），视口外的保活节点先释放
-    this.trimMountedMapsToViewport();
-  },
-
-  onUnload() {
-    this.clearMapTimers();
   },
 
   /** 清除省份筛选 */
@@ -369,9 +164,6 @@ Page({
     if (!app.globalData.loggedIn) return;
     try {
       this._monthlyStats = {}; // 重置聚合缓存，防上一次筛选的数据串味（只在 JS 用，不进 data）
-      this._mapCache = {}; // 地图抽稀点缓存随列表刷新一起作废
-      this._mapSeen = new Map(); // 地图节点保活的最近可见时间
-      this._viewportIds = new Set();
       this.setData({ loading: true, page: 1 });
       // 个人最佳与列表并行拉取：每次刷新都取实时值（缓存不失效，新纪录要立刻在卡片亮出）
       const [data, best] = await Promise.all([api.get('/activities', this.buildParams(1)), this.loadBest()]);
@@ -387,7 +179,6 @@ Page({
         initialized: true,
         loadError: false,
       });
-      this.scheduleMapSync();
     } catch (e) {
       console.error('加载轨迹列表失败', e);
       this.setData({ loadError: true });
@@ -440,7 +231,6 @@ Page({
         page: next,
         hasMore: data.items.length >= PAGE_SIZE,
       });
-      this.scheduleMapSync();
     } catch (e) {
       console.error('加载更多失败', e);
     } finally {
@@ -515,14 +305,14 @@ Page({
       diffDays < 7
         ? ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'][start.getDay()]
         : `${start.getFullYear()}/${start.getMonth() + 1}/${start.getDate()}`;
-    // 列表地图模式：先用 60 点预览折线立即可见，进入视口后再拉 ≤1500 点详情
-    const previewView = buildMapView(item.previewPoints || [], item.type);
+    // 卡片左图用列表下发的 60 点预览直接画 canvas（不再请求地图详情点）
     const end = new Date(item.endTime || item.startTime + (item.duration || 0) * 1000);
     const out = {
       ...item,
       id: String(item._id || item.id || ''),
       iconImg: meta.iconImg || '',
       label: meta.label || item.type,
+      color: '#4A5568', // 深灰蓝：白底卡片上轨迹清晰（中灰偏淡）
       previewPoints: item.previewPoints || [],
       distanceKm: (item.distance / 1000).toFixed(2).replace(/\.?0+$/, ''),
       durationText: formatHms(item.duration),
@@ -537,15 +327,6 @@ Page({
         minute: '2-digit',
       }),
       timeText,
-      mapReady: false,
-      mapDetail: false,
-      mapLoading: false,
-      mapFailed: false,
-      mapEmpty: false,
-      mapPolyline: previewView ? previewView.polyline : [],
-      mapIncludePoints: previewView ? previewView.includePoints : [],
-      mapFitPoints: previewView ? previewView.fitPoints : [],
-      mapCenter: previewView ? previewView.center : null,
     };
     // 个人最佳角标（列表卡片右侧）：命中多项时展示第一项 + 等N项；
     // 前纪录（已被刷新）优先级靠后，全为前纪录时角标灰显；无命中时不亮角标
@@ -590,15 +371,12 @@ Page({
     if (!res.confirm) return;
     try {
       await api.del(`/activities/${id}`);
-      if (this._mapCache) delete this._mapCache[id];
-      if (this._mapSeen) this._mapSeen.delete(id);
       const items = this.data.items.filter((i) => i.id !== id);
       this.setData({
         items,
         totalCount: Math.max(0, this.data.totalCount - 1),
         groups: this.buildGroups(items),
       });
-      this.scheduleMapSync();
       this.syncMonthlyStats(); // 删除影响整月累计，重新拉取聚合
       markHomeDirty(); // 首页累计数据 / 榜名次 / 日历都会变
       wx.showToast({ title: '已删除', icon: 'success' });

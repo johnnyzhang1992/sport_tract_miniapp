@@ -32,7 +32,7 @@
     <view class="province-bar-close" hover-class="province-bar-close-hover" bindtap="clearRange">✕</view>
   </view>
 
-  <!-- 展示模式切换：列表（text-align-justify）/ 图片（layout-grid） -->
+  <!-- 展示模式切换：列表（text-align-justify）/ 卡片（layout-grid，左侧 canvas 轨迹） -->
   <view class="mode-bar">
     <text class="mode-bar-title">{{totalCount}} 条轨迹</text>
     <view class="mode-btns">
@@ -154,9 +154,9 @@
     </view>
   </block>
 
-  <!-- 地图模式：一行一条（左侧真实地图，右侧数据概况）；地图点按视口懒加载 -->
+  <!-- 卡片模式：一行一条（左侧 canvas 轨迹缩略图，右侧数据概况） -->
   <view class="map-list" wx:else>
-    <view class="map-item" id="map-item-{{item.id}}" wx:for="{{items}}" wx:key="id" data-id="{{item.id}}">
+    <view class="map-item" wx:for="{{items}}" wx:key="id" data-id="{{item.id}}">
       <t-swipe-cell
         right="{{[{ text: '删除', className: 'del-action' }]}}"
         data-id="{{item.id}}"
@@ -170,30 +170,16 @@
           bindtap="onTapItem"
         >
           <view class="map-wrap">
-            <map
-              wx:if="{{item.mapReady && item.mapCenter}}"
-              id="track-map-{{item.id}}"
-              class="track-map-mini"
-              latitude="{{item.mapCenter.latitude}}"
-              longitude="{{item.mapCenter.longitude}}"
-              scale="15"
-              polyline="{{item.mapPolyline}}"
-              include-points="{{item.mapIncludePoints}}"
-              data-id="{{item.id}}"
-              bindtap="onTapItem"
-              enable-zoom="{{false}}"
-              enable-scroll="{{false}}"
-              enable-rotate="{{false}}"
-              enable-overlooking="{{false}}"
-              enable-satellite="{{false}}"
-              show-location="{{false}}"
-              enable-traffic="{{false}}"
-              enable-poi="{{false}}"
+            <track-thumb
+              wx:if="{{item.previewPoints.length >= 2}}"
+              class="track-thumb"
+              points="{{item.previewPoints}}"
+              color="{{item.color}}"
             />
             <view wx:else class="map-placeholder">
               <image wx:if="{{item.iconImg}}" class="map-placeholder-icon-img" src="{{item.iconImg}}" mode="aspectFit" />
               <text wx:else class="map-placeholder-icon">—</text>
-              <text class="map-placeholder-text">{{item.mapEmpty ? '暂无轨迹' : item.mapFailed ? '地图加载失败' : '地图加载中…'}}</text>
+              <text class="map-placeholder-text">暂无轨迹</text>
             </view>
           </view>
           <view class="map-info">
