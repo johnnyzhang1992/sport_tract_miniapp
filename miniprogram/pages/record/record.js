@@ -6,6 +6,7 @@
  */
 const config = require('../../config/index');
 const loading = require('../../utils/loading');
+const { resolveAccuracy, describeAccuracyFields } = require('../../utils/loc-accuracy');
 const api = require('../../services/api');
 const { Tracker } = require('../../services/tracker');
 const { ensureLocationAuth } = require('../../services/location-auth');
@@ -117,7 +118,9 @@ Page({
     });
   },
 
-  /** 疑似乘车提示：每段只响一次（watcher 内部记状态），只提示不改数据——是否剔除由用户在轨迹详情「纠偏」决定 */
+  /** 疑似搭车提示：触发条件是「持续 ≥6.5m/s 撑满 60s+」＝ 必然是直线大位移，用「搭车」准确
+   *  （碎小的室内漂移不会触发持续判据，那种归详情页的「定位漂移」文案）。每段只响一次，
+   *  只提示不改数据——是否剔除由用户在轨迹详情「纠偏」决定 */
   onVehicle(info) {
     wx.vibrateShort({ type: 'heavy', fail: () => wx.vibrateShort({}) });
     wx.showToast({
@@ -311,7 +314,13 @@ Page({
       wx.showToast({ title: '已获取定位', icon: 'success' });
     }
     // 实时精度（常驻展示）+ 弱信号提示（accuracy > 45m 时橙色提醒）
-    const acc = typeof loc.accuracy === 'number' ? Math.round(loc.accuracy) : null;
+    // 归一化兼容机型差异（字符串/换名字段/0 值），详见 utils/loc-accuracy.js
+    const acc = resolveAccuracy(loc);
+    // 设备拿不到精度：首次打一条诊断（字段与值），方便用户开 vConsole 回传机型差异
+    if (acc == null && !this._accDiagLogged) {
+      this._accDiagLogged = true;
+      console.warn('[record] 该机型未返回有效精度', describeAccuracyFields(loc));
+    }
     const weak = acc != null && acc > 45;
     this.setData({
       currentAccuracy: acc,

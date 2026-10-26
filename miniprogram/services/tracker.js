@@ -3,6 +3,7 @@
  * 纯逻辑模块：页面持有单例，onLocationChange 喂点，UI 读 snapshot()
  */
 const config = require('../config/index');
+const { resolveAccuracy, describeAccuracyFields } = require('../utils/loc-accuracy');
 const { createVehicleWatcher } = require('../utils/vehicle-live');
 const { createStandstillWatcher, createMovementWatcher } = require('../utils/standstill-live');
 
@@ -49,6 +50,12 @@ const REVERSE_SLOW_SPEED_MPS = 2;
 /** 巨步弦判定的最短单步间隔（秒）：与服务端 vehicle.ts 的 VEHICLE_MAX_STEP_SEC 同口径。
  *  连续超过该时长没有任何采样（隧道/挂起/挂机），重现点一步跨过的直线视为被运载 */
 const CHORD_MIN_GAP_SEC = 120;
+
+/** 巨步弦的位移闸门（m/s）：>120s 的断档还要弦速达该值才判「被运载」。
+ *  只看时间不看位移会把「室内信号差、人几乎原地站着」的长空窗当乘车，白吞整段运动时长
+ *  （实测 212s 只移 3.9m 被扣）。语义上「断档 ≠ 乘车」。
+ *  ⚠️ 与服务端 vehicle.ts#CHORD_VEHICLE_MIN_MPS 同值，改一处必须同步 */
+const CHORD_VEHICLE_MIN_MPS = 2.0;
 
 /** 中短断档收紧下限（秒）：30 < dt ≤ 120 的步允许速度降到 gapSpeed（三级阶梯中档，docs/19 §3.1）。
  *  信号刚恢复的首 fix 不可信，地铁进出站 30-60s 丢信号一步跳几百米，速度落在单步判据与
@@ -185,7 +192,11 @@ class Tracker {
     // 精度差不整批丢弃（决策：异常点标记保留）：accuracy 超类型阈值只说明位置可信度低，
     // 全丢会让弱信号段（高架/林荫/地下口）轨迹断线没法渲染。抽稀保留：距上一保留点
     // ≥10s 或 ≥30m 才收一个，密度有上限；保留点标 accBad 供纠偏/渲染使用。
-    const badAcc = typeof loc.accuracy === 'number' && loc.accuracy > this._typeCfg.maxAccuracyM;
+    // 精度归一化（2026-10-26）：部分 Android 机型/微信版本把 accuracy 返回成字符串、
+    // 改用 horizontalAccuracy、或把无效值填 0——旧代码的 typeof === 'number' 硬判会把这些
+    // 全当「无精度」，0 更会被当成完美精度。统一走 resolveAccuracy 解析（null = 未知）。
+    const acc = resolveAccuracy(loc);
+    const badAcc = acc != null && acc > this._typeCfg.maxAccuracyM;
 
     let d = 0;
     let dt = 0;
@@ -207,8 +218,11 @@ class Tracker {
 
     // 巨步弦（隧道/地下车库/挂机等长时间无定位后的重现点）：一步跨过 >120s 意味着这段
     // 完全没有采样，落点间直线是被运载/凭空连出来的 → 标 vehicle：灰线、距离与时长都不计入。
+    // 位移闸门（2026-10-26）：还要弦速 ≥ CHORD_VEHICLE_MIN_MPS——只看时间会把「室内信号差、
+    // 人几乎原地站着」的长空窗当乘车，白吞整段运动时长。
     // 暂停恢复后的首点不判：那段时长已由 pausedMs 扣过，再剔就是双扣。
-    const chordGap = this.lastPoint != null && dt > CHORD_MIN_GAP_SEC && !this._pendingGap;
+    const chordGap = this.lastPoint != null && dt > CHORD_MIN_GAP_SEC && !this._pendingGap
+      && d / dt >= CHORD_VEHICLE_MIN_MPS;
     // 中短断档收紧（30 < dt ≤ 120，三级阶梯中档）：信号刚恢复的首 fix 不可信，允许速度
     // 降到 gapSpeed（类型配置，不配置 = 豁免）。暂停恢复首点豁免：那段时长已由 pausedMs
     // 扣过，再剔就是双扣。⚠️ 与服务端 markVehicle 中档同口径，改一处必须同步另一处
@@ -243,7 +257,7 @@ class Tracker {
       altitude: typeof loc.altitude === 'number' ? Math.round(loc.altitude * 10) / 10 : null,
       speed:
         loc.speed != null && loc.speed >= 0 ? Math.round(loc.speed * 10) / 10 : null,
-      accuracy: typeof loc.accuracy === 'number' ? Math.round(loc.accuracy) : null,
+      accuracy: acc,
       timestamp: now,
     };
     // 异常标记只 true 时携带（稀疏存储，紧凑化/上传/服务端同口径）
