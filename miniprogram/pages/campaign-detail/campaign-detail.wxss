@@ -502,6 +502,12 @@
   color: #fff;
   font-variant-numeric: tabular-nums;
 }
+.me-excluded {
+  margin-top: 8rpx;
+  font-size: 20rpx;
+  color: #86909c;
+}
+
 .me-count {
   font-size: 22rpx;
   color: #fff;

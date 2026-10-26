@@ -198,9 +198,13 @@ function toMemberRow(r, canKick, metric, isMe) {
 function toPanel(p) {
   const base = fmtPanel(p || {});
   const ranked = typeof p.rank === 'number' && typeof p.members === 'number' && p.members > 0;
+  // 被门禁排除的轨迹条数（定位异常，不计入活动统计）——不说明用户会困惑
+  // 「我明明跑了 21 公里，活动里怎么只算 12」（服务端 excludedCount 下发）
+  const excluded = typeof p.excludedCount === 'number' && p.excludedCount > 0;
   return Object.assign(base, {
     rankText: ranked ? `第 ${p.rank} 名` : '',
     gapText: ranked ? (p.rank <= 1 ? '领跑全队' : `距上一名 ${fmtKm(p.gapToPrev)} km`) : '',
+    excludedText: excluded ? `另有 ${p.excludedCount} 条轨迹未计入（定位异常）` : '',
   });
 }
 

@@ -242,6 +242,7 @@
       <view class="me-dist">{{panel.distanceText}} km</view>
       <view class="me-count">{{panel.countText}} 次 · 连续 {{panel.streakText}} 天 · {{panel.durationText}}</view>
     </view>
+    <view class="me-excluded" wx:if="{{panel.excludedText}}">{{panel.excludedText}}</view>
   </view>
 
   <!-- 成员信息半屏：标题行是头像+昵称 +「我 vs TA」对照 + 该成员明细（分页，加载更多由页面拉）。
