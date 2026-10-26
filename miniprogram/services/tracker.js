@@ -30,12 +30,13 @@ const RESUME_WARMUP_MS = 5000;
  *  gapSpeed：中短断档（30s<dt≤120s）收紧阈值 m/s——人无法持续 30s+（世界纪录级）、车载远超；
  *  不配置 = 豁免（骑行下坡/巡航合法速度与乘车重叠）。⚠️ 与服务端 TYPE_CONFIGS 两端同值 */
 const TYPE_TRACKER_CONFIG = {
-  walking: { maxAccuracyM: 60, minSpikeSpeed: 5, maxAbsSpeed: 12, minHighSpeed: 7, gapSpeed: 4.0 },
-  hiking: { maxAccuracyM: 60, minSpikeSpeed: 5, maxAbsSpeed: 12, minHighSpeed: 7, gapSpeed: 4.0 },
-  running: { maxAccuracyM: 50, minSpikeSpeed: 8, maxAbsSpeed: 18, minHighSpeed: 10, gapSpeed: 6.5 },
-  cycling: { maxAccuracyM: 40, minSpikeSpeed: 12, maxAbsSpeed: 30, minHighSpeed: 14 }, // gapSpeed 豁免
-  mountaineering: { maxAccuracyM: 80, minSpikeSpeed: 5, maxAbsSpeed: 12, minHighSpeed: 7, gapSpeed: 4.0 },
-  swimming: { maxAccuracyM: 60, minSpikeSpeed: 3, maxAbsSpeed: 8, minHighSpeed: 5, gapSpeed: 3.0 },
+  walking: { maxAccuracyM: 60, minSpikeSpeed: 5, maxAbsSpeed: 12, minHighSpeed: 7, gapSpeed: 4.0, chordCeilMps: 2.2 },
+  hiking: { maxAccuracyM: 60, minSpikeSpeed: 5, maxAbsSpeed: 12, minHighSpeed: 7, gapSpeed: 4.0, chordCeilMps: 2.2 },
+  running: { maxAccuracyM: 50, minSpikeSpeed: 8, maxAbsSpeed: 18, minHighSpeed: 10, gapSpeed: 6.5, chordCeilMps: 6.5 },
+  // 骑行：gapSpeed 豁免（6.5m/s 是通勤速度），但巨步弦按 11.5m/s（41km/h）判——合法高速放行、机动车拦住
+  cycling: { maxAccuracyM: 40, minSpikeSpeed: 12, maxAbsSpeed: 30, minHighSpeed: 14, chordCeilMps: 11.5 },
+  mountaineering: { maxAccuracyM: 80, minSpikeSpeed: 5, maxAbsSpeed: 12, minHighSpeed: 7, gapSpeed: 4.0, chordCeilMps: 2.2 },
+  swimming: { maxAccuracyM: 60, minSpikeSpeed: 3, maxAbsSpeed: 8, minHighSpeed: 5, gapSpeed: 3.0, chordCeilMps: 2.0 },
 };
 const DEFAULT_TRACKER_CONFIG = TYPE_TRACKER_CONFIG.running;
 /** 反转漂移过滤：新点相对上一有效点的方向与上一段方向夹角超过该角度（°）且移动缓慢 → 视为 GPS 乱跳丢弃 */
@@ -51,11 +52,11 @@ const REVERSE_SLOW_SPEED_MPS = 2;
  *  连续超过该时长没有任何采样（隧道/挂起/挂机），重现点一步跨过的直线视为被运载 */
 const CHORD_MIN_GAP_SEC = 120;
 
-/** 巨步弦的位移闸门（m/s）：>120s 的断档还要弦速达该值才判「被运载」。
- *  只看时间不看位移会把「室内信号差、人几乎原地站着」的长空窗当乘车，白吞整段运动时长
- *  （实测 212s 只移 3.9m 被扣）。语义上「断档 ≠ 乘车」。
- *  ⚠️ 与服务端 vehicle.ts#CHORD_VEHICLE_MIN_MPS 同值，改一处必须同步 */
-const CHORD_VEHICLE_MIN_MPS = 2.0;
+/** 巨步弦的位移闸门（m/s，按类型）：>120s 的断档还要弦速超过「本类型可持续均速上限」才判被运载。
+ *  只看时间不看位移会把室内信号差的长空窗当乘车（实测 212s 只移 3.9m 被扣 3.5 分钟）；
+ *  反过来用固定低阈值又会误标合法高速骑行（实测 358s 移 3805m = 38km/h 是真骑行）。
+ *  表值与服务端 vehicle.ts#SUSTAINED_SPEED_CEIL_MPS 同源：跑步 6.5、步行类 2.2、骑行 11.5。
+ *  ⚠️ 改一处必须同步另一处 */
 
 /** 中短断档收紧下限（秒）：30 < dt ≤ 120 的步允许速度降到 gapSpeed（三级阶梯中档，docs/19 §3.1）。
  *  信号刚恢复的首 fix 不可信，地铁进出站 30-60s 丢信号一步跳几百米，速度落在单步判据与
@@ -218,11 +219,12 @@ class Tracker {
 
     // 巨步弦（隧道/地下车库/挂机等长时间无定位后的重现点）：一步跨过 >120s 意味着这段
     // 完全没有采样，落点间直线是被运载/凭空连出来的 → 标 vehicle：灰线、距离与时长都不计入。
-    // 位移闸门（2026-10-26）：还要弦速 ≥ CHORD_VEHICLE_MIN_MPS——只看时间会把「室内信号差、
-    // 人几乎原地站着」的长空窗当乘车，白吞整段运动时长。
+    // 位移闸门（2026-10-26）：还要弦速超过本类型可持续均速上限（chordCeilMps）——只看时间会把
+    // 「室内信号差、人几乎原地站着」的长空窗当乘车，白吞整段运动时长；固定低阈值又会误标合法高速骑行。
     // 暂停恢复后的首点不判：那段时长已由 pausedMs 扣过，再剔就是双扣。
+    const chordCeil = this._typeCfg.chordCeilMps ?? 2.2;
     const chordGap = this.lastPoint != null && dt > CHORD_MIN_GAP_SEC && !this._pendingGap
-      && d / dt >= CHORD_VEHICLE_MIN_MPS;
+      && d / dt > chordCeil;
     // 中短断档收紧（30 < dt ≤ 120，三级阶梯中档）：信号刚恢复的首 fix 不可信，允许速度
     // 降到 gapSpeed（类型配置，不配置 = 豁免）。暂停恢复首点豁免：那段时长已由 pausedMs
     // 扣过，再剔就是双扣。⚠️ 与服务端 markVehicle 中档同口径，改一处必须同步另一处

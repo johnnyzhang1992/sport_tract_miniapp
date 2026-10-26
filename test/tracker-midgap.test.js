@@ -157,6 +157,26 @@ test('T11 巨步弦位移闸门：212s 只移 3.9m（室内丢信号原地）→
   assert.ok(t.distance >= 10 && t.distance <= 12, `位移应照常计入，实际 ${t.distance}`);
 });
 
+test('T13 巨步弦类型感知：骑行 358s 跨 3805m（38km/h 合法骑行）→ 不标；机动车 20m/s → 标', () => {
+  // 用户实测线上轨迹形态：骑行长断档 10.6m/s 属于真实高速骑行（低于 11.5 上限）
+  let clock = 0;
+  const t = new Tracker('cycling', 60, () => clock);
+  t.addPoint(P(0));
+  clock += 358_000;
+  t.addPoint(P(3805));
+  assert.equal(t.points[1].vehicle, undefined, '合法高速骑行不该被当搭车');
+  assert.equal(t._vehicleMs, 0);
+
+  // 机动车：300s 跨 6000m = 20m/s > 11.5 上限 → 标
+  clock = 0;
+  const t2 = new Tracker('cycling', 60, () => clock);
+  t2.addPoint(P(0));
+  clock += 300_000;
+  t2.addPoint(P(6000));
+  assert.equal(t2.points[1].vehicle, true, '机动车速度应标');
+  assert.ok(t2._vehicleMs >= 300_000);
+});
+
 test('T12 巨步弦回归：300s 跨 3000m（真被运载）仍标 vehicle', () => {
   let clock = 0;
   const t = new Tracker('walking', 60, () => clock);
