@@ -85,6 +85,12 @@
     </view>
     <!-- 文案由接口整句下发（vehicleNotice），端上不重算：webAdmin 详情弹窗渲染同一句 -->
     <view class="legend-note" wx:if="{{activity.vehicleNotice}}">{{activity.vehicleNotice}}</view>
+    <!-- 未计入榜单说明（driftNotice 服务端拼好）：数据完整保留，只是不进 PB/排行榜，
+         不给说明用户会困惑「我明明跑了 25 公里，PB 怎么是 12 公里」 -->
+    <view class="legend-note drift-note" wx:if="{{activity.driftNotice}}">
+      <text>{{activity.driftNotice}}</text>
+      <text class="drift-note-link" catchtap="openLeaderboardRule">了解规则 ›</text>
+    </view>
     <view class="md-title">运动数据</view>
     <view class="md-grid">
       <view class="md-cell" wx:for="{{metrics}}" wx:key="label">

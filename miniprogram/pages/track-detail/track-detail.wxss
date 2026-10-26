@@ -805,3 +805,16 @@
 .act-btn-warn {
   border: 2rpx solid #f5c34d;
 }
+
+/* 未计入榜单说明：与 vehicleNotice 同排但用另一色系（中性灰蓝，不是警告橙）——
+   它是「规则说明」不是「数据被剔除」，别让用户以为出错了 */
+.drift-note {
+  color: #4e5969;
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  flex-wrap: wrap;
+}
+.drift-note-link {
+  color: #2b6cf6;
+}

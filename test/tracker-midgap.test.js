@@ -95,42 +95,32 @@ test('T6 gapTighten 步不进 _recentSpeeds 窗口（中位数不被抬上天）
   );
 });
 
-test('T7 骑行滚动窗：5min 均速 15m/s（54km/h）→ 追溯整窗标 vehicle，距离归零', () => {
+test('T7 骑行不做速度追责：5min 均速 54km/h 也不标 vehicle、不扣数据（产品决策 2026-10-26）', () => {
   let clock = 0;
   const t = new Tracker('cycling', 60, () => clock);
   t.addPoint(P(0));
-  // 10 步 × 30s × 450m（15m/s = 54km/h > 12.5 上限）：第 10 步窗口恰好满 300s 即追溯
-  for (let k = 1; k <= 10; k++) {
+  for (let k = 1; k <= 12; k++) {
     clock += 30_000;
-    t.addPoint(P(k * 450));
+    t.addPoint(P(k * 450)); // 15m/s = 54km/h
   }
-  const marked = t.points.filter((p) => p.vehicle).length;
-  assert.equal(marked, 10, '窗内全部步应标 vehicle');
-  assert.equal(Math.round(t.distance), 0, `窗内距离应全部扣回，实际 ${t.distance}`);
-  assert.equal(t._vehicleMs, 300_000, `_vehicleMs 应为 300s，实际 ${t._vehicleMs}`);
-  // 清窗重开：后续正常步不重复判定，新距离照常入账
-  clock += 30_000;
-  t.addPoint(P(11 * 450));
-  clock += 30_000;
-  t.addPoint(P(12 * 450));
-  assert.equal(t.points[11].vehicle, undefined);
-  assert.equal(t.points[12].vehicle, undefined);
-  assert.ok(t.distance > 800 && t.distance < 1000, `清窗后新步照常入账 ~900m，实际 ${t.distance}`);
+  assert.equal(t.points.filter((p) => p.vehicle).length, 0, '骑行不追责：不标任何 vehicle');
+  assert.equal(t._vehicleMs, 0, '不扣时长');
+  assert.ok(t.distance > 5000, `距离完整保留，实际 ${t.distance}`);
 });
 
-test('T8 骑行长下坡（窗内净海拔降 200m）：豁免不标，距离保留', () => {
+test('T8 骑行长下坡/高速巡航同样不标（骑行整体豁免）', () => {
   let clock = 0;
   const t = new Tracker('cycling', 60, () => clock);
   t.addPoint(P(0, { altitude: 1000 }));
   for (let k = 1; k <= 12; k++) {
     clock += 30_000;
-    t.addPoint(P(k * 450, { altitude: 1000 - k * 20 })); // 每步降 20m，窗内降 ~240m
+    t.addPoint(P(k * 450, { altitude: 1000 - k * 20 }));
   }
-  assert.equal(t.points.filter((p) => p.vehicle).length, 0, '长下坡应豁免');
-  assert.ok(t.distance >= 5000, `下坡距离应保留，实际 ${t.distance}`);
+  assert.equal(t.points.filter((p) => p.vehicle).length, 0);
+  assert.ok(t.distance > 5000);
 });
 
-test('T9 restoreFromPoints 重放骑行含滚动窗标记的点列：口径一致', () => {
+test('T9 restoreFromPoints 重放骑行轨迹：口径一致（无 vehicle 标记）', () => {
   let clock = 0;
   const t1 = new Tracker('cycling', 60, () => clock);
   t1.addPoint(P(0));
@@ -140,8 +130,8 @@ test('T9 restoreFromPoints 重放骑行含滚动窗标记的点列：口径一�
   }
   const t2 = new Tracker('cycling', 60, () => clock);
   t2.restoreFromPoints(t1.points, [], t1.startTime, 0, 0);
-  assert.equal(Math.round(t2.distance), Math.round(t1.distance), '重放距离一致（vehicle 步跳过）');
-  assert.equal(t2._vehicleMs, t1._vehicleMs, '重放 _vehicleMs 一致');
+  assert.equal(Math.round(t2.distance), Math.round(t1.distance));
+  assert.equal(t2._vehicleMs, 0);
 });
 
 test('T11 巨步弦位移闸门：212s 只移 3.9m（室内丢信号原地）→ 不标 vehicle、不扣时长', () => {
@@ -157,24 +147,31 @@ test('T11 巨步弦位移闸门：212s 只移 3.9m（室内丢信号原地）→
   assert.ok(t.distance >= 10 && t.distance <= 12, `位移应照常计入，实际 ${t.distance}`);
 });
 
-test('T13 巨步弦类型感知：骑行 358s 跨 3805m（38km/h 合法骑行）→ 不标；机动车 20m/s → 标', () => {
-  // 用户实测线上轨迹形态：骑行长断档 10.6m/s 属于真实高速骑行（低于 11.5 上限）
+test('T13 巨步弦：骑行整体豁免（含摩托车速度），步行按类型上限判定', () => {
+  // 产品决策 2026-10-26：骑行不区分自行车/摩托车，距离与时长一律不扣
   let clock = 0;
   const t = new Tracker('cycling', 60, () => clock);
   t.addPoint(P(0));
   clock += 358_000;
   t.addPoint(P(3805));
-  assert.equal(t.points[1].vehicle, undefined, '合法高速骑行不该被当搭车');
+  assert.equal(t.points[1].vehicle, undefined, '合法高速骑行不标');
   assert.equal(t._vehicleMs, 0);
 
-  // 机动车：300s 跨 6000m = 20m/s > 11.5 上限 → 标
   clock = 0;
   const t2 = new Tracker('cycling', 60, () => clock);
   t2.addPoint(P(0));
   clock += 300_000;
-  t2.addPoint(P(6000));
-  assert.equal(t2.points[1].vehicle, true, '机动车速度应标');
-  assert.ok(t2._vehicleMs >= 300_000);
+  t2.addPoint(P(6000)); // 20m/s = 72km/h
+  assert.equal(t2.points[1].vehicle, undefined, '摩托车速度也不扣（骑行豁免）');
+  assert.equal(t2._vehicleMs, 0);
+
+  // 步行：300s 跨 3000m（10m/s = 36km/h）超跑步级上限 6.5 → 仍要标
+  clock = 0;
+  const t3 = new Tracker('walking', 60, () => clock);
+  t3.addPoint(P(0));
+  clock += 300_000;
+  t3.addPoint(P(3000));
+  assert.equal(t3.points[1].vehicle, true, '步行同几何应标');
 });
 
 test('T12 巨步弦回归：300s 跨 3000m（真被运载）仍标 vehicle', () => {
