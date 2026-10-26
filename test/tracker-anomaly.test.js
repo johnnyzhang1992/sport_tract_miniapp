@@ -110,11 +110,11 @@ test('TA7 坐车步时长不计入运动时长（超速 + 隧道弦）', () => {
   t.addPoint(P(30, 120));
   clock += 3000;
   t.addPoint(P(30.0009, 120)); // 超速步：3s
-  clock += 600000;
-  t.addPoint(P(30.0009, 120.0045)); // 隧道弦：600s 无定位后 ~430m
+  clock += 180000;
+  t.addPoint(P(30.0009, 120.0045)); // 隧道弦：180s 无定位后 ~430m（≈2.4m/s，过位移闸门）
   clock += 3000;
   t.addPoint(P(30.0009, 120.00451)); // 正常步：3s
-  // 墙钟 606s − 坐车步（3s + 600s）= 3s
+  // 墙钟 186s − 坐车步（3s + 180s）= 3s
   const dur = t.getDurationSec();
   assert.ok(dur > 1 && dur < 8, `时长=${dur.toFixed(1)}s（应约 3s）`);
   // 回放同口径

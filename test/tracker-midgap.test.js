@@ -144,6 +144,30 @@ test('T9 restoreFromPoints 重放骑行含滚动窗标记的点列：口径一�
   assert.equal(t2._vehicleMs, t1._vehicleMs, '重放 _vehicleMs 一致');
 });
 
+test('T11 巨步弦位移闸门：212s 只移 3.9m（室内丢信号原地）→ 不标 vehicle、不扣时长', () => {
+  let clock = 0;
+  const t = new Tracker('walking', 60, () => clock);
+  t.addPoint(P(0));
+  clock += 5000;
+  t.addPoint(P(7));
+  clock += 212_000; // 室内丢失信号 212s，人几乎原地
+  t.addPoint(P(11)); // 只移动 4m
+  assert.equal(t.points[2].vehicle, undefined, '原地长空窗不得当乘车');
+  assert.equal(t._vehicleMs, 0, '不应扣时长');
+  assert.ok(t.distance >= 10 && t.distance <= 12, `位移应照常计入，实际 ${t.distance}`);
+});
+
+test('T12 巨步弦回归：300s 跨 3000m（真被运载）仍标 vehicle', () => {
+  let clock = 0;
+  const t = new Tracker('walking', 60, () => clock);
+  t.addPoint(P(0));
+  clock += 300_000;
+  t.addPoint(P(3000)); // 10 m/s
+  assert.equal(t.points[1].vehicle, true, '真被运载的长断档仍要标');
+  assert.ok(t._vehicleMs >= 300_000, `时长应进 _vehicleMs，实际 ${t._vehicleMs}`);
+  assert.ok(t.distance < 10, `该步位移不计入，实际 ${t.distance}`);
+});
+
 test('T10 骑行均速未超天花板（12m/s = 43km/h）：不标', () => {
   let clock = 0;
   const t = new Tracker('cycling', 60, () => clock);

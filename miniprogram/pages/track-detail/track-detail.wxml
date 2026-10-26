@@ -77,7 +77,7 @@
     <!-- 线型说明：灰线/虚线各自独立一行（2026-10-26 拍板），色块 + 完整描述句同行 -->
     <view class="legend-row legend-row-sub" wx:if="{{activity.vehicleNotice}}">
       <view class="legend-vehicle"></view>
-      <text class="legend-text">灰线：疑似搭车段，距离与时长均未计入</text>
+      <text class="legend-text">灰线：疑似搭车/定位漂移段，距离与时长均未计入</text>
     </view>
     <view class="legend-row legend-row-sub" wx:if="{{hasUnreliableLink}}">
       <view class="legend-dash"></view>

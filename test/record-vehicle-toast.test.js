@@ -1,5 +1,5 @@
 /**
- * 录入端「疑似乘车」toast 回归（pages/record/record.js#onVehicle）
+ * 录入端「疑似搭车」toast 回归（pages/record/record.js#onVehicle）
  * 只抓 Page() 工厂、用假 this 调这一个方法：不建活动、不真录，断的是文案口径与"每段一次"的接线点。
  * 跑法：node --test test/record-vehicle-toast.test.js
  */
@@ -39,7 +39,7 @@ test('toast 文案带实际速度与时长（不是笼统一句"速度过快"）
   assert.equal(t.icon, 'none');
   assert.match(t.title, /26 km\/h/, `应带换算后的实际速度，实际「${t.title}」`);
   assert.match(t.title, /01:02/, `应带已持续的时长，实际「${t.title}」`);
-  assert.match(t.title, /疑似搭车/, `用词要与详情页图例、接口文案一致，实际「${t.title}」`);
+  assert.match(t.title, /疑似搭车/, `持续高速判据必然是直线大位移，用「搭车」准确，实际「${t.title}」`);
   assert.match(t.title, /未计入/, '要讲清后果，否则用户以为只是提醒一下');
 });
 
