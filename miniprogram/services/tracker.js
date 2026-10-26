@@ -390,28 +390,34 @@ class Tracker {
     win.push({ point, dtMs: dtSec * 1000, d: stepDistM });
     this._rollMs += dtSec * 1000;
     this._rollDist += stepDistM;
+    // 先判后淘汰：窗口一满立即评估（若先淘汰，头部短步会让窗口永远差一步到满，触发死锁）
+    if (this._rollMs >= CYCLE_ROLL_WINDOW_MS) {
+      if (this._rollDist / (this._rollMs / 1000) > CYCLE_ROLL_CAP_MPS) {
+        // 下坡豁免：窗内净海拔下降 ≥ 阈值 = 合法长下坡（海拔缺失按无豁免保守处理）
+        const alts = win.map((w) => w.point.altitude).filter((a) => a != null);
+        const drop = alts.length >= 2 ? alts[0] - alts[alts.length - 1] : 0;
+        if (!(drop >= CYCLE_ROLL_DROP_EXEMPT_M)) {
+          // 追溯回滚：未标记步标 vehicle、扣回距离、补进 _vehicleMs；
+          // 已标记步（超速/巨步弦/断档收紧）距离从未入账、时长已在 _vehicleMs，跳过防双扣
+          for (const w of win) {
+            if (w.point.vehicle) continue;
+            w.point.vehicle = true;
+            this.distance = Math.max(0, this.distance - w.d);
+            this._vehicleMs += w.dtMs;
+          }
+          // 整窗清空重开：同一段不重复判定
+          win.length = 0;
+          this._rollMs = 0;
+          this._rollDist = 0;
+        }
+      }
+    }
     // 窗口滑动：总量超窗就淘汰最老的步（允许清空，防单步巨 dt 永久占据窗口）
     while (this._rollMs > CYCLE_ROLL_WINDOW_MS && win.length > 0) {
       const old = win.shift();
       this._rollMs -= old.dtMs;
       this._rollDist -= old.d;
     }
-    if (this._rollMs < CYCLE_ROLL_WINDOW_MS) return; // 窗口未满不判
-    if (this._rollDist / (this._rollMs / 1000) <= CYCLE_ROLL_CAP_MPS) return; // 均速未超天花板
-    // 下坡豁免：窗内净海拔下降 ≥ 阈值 = 合法长下坡（海拔缺失按无豁免保守处理）
-    const alts = win.map((w) => w.point.altitude).filter((a) => a != null);
-    if (alts.length >= 2 && alts[0] - alts[alts.length - 1] >= CYCLE_ROLL_DROP_EXEMPT_M) return;
-    // 追溯回滚：未标记步标 vehicle、扣回距离、补进 _vehicleMs；
-    // 已标记步（超速/巨步弦/断档收紧）距离从未入账、时长已在 _vehicleMs，跳过防双扣
-    for (const w of win) {
-      if (w.point.vehicle) continue;
-      w.point.vehicle = true;
-      this.distance = Math.max(0, this.distance - w.d);
-      this._vehicleMs += w.dtMs;
-    }
-    win.length = 0;
-    this._rollMs = 0;
-    this._rollDist = 0;
   }
 
   /** 爬升累计：EMA 平滑后做滞回确认（下坡先"吃掉"未确认爬升，吃穿归零） */
