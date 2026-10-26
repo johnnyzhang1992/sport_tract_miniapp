@@ -74,7 +74,7 @@ test('MV1b scale 预算：跨度越大 scale 越小；容器越大 scale 越大�
   assert.ok(Number.isFinite(stationary.scale) && stationary.scale <= 19, `scale=${stationary.scale}`);
 });
 
-test('MV2 暂停/断档点切开折线，断点本身保留', () => {
+test('MV2 暂停/断档点切开折线，断点本身保留（2026-10-26 起断点另补虚线连接，保持连贯性）', () => {
   const view = buildMapView([
     { lat: 1, lng: 1 },
     { lat: 2, lng: 2, pauseGap: true },
@@ -82,15 +82,28 @@ test('MV2 暂停/断档点切开折线，断点本身保留', () => {
     { lat: 4, lng: 4, gapJump: true },
     { lat: 5, lng: 5 },
   ]);
-  assert.equal(view.polyline.length, 2, '两段断档 → 两段线');
+  const solid = view.polyline.filter((pl) => !pl.dottedLine);
+  const dashed = view.polyline.filter((pl) => pl.dottedLine);
+  assert.equal(solid.length, 2, '两段断档 → 两段实线（切开不跨）');
   assert.deepEqual(
-    view.polyline[0].points.map((p) => p.latitude),
+    solid[0].points.map((p) => p.latitude),
     [2, 3],
     '暂停点作为新段起点',
   );
   assert.deepEqual(
-    view.polyline[1].points.map((p) => p.latitude),
+    solid[1].points.map((p) => p.latitude),
     [4, 5],
+  );
+  // 断点虚线连接：与详情页同一份连贯性口径，每处断开补一条两点灰虚线
+  assert.equal(dashed.length, 2, '两处断开 → 两条虚线连接段');
+  for (const pl of dashed) {
+    assert.equal(pl.points.length, 2);
+    assert.equal(pl.arrowLine, false);
+  }
+  assert.deepEqual(
+    dashed.map((pl) => pl.points[0].latitude).sort(),
+    [1, 3],
+    '连接段起点 = 前段末点（纬度 1 与 3）',
   );
   assert.equal(view.includePoints.length, 4);
 });

@@ -3,7 +3,7 @@ const { ensureLogin } = require('../../utils/login-gate');
 const config = require('../../config/index');
 const posterAgg = require('../../utils/poster-aggregate');
 const tf = require('../../utils/track-filter');
-const { splitByUnreliableLinks } = require('../../utils/track-pace.js');
+const { splitByUnreliableLinks, collectUnreliableLinks, UNRELIABLE_LINK_COLOR } = require('../../utils/track-pace.js');
 
 /** 分享海报最多展示轨迹条数（防 canvas 绘制过多导致性能问题） */
 const MAX_SHARE_TRACKS = 72; // 8 列 × 9 行（高度更高，贴合 3:4）
@@ -431,7 +431,7 @@ Page({
     ctx.lineWidth = 1.5;
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
-    // 按断开标记切段（暂停间隙 + 采样断档连线都不画线，与详情页地图一致）
+    // 按断开标记切段（暂停间隙 + 采样断档连线断开，断点另补虚线连接，与详情页地图一致）
     const segs = this.splitByGap(pts);
     for (const seg of segs) {
       if (seg.length < 2) continue;
@@ -442,9 +442,24 @@ Page({
       });
       ctx.stroke();
     }
+    // 断点虚线连接：保持轨迹视觉连贯（与详情页 dottedLine 同口径）
+    const links = collectUnreliableLinks(pts);
+    if (links.length) {
+      ctx.save();
+      ctx.setLineDash([2.5, 2.5]);
+      ctx.strokeStyle = UNRELIABLE_LINK_COLOR;
+      ctx.lineWidth = 1.2;
+      for (const link of links) {
+        ctx.beginPath();
+        ctx.moveTo(px(link.from), py(link.from));
+        ctx.lineTo(px(link.to), py(link.to));
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
   },
 
-  /** 断开标记切段（pauseGap 暂停间隙 / gapJump 采样断档连线都不画线），与详情页地图共用同一份口径 */
+  /** 断开标记切段（pauseGap 暂停间隙 / gapJump 断档连线断开，断点另补虚线连接保持连贯），与详情页地图共用同一份口径 */
   splitByGap(pts) {
     return splitByUnreliableLinks([pts]);
   },
@@ -560,6 +575,20 @@ Page({
             });
             ctx.stroke();
           });
+          // 断点虚线连接：与详情页同一份连贯性口径
+          const links = collectUnreliableLinks(pts);
+          if (links.length) {
+            ctx.save();
+            ctx.setLineDash([2, 2]);
+            ctx.strokeStyle = UNRELIABLE_LINK_COLOR;
+            for (const link of links) {
+              ctx.beginPath();
+              ctx.moveTo(projector.x(link.from.lng), projector.y(link.from.lat));
+              ctx.lineTo(projector.x(link.to.lng), projector.y(link.to.lat));
+              ctx.stroke();
+            }
+            ctx.restore();
+          }
         };
 
         // 4. 逐面板绘制：面板框与投影在排版阶段已量好（要和裁剪判定同一口径），这里只画

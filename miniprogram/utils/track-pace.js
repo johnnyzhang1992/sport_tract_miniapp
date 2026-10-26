@@ -69,6 +69,34 @@ function splitByUnreliableLinks(segs) {
 }
 
 /**
+ * 断开处的「虚线连接段」端点对（渲染连贯性）：[{ from, to, type }]
+ * 直接扫原始点列：points[i] 带 pauseGap/gapJump ⇒ i-1 → i 就是断开的那条线。
+ * 不从切段结果反推——切段会丢 <2 点的短段，反推会把隔了整个短段的两点连错。
+ * vehicle 不在内：坐车段走「灰实线」语义（画灰不隐身），虚线只管“不可信但还在同一场运动”的连接。
+ * @returns Array<{ from:{lat,lng}, to:{lat,lng}, type:'pauseGap'|'gapJump' }>
+ */
+function collectUnreliableLinks(points) {
+  const pts = points || [];
+  const out = [];
+  for (let i = 1; i < pts.length; i++) {
+    const cur = pts[i];
+    if (!cur || (!cur.pauseGap && !cur.gapJump)) continue;
+    const prev = pts[i - 1];
+    if (!prev) continue;
+    if (prev.lat == null || prev.lng == null || cur.lat == null || cur.lng == null) continue;
+    out.push({
+      from: { lat: prev.lat, lng: prev.lng },
+      to: { lat: cur.lat, lng: cur.lng },
+      type: cur.pauseGap ? 'pauseGap' : 'gapJump',
+    });
+  }
+  return out;
+}
+
+/** 虚线连接段统一色：与 vehicle 灰同族（#c9cdd4 略深一档，区别于实线），语义是「不可信但连贯」 */
+const UNRELIABLE_LINK_COLOR = '#b9c2cf';
+
+/**
  * 逐点平滑配速（秒/公里）：与段内点等长，段首与异常点为 null
  * 原地（窗口位移 < MIN_WINDOW_M）或时间戳缺失 → null
  */
@@ -209,6 +237,8 @@ module.exports = {
   haversineKm,
   splitByPauseGaps,
   splitByUnreliableLinks,
+  collectUnreliableLinks,
+  UNRELIABLE_LINK_COLOR,
   computeSegPaces,
   paceSamples,
   computeRunPaceZones,

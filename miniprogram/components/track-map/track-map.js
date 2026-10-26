@@ -6,7 +6,7 @@
 // 合集模式"密集区域"半径（km）：轨迹中心距核心在此范围内即视为同一密集簇
 const DENSE_REGION_KM = 50;
 const { getPaceScale } = require('../../utils/pace-scale.js');
-const { haversineKm, splitByUnreliableLinks, computeSegPaces } = require('../../utils/track-pace.js');
+const { haversineKm, splitByUnreliableLinks, collectUnreliableLinks, UNRELIABLE_LINK_COLOR, computeSegPaces } = require('../../utils/track-pace.js');
 
 Component({
   properties: {
@@ -222,6 +222,19 @@ Component({
         polylines.push({ points: segPts, color: '#D6E4FF', width: 9, arrowLine: false });
         polylines.push({ points: segPts, color, width: 4, arrowLine: false });
       });
+      // 断点虚线连接（暂停间隙/断档连线）：保持轨迹视觉连贯，灰虚线标识「不可信连接」
+      for (const link of collectUnreliableLinks(pts)) {
+        polylines.push({
+          points: [
+            { latitude: link.from.lat, longitude: link.from.lng },
+            { latitude: link.to.lat, longitude: link.to.lng },
+          ],
+          color: UNRELIABLE_LINK_COLOR,
+          width: 3,
+          dottedLine: true,
+          arrowLine: false,
+        });
+      }
       this.setData({ polyline: polylines });
     },
 
@@ -278,6 +291,19 @@ Component({
         }
       }
 
+      // 断点虚线连接：与默认配色同口径（海拔分桶不跨断点，连接段单独补虚线）
+      for (const link of collectUnreliableLinks(pts)) {
+        allPolylines.push({
+          points: [
+            { latitude: link.from.lat, longitude: link.from.lng },
+            { latitude: link.to.lat, longitude: link.to.lng },
+          ],
+          color: UNRELIABLE_LINK_COLOR,
+          width: 3,
+          dottedLine: true,
+          arrowLine: false,
+        });
+      }
       this.setData({ polyline: allPolylines });
     },
 
@@ -342,6 +368,19 @@ Component({
           }
         }
       });
+      // 断点虚线连接：与默认配色同口径（配速平滑不跨断点，连接段单独补虚线）
+      for (const link of collectUnreliableLinks(pts)) {
+        allPolylines.push({
+          points: [
+            { latitude: link.from.lat, longitude: link.from.lng },
+            { latitude: link.to.lat, longitude: link.to.lng },
+          ],
+          color: UNRELIABLE_LINK_COLOR,
+          width: 3,
+          dottedLine: true,
+          arrowLine: false,
+        });
+      }
       this.setData({ polyline: allPolylines });
     },
 
@@ -796,6 +835,19 @@ Component({
             arrowLine: false,
           });
         });
+        // 断点虚线连接：与详情/列表同一份连贯性口径（合集模式热力线细分一档）
+        for (const link of collectUnreliableLinks(raw)) {
+          polylines.push({
+            points: [
+              { latitude: link.from.lat, longitude: link.from.lng },
+              { latitude: link.to.lat, longitude: link.to.lng },
+            ],
+            color: UNRELIABLE_LINK_COLOR,
+            width: Math.max(2, (width || 3) - 1),
+            dottedLine: true,
+            arrowLine: false,
+          });
+        }
       });
 
       // 热力不再用 circles（map circles 与 polyline 渲染冲突），改由轨迹线粗细/颜色表达

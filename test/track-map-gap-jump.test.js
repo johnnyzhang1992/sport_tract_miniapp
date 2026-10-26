@@ -3,7 +3,9 @@
  *
  * 断档连线（gapJump）= 服务端判出的「丢锁几秒后重定位超前」那条不可信弦（斜穿内场）。
  * 这里断的是真渲染口径：三种着色模式（默认轮换色 / 配速 / 海拔）都不许把
- * 「断档前一点 → 落点」这条线画出来，同时一个点都不能丢（点保留、指标不变，只是线不画）。
+ * 「断档前一点 → 落点」这条线画成实线；同时一个点都不能丢（点保留、指标不变）。
+ * 2026-10-26 起新增连贯性口径：断开处改补一条灰虚线连接段（dottedLine，与实线区分），
+ * 所以断言分两层：实线不算弦（ chordDrawn on solid）、虚线必须补上（chordDrawnDashed）。
  * 跑法：node --test test/track-map-gap-jump.test.js
  */
 const { test } = require('node:test');
@@ -65,6 +67,9 @@ function build(points, colorMode, activityType) {
 const key = (p) => `${p.latitude.toFixed(ROUND)},${p.longitude.toFixed(ROUND)}`;
 const walk = (pts) => ({ latitude: pts.lat, longitude: pts.lng });
 
+/** 实线 polyline（不含虚线连接段）：新口径下「不许画假线」只对实线生效 */
+const solidLines = (lines) => lines.filter((l) => !l.dottedLine);
+
 /** 该弦是否被画进了某条 polyline（相邻两点恰好是 a→b） */
 function chordDrawn(lines, a, b) {
   const from = key(walk(a));
@@ -73,6 +78,8 @@ function chordDrawn(lines, a, b) {
     l.points.some((p, i) => i > 0 && key(l.points[i - 1]) === from && key(p) === to),
   );
 }
+/** 虚线连接段是否补上了这条弦（两点恰好 a→b 且 dottedLine） */
+const chordDrawnDashed = (lines, a, b) => chordDrawn(lines.filter((l) => l.dottedLine), a, b);
 const covered = (lines) => new Set(lines.flatMap((l) => l.points.map(key)));
 
 const cruise = { sec: 20, speed: 2.5 }; // 50m/20s
@@ -85,35 +92,37 @@ function chordTrack(extraTag) {
 }
 
 for (const mode of ['default', 'pace', 'altitude']) {
-  test(`${mode} 着色：断档连线不画，但点一个不少`, () => {
+  test(`${mode} 着色：断档弦不画实线、改补虚线，点一个不少`, () => {
     const pts = chordTrack();
     const before = pts[2];
     const after = pts[3];
     assert.equal(after.gapJump, true, '夹具：第 3 点是断档落点');
 
     const lines = build(pts, mode, mode === 'altitude' ? 'hiking' : 'running');
-    assert.ok(!chordDrawn(lines, before, after), `${mode} 模式不应画出斜穿的那条弦`);
+    assert.ok(!chordDrawn(solidLines(lines), before, after), `${mode} 模式不应把斜穿的弦画成实线`);
+    assert.ok(chordDrawnDashed(lines, before, after), `${mode} 模式断开处应补灰虚线连接段`);
 
-    // 一个点都不能少：断线只去掉这条连线，轨迹本身仍完整可见
+    // 一个点都不能少：断线只换掉这条连线的画法，轨迹本身仍完整可见
     const got = covered(lines);
     pts.forEach((p) => assert.ok(got.has(key(walk(p))), `点位缺失：${p.lat}`));
   });
 }
 
-test('同一个点同时带 pauseGap 与 gapJump：仍只断开一次，不产生空段', () => {
+test('同一个点同时带 pauseGap 与 gapJump：实线仍只断开一次，虚线补一条', () => {
   const pts = chordTrack({ pauseGap: true });
   const lines = build(pts, 'pace', 'running');
-  assert.ok(!chordDrawn(lines, pts[2], pts[3]), '两标叠加也该断开');
+  assert.ok(!chordDrawn(solidLines(lines), pts[2], pts[3]), '两标叠加实线也该断开');
+  assert.ok(chordDrawnDashed(lines, pts[2], pts[3]), '两标叠加只补一条虚线连接，不产生空段');
   const left = new Set(pts.slice(0, 3).map((p) => key(walk(p))));
   const right = new Set(pts.slice(3).map((p) => key(walk(p))));
   assert.ok(
-    lines.every((l) => {
+    solidLines(lines).every((l) => {
       const ks = new Set(l.points.map(key));
       const hitsLeft = [...ks].some((k) => left.has(k));
       const hitsRight = [...ks].every((k) => right.has(k));
       return !(hitsLeft && hitsRight);
     }),
-    '任何一条 polyline 都不该跨过断开处',
+    '任何一条实线 polyline 都不该跨过断开处（虚线连接段除外）',
   );
 });
 

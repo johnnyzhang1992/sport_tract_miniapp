@@ -688,6 +688,10 @@
   gap: 16rpx;
   margin-top: 24rpx;
 }
+/* 灰线/虚线说明行：紧贴配速图例行，间距收紧 */
+.legend-row-sub {
+  margin-top: 10rpx;
+}
 /* 指标卡头部：大数字距离（左） + 用户头像昵称（右，头像悬浮压卡片顶边） */
 .hero-row {
   display: flex;
@@ -777,6 +781,13 @@
   height: 12rpx;
   border-radius: 6rpx;
   background: #8a93a6;
+  flex-shrink: 0;
+}
+/* 虚线图例色块：与地图上 pauseGap/gapJump 连接段同色（track-pace.js#UNRELIABLE_LINK_COLOR） */
+.legend-dash {
+  width: 32rpx;
+  height: 0;
+  border-top: 4rpx dashed #b9c2cf;
   flex-shrink: 0;
 }
 .legend-note {

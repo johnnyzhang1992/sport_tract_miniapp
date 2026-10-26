@@ -4,7 +4,7 @@
  * - 按配速着色：沿用详情页口径（45s 滑动窗口平滑 + 按运动类型的绝对刻度 4 档绿→红）；
  *   无时间戳时回退品牌蓝单色线；疑似乘车段灰显。
  */
-const { splitByUnreliableLinks, computeSegPaces } = require('./track-pace');
+const { splitByUnreliableLinks, collectUnreliableLinks, UNRELIABLE_LINK_COLOR, computeSegPaces } = require('./track-pace');
 const { getPaceScale } = require('./pace-scale');
 
 const TRACK_COLOR = '#2B6CF6';
@@ -93,6 +93,20 @@ function buildMapView(points, activityType, opts) {
     });
   }
   if (!polyline.length) return null;
+
+  // 断点虚线连接（暂停间隙/断档连线）：与详情页同一份连贯性口径，灰虚线标识「不可信连接」
+  for (const link of collectUnreliableLinks(valid)) {
+    polyline.push({
+      points: [
+        { latitude: link.from.lat, longitude: link.from.lng },
+        { latitude: link.to.lat, longitude: link.to.lng },
+      ],
+      color: UNRELIABLE_LINK_COLOR,
+      width: Math.max(2, LINE_WIDTH - 0.5),
+      dottedLine: true,
+      arrowLine: false,
+    });
+  }
 
   // 视野留白：include-points 会贴边适配，加一圈 12% 的包围盒角点让轨迹不顶边
   let minLat = Infinity;

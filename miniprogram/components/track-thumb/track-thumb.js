@@ -1,4 +1,4 @@
-const { splitByUnreliableLinks } = require('../../utils/track-pace.js');
+const { splitByUnreliableLinks, collectUnreliableLinks, UNRELIABLE_LINK_COLOR } = require('../../utils/track-pace.js');
 
 Component({
   options: { styleIsolation: 'apply-shared' },
@@ -71,7 +71,7 @@ Component({
           ctx.lineWidth = 1.5;
           ctx.lineJoin = 'round';
           ctx.lineCap = 'round';
-          // 断开标记切段（pauseGap 暂停间隙 / gapJump 采样断档连线都不画线），与详情页地图共用同一份口径
+          // 断开标记切段（pauseGap 暂停间隙 / gapJump 断档连线断开，断点另补虚线连接保持连贯），与详情页地图共用同一份口径
           const segs = splitByUnreliableLinks([points]);
           for (const seg of segs) {
             if (seg.length < 2) continue;
@@ -90,6 +90,21 @@ Component({
               ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
             }
             ctx.stroke();
+          }
+          // 断点虚线连接：保持轨迹视觉连贯（与详情页 dottedLine 同口径）
+          const links = collectUnreliableLinks(points);
+          if (links.length) {
+            ctx.save();
+            ctx.setLineDash([3, 3]);
+            ctx.strokeStyle = UNRELIABLE_LINK_COLOR;
+            ctx.lineWidth = 1.2;
+            for (const link of links) {
+              ctx.beginPath();
+              ctx.moveTo(x(link.from.lng), y(link.from.lat));
+              ctx.lineTo(x(link.to.lng), y(link.to.lat));
+              ctx.stroke();
+            }
+            ctx.restore();
           }
         });
     },

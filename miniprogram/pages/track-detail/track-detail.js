@@ -139,6 +139,8 @@ Page({
         colorMode,
         activityType: activity.type,
         peakMarker,
+        // 图例「虚线」项与描述句的展示条件：原始点里真有暂停/断档标记才展示（抽稀后的 mapPoints 可能丢标记，不能用它判）
+        hasUnreliableLink: (activity.trackPoints || []).some((p) => !!p.pauseGap || !!p.gapJump),
         paceSlowText: (formatPaceParts(getPaceScale(activity.type).slow) || {}).value || '—',
         paceFastText: (formatPaceParts(getPaceScale(activity.type).fast) || {}).value || '—',
         mapPoints: simplifyForMap(activity.trackPoints || []).map((p) => ({

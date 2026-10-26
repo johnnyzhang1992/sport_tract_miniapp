@@ -68,15 +68,20 @@
       </view>
     </view>
     <view class="note-text" wx:if="{{activity.note}}">{{activity.note}}</view>
-    <!-- 轨迹线颜色说明（徒步/爬山按海拔，其余按配速；灰色 = 服务端判出的非运动段） -->
+    <!-- 轨迹线颜色说明（徒步/爬山按海拔，其余按配速） -->
     <view class="legend-row">
       <text class="legend-text">{{colorMode === 'altitude' ? '海拔低' : '慢 ' + paceSlowText}}</text>
       <view class="legend-bar {{colorMode === 'altitude' ? 'legend-bar-altitude' : 'legend-bar-pace'}}"></view>
       <text class="legend-text">{{colorMode === 'altitude' ? '海拔高' : paceFastText + ' 快'}}</text>
-      <block wx:if="{{activity.vehicleNotice}}">
-        <view class="legend-vehicle"></view>
-        <text class="legend-text">疑似搭车 · 未计入</text>
-      </block>
+    </view>
+    <!-- 线型说明：灰线/虚线各自独立一行（2026-10-26 拍板），色块 + 完整描述句同行 -->
+    <view class="legend-row legend-row-sub" wx:if="{{activity.vehicleNotice}}">
+      <view class="legend-vehicle"></view>
+      <text class="legend-text">灰线：疑似搭车段，距离与时长均未计入</text>
+    </view>
+    <view class="legend-row legend-row-sub" wx:if="{{hasUnreliableLink}}">
+      <view class="legend-dash"></view>
+      <text class="legend-text">虚线：暂停/信号断档连接，仅保持轨迹连贯，不计距离</text>
     </view>
     <!-- 文案由接口整句下发（vehicleNotice），端上不重算：webAdmin 详情弹窗渲染同一句 -->
     <view class="legend-note" wx:if="{{activity.vehicleNotice}}">{{activity.vehicleNotice}}</view>

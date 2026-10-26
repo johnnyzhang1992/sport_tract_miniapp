@@ -8,7 +8,7 @@
  * 方法: preview()；事件: posterready({ path }) 海报临时路径
  */
 const loading = require('../../utils/loading');
-const { splitByUnreliableLinks } = require('../../utils/track-pace.js');
+const { splitByUnreliableLinks, collectUnreliableLinks, UNRELIABLE_LINK_COLOR } = require('../../utils/track-pace.js');
 const { computePosterLayout, POSTER } = require('../../utils/poster-layout.js');
 
 const BRAND_NAME = '小迹一下';
@@ -397,6 +397,21 @@ Component({
         });
         ctx.stroke();
       }
+      // 断点虚线连接：保持轨迹视觉连贯（与详情页地图 dottedLine 同口径）
+      const links = collectUnreliableLinks(pts);
+      if (links.length) {
+        ctx.save();
+        ctx.setLineDash([2.5, 2.5]);
+        ctx.strokeStyle = UNRELIABLE_LINK_COLOR;
+        ctx.lineWidth = 1.2;
+        for (const link of links) {
+          ctx.beginPath();
+          ctx.moveTo(px(link.from), py(link.from));
+          ctx.lineTo(px(link.to), py(link.to));
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
 
       // 公里标：按官方总距离比例在整公里处画白底圆点+序号（简化点位累计有截弯误差，用比例定位）
       if (this.data.showKmMarks) {
@@ -465,7 +480,7 @@ Component({
       }
     },
 
-    /** 断开标记切段（pauseGap 暂停间隙 / gapJump 采样断档连线都不画线），与详情页地图共用同一份口径 */
+    /** 断开标记切段（pauseGap 暂停间隙 / gapJump 断档连线断开，断点另补虚线连接保持连贯），与详情页地图共用同一份口径 */
     splitByLineBreaks(pts) {
       return splitByUnreliableLinks([pts]);
     },
