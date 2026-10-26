@@ -25,6 +25,18 @@ const SECTION_LABELS = { overview: '累计数据', footprint: '点亮省市', he
 /** 榜名次 label 用的周期名（服务端回 period，端上不再自己探周期） */
 const PERIOD_LABEL = { week: '周榜', month: '月榜', year: '年榜', all: '总榜' };
 
+/** 近 365 天全 0 的空日历数据（游客态占位：卡片正常渲染、格子全为"无运动"色） */
+function emptyHeatData() {
+  const out = [];
+  const today = new Date();
+  for (let i = 364; i >= 0; i--) {
+    const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    out.push({ date: key, distance: 0, count: 0 });
+  }
+  return out;
+}
+
 /** 首页活动卡：标题 + 成员面（人数 + 头像堆叠）——WXML 不做格式化，统一在这里算好 */
 function toCampaignCard(c) {
   return Object.assign({}, c, {
@@ -348,14 +360,15 @@ Page({
     }
     // 有未保存运动时让位（避免两个原生 Modal 同帧互顶），本次会话进个人中心登录时仍会补弹
     if (app.globalData.loggedIn && !wx.getStorageSync('pending_summary')) app.maybeShowProfileGuide();
-    // 游客态：不读缓存/不请求，展示登录引导（登录后 onShow 重新加载）
+    // 游客态：不读缓存/不请求，展示登录引导（登录后 onShow 重新加载）。
+    // 运动日历仍渲染：给一份近 365 天全 0 的空日历（页面骨架完整，登录引导更有着落）
     if (!app.globalData.loggedIn) {
       this._loadingOverview = false;
       this.setData({
         loading: false,
         notLoggedIn: true,
         totalOverview: null,
-        heatData: [],
+        heatData: emptyHeatData(),
         overviewError: null,
         footprintError: null,
         heatError: null,

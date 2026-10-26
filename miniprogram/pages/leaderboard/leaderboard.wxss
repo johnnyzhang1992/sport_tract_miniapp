@@ -639,6 +639,29 @@
   padding: 6rpx 0;
 }
 
+/* 游客轻提示条（榜单可看，仅提示登录后有"我的排名"；替代原整页登录卡） */
+.guest-tip {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  background: #eaf1ff;
+  border-radius: 12rpx;
+  padding: 16rpx 24rpx;
+}
+.guest-tip-hover {
+  opacity: 0.7;
+}
+.guest-tip-text {
+  flex: 1;
+  font-size: 24rpx;
+  color: #1a56d6;
+}
+.guest-tip-btn {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #1a56d6;
+}
+
 /* 游客登录提示 */
 .login-hint {
   background: #fff;

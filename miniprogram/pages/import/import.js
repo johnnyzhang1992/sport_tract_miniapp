@@ -1,4 +1,5 @@
 const api = require('../../services/api');
+const { ensureLogin } = require('../../utils/login-gate');
 const loading = require('../../utils/loading');
 const config = require('../../config/index');
 const { formatDuration } = require('../../utils/format');
@@ -23,8 +24,18 @@ Page({
   },
 
   /** 选择轨迹文件（从微信聊天记录） */
-  chooseFile() {
+  async chooseFile() {
     if (this.data.uploading) return;
+    // 登录闸门（2026-10-26）：导入落库必须登录——选文件之前先拦，
+    // 否则游客选完文件才静默失败，体验断裂（说明卡可看，动作要登录）
+    const app = getApp();
+    if (app.hasSession && app.hasSession() && !app.globalData.loggedIn) {
+      try { await app.login(); } catch (e) { /* 恢复失败走弹窗 */ }
+    }
+    if (!app.globalData.loggedIn) {
+      const ok = await ensureLogin('登录后才能导入轨迹文件。');
+      if (!ok) return;
+    }
     wx.chooseMessageFile({
       count: 1,
       type: 'file',

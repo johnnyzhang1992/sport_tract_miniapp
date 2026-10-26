@@ -177,8 +177,8 @@ Page({
       try { await app.login(); } catch (e) { console.warn('静默登录失败', e); }
     }
     const loggedIn = !!app.globalData.loggedIn;
-    this.setData({ loggedIn, loading: !silent && loggedIn });
-    if (!loggedIn) return;
+    // 游客也拉榜单（2026-10-26 放开浏览）：接口可选鉴权，me 为 null 时端上不渲染"我的排名"卡
+    this.setData({ loggedIn, loading: !silent });
 
     try {
       const api = app.globalData.api;

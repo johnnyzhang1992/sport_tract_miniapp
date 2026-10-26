@@ -216,3 +216,42 @@
 .share-save::after {
   border: none;
 }
+
+/* 游客态：地图上方居中登录引导卡（沿用 page-tip 的浮层定位手法） */
+.guest-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 30;
+}
+.login-hint {
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 64rpx 48rpx;
+  text-align: center;
+  width: 480rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.1);
+}
+.login-hint-icon {
+  width: 96rpx;
+  height: 96rpx;
+  opacity: 0.6;
+}
+.login-hint-text {
+  color: #4e5969;
+  font-size: 26rpx;
+  margin: 24rpx 0 32rpx;
+  line-height: 1.6;
+}
+.login-hint-btn {
+  background: #2b6cf6;
+  color: #fff;
+  border-radius: 999rpx;
+  font-size: 28rpx;
+  width: 320rpx;
+}

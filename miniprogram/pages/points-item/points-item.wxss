@@ -16,56 +16,65 @@
 }
 
 /* 商品头图：与积分页/明细页同一套压深蓝渐变；白底方块里放金色「签」字（荣誉金，同任务分值） */
-.hero {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10rpx;
-  background: linear-gradient(135deg, #1a56d6, #2b6cf6);
-  padding: 48rpx 32rpx 76rpx;
-}
-
 .hero-icon {
-  width: 128rpx;
-  height: 128rpx;
-  border-radius: 32rpx;
-  background: #fff;
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 20rpx;
+  background: #f7f8fa;
   color: #8a5f12;
+  font-size: 40rpx;
+  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 56rpx;
-  font-weight: 700;
+  flex-shrink: 0;
 }
 
 .hero-name {
-  margin-top: 12rpx;
-  font-size: 34rpx;
-  font-weight: 700;
-  color: #fff;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #1f2329;
 }
 
 .hero-sub {
-  font-size: 24rpx;
-  color: #fff;
+  font-size: 22rpx;
+  color: #8a93a6;
 }
 
 .hero-price {
   display: flex;
   align-items: baseline;
-  gap: 6rpx;
-  margin-top: 8rpx;
+  gap: 4rpx;
+  flex-shrink: 0;
 }
 
 .price {
-  font-size: 56rpx;
+  font-size: 40rpx;
   font-weight: 700;
-  color: #fff;
+  color: #8a5f12;
 }
 
 .price-unit {
-  font-size: 24rpx;
-  color: rgba(255, 255, 255, 0.8);
+  font-size: 22rpx;
+  color: #8a93a6;
+}
+
+/* 商品头（2026-10-26 去色块）：横排 图位 + 名称/副题 + 右侧价格 */
+.item-head {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  padding-bottom: 20rpx;
+  border-bottom: 1rpx solid #f2f3f5;
+  margin-bottom: 20rpx;
+}
+
+.item-head-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+  min-width: 0;
 }
 
 .card {
@@ -76,7 +85,7 @@
 }
 
 .card-first {
-  margin-top: -52rpx;
+  margin-top: 24rpx; /* 色块已去，首卡不再压角 */
 }
 
 .section-title {

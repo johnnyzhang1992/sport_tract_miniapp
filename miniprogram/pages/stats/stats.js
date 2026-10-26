@@ -3,6 +3,7 @@
  * 概览（今日/本周/本月/累计）+ 近 7/30 天距离/时长趋势柱状图
  */
 const api = require('../../services/api');
+const { ensureLogin } = require('../../utils/login-gate');
 const { formatDuration, formatPaceParts, formatDurationStat, formatThousands } = require('../../utils/format');
 const { calcDiff } = require('../../utils/diff');
 const { buildTrophies } = require('../../utils/trophy');
@@ -47,6 +48,7 @@ Page({
     trendActivityTypes: [{ value: '', label: '全部' }],
     compare: { week: null, month: null }, // 本周 vs 上周、本月 vs 上月（距离 ±%）
     loading: true,
+    notLoggedIn: false, // 游客态：登录引导卡（2026-10-26 补缺省态）
     best: null, // 个人最佳纪录
     trophies: [], // 里程碑奖杯墙（1K/5K/10K/半马/全马）
     percentile: null, // 累计距离全站分位（仅全站 ≥2 人时展示）
@@ -59,6 +61,11 @@ Page({
 
   onShow() {
     this.loadAll();
+  },
+
+  /** 游客点「去登录」：登录成功立即拉数据 */
+  async guestLogin() {
+    if (await ensureLogin('登录后查看你的运动统计。')) this.loadAll();
   },
 
   onPullDownRefresh() {
@@ -79,7 +86,12 @@ Page({
         console.warn('静默登录失败', e);
       }
     }
-    if (!app.globalData.loggedIn) return;
+    if (!app.globalData.loggedIn) {
+      // 游客态缺省：登录引导卡（登录后 onShow 自动重拉）
+      this.setData({ notLoggedIn: true, loading: false });
+      return;
+    }
+    this.setData({ notLoggedIn: false });
     try {
       this.setData({ loading: true });
       const [overview, trend, best, percentile, daily] = await Promise.all([

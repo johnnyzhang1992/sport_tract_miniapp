@@ -14,6 +14,8 @@ Page({
     loggedIn: false,
     loading: false,
     unreadCount: 0, // 未读通知数（0=不显示角标）
+    // 签到条（登录后显示）：未签点击直接签到，已签点击进积分页
+    signin: { loaded: false, signedToday: false, streakDay: 0, nextReward: 0, balance: null },
   },
 
   onShow() {
@@ -59,10 +61,11 @@ Page({
     }
     try {
       this.setData({ loading: true });
-      // 刷新资料 + 概况（今日/本周/本月的运动距离）
-      const [user, overview] = await Promise.all([
+      // 刷新资料 + 概况（今日/本周/本月的运动距离）+ 签到状态（快捷签到条用）
+      const [user, overview, points] = await Promise.all([
         api.get('/users/me'),
         api.get('/stats/overview').catch(() => null),
+        api.get('/points/summary').catch(() => null),
       ]);
 
       // 头像缓存判断：基础 URL 没变且缓存未过期 → 复用缓存签名 URL（image src 不变 → 微信缓存命中，不重复下载）
@@ -88,16 +91,62 @@ Page({
         user: { ...user, avatarUrl, avatarText: initialOf(user.nickname, ''), joinDays },
         showBodyData,
         loggedIn: true,
-        // 数据统计卡片：今日/本周/本月运动距离（km）
-        statsCards: ['today', 'week', 'month'].map((k) => {
-          const s = overview && overview[k] ? overview[k] : { distance: 0 };
-          return { key: k, distance: ((s.distance || 0) / 1000).toFixed(1) };
-        }),
+        // 数据统计卡（简洁三格）：本周距离 / 累计距离 / 运动天数——
+        // 旧版「今日/本周/本月」在多数日子两格是 0.0；换成累计口径后格格有值
+        stats: (() => {
+          const w = (overview && overview.week) || {};
+          const t = (overview && overview.total) || {};
+          const fmtKm = (m) => ((m || 0) / 1000).toFixed(1).replace(/\.0$/, '');
+          return {
+            weekKm: fmtKm(w.distance),
+            totalKm: fmtKm(t.distance),
+            activeDays: t.activeDays || 0,
+          };
+        })(),
+        signin: {
+          loaded: !!points,
+          signedToday: !!(points && points.signin && points.signin.todaySigned),
+          streakDay: (points && points.signin && points.signin.streakDay) || 0,
+          nextReward: (points && points.signin && points.signin.nextReward) || 0,
+          cards: (points && points.signin && points.signin.cards) || 0,
+          balance: points ? points.balance : null,
+        },
       });
     } catch (e) {
       console.error('加载用户信息失败', e);
     } finally {
       this.setData({ loading: false });
+    }
+  },
+
+  /** 资产条左侧（我的积分）：进积分页看余额/明细/任务/补签 */
+  onBadgeTap() {
+    this.goPoints();
+  },
+
+  /** 签到条点击：未签直接签到（原地翻转状态），已签进积分页看任务/补签 */
+  async onSigninStripTap() {
+    if (this.data.signin.signedToday) {
+      this.goPoints();
+      return;
+    }
+    try {
+      // POST /points/sign-in 的返回是顶层平铺的 SigninResult（todaySigned/streakDay/nextReward/
+      // balance 直接在 data 上）——不是 summary 那种 { signin: {...} } 嵌套，别读错形状
+      const data = await api.post('/points/sign-in');
+      this.setData({
+        signin: {
+          loaded: true,
+          signedToday: !!(data && data.todaySigned),
+          streakDay: (data && data.streakDay) || 0,
+          nextReward: (data && data.nextReward) || 0,
+          balance: (data && data.balance) ?? null,
+        },
+      });
+      const credited = (data && data.credited) || 0;
+      wx.showToast({ title: credited > 0 ? `签到成功 +${credited}` : '今日已签到', icon: 'success' });
+    } catch (e) {
+      wx.showToast({ title: (e && e.message) || '签到失败', icon: 'none' });
     }
   },
 
@@ -113,6 +162,16 @@ Page({
   /** 轨迹合集（M6：一周/一月/一年一图总览） */
   goOverview() {
     wx.navigateTo({ url: '/pages/overview/overview' });
+  },
+
+  /** 每周运动榜 */
+  goLeaderboard() {
+    wx.navigateTo({ url: '/pages/leaderboard/leaderboard' });
+  },
+
+  /** 积分规则 */
+  goRules() {
+    wx.navigateTo({ url: '/pages/points-rules/points-rules' });
   },
 
   /** 数据导入（M7：两步路/Strava 等 GPX/KML/TCX） */

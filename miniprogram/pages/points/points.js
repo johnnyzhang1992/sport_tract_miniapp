@@ -1,6 +1,6 @@
 const api = require('../../services/api');
 const { ensureLogin, waitSession } = require('../../utils/login-gate');
-const { buildSigninStrip, buildMakeupChips, buildTaskRows, buildItemCards } = require('../../utils/points-view');
+const { buildSigninStrip, buildTaskRows, buildItemCards, md } = require('../../utils/points-view');
 const { createRewardedAd, isAdRewardEligible } = require('../../utils/rewarded-ad');
 // cells 的 dateKey 是东八区 YYYY-MM-DD，「今天」比对键必须同口径：用 bjDate，不再写一份时区偏移
 const { bjDate } = require('../../utils/bj-date');
@@ -15,7 +15,7 @@ Page({
     strip: [],
     chips: [],
     streakText: '',
-    tasks: [],
+    taskGroups: { onceTasks: [], dailyTasks: [] },
     items: [],
     cards: 0,
     videoBusy: false,
@@ -40,8 +40,9 @@ Page({
     this.ad = null;
   },
 
-  async fetch() {
-    this.setData({ loading: true, failed: false });
+  async fetch(silent = false) {
+    // silent：下拉刷新等「已有内容再拉取」的场景，不闪 loading 骨架，失败用 toast 提示
+    this.setData({ loading: !silent, failed: false });
     // 登录闸门走触点级：进页不自动弹登录，游客先看引导；但冷启动直达时先等 onLaunch 那次静默登录
     if (!(await waitSession())) {
       this.setData({ loading: false, loggedIn: false });
@@ -59,14 +60,20 @@ Page({
         balance: data.balance ?? 0,
         signin,
         strip: buildSigninStrip(cells, bjDate(Date.now())),
-        chips: buildMakeupChips(cells, signin.cards || 0),
+        hasMakeup: cells.some((c) => c.state === 'makeup'),
         // 连签 ≥7 天七格全勾后，还要按需求 §4.2 显示「已连续 N 天 · 每日 7 分」
         streakText: streakDay >= 7 ? `已连续 ${streakDay} 天 · 每日 7 分` : '',
-        tasks: buildTaskRows(data.tasks || []),
+        taskGroups: buildTaskRows(data.tasks || []),
         items: buildItemCards(data.items),
         cards: signin.cards || 0,
       });
     } catch (e) {
+      if (silent) {
+        // 静默刷新失败：保留已有内容，toast 提示即可（顶掉整页失败块反而晃眼）
+        this.setData({ loading: false });
+        wx.showToast({ title: (e && e.message) || '刷新失败', icon: 'none' });
+        return;
+      }
       // WXML 里 failed 分支排在已登录内容与游客引导之前：请求失败只会看到重试块，
       // 不会掉回「登录后查看积分」（游客引导是最后兜底支，且只在未登录时可达）。
       this.setData({ loading: false, failed: true });
@@ -75,6 +82,15 @@ Page({
 
   onRetry() {
     this.fetch();
+  },
+
+  async onPullDownRefresh() {
+    // 下拉刷新走静默：已有内容不闪骨架，完成（或失败）后收起下拉动画
+    try {
+      await this.fetch(true);
+    } finally {
+      wx.stopPullDownRefresh();
+    }
   },
 
   /** 游客点「登录后查看积分」：登录成功才拉汇总（不在进页时弹登录） */
@@ -88,7 +104,7 @@ Page({
 
   async onClaim(e) {
     const key = e.currentTarget.dataset.key;
-    const task = this.data.tasks.find((t) => t.key === key);
+    const task = this.data.taskGroups.onceTasks.concat(this.data.taskGroups.dailyTasks).find((t) => t.key === key);
     if (!task || task.disabled) return;
     if (key === 'daily_video') return this.watchVideo();
     await this.post(`/points/tasks/${key}/claim`, '领取成功');
@@ -139,21 +155,22 @@ Page({
   },
 
   /**
-   * 补某个漏签日（点胶囊，dateKey 由 data-date-key 回传）：有卡 → 确认后 POST；无卡 → 落兑换页、不发请求。
+   * 补某个漏签日（直接点七格里的「补」字，dateKey 由 data-date-key 回传）：
+   * 有卡 → 确认后 POST；无卡 → 落兑换页、不发请求。
    * 卡由服务端挑（spec §5.2），请求体只有 { dateKey }；可补判定的唯一来源是 cells 里的 makeup 格。
    */
   onMakeup(e) {
     const dateKey = e.currentTarget.dataset.dateKey;
-    const chip = this.data.chips.find((c) => c.dateKey === dateKey);
-    if (!chip) return;
-    if (!chip.hasCard) {
+    const cell = this.data.strip.find((c) => c.dateKey === dateKey);
+    if (!cell || cell.state !== 'makeup') return;
+    if (!(this.data.cards > 0)) {
       this.goItem();
       return;
     }
     wx.showModal({
       title: '补签该日',
-      // 日期用胶囊自带的 MM.DD label，与七格 sub 同一格式，不打 ISO 日期给用户看
-      content: `使用 1 张补签卡${chip.label}？补完连签将重排，今天可拿 ${chip.todayRewardAfter} 分`,
+      // 日期用七格 sub 的 MM.DD 格式，不打 ISO 日期给用户看；todayRewardAfter 由服务端 cells 下发
+      content: `使用 1 张补签卡补签 ${md(dateKey)}？补完连签将重排，今天可拿 ${cell.todayRewardAfter} 分`,
       success: (res) => {
         if (res && res.confirm) this.useMakeupCard(dateKey);
       },

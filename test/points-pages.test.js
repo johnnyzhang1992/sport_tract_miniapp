@@ -2,13 +2,14 @@
  * 积分主页（pages/points/points）与个人中心入口回归：
  * 1) 结构：app.json 注册路由、我的页有入口、积分页有签到/任务/补签卡/明细/规则；
  * 2) 登录闸门走触点级：游客进页不弹登录、不发请求，只有点「登录后查看积分」才 ensureLogin + 拉汇总；
- * 3) 汇总只读 /points/summary，映射余额/cells 七格/补签胶囊/任务行/道具卡；
+ * 3) 汇总只读 /points/summary，映射余额/cells 七格/任务行/道具卡；
  * 4) 签到与任务领取走 POST；补签走 POST /points/signin/makeup {dateKey}（卡由服务端挑，前端不传卡 id）；
  *    激励视频只有完播（isEnded===true）才领分，提前关闭/广告失败都不发分；
  * 5) 积分明细页（PP12–PP16）：触点到 /points/records 才发请求、分页 20 条、+N/-N 与余额、失败重试；
  * 6) 积分规则页（PP12/PP17）：静态 Q&A 覆盖连续签到/次日失效/有效期/每日上限/补签卡；
- * 7) 补签入口收口（PP37/PP38）：商品页「去补签」以 summary 的 cells 为准（有 makeup 格才出现），
- *    兑换记录页去掉行内补签入口（单一入口在积分页胶囊），已用的卡仍按 MM.DD 显示补了哪天。
+ * 7) 补签入口收口（PP29/PP30/PP35/PP37/PP38）：入口＝积分页七格里的「补」字（无独立胶囊行），
+ *    商品页「去补签」以 summary 的 cells 为准（有 makeup 格才出现），
+ *    兑换记录页去掉行内补签入口，已用的卡仍按 MM.DD 显示补了哪天。
  * 运行：node --test test/points-pages.test.js；桩：wx / Page / getApp 就地 stub，
  * services/api、utils/login-gate、utils/rewarded-ad 用 require.cache 注入假实现（isAdRewardEligible 用真实实现）。
  */
@@ -64,7 +65,7 @@ const summaryFixture = () => ({
   tasks: [
     // 故意把已领取的放最前：接口原序如此，页面要把它沉到末尾（未完成在前）
     { key: 'daily_activity', title: '每日运动', points: 5, status: 'claimed', actionText: '已领取' },
-    { key: 'profile', title: '完善资料', points: 10, status: 'claimable', actionText: '领取' },
+    { key: 'newbie_profile', title: '完善资料', points: 10, status: 'claimable', actionText: '领取' },
     { key: 'daily_video', title: '每日看视频', points: 5, status: 'claimable', actionText: '去观看' },
   ],
   items: [{ key: 'makeup_card', name: '补签卡', subtitle: '恢复连续打卡记录', price: 30, validDays: 30 }],
@@ -208,7 +209,7 @@ test('PP3 游客进页：不弹登录、不发请求，展示登录引导', asyn
   assert.ok(read('miniprogram/pages/points/points.wxml').includes('登录后查看积分'));
 });
 
-test('PP4 登录用户进页：只读一次汇总并映射余额/cells 七格/补签胶囊/任务/道具卡', async () => {
+test('PP4 登录用户进页：只读一次汇总并映射余额/cells 七格/任务/道具卡', async () => {
   reset();
   const p = boot();
   await tick();
@@ -228,17 +229,27 @@ test('PP4 登录用户进页：只读一次汇总并映射余额/cells 七格/�
     ['makeup', 'signed', 'signed', 'missed', 'signed', 'makeup', 'today'],
     '格子状态一律照抄服务端 cells，页面不自推位置/断口',
   );
-  assert.deepEqual(p.data.strip.map((s) => s.dot), ['补', '✓', '✓', '未', '✓', '补', '+1']);
+  assert.deepEqual(p.data.strip.map((s) => s.dot), ['补', '+1', '+2', '未', '+3', '补', '+1']);
   assert.deepEqual(p.data.strip.map((s) => s.reward), [1, 1, 2, 0, 3, 4, 1], '分值原样带出 cells 的名义分');
   assert.ok(
     p.data.strip.every((s) => /^(今天|明天|\d{2}\.\d{2})$/.test(s.sub)),
     'sub 只能是「今天/明天/MM.DD」三种（由纯函数按 dateKey 比对）',
   );
-  assert.equal(p.data.chips.length, 2, '两个 makeup 格各一颗胶囊');
   assert.deepEqual(
-    p.data.tasks.map((t) => [t.key, t.actionText, t.disabled]),
-    [['profile', '领取', false], ['daily_video', '去观看', false], ['daily_activity', '已领取', true]],
-    '接口把已领取排在最前，页面要按「未完成在前」重排',
+    p.data.strip.filter((s) => s.state === 'makeup').map((s) => s.dateKey),
+    ['2026-10-19', '2026-10-24'],
+    '补签入口＝七格里的 makeup 格（没有单独的胶囊行）',
+  );
+  assert.equal(p.data.hasMakeup, true, '有可补格才显示补签说明行');
+  assert.equal(p.data.strip[0].todayRewardAfter, 1, '弹窗要用的「补完今天可拿几分」从 cells 原样带出');
+  // 新手/每日分卡展示：各自组内「未完成在前」，新手卡完成后整卡隐藏（由 onceTasks.length 驱动）
+  assert.deepEqual(
+    p.data.taskGroups.onceTasks.map((t) => [t.key, t.actionText, t.disabled]),
+    [['newbie_profile', '领取', false]],
+  );
+  assert.deepEqual(
+    p.data.taskGroups.dailyTasks.map((t) => [t.key, t.actionText, t.disabled]),
+    [['daily_video', '去观看', false], ['daily_activity', '已领取', true]],
   );
   assert.equal(p.data.items.length, 1);
   assert.deepEqual(p.data.items[0], {
@@ -314,9 +325,9 @@ test('PP7 任务：不可领的行不请求，可领的行 POST 领取接口', a
   await tick();
   assert.deepEqual(calls(), [], '已领取任务点不动，也不能发请求');
 
-  await p.onClaim({ currentTarget: { dataset: { key: 'profile' } } });
+  await p.onClaim({ currentTarget: { dataset: { key: 'newbie_profile' } } });
   await tick();
-  assert.deepEqual(calls(), ['POST /points/tasks/profile/claim', 'GET /points/summary']);
+  assert.deepEqual(calls(), ['POST /points/tasks/newbie_profile/claim', 'GET /points/summary']);
   assert.ok(toasts.includes('领取成功'));
 });
 
@@ -408,18 +419,21 @@ test('PP11 汇总失败：failed 置位但页面不崩', async () => {
   assert.equal(p.data.loading, false);
 });
 
-test('PP29 补签胶囊：确认弹窗带 MM.DD 日期与补完分值 → POST /points/signin/makeup {dateKey} → 刷新', async () => {
+test('PP29 七格「补」字补签：确认弹窗带 MM.DD 日期与补完分值 → POST /points/signin/makeup {dateKey} → 刷新', async () => {
   reset();
   const p = boot();
   await tick();
-  assert.equal(p.data.chips.length, 2, '19 与 24 各一颗');
-  assert.deepEqual(p.data.chips.map((c) => c.dateKey), ['2026-10-19', '2026-10-24']);
+  assert.deepEqual(
+    p.data.strip.filter((s) => s.state === 'makeup').map((s) => s.dateKey),
+    ['2026-10-19', '2026-10-24'],
+    '19 与 24 两格是补签入口',
+  );
   postRespond = () => Promise.resolve({ credited: 1, toppedUp: 4 });
   const tap = { currentTarget: { dataset: { dateKey: '2026-10-19' } } };
   p.onMakeup(tap);
   p.onMakeup(tap); // makeupBusy 闸门：第一发还在飞时连点不能再发请求
   assert.equal(modals.length, 2, '两次点击都进确认弹窗，第二次在闸门处被挡下');
-  assert.ok(modals[0].content.includes('10.19'), '弹窗日期与胶囊/七格同为 MM.DD，不打 ISO 日期');
+  assert.ok(modals[0].content.includes('10.19'), '弹窗日期与七格同为 MM.DD，不打 ISO 日期');
   assert.ok(modals[0].content.includes('今天可拿'), '要提前告知补完的效果');
   await tick();
   assert.deepEqual(apiCalls.filter((c) => c.method === 'POST').map((c) => `${c.url} ${JSON.stringify(c.data)}`),
@@ -430,7 +444,7 @@ test('PP29 补签胶囊：确认弹窗带 MM.DD 日期与补完分值 → POST /
   assert.equal(p.makeupBusy, false, '落地后闸门要复位');
 });
 
-test('PP30 取消确认不发请求；无卡时点胶囊跳兑换页而不是发请求', async () => {
+test('PP30 取消确认不发请求；无卡时点「补」格跳兑换页而不是发请求', async () => {
   reset();
   const p = boot();
   await tick();
@@ -439,17 +453,17 @@ test('PP30 取消确认不发请求；无卡时点胶囊跳兑换页而不是发
   await tick();
   assert.deepEqual(calls().filter((c) => c.startsWith('POST')), [], '取消不能发请求');
   modalAnswer = true;
-  p.setData({ cards: 0, chips: [{ dateKey: '2026-10-19', label: '补签 10.19', sub: '去兑换', hasCard: false }] });
+  p.setData({ cards: 0 });
   p.onMakeup({ currentTarget: { dataset: { dateKey: '2026-10-19' } } });
   await tick();
   assert.deepEqual(calls().filter((c) => c.startsWith('POST')), []);
   assert.deepEqual(navs, ['/pages/points-item/points-item'], '无卡要落到兑换页');
   assert.equal(modals.length, 1, '无卡不弹确认，此前只有取消那一次');
 
-  // chips 里没有的日期点不动：入口与 cells 同源，防陈旧/伪造的 dataset（卡仍由服务端挑）
+  // 不是 makeup 格的日期点不动：入口与 cells 同源，防陈旧/伪造的 dataset（卡仍由服务端挑）
   p.onMakeup({ currentTarget: { dataset: { dateKey: '2026-10-22' } } });
   await tick();
-  assert.equal(navs.length, 1, '不在 chips 里的日期既不跳转也不发请求');
+  assert.equal(navs.length, 1, '不是 makeup 格的日期既不跳转也不发请求');
   assert.deepEqual(calls().filter((c) => c.startsWith('POST')), []);
 });
 
@@ -544,7 +558,7 @@ test('PP34 连签 ≥7：显示「已连续 N 天 · 每日 7 分」，未满 7 
   assert.equal(q.data.streakText, '', '未满 7 天不显示该文案');
 });
 
-test('PP35 七格与胶囊同源：cells 里没有 makeup 格时不出现补签入口', async () => {
+test('PP35 补签入口收口在七格：cells 里没有 makeup 格时不出现补签入口，也没有单独的胶囊行', async () => {
   reset();
   summaryRespond = () => Promise.resolve(Object.assign({}, summaryFixture(), {
     signin: Object.assign({}, summaryFixture().signin, {
@@ -553,19 +567,19 @@ test('PP35 七格与胶囊同源：cells 里没有 makeup 格时不出现补签�
   }));
   const p = boot();
   await tick();
-  assert.deepEqual(p.data.chips, []);
   assert.ok(!p.data.strip.some((s) => s.state === 'makeup'), '七格里也没有 makeup 格');
+  assert.equal(p.data.hasMakeup, false, '没有可补格就不出现补签说明行');
 
   const wxml = read('miniprogram/pages/points/points.wxml');
   const js = read('miniprogram/pages/points/points.js');
   assert.ok(!wxml.includes('makeup-link'), '旧的单条补签链接要删掉');
   assert.ok(!js.includes('canMakeUp') && !js.includes('makeupCardId') && !js.includes('makeupDate'),
     '后端已删的 canMakeUp/makeupDate/makeupCardId 前端不能再读');
-  assert.ok(wxml.includes('<view class="chip-row" wx:if="{{chips.length}}">'), '胶囊行由 chips 空否把关，与 cells 同源');
-  assert.ok(wxml.includes('<view class="makeup-note" wx:if="{{chips.length}}">'), '说明行同样跟 chips 同源，不留常驻噪声');
-  assert.ok(wxml.includes('data-date-key'), '胶囊点击回传 dateKey，服务端按日校验');
-  assert.ok(wxml.includes('bindtap="onMakeup"'), '胶囊绑定补签入口');
+  assert.ok(!wxml.includes('chip-row') && !wxml.includes('makeup-chip'), '七格下方的补签胶囊行要删掉（入口就在格子里）');
+  assert.ok(wxml.includes('data-date-key'), '七格回传 dateKey，服务端按日校验');
+  assert.ok(wxml.includes('bindtap="onMakeup"'), '补签入口挂在七格上');
   assert.ok(wxml.includes('class="signin-cell {{item.state}}"'), '七格配色由 cells.state 驱动');
+  assert.ok(wxml.includes('<view class="makeup-note" wx:if="{{hasMakeup}}">'), '说明行跟可补格同源，不留常驻噪声');
 });
 
 test('PP36 七格「今天」由东八区 dateKey 比对：页面把 bjDate(Date.now()) 作 todayKey 传给纯函数', async () => {
@@ -743,12 +757,18 @@ test('PP16 明细页：满 20 条上拉加载下一页，末页停止；失败�
   assert.equal(apiCalls[apiCalls.length - 1].params.page, 1);
 });
 
-test('PP17 规则页覆盖连续签到/第 7 天/断签/次日/视频/次年/每日 100/补签卡 200 分 30 天只补昨天', () => {
+test('PP17 规则页：答案钉在实际渲染的 Q&A 文本上，补签条目已是窗口口径、旧「只能补昨天」不复活', () => {
   const rules = read('miniprogram/pages/points-rules/points-rules.wxml');
-  ['连续签到', '第 7 天', '断签', '次日', '视频', '次年', '100', '200', '30 天', '昨天'].forEach((s) => {
-    assert.ok(rules.includes(s), `规则页缺少「${s}」`);
+  // 与 PP22 同一收紧思路：断言只作用在 `<text class="a">` 答案叶子文本上——
+  // wxml 注释里塞「昨天」或「只能补签昨天」顶不掉正向钉、也躲不掉负向钉（正向钉必须真渲染）。
+  const answers = [...rules.matchAll(/<text class="a">([\s\S]*?)<\/text>/g)].map((m) => m[1]).join(' ');
+  ['连续签到', '第 7 天', '断签', '次日', '视频', '次年', '100', '200', '30 天',
+    '近 7 天窗口', '漏签日', '窗口内需有签到记录', '今天已签到也能补'].forEach((s) => {
+    assert.ok(answers.includes(s), `规则页答案缺少「${s}」`);
   });
-  assert.ok(rules.includes('min(N, 7)'), '连续签到奖励应写明 min(N, 7)');
+  assert.ok(answers.includes('min(N, 7)'), '连续签到奖励应写明 min(N, 7)');
+  assert.ok(!answers.includes('昨天'), '补签规则答案不得再出现「昨天」旧窗口口径——可补范围以近 7 天窗口为准（段长上限已放宽）');
+  assert.ok(!rules.includes('只能补签昨天'), '静态旧文案「只能补签昨天」不得以任何节点复活');
 });
 
 test('PP18 明细页：首屏 loading 与翻页 loadingMore 分离，翻页中保留已渲染行', async () => {
@@ -854,7 +874,8 @@ const itemFixture = () => ({
   subtitle: '恢复连续打卡记录',
   price: 200,
   validDays: 30,
-  description: '每张仅可使用一次；仅用于补签昨天；兑换后 30 天内有效',
+  // 与 dev 服务端 points-items.ts getItems() 下发的描述逐字一致（测试替身跟紧真实契约）
+  description: '每张仅可使用一次；可补签近 7 天窗口内的漏签日，补一天用一张；兑换后 30 天内有效',
 });
 
 /** 商品页同时依赖 /points/items 与 /points/summary，按路径分流 */

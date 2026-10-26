@@ -1,12 +1,11 @@
 <view class="page">
-  <!-- 游客提示 -->
-  <view class="login-hint" wx:if="{{!loggedIn && !loading}}">
-    <image class="login-hint-icon" src="/assets/icons/tab-rank-gray.png" mode="aspectFit" />
-    <view class="login-hint-text">登录后查看全国运动榜，看看其他迹路者都在哪运动</view>
-    <button class="login-hint-btn" bindtap="guestLogin">去登录</button>
+  <!-- 游客轻提示：榜单可看，登录后才有「我的排名」（2026-10-26 放开游客浏览） -->
+  <view class="guest-tip" wx:if="{{!loggedIn && !loading}}" hover-class="guest-tip-hover" hover-stay-time="80" bindtap="guestLogin">
+    <view class="guest-tip-text">登录后可在榜单看到你的排名</view>
+    <view class="guest-tip-btn">去登录 ›</view>
   </view>
 
-  <block wx:if="{{loggedIn}}">
+  <block>
     <!-- 排行榜 -->
     <view class="card rank-card">
       <view class="card-head">
@@ -137,7 +136,7 @@
         <view class="me-count">{{board.me.count}} 条轨迹</view>
       </view>
     </view>
-    <view class="me-card empty" wx:if="{{board && !board.me}}">
+    <view class="me-card empty" wx:if="{{board && !board.me && loggedIn}}">
       <view class="me-hint">完成一条{{types[typeIndex].label}}轨迹，就能上榜啦</view>
     </view>
   </block>

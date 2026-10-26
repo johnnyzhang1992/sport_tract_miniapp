@@ -1,3 +1,10 @@
+<!-- 游客态缺省：登录引导卡（不发请求，登录后自动重拉） -->
+<view class="login-hint" wx:if="{{notLoggedIn}}">
+  <image class="login-hint-icon" src="/assets/icons/lucide-chart.png" mode="aspectFit" />
+  <view class="login-hint-text">登录后查看你的运动报告</view>
+  <button class="login-hint-btn" bindtap="guestLogin">去登录</button>
+</view>
+
 <view class="container" wx:if="{{summary || loading}}">
   <!-- 维度切换 -->
   <view class="card range-card">

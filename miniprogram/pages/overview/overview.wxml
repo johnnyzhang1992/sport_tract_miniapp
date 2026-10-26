@@ -28,8 +28,15 @@
   </view>
 
   <!-- 提示做成居中浮层（白底衬）：地图没有页内留白，直接压在底图上会糊成一片 -->
+  <view wx:if="{{notLoggedIn}}" class="guest-mask">
+    <view class="login-hint">
+      <image class="login-hint-icon" src="/assets/icons/lucide-compass.png" mode="aspectFit" />
+      <view class="login-hint-text">登录后查看你的轨迹合集</view>
+      <button class="login-hint-btn" bindtap="guestLogin">去登录</button>
+    </view>
+  </view>
   <view wx:if="{{loading}}" class="page-tip">加载中…</view>
-  <view wx:elif="{{tracks.length === 0}}" class="page-tip">{{filtered ? '该条件下还没有运动记录' : '该时间段还没有运动记录'}}</view>
+  <view wx:elif="{{tracks.length === 0 && !notLoggedIn}}" class="page-tip">{{filtered ? '该条件下还没有运动记录' : '该时间段还没有运动记录'}}</view>
 
   <!-- 筛选半屏（时间 / 省份） -->
   <track-filter-sheet

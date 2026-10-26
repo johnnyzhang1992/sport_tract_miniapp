@@ -9,43 +9,57 @@
     </view>
   </block>
   <block wx:elif="{{loggedIn}}">
-    <view class="balance-card">
-      <text class="balance">{{balance}}</text>
-      <view class="balance-actions">
-        <text bindtap="goRecords">积分明细 ›</text>
-        <text bindtap="goRules">积分规则</text>
-      </view>
-    </view>
-
     <view class="card signin-card">
+      <!-- 卡头：左=积分余额（点进积分明细），右=积分规则入口；核心数据与核心动作同卡 -->
+      <view class="signin-head">
+        <view class="balance-box" hover-class="row-hover" hover-stay-time="80" bindtap="goRecords">
+          <text class="balance-num">{{balance}}</text>
+          <text class="balance-label">积分明细 ›</text>
+        </view>
+        <text class="rules-link" bindtap="goRules">积分规则 ›</text>
+      </view>
+
       <view class="signin-strip">
-        <view wx:for="{{strip}}" wx:key="dateKey" class="signin-cell {{item.state}}">
+        <!-- makeup 格直接点「补」字补签（确认弹窗带补完分值）；其余格点击无动作 -->
+        <view wx:for="{{strip}}" wx:key="dateKey"
+              class="signin-cell {{item.state}}"
+              data-date-key="{{item.dateKey}}" bindtap="onMakeup">
           <view class="dot">{{item.dot}}</view>
           <text class="sub">{{item.sub}}</text>
         </view>
       </view>
       <view wx:if="{{streakText}}" class="streak-note">{{streakText}}</view>
       <view class="signin-btn" wx:if="{{!signin.todaySigned}}" bindtap="onSignIn">今日签到</view>
-      <view class="signin-btn off" wx:else>明日签到领 {{signin.nextReward}} 积分</view>
-      <!-- 补签胶囊行：每个 makeup 格一颗（与七格同源，cells 没给就不渲染），点一颗消耗一张卡 -->
-      <view class="chip-row" wx:if="{{chips.length}}">
-        <view wx:for="{{chips}}" wx:key="dateKey" class="makeup-chip"
-              data-date-key="{{item.dateKey}}" bindtap="onMakeup">
-          <text class="chip-label">{{item.label}}</text>
-          <text class="chip-sub">{{item.sub}} ›</text>
-        </view>
+      <!-- 已签态：中间数字 = 今天签到实际拿到的积分（今日再点无动作，纯状态展示） -->
+      <view class="signin-btn off" wx:else>
+        <text>今日已签 +</text>
+        <text class="signin-got">{{signin.todayReward}}</text>
+        <text>分</text>
       </view>
-      <view class="makeup-note" wx:if="{{chips.length}}">1 张补签卡补 1 格 · 补完连签重排</view>
+      <view class="makeup-note" wx:if="{{hasMakeup}}">点「补」字直接补签 · 1 张补签卡补 1 格 · 补完连签重排</view>
     </view>
 
+    <!-- 每日任务（0 点重置）：放新手卡前面，每日可做的离签到更近 -->
     <view class="card">
-      <view class="section-title">新手与每日任务</view>
-      <view wx:for="{{tasks}}" wx:key="key" class="task-row">
+      <view class="section-title">每日任务</view>
+      <view wx:for="{{taskGroups.dailyTasks}}" wx:key="key" class="task-row">
         <view>
           <text class="task-title">{{item.title}}</text>
           <text class="task-points">+{{item.points}}</text>
         </view>
-        <view class="task-action {{item.disabled ? 'off' : ''}}" data-key="{{item.key}}" bindtap="onClaim">{{item.actionText}}</view>
+        <view class="task-action {{item.statusClass}}" data-key="{{item.key}}" bindtap="onClaim">{{item.actionText}}</view>
+      </view>
+    </view>
+
+    <!-- 新手任务（一次性）：全部完成后整卡隐藏，不再占位 -->
+    <view class="card" wx:if="{{taskGroups.onceTasks.length}}">
+      <view class="section-title">新手任务</view>
+      <view wx:for="{{taskGroups.onceTasks}}" wx:key="key" class="task-row">
+        <view>
+          <text class="task-title">{{item.title}}</text>
+          <text class="task-points">+{{item.points}}</text>
+        </view>
+        <view class="task-action {{item.statusClass}}" data-key="{{item.key}}" bindtap="onClaim">{{item.actionText}}</view>
       </view>
     </view>
 

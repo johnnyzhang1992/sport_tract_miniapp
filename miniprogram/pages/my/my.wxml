@@ -1,22 +1,37 @@
 <view class="container">
-  <!-- 用户卡片（未登录点开登录弹窗，已登录进资料编辑） -->
-  <view class="card user-card hover-card" hover-class="card-hover" hover-stay-time="100" bindtap="onUserCardTap">
-    <t-avatar
-      class="user-avatar"
-      image="{{user.avatarUrl || '/assets/icons/lucide-user.png'}}"
-      size="96rpx"
-    >
-      {{user.avatarText}}
-    </t-avatar>
-    <view class="user-info">
-      <view class="user-name">{{loggedIn ? (user.nickname || '微信用户') : '未登录'}}</view>
-      <view class="text-muted">{{loggedIn ? (user.uid ? '迹路者' + user.uid + ' · 已加入 ' + user.joinDays + ' 天' : '点击编辑资料') : '点击登录，同步运动数据'}}</view>
-      <view class="body-data" wx:if="{{showBodyData}}">
-        <text class="body-item" wx:if="{{user.heightCm}}">身高 {{user.heightCm}}cm</text>
-        <text class="body-item" wx:if="{{user.weightKg}}">体重 {{user.weightKg}}kg</text>
+  <!-- 用户卡片（未登录点开登录弹窗，已登录进资料编辑）：头部加积分资产行（原骨架 + 渐进创意） -->
+  <view class="card user-card">
+    <view class="user-head" hover-class="card-hover" hover-stay-time="100" bindtap="onUserCardTap">
+      <t-avatar
+        class="user-avatar"
+        image="{{user.avatarUrl || '/assets/icons/lucide-user.png'}}"
+        size="96rpx"
+      >
+        {{user.avatarText}}
+      </t-avatar>
+      <view class="user-info">
+        <view class="user-name">{{loggedIn ? (user.nickname || '微信用户') : '未登录'}}</view>
+        <view class="text-muted">{{loggedIn ? (user.uid ? '迹路者' + user.uid + ' · 已加入 ' + user.joinDays + ' 天' : '点击编辑资料') : '点击登录，同步运动数据'}}</view>
+        <view class="body-data" wx:if="{{loggedIn && showBodyData}}">
+          <text class="body-item" wx:if="{{user.heightCm}}">身高 {{user.heightCm}}cm</text>
+          <text class="body-item" wx:if="{{user.weightKg}}">体重 {{user.weightKg}}kg</text>
+        </view>
+      </view>
+      <view class="link-arrow">›</view>
+    </view>
+
+    <!-- 积分资产行（仅登录后）：左=积分与连签（进积分页），右=签到胶囊（未签直签） -->
+    <view class="asset-row" wx:if="{{loggedIn && signin.loaded}}">
+      <view class="asset-left" hover-class="row-hover" hover-stay-time="80" catchtap="onBadgeTap">
+        <text class="asset-text">{{signin.balance}} 积分</text>
+        <text class="asset-divider" wx:if="{{signin.streakDay > 0}}">·</text>
+        <text class="asset-text" wx:if="{{signin.streakDay > 0}}">连签 {{signin.streakDay}} 天</text>
+        <view class="asset-arrow">›</view>
+      </view>
+      <view class="sign-chip {{signin.signedToday ? 'signed' : ''}}" catchtap="onSigninStripTap" hover-class="row-hover" hover-stay-time="80">
+        {{signin.signedToday ? '✓ 已签' : '签到 +' + signin.nextReward}}
       </view>
     </view>
-    <view class="link-arrow">›</view>
   </view>
 
   <!-- 数据统计卡片（今日/本周/本月运动距离，整卡可点） -->
@@ -28,18 +43,19 @@
       </view>
       <view class="link-arrow">›</view>
     </view>
+    <!-- 单行三格（简洁版）：本周 / 累计 距离 + 运动天数 -->
     <view class="stats-grid">
       <view class="stats-cell">
-        <view class="stats-num">{{statsCards[0].distance}}</view>
-        <view class="stats-label">今日</view>
-      </view>
-      <view class="stats-cell">
-        <view class="stats-num">{{statsCards[1].distance}}</view>
+        <view class="stats-num">{{stats.weekKm}}<text class="stats-unit">km</text></view>
         <view class="stats-label">本周</view>
       </view>
       <view class="stats-cell">
-        <view class="stats-num">{{statsCards[2].distance}}</view>
-        <view class="stats-label">本月</view>
+        <view class="stats-num">{{stats.totalKm}}<text class="stats-unit">km</text></view>
+        <view class="stats-label">累计</view>
+      </view>
+      <view class="stats-cell">
+        <view class="stats-num">{{stats.activeDays}}</view>
+        <view class="stats-label">天</view>
       </view>
     </view>
   </view>
@@ -62,19 +78,19 @@
     <view class="link-arrow">›</view>
   </view>
 
-  <!-- 菜单（轨迹合集 · 数据导入 · 设置 · 消息中心，点亮地图已并入数据统计页）
+  <!-- 菜单（用户卡资产行之外的常驻积分入口）
        箭头统一用 .link-arrow（与上面三张卡同字形同色同右距），不再用组件的 arrow 图标 -->
   <t-cell-group class="card menu-card">
+    <t-cell title="我的积分" t-class-left="cell-left" t-class-title="cell-title" bind:click="goPoints">
+      <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-coins.png" mode="aspectFit" />
+      <view slot="right-icon" class="link-arrow">›</view>
+    </t-cell>
     <t-cell title="轨迹合集" t-class-left="cell-left" t-class-title="cell-title" bind:click="goOverview">
       <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-compass.png" mode="aspectFit" />
       <view slot="right-icon" class="link-arrow">›</view>
     </t-cell>
     <t-cell title="数据导入" t-class-left="cell-left" t-class-title="cell-title" bind:click="goImport">
       <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-download.png" mode="aspectFit" />
-      <view slot="right-icon" class="link-arrow">›</view>
-    </t-cell>
-    <t-cell title="我的积分" t-class-left="cell-left" t-class-title="cell-title" bind:click="goPoints">
-      <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-coins.png" mode="aspectFit" />
       <view slot="right-icon" class="link-arrow">›</view>
     </t-cell>
     <t-cell title="设置" t-class-left="cell-left" t-class-title="cell-title" bind:click="goSettings">

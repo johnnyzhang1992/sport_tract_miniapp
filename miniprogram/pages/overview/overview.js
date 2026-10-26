@@ -1,4 +1,5 @@
 const api = require('../../services/api');
+const { ensureLogin } = require('../../utils/login-gate');
 const config = require('../../config/index');
 const posterAgg = require('../../utils/poster-aggregate');
 const tf = require('../../utils/track-filter');
@@ -57,6 +58,7 @@ Page({
     heat: [],
     mapType: 'standard',
     loading: false,
+    notLoggedIn: false, // 游客态：登录引导卡（2026-10-26 补缺省态）
     shareVisible: false,
     shareTracks: [], // 分享网格：[{ id, points:[{lat,lng}], timeText, distance }]
     shareShowTime: false, // 默认不展示时间
@@ -67,7 +69,21 @@ Page({
 
   onLoad() {
     this.fetch();
-    this.ensureYearOptions(); // 预取全量快照（历史年份候选），打开筛选时秒开
+    // 预取全量快照（历史年份候选）：游客不发（必 401），登录后 onShow 补拉
+    if (getApp().globalData.loggedIn) this.ensureYearOptions();
+  },
+
+  onShow() {
+    // 从登录页回来：自动重拉轨迹合集 + 年份候选（游客期没预取的那次）
+    if (this.data.notLoggedIn && getApp().globalData.loggedIn) {
+      this.fetch();
+      this.ensureYearOptions();
+    }
+  },
+
+  /** 游客点「去登录」：登录成功立即拉合集 */
+  async guestLogin() {
+    if (await ensureLogin('登录后查看你的轨迹合集。')) this.fetch();
   },
 
   async fetch() {
@@ -80,7 +96,12 @@ Page({
         console.warn('静默登录失败', e);
       }
     }
-    if (!app.globalData.loggedIn) return;
+    if (!app.globalData.loggedIn) {
+      // 游客态缺省：登录引导卡（地图页叠一层浮层卡，登录后自动重拉）
+      this.setData({ notLoggedIn: true, loading: false });
+      return;
+    }
+    this.setData({ notLoggedIn: false });
     // 请求序号守卫：只应用最后一次结果，防竞态（连点切档时旧包不能盖新包）
     const seq = (this._seq = (this._seq || 0) + 1);
     // 仅首屏才进 loading：切档保留已画内容，防闪屏

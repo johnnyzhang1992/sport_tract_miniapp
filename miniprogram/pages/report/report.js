@@ -3,6 +3,7 @@
  * 汇总 → 个人最佳 → 轨迹列表
  */
 const api = require('../../services/api');
+const { ensureLogin } = require('../../utils/login-gate');
 const loading = require('../../utils/loading');
 const config = require('../../config/index');
 const { formatDuration, formatDurationStat, formatPaceParts, formatThousands, formatCompactCn } = require('../../utils/format');
@@ -99,6 +100,7 @@ Page({
     dateChartData: [], // 日期汇总柱状图数据（距离 km）
     compare: [], // 周期对比（当前周期 vs 上一周期）
     loading: true,
+    notLoggedIn: false, // 游客态：登录引导卡（2026-10-26 补缺省态）
     showPeriodPicker: false, // 周期选择弹窗
     periodOptions: [], // 弹窗选项 [{offset, label, selected}]
     pickerScrollInto: '', // 弹窗滚动定位到当前周期
@@ -113,6 +115,16 @@ Page({
     if (options.range) this.setData({ activeRange: options.range });
     this.applyPeriod();
     this.fetch();
+  },
+
+  onShow() {
+    // 从登录页回来：未登录态自动重拉（游客进页时 fetch 已置引导卡，这里只在状态翻转时触发）
+    if (this.data.notLoggedIn && getApp().globalData.loggedIn) this.fetch();
+  },
+
+  /** 游客点「去登录」：登录成功立即拉报告 */
+  async guestLogin() {
+    if (await ensureLogin('登录后查看你的运动报告。')) this.fetch();
   },
 
   onRangeChange(e) {
@@ -439,7 +451,12 @@ Page({
         console.warn('静默登录失败', e);
       }
     }
-    if (!app.globalData.loggedIn) return;
+    if (!app.globalData.loggedIn) {
+      // 游客态缺省：登录引导卡（登录后 onShow 自动重拉）
+      this.setData({ notLoggedIn: true, loading: false });
+      return;
+    }
+    this.setData({ notLoggedIn: false });
     // 请求序号守卫：快速连续翻页时丢弃过期响应，避免旧数据覆盖新数据
     const seq = (this._fetchSeq = (this._fetchSeq || 0) + 1);
     // 保留旧数据直到新数据到达（避免整页闪空），仅切换 loading 态

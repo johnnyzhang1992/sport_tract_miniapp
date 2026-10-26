@@ -4,6 +4,7 @@ const { getBestCache, setBestCache } = require('../../services/storage');
 const { matchBest } = require('../../utils/best-records');
 const config = require('../../config/index');
 const { markHomeDirty } = require('../../utils/home-refresh');
+const { ensureLogin } = require('../../utils/login-gate');
 
 const PAGE_SIZE = 20;
 const VIEW_MODE_KEY = 'tracksViewMode';
@@ -55,6 +56,7 @@ Page({
     loading: false,
     initialized: false,
     loadError: false, // 首屏加载失败（与「还没有运动记录」区分，展示重试入口）
+    notLoggedIn: false, // 游客态：展示登录引导卡（2026-10-26 补缺省态）
   },
 
   onLoad() {
@@ -63,6 +65,11 @@ Page({
       const saved = wx.getStorageSync(VIEW_MODE_KEY);
       if (saved === 'grid' || saved === 'list') this.setData({ viewMode: saved });
     } catch (e) {}
+  },
+
+  /** 游客点「去登录」：登录成功重拉列表（回到本页 onShow 也会自动刷新，这里点完立即拉） */
+  async guestLogin() {
+    if (await ensureLogin('登录后查看你的运动轨迹。')) this.refresh();
   },
 
   /** 切换展示模式（lucide layout-list / layout-grid 图标按钮） */
@@ -161,7 +168,12 @@ Page({
         console.warn('静默登录失败', e);
       }
     }
-    if (!app.globalData.loggedIn) return;
+    if (!app.globalData.loggedIn) {
+      // 游客态缺省：不发请求，展示登录引导卡（登录后回本页自动重拉）
+      this.setData({ notLoggedIn: true, loading: false, initialized: false });
+      return;
+    }
+    this.setData({ notLoggedIn: false });
     try {
       this._monthlyStats = {}; // 重置聚合缓存，防上一次筛选的数据串味（只在 JS 用，不进 data）
       this.setData({ loading: true, page: 1 });

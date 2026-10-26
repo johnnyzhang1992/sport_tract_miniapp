@@ -65,6 +65,7 @@ Page({
     error: '',
     errorHint: '', // 错误次要提示行
     error429: false, // 创建频控（429）专用错误态：按钮换成“回首页”
+    errorLogin: false, // 未登录（401）专用错误态：按钮换成“去登录”（跳个人中心）
     endConfirmVisible: false,
   },
 
@@ -200,6 +201,7 @@ Page({
       this.maybeShowCapsuleGuide(); // 首几次运动：引导点胶囊最小化后台记录
     } catch (e) {
       console.error('[record] init 失败', e);
+      const msg = (e && e.message) || '';
       if (e && e.statusCode === 429) {
         // 创建频控（1 小时 10 条）：重试无意义，引导回首页（可从“继续上次运动”恢复）
         this.setData({
@@ -208,10 +210,23 @@ Page({
           error: '最近新建的运动太多啦（1 小时内最多 10 条）',
           errorHint: '请稍后再试，或回首页继续上次运动',
         });
+      } else if (/未授权|请先登录|未登录/.test(msg)) {
+        // 游客创建活动 401：这不是定位授权问题，给「去登录」跳个人中心（登录回来 onShow 自动重试）
+        this.setData({
+          starting: false,
+          errorLogin: true,
+          error: '登录后才能记录运动',
+          errorHint: '去个人中心完成登录，回来自动继续',
+        });
       } else {
         this.setData({ error: e.message || '初始化失败' });
       }
     }
+  },
+
+  /** 未登录：跳个人中心登录（回本页 onShow 检测到已登录会自动重试初始化） */
+  goLogin() {
+    wx.switchTab({ url: '/pages/my/my' });
   },
 
   /** 429 频控：返回首页（首页可“继续上次运动”） */
@@ -671,6 +686,11 @@ Page({
     // 权限复查排在 tracker 早退之前：首次进入时 tracker 还没建，也要把这条提示算出来；
     // 从设置页开完后台定位回来，同样靠这里把提示收掉
     this.refreshBgLocHint();
+    // 从个人中心登录回来：清掉未登录错误态并自动重试初始化（不用用户再点一次）
+    if (this.data.errorLogin && getApp().globalData.loggedIn) {
+      this.setData({ error: '', errorLogin: false, errorHint: '', starting: true });
+      this.init();
+    }
     if (!this.tracker) return;
     // 回前台：后台较久则开启预热窗口（丢弃回前台后几秒内的漂移点）
     this.tracker.onForeground();

@@ -535,3 +535,30 @@
   flex-shrink: 0;
   line-height: 1;
 }
+
+/* 游客态登录引导（与轨迹列表同款 .login-hint） */
+.login-hint {
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 80rpx 40rpx;
+  text-align: center;
+  margin: 24rpx;
+}
+.login-hint-icon {
+  width: 96rpx;
+  height: 96rpx;
+  opacity: 0.6;
+}
+.login-hint-text {
+  color: #4e5969;
+  font-size: 26rpx;
+  margin: 24rpx 0 32rpx;
+  line-height: 1.6;
+}
+.login-hint-btn {
+  background: #2b6cf6;
+  color: #fff;
+  border-radius: 999rpx;
+  font-size: 28rpx;
+  width: 320rpx;
+}

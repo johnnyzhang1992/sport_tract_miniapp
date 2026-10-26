@@ -89,6 +89,40 @@ Page({
   },
 
   onLoad(options) {
+    // 进页登录闸门（2026-10-26 需求）：创建/编辑活动必须登录。单点拦在目标页，
+    // 三个入口（首页引导卡 / 活动列表 / 活动详情）一起覆盖，入口侧不再各自判。
+    this._options = options || {};
+    const app = getApp();
+    if (app.hasSession && app.hasSession() && !app.globalData.loggedIn) {
+      // 本地有 token 的老用户先静默恢复；恢复不了（token 失效）再走弹窗
+      app
+        .login()
+        .catch(() => {})
+        .then(() => this.gateLogin());
+      return;
+    }
+    this.gateLogin();
+  },
+
+  /** 登录闸门：已登录 → 初始化表单；游客 → 弹 ensureLogin，取消即提示并退页 */
+  async gateLogin() {
+    if (getApp().globalData.loggedIn) {
+      this.initForm();
+      return;
+    }
+    const ok = await ensureLogin();
+    if (ok) {
+      this.initForm();
+      return;
+    }
+    // toast 与退页同时发：toast 会盖在转场上继续显示，不需要人为延迟（延迟反而在快速返回时拖泥带水）
+    wx.showToast({ title: '登录后才能创建活动', icon: 'none' });
+    wx.navigateBack({ delta: 1 });
+  },
+
+  /** 表单初始化（原 onLoad 主体；登录确认后才执行） */
+  initForm() {
+    const options = this._options || {};
     const id = (options && options.id) || '';
     if (id) {
       this.setData({ isEdit: true, editId: id });

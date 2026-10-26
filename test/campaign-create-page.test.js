@@ -565,3 +565,40 @@ test('CCP24 结束日期 picker 必须挂上 end 上界', () => {
   ).replace(/<!--[\s\S]*?-->/g, '');
   assert.match(wxml, /mode="date"[^>]*end="\{\{maxEndDate\}\}"/, '结束日期选择器要绑上界');
 });
+
+/* ------------------- 进页登录闸门（2026-10-26：游客不得进创建/编辑页） ------------------- */
+
+const gateTick = () => new Promise((r) => setImmediate(r));
+
+test('CCP25 游客进创建页：弹登录引导，取消 → toast 提示并退页，表单不初始化', async () => {
+  resetEnv();
+  appStub.globalData.loggedIn = false; // 游客（appStub 无 hasSession → 直接走闸门）
+  const page = makePage();
+  page.onLoad();
+  await gateTick(); await gateTick(); await gateTick();
+  assert.equal(modals.length, 1, '游客进页即弹 ensureLogin');
+  assert.ok(toasts.some((t) => t === '登录后才能创建活动'), `toast=${JSON.stringify(toasts)}`);
+  assert.equal(navBacks.length, 1, '取消登录要退页');
+  assert.equal(page.data.startDateText, '', '表单不初始化（无预填日期）');
+});
+
+test('CCP26 游客确认登录 → 表单初始化，可以正常创建', async () => {
+  resetEnv();
+  appStub.globalData.loggedIn = false;
+  modalConfirm = true; // 登录弹窗点确认 → appStub.login 置 loggedIn
+  const page = makePage();
+  page.onLoad();
+  await gateTick(); await gateTick(); await gateTick();
+  assert.equal(loginCalls, 1);
+  assert.ok(page.data.startDateText, '登录成功后表单照常初始化（预填日期）');
+  assert.equal(navBacks.length, 0, '不退页');
+});
+
+test('CCP27 已登录进页：不弹登录，表单直接初始化（老路径不回归）', async () => {
+  resetEnv();
+  const page = makePage();
+  page.onLoad();
+  await gateTick();
+  assert.equal(modals.length, 0, '已登录不该再弹登录');
+  assert.ok(page.data.startDateText, '表单照常初始化');
+});

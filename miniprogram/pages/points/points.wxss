@@ -4,43 +4,58 @@
   padding-bottom: 24rpx;
 }
 
-/* 余额英雄区：蓝渐变压深一档（#1a56d6→#2b6cf6，两色都是本项目已有），因为这里要放
-   24rpx 的可点文字——首页那条 #2b6cf6→#5b8cff 的浅端上白字只有 3.16:1，这里最浅 4.59:1。 */
-.balance-card {
-  background: linear-gradient(135deg, #1a56d6, #2b6cf6);
-  padding: 32rpx 32rpx 72rpx;
-}
-
-.balance {
-  display: block;
-  font-size: 88rpx;
-  font-weight: 700;
-  text-align: center;
-  color: #fff;
-}
-
-.balance-actions {
+/* 签到卡头（2026-10-26 布局重排）：余额并入签到卡——
+   左「N 积分 ›」进明细、右「规则 ›」，七格/签到按钮在其下；页面不再有独立头部 */
+.signin-head {
   display: flex;
+  align-items: baseline;
   justify-content: space-between;
+  padding: 4rpx 4rpx 0;
+}
+
+.balance-box {
+  display: flex;
+  align-items: baseline;
+  gap: 10rpx;
+}
+
+.balance-num {
+  font-size: 56rpx;
+  font-weight: 700;
+  color: #1f2329;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+
+.balance-label {
   font-size: 24rpx;
-  color: #fff;
-  margin-top: 8rpx;
+  color: #2b6cf6;
+}
+
+.rules-link {
+  font-size: 24rpx;
+  color: #8a93a6;
+}
+
+.row-hover {
+  opacity: 0.7;
 }
 
 .card {
   background: #fff;
   border-radius: 20rpx;
-  margin: -44rpx 24rpx 0;
-  padding: 24rpx;
+  margin: 24rpx 24rpx 0;
+  padding: 20rpx 20rpx 8rpx; /* 底部 8rpx：task-row 自带 14rpx 上下内边距，再叠 20 会Double 出大空白 */
 }
 
 .card + .card {
-  margin-top: 20rpx;
+  margin-top: 16rpx;
 }
 
 .signin-strip {
   display: flex;
   justify-content: space-between;
+  margin-top: 20rpx; /* 与卡头的余额行拉开 */
 }
 
 .signin-cell {
@@ -48,7 +63,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8rpx;
+  gap: 6rpx;
 }
 
 .signin-cell .dot {
@@ -92,14 +107,15 @@
 }
 
 .signin-btn {
-  margin-top: 24rpx;
-  height: 80rpx;
+  margin-top: 16rpx;
+  height: 72rpx;
   border-radius: 999rpx;
   background: #2b6cf6;
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 4rpx;
   font-size: 28rpx;
   font-weight: 600;
 }
@@ -111,52 +127,26 @@
   color: #fff;
 }
 
-/* 补签胶囊：热区 min-height 76rpx（本项目点击区口径，勿缩小），尾文案「›」提示可点；
-   底色复用运动榜「破纪录」暖底 #fdf6e3 + 荣誉金描边，与 makeup 格虚线圈同一套观感，不引新色值 */
-.chip-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16rpx;
-  margin-top: 20rpx;
+/* 已签态中间的实得分数字：比两侧文案大一号，视觉重心 */
+.signin-got {
+  font-size: 36rpx;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
-.makeup-chip {
-  flex: 1 1 auto;
-  min-height: 76rpx;
-  padding: 10rpx 24rpx;
-  border-radius: 999rpx;
-  box-sizing: border-box;
-  background: #fdf6e3;
-  border: 2rpx solid #8a5f12;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.chip-label {
-  font-size: 24rpx;
-  font-weight: 600;
-  color: #8a5f12;
-}
-
-.chip-sub {
-  font-size: 20rpx;
-  color: #8a5f12;
-}
-
+/* 补签交互：直接点七格里的「补」字（makeup 格自带暖色虚线圈即入口），胶囊按钮已删——入口只有这一个 */
 .makeup-note {
   text-align: center;
   font-size: 20rpx;
   color: #8a93a6;
-  margin-top: 16rpx;
+  margin-top: 12rpx;
 }
 
 .streak-note {
   text-align: center;
   font-size: 22rpx;
   color: #8a93a6;
-  margin-top: 16rpx;
+  margin-top: 12rpx;
 }
 
 .state-block {
@@ -178,13 +168,14 @@
 .section-title {
   font-size: 28rpx;
   font-weight: 600;
+  margin-bottom: 4rpx;
 }
 
 .task-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 22rpx 0;
+  padding: 14rpx 0;
   border-bottom: 1rpx solid #f2f3f5;
 }
 
@@ -203,40 +194,49 @@
 }
 
 .task-action {
-  padding: 10rpx 24rpx;
+  padding: 6rpx 20rpx;
   border-radius: 999rpx;
   background: #2b6cf6;
   color: #fff;
   font-size: 22rpx;
 }
 
+/* locked（待做）＝描边引导态：与「待领取」实心蓝区分 */
 .task-action.off {
+  background: #fff;
+  color: #2b6cf6;
+  border: 1rpx solid #2b6cf6;
+}
+
+/* claimed（已领取）＝完成态：浅灰底灰字沉底，与待做/待领取一眼区分 */
+.task-action.done {
   background: #f2f3f5;
   color: #8a93a6;
+  border: none;
 }
 
 /* 道具卡：浅灰底自成一块（一道具一张），图位白底金字，与商品页头图同一套观感 */
 .item-card {
   display: flex;
   align-items: center;
-  gap: 20rpx;
-  margin-top: 16rpx;
-  padding: 24rpx;
+  gap: 16rpx;
+  margin-top: 12rpx;
+  padding: 16rpx;
   border-radius: 16rpx;
   background: #f7f8fa;
 }
 
 .item-glyph {
   flex: none;
-  width: 72rpx;
-  height: 72rpx;
-  border-radius: 16rpx;
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 14rpx;
   background: #fff;
   color: #8a5f12;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 34rpx;
+  font-size: 32rpx;
   font-weight: 700;
 }
 
