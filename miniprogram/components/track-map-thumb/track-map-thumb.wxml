@@ -1,0 +1,26 @@
+<view class="thumb-root">
+  <map
+    wx:if="{{mounted && center}}"
+    id="thumb-map"
+    class="track-map-mini"
+    latitude="{{center.latitude}}"
+    longitude="{{center.longitude}}"
+    scale="{{scale}}"
+    polyline="{{polyline}}"
+    include-points="{{includePoints}}"
+    bindtap="onTap"
+    enable-zoom="{{false}}"
+    enable-scroll="{{false}}"
+    enable-rotate="{{false}}"
+    enable-overlooking="{{false}}"
+    enable-satellite="{{false}}"
+    show-location="{{false}}"
+    enable-traffic="{{false}}"
+    enable-poi="{{false}}"
+  />
+  <view wx:else class="map-placeholder">
+    <image wx:if="{{iconImg}}" class="map-placeholder-icon-img" src="{{iconImg}}" mode="aspectFit" />
+    <text wx:else class="map-placeholder-icon">—</text>
+    <text class="map-placeholder-text">{{empty ? '暂无轨迹' : failed ? '地图加载失败' : '地图加载中…'}}</text>
+  </view>
+</view>
