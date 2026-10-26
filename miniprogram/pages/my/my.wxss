@@ -22,9 +22,9 @@
   font-weight: 600;
 }
 
-/* 积分资产区：白卡内的浅灰内嵌双格（与下方统计卡同一套「大数字+小标签」语言）。
-   左格积分余额、中格连签天数（>0 数字转主题蓝+火苗点亮，链是活的的正反馈），
-   右侧签到胶囊独立（未签直签）。左两格整体可点进积分页 */
+/* 积分资产区：白卡内的浅灰内嵌双格（与下方统计卡同一套「大数字+小标签」语言），
+   配色黑/灰/白无图标。左格积分余额、右格连签天数，两格整体可点进积分页，
+   右侧签到胶囊独立（未签直签） */
 .asset-row {
   display: flex;
   align-items: center;
@@ -37,26 +37,9 @@
 .asset-cell {
   flex: 1;
   display: flex;
-  flex-direction: column;
-  gap: 4rpx;
-  padding: 4rpx 0 4rpx 16rpx;
-}
-
-.asset-num-row {
-  display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 8rpx;
-}
-
-.asset-icon {
-  width: 30rpx;
-  height: 30rpx;
-  opacity: 0.55;
-}
-
-/* 连签 >0：火苗点亮（不透明）+ 数字主题蓝，与灰色未签态拉开 */
-.asset-icon-hot {
-  opacity: 1;
+  padding: 8rpx 0 8rpx 16rpx;
 }
 
 .asset-num {
@@ -67,32 +50,22 @@
   line-height: 1;
 }
 
-.asset-num-hot {
-  color: #2b6cf6;
-}
-
 .asset-label {
   font-size: 20rpx;
   color: #8a93a6;
   line-height: 1;
 }
 
-.asset-sep {
-  width: 1rpx;
-  height: 48rpx;
-  background: #e5e6eb;
-  margin: 0 12rpx;
-  flex-shrink: 0;
-}
 
-/* 签到胶囊：随双格资产区放大一号（22→24rpx），未签蓝底转化入口、已签置灰 */
+
+/* 签到胶囊：小一号（尺寸用户确认可以）；圆角 16rpx——12 太方、全圆过圆 */
 .sign-chip {
-  padding: 14rpx 24rpx;
-  border-radius: 999rpx;
+  padding: 8rpx 20rpx;
+  border-radius: 16rpx;
   background: #2b6cf6;
   color: #fff;
-  font-size: 24rpx;
-  font-weight: 500;
+  font-size: 22rpx;
+  font-weight: 400;
   flex-shrink: 0;
   margin-right: 8rpx;
 }
@@ -152,7 +125,10 @@
 
 .stats-cell {
   flex: 1;
-  text-align: center;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8rpx;
 }
 
 .stats-num {
@@ -162,19 +138,17 @@
   line-height: 1.2;
   font-variant-numeric: tabular-nums;
 }
-
 /* km 小单位：贴着数字右上方，不占格宽 */
 .stats-unit {
   font-size: 20rpx;
   font-weight: 400;
   color: #8a93a6;
-  margin-left: 2rpx;
+  margin-left: 6rpx;
 }
 
 .stats-label {
   font-size: 22rpx;
   color: #8a93a6;
-  margin-top: 4rpx;
 }
 
 /* 菜单卡 */

@@ -21,21 +21,15 @@
     </view>
 
     <!-- 积分资产区（仅登录后）：双格数字（积分余额/连签）+ 签到胶囊，
-         与下方统计卡同一套「大数字+小标签」语言；左两格整体进积分页，右侧未签直签 -->
+         与下方统计卡同一套「大数字+小标签」语言；配色黑/灰/白，无图标；
+         左两格整体进积分页，右侧未签直签 -->
     <view class="asset-row" wx:if="{{loggedIn && signin.loaded}}">
       <view class="asset-cell" hover-class="row-hover" hover-stay-time="80" catchtap="onBadgeTap">
-        <view class="asset-num-row">
-          <image class="asset-icon" src="/assets/icons/lucide-coins.png" mode="aspectFit" />
-          <text class="asset-num">{{signin.balance}}</text>
-        </view>
+        <view class="asset-num">{{signin.balance}}</view>
         <view class="asset-label">积分</view>
       </view>
-      <view class="asset-sep"></view>
       <view class="asset-cell" hover-class="row-hover" hover-stay-time="80" catchtap="onBadgeTap">
-        <view class="asset-num-row">
-          <image class="asset-icon {{signin.streakDay > 0 ? 'asset-icon-hot' : ''}}" src="/assets/icons/lucide-flame.png" mode="aspectFit" />
-          <text class="asset-num {{signin.streakDay > 0 ? 'asset-num-hot' : ''}}">{{signin.streakDay}}</text>
-        </view>
+        <view class="asset-num">{{signin.streakDay}}</view>
         <view class="asset-label">连签天数</view>
       </view>
       <view class="sign-chip {{signin.signedToday ? 'signed' : ''}}" catchtap="onSigninStripTap" hover-class="row-hover" hover-stay-time="80">
