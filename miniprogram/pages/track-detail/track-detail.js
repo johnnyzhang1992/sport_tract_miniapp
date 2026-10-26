@@ -525,7 +525,7 @@ Page({
     this.setData({ editNote: e.detail.value });
   },
 
-  /** 保存编辑（改类型重算配速/卡路里；备注 ≤500） */
+  /** 保存编辑（改类型重算配速/卡路里/表现分/漂移分；备注 ≤500） */
   async saveEdit() {
     if (this.data.editSaving) return;
     const { editType, editNote } = this.data;
@@ -539,18 +539,32 @@ Page({
     this.setData({ editSaving: true });
     try {
       const res = await api.put(`/activities/${this.data.id}/meta`, body);
-      // 刷新类型/备注（指标不变，仅更新展示字段）
-      const act = this.data.activity || {};
-      const meta = config.ACTIVITY_TYPES.find((t) => t.type === res.type) || {};
-      this.setData({
-        'activity.type': res.type,
-        'activity.label': meta.label || res.type,
-        'activity.icon': meta.icon || '🏃',
-        'activity.iconImg': meta.iconImg || '',
-        'activity.note': res.note,
-        editVisible: false,
-      });
-      wx.showToast({ title: '已保存', icon: 'success' });
+      const typeChanged = !!body.type;
+      if (typeChanged) {
+        // 服务端换类型会重算 fastestKm/表现分/漂移分等口径 → 整页重拉而非局部 setData
+        await this.loadDetail();
+        this.setData({ editVisible: false });
+        // 非运动段等标记仍按旧类型判定（重判属纠偏语义，需用户授权）→ 引导一键纠偏
+        const newMeta = config.ACTIVITY_TYPES.find((t) => t.type === res.type) || {};
+        const tip = await new Promise((resolve) => {
+          wx.showModal({
+            title: '类型已变更',
+            content: `非运动段等标记仍按旧类型判定，建议重新纠偏以「${newMeta.label || res.type}」重判。`,
+            confirmText: '去纠偏',
+            cancelText: '暂不',
+            success: resolve,
+            fail: () => resolve({ confirm: false }),
+          });
+        });
+        if (tip.confirm) this.reprocessTrack(true); // 已确认过，跳过纠偏的二次确认
+      } else {
+        const act = this.data.activity || {};
+        this.setData({
+          'activity.note': res.note,
+          editVisible: false,
+        });
+        wx.showToast({ title: '已保存', icon: 'success' });
+      }
     } catch (e) {
       console.error('保存编辑失败', e);
       wx.showToast({ title: '保存失败', icon: 'none' });
@@ -597,22 +611,26 @@ Page({
   /** 全屏地图图层切换（与页面 mapType 同步） */
   noop() {},
 
-  /** 重新纠偏：对轨迹重跑 清洗→纠偏→平滑→重算指标（清理历史脏数据） */
-  async reprocessTrack() {
+  /** 重新纠偏：对轨迹重跑 清洗→纠偏→平滑→重算指标（清理历史脏数据）
+   *  @param skipConfirm 仅允许 === true（换类型引导流已确认过一次，跳过二次确认；
+   *         bindtap 会把事件对象当首参传进来，不能按真值判） */
+  async reprocessTrack(skipConfirm = false) {
     // 已纠偏的轨迹再次纠偏意义不大（输入已是清洗后的点），确认文案区分
     const corrected = this.data.activity && this.data.activity.corrected;
-    const res = await new Promise((resolve) => {
-      wx.showModal({
-        title: corrected ? '重新纠偏' : '轨迹纠偏',
-        content: corrected
-          ? '将基于当前轨迹重新清洗并重算距离/配速等指标，是否继续？'
-          : '将剔除 GPS 偏移点并重算距离/配速等指标，距离可能略微变小，是否继续？',
-        confirmText: '纠偏',
-        success: resolve,
-        fail: () => resolve({ confirm: false }),
+    if (skipConfirm !== true) {
+      const res = await new Promise((resolve) => {
+        wx.showModal({
+          title: corrected ? '重新纠偏' : '轨迹纠偏',
+          content: corrected
+            ? '将基于当前轨迹重新清洗并重算距离/配速等指标，是否继续？'
+            : '将剔除 GPS 偏移点并重算距离/配速等指标，距离可能略微变小，是否继续？',
+          confirmText: '纠偏',
+          success: resolve,
+          fail: () => resolve({ confirm: false }),
+        });
       });
-    });
-    if (!res.confirm) return;
+      if (!res.confirm) return;
+    }
     loading.show('纠偏中…');
     try {
       const data = await api.post(`/activities/${this.data.id}/reprocess`);
