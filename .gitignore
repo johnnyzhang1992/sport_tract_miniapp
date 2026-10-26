@@ -26,3 +26,4 @@ miniprogram/config/local.js
 
 # 项目文档仅本地保留，不入仓库
 docs/
+verify-*.png
