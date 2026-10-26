@@ -25,14 +25,16 @@ const MIN_PACE_DISTANCE_M = 200;
 const BACKGROUND_GAP_MS = 30000;
 /** 预热窗口（毫秒）：回前台后丢弃该窗口内的点，等 GPS 重新收敛 */
 const RESUME_WARMUP_MS = 5000;
-/** 按运动类型的实时过滤配置（决策：与后端 cleanTrajectory 类型配置一致，防骑行起步误杀等） */
+/** 按运动类型的实时过滤配置（决策：与后端 cleanTrajectory 类型配置一致，防骑行起步误杀等）。
+ *  gapSpeed：中短断档（30s<dt≤120s）收紧阈值 m/s——人无法持续 30s+（世界纪录级）、车载远超；
+ *  不配置 = 豁免（骑行下坡/巡航合法速度与乘车重叠）。⚠️ 与服务端 TYPE_CONFIGS 两端同值 */
 const TYPE_TRACKER_CONFIG = {
-  walking: { maxAccuracyM: 60, minSpikeSpeed: 5, maxAbsSpeed: 12, minHighSpeed: 7 },
-  hiking: { maxAccuracyM: 60, minSpikeSpeed: 5, maxAbsSpeed: 12, minHighSpeed: 7 },
-  running: { maxAccuracyM: 50, minSpikeSpeed: 8, maxAbsSpeed: 18, minHighSpeed: 10 },
-  cycling: { maxAccuracyM: 40, minSpikeSpeed: 12, maxAbsSpeed: 30, minHighSpeed: 14 },
-  mountaineering: { maxAccuracyM: 80, minSpikeSpeed: 5, maxAbsSpeed: 12, minHighSpeed: 7 },
-  swimming: { maxAccuracyM: 60, minSpikeSpeed: 3, maxAbsSpeed: 8, minHighSpeed: 5 },
+  walking: { maxAccuracyM: 60, minSpikeSpeed: 5, maxAbsSpeed: 12, minHighSpeed: 7, gapSpeed: 4.0 },
+  hiking: { maxAccuracyM: 60, minSpikeSpeed: 5, maxAbsSpeed: 12, minHighSpeed: 7, gapSpeed: 4.0 },
+  running: { maxAccuracyM: 50, minSpikeSpeed: 8, maxAbsSpeed: 18, minHighSpeed: 10, gapSpeed: 6.5 },
+  cycling: { maxAccuracyM: 40, minSpikeSpeed: 12, maxAbsSpeed: 30, minHighSpeed: 14 }, // gapSpeed 豁免
+  mountaineering: { maxAccuracyM: 80, minSpikeSpeed: 5, maxAbsSpeed: 12, minHighSpeed: 7, gapSpeed: 4.0 },
+  swimming: { maxAccuracyM: 60, minSpikeSpeed: 3, maxAbsSpeed: 8, minHighSpeed: 5, gapSpeed: 3.0 },
 };
 const DEFAULT_TRACKER_CONFIG = TYPE_TRACKER_CONFIG.running;
 /** 反转漂移过滤：新点相对上一有效点的方向与上一段方向夹角超过该角度（°）且移动缓慢 → 视为 GPS 乱跳丢弃 */
@@ -47,6 +49,19 @@ const REVERSE_SLOW_SPEED_MPS = 2;
 /** 巨步弦判定的最短单步间隔（秒）：与服务端 vehicle.ts 的 VEHICLE_MAX_STEP_SEC 同口径。
  *  连续超过该时长没有任何采样（隧道/挂起/挂机），重现点一步跨过的直线视为被运载 */
 const CHORD_MIN_GAP_SEC = 120;
+
+/** 中短断档收紧下限（秒）：30 < dt ≤ 120 的步允许速度降到 gapSpeed（三级阶梯中档，docs/19 §3.1）。
+ *  信号刚恢复的首 fix 不可信，地铁进出站 30-60s 丢信号一步跳几百米，速度落在单步判据与
+ *  类型上限之间的空档。⚠️ 与服务端 vehicle.ts#GAP_TIGHTEN_MIN_SEC /
+ *  trajectory-clean.ts#TypeConfig.gapSpeed 两端同值，改一处必须同步另一处 */
+const GAP_TIGHTEN_MIN_SEC = 30;
+
+/** 骑行「滚动均速天花板」（docs/19 §3.6 开车标记）：5 分钟窗均速超上限且非下坡 → 追溯整窗标 vehicle。
+ *  公交/电驴与骑行速度重叠不判（荣誉制，用户拍板）；天花板只拦高速/干线驾车。
+ *  ⚠️ 与服务端 vehicle.ts 骑行滚动窗分支同口径，改一处必须同步另一处 */
+const CYCLE_ROLL_WINDOW_MS = 300_000; // 5 分钟滑动窗
+const CYCLE_ROLL_CAP_MPS = 12.5;      // 45 km/h = 1'20"/km，防误伤顶级业余编队可提至 13.9
+const CYCLE_ROLL_DROP_EXEMPT_M = 50;  // 窗内净海拔下降 ≥ 该值 = 合法长下坡，豁免
 
 /** 精度差抽稀保留：距上一保留点间隔超过该值（毫秒）才再收一个差精度点 */
 const ACC_BAD_KEEP_GAP_MS = 10000;
@@ -136,6 +151,12 @@ class Tracker {
     // 前后台切换：切后台时间戳 + 回前台预热窗口（冷启动漂移过滤）
     this._backgroundAt = 0;
     this._resumeWarmupUntil = 0;
+
+    // 骑行「滚动均速天花板」状态（仅 cycling；pause/restore 清空重开，窗口不跨暂停）
+    this._isCycling = type === 'cycling';
+    this._rollWin = []; // { point, dtMs, d }：窗内各步，追溯回滚时要扣回距离、标点
+    this._rollMs = 0;
+    this._rollDist = 0;
   }
 
   /**
@@ -188,7 +209,14 @@ class Tracker {
     // 完全没有采样，落点间直线是被运载/凭空连出来的 → 标 vehicle：灰线、距离与时长都不计入。
     // 暂停恢复后的首点不判：那段时长已由 pausedMs 扣过，再剔就是双扣。
     const chordGap = this.lastPoint != null && dt > CHORD_MIN_GAP_SEC && !this._pendingGap;
-    const vehicleMark = overSpeed || chordGap;
+    // 中短断档收紧（30 < dt ≤ 120，三级阶梯中档）：信号刚恢复的首 fix 不可信，允许速度
+    // 降到 gapSpeed（类型配置，不配置 = 豁免）。暂停恢复首点豁免：那段时长已由 pausedMs
+    // 扣过，再剔就是双扣。⚠️ 与服务端 markVehicle 中档同口径，改一处必须同步另一处
+    const gapTighten = this.lastPoint != null && !this._pendingGap
+      && dt > GAP_TIGHTEN_MIN_SEC
+      && this._typeCfg.gapSpeed != null
+      && d / dt > this._typeCfg.gapSpeed;
+    const vehicleMark = overSpeed || chordGap || gapTighten;
 
     // 反转漂移过滤（方向大反转 + 低速 = 室内 GPS 乱跳）：抽稀保留而不是丢弃——
     // 距上一保留点 ≥10s 或 ≥30m 才收一个并标 accBad，一直室内也有点可渲染；
@@ -289,7 +317,6 @@ class Tracker {
     this.points.push(point);
     this.lastPoint = point;
     this.lastSampleTime = now;
-
     // 尖刺回滚（决策：GPS 短时高速来回跳）——检测上一点是否尖刺，是则剔除并回退距离
     if (this.points.length >= 3 && this._recentSpeeds.length >= 3) {
       const a = this.points[this.points.length - 3];
@@ -343,7 +370,48 @@ class Tracker {
       }
     }
 
+    // 骑行滚动均速天花板（docs/19 §3.6）：开车检测，命中时追溯整窗标 vehicle。
+    // 注：追溯标记发生在入窗口之后，被标记步的瞬时速度已进过 _recentSpeeds——
+    // 接受这个近似：中位数被抬高只会让尖刺判定更宽松，不影响距离/时长口径
+    if (this._isCycling) this._feedCycleRollWindow(point, dt, d);
+
     return point;
+  }
+
+  /**
+   * 骑行滚动均速天花板：5 分钟滑动窗均速 > 45km/h 且非下坡 → 追溯整窗标 vehicle
+   * （距离扣回、时长补进 _vehicleMs、点标 vehicle——与尖刺回滚同型的追溯修正）。
+   * 公交/电驴与骑行速度重叠不判（荣誉制）；天花板只拦高速/干线驾车。
+   * 判定命中或下坡豁免后都整窗清空重开：同一段不重复判定。
+   */
+  _feedCycleRollWindow(point, dtSec, stepDistM) {
+    if (dtSec <= 0) return;
+    const win = this._rollWin;
+    win.push({ point, dtMs: dtSec * 1000, d: stepDistM });
+    this._rollMs += dtSec * 1000;
+    this._rollDist += stepDistM;
+    // 窗口滑动：总量超窗就淘汰最老的步（允许清空，防单步巨 dt 永久占据窗口）
+    while (this._rollMs > CYCLE_ROLL_WINDOW_MS && win.length > 0) {
+      const old = win.shift();
+      this._rollMs -= old.dtMs;
+      this._rollDist -= old.d;
+    }
+    if (this._rollMs < CYCLE_ROLL_WINDOW_MS) return; // 窗口未满不判
+    if (this._rollDist / (this._rollMs / 1000) <= CYCLE_ROLL_CAP_MPS) return; // 均速未超天花板
+    // 下坡豁免：窗内净海拔下降 ≥ 阈值 = 合法长下坡（海拔缺失按无豁免保守处理）
+    const alts = win.map((w) => w.point.altitude).filter((a) => a != null);
+    if (alts.length >= 2 && alts[0] - alts[alts.length - 1] >= CYCLE_ROLL_DROP_EXEMPT_M) return;
+    // 追溯回滚：未标记步标 vehicle、扣回距离、补进 _vehicleMs；
+    // 已标记步（超速/巨步弦/断档收紧）距离从未入账、时长已在 _vehicleMs，跳过防双扣
+    for (const w of win) {
+      if (w.point.vehicle) continue;
+      w.point.vehicle = true;
+      this.distance = Math.max(0, this.distance - w.d);
+      this._vehicleMs += w.dtMs;
+    }
+    win.length = 0;
+    this._rollMs = 0;
+    this._rollDist = 0;
   }
 
   /** 爬升累计：EMA 平滑后做滞回确认（下坡先"吃掉"未确认爬升，吃穿归零） */
@@ -459,6 +527,10 @@ class Tracker {
     this.pausedAt = 0;
     this._pendingGap = false;
     this._gapSinceResume = false;
+    // 骑行滚动窗清空重开：重放不喂窗（历史段的均速判定无法可靠重建，已标记步重放时同口径跳过）
+    this._rollWin = [];
+    this._rollMs = 0;
+    this._rollDist = 0;
   }
 
   /** 切后台标记（页面 onHide 调用） */
@@ -487,6 +559,10 @@ class Tracker {
       // 静止/乘车观察器不跨暂停：暂停是硬边界，就地清空（不依赖恢复首点有没有带上 pauseGap）
       this._standstill.reset();
       this._vehicle.reset();
+      // 骑行滚动窗同样不跨暂停（暂停期间无采点，窗内步均属暂停前，留着只会拖到恢复后误判）
+      this._rollWin = [];
+      this._rollMs = 0;
+      this._rollDist = 0;
       // 走动判断从"暂停前最后一点"起算，暂停期间第一个定位点就能算一步
       this._resumeMove.reset();
       if (this.lastPoint) {
