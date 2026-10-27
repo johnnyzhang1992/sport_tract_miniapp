@@ -10,13 +10,13 @@
   </block>
   <block wx:elif="{{loggedIn}}">
     <view class="card signin-card">
-      <!-- 卡头：左=积分余额（点进积分明细），右=积分规则入口；核心数据与核心动作同卡 -->
+      <!-- 卡头：左=积分余额（点进积分明细），右=积分规则胶囊；加大字号与点击热区（2026-10-26 二轮） -->
       <view class="signin-head">
         <view class="balance-box" hover-class="row-hover" hover-stay-time="80" bindtap="goRecords">
           <text class="balance-num">{{balance}}</text>
           <text class="balance-label">积分明细 ›</text>
         </view>
-        <text class="rules-link" bindtap="goRules">积分规则 ›</text>
+        <view class="rules-link" hover-class="row-hover" hover-stay-time="80" bindtap="goRules">积分规则</view>
       </view>
 
       <view class="signin-strip">
@@ -63,23 +63,28 @@
       </view>
     </view>
 
-    <!-- 道具区：接口下发整张商品表，一个道具一张卡（图位＝名称首字，与头像首字占位同一套做法） -->
+    <!-- 道具区：接口下发整张商品表，一行两个竖排卡（2026-10-26 改版）；标题右「兑换记录」进明细筛选 -->
     <view class="card" wx:if="{{items.length}}">
-      <view class="section-title">积分兑换</view>
-      <view wx:for="{{items}}" wx:key="key" class="item-card" bindtap="goItem">
-        <view class="item-glyph">{{item.glyph}}</view>
-        <view class="item-body">
+      <view class="section-head">
+        <view class="section-title">积分兑换</view>
+        <text class="section-link" hover-class="row-hover" hover-stay-time="80" bindtap="goExchangeRecords">兑换记录 ›</text>
+      </view>
+      <view class="item-grid">
+        <view wx:for="{{items}}" wx:key="key" class="item-card" hover-class="row-hover" hover-stay-time="80" bindtap="goItem">
+          <view class="item-glyph">{{item.glyph}}</view>
           <view class="item-name-row">
             <text class="item-name">{{item.name}}</text>
-            <text class="item-owned" wx:if="{{cards > 0}}">持有 {{cards}} 张</text>
+            <text class="item-owned" wx:if="{{cards > 0}}">持有{{cards}}张</text>
           </view>
-          <text class="item-sub">{{item.subtitle}} · {{item.validDays}} 天有效</text>
+          <text class="item-sub">{{item.subtitle}} · {{item.validDays}}天有效</text>
+          <view class="item-foot">
+            <view class="item-side">
+              <text class="item-price">{{item.price}}</text>
+              <text class="item-price-unit">积分</text>
+            </view>
+            <view class="item-go">兑换</view>
+          </view>
         </view>
-        <view class="item-side">
-          <text class="item-price">{{item.price}}</text>
-          <text class="item-price-unit">积分</text>
-        </view>
-        <text class="link-arrow">›</text>
       </view>
     </view>
   </block>

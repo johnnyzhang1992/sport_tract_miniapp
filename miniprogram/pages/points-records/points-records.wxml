@@ -10,6 +10,8 @@
           <text class="balance-num">{{balance}}</text>
           <text class="balance-label">当前积分</text>
         </view>
+        <!-- 从「兑换记录」入口进入时展示筛选态 -->
+        <view wx:if="{{typeFilter}}" class="type-filter-tag">仅看兑换记录</view>
       </view>
       <view wx:if="{{items.length}}" class="record-list">
         <view wx:for="{{items}}" wx:key="id" class="record-row">

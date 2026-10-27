@@ -17,6 +17,14 @@
 
 /* 顶部余额区与积分页同一套蓝渐变英雄区（points.wxss .balance-card），白字最浅处 4.59:1 */
 /* 卡头余额（2026-10-26 去色块）：与积分主页签到卡头同款手法 */
+.type-filter-tag {
+  font-size: 22rpx;
+  color: #2b6cf6;
+  background: #eaf1ff;
+  border-radius: 999rpx;
+  padding: 6rpx 18rpx;
+}
+
 .balance-head {
   padding: 4rpx 4rpx 20rpx;
   border-bottom: 1rpx solid #f2f3f5;

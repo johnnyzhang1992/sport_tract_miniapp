@@ -22,9 +22,13 @@ Page({
     loadingMore: false, // 仅触底翻页：底栏内联提示，不清列表
     failed: false, // 首屏失败：整页错误态
     loadMoreFailed: false, // 翻页失败：保留已有行，底栏给重试
+    typeFilter: '', // 明细类型筛选（空 = 全部）；入口可带 type 进入
   },
 
-  onLoad() {
+  onLoad(options) {
+    // 支持带 type 进入（如「兑换记录」入口带 type=exchange）：只看该类型明细
+    const type = options && options.type ? String(options.type) : '';
+    this.setData({ typeFilter: type });
     this.fetch(1);
   },
 
@@ -53,7 +57,11 @@ Page({
       return;
     }
     try {
-      const data = await api.get('/points/records', { page, pageSize: PAGE_SIZE });
+      const typeFilter = this.data.typeFilter;
+      const data = await api.get(
+        '/points/records',
+        typeFilter ? { page, pageSize: PAGE_SIZE, type: typeFilter } : { page, pageSize: PAGE_SIZE },
+      );
       const items = (data.items || []).map((it) => ({
         id: it.id,
         title: it.title,

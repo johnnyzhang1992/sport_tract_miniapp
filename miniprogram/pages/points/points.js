@@ -202,6 +202,11 @@ Page({
     wx.navigateTo({ url: '/pages/points-records/points-records' });
   },
 
+  // 兑换记录：明细页带 type=exchange 筛选（2026-10-26）
+  goExchangeRecords() {
+    wx.navigateTo({ url: '/pages/points-records/points-records?type=exchange' });
+  },
+
   goRules() {
     wx.navigateTo({ url: '/pages/points-rules/points-rules' });
   },

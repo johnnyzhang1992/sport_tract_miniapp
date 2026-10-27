@@ -37,7 +37,7 @@ test('PP2 积分页：签到/任务/兑换入口存在，有效期由接口 vali
   assert.ok(wxml.includes('补签卡'));
   assert.ok(wxml.includes('积分规则'));
   assert.ok(wxml.includes('积分明细'));
-  assert.ok(wxml.includes('{{item.validDays}} 天有效'), '兑换卡有效期要渲染接口下发的 validDays');
+  assert.ok(wxml.includes('{{item.validDays}}天有效'), '兑换卡有效期要渲染接口下发的 validDays');
   assert.ok(!wxml.includes('30 天有效'), '不能在 WXML 写死 30 天');
 });
 
@@ -296,12 +296,13 @@ test('PP5b 冷启动竞态：首屏停在游客引导，回到本页时会话已
   assert.equal(p.data.loggedIn, true, '回到本页要自己补拉，不能继续要用户点引导');
 });
 
-test('PP5c 道具区是卡片列表：一个道具一张卡，图位用名称首字', () => {
+test('PP5c 道具区是卡片列表：一行两个竖排卡，图位用名称首字', () => {
   const wxml = read('miniprogram/pages/points/points.wxml');
   assert.ok(/wx:for="{{items}}"/.test(wxml), '道具区要按接口下发的商品表循环，不能写死一张');
-  assert.ok(wxml.includes('class="item-card"'), '每个道具一张卡（不是原来那行「标题+箭头」）');
+  assert.ok(wxml.includes('class="item-grid"') && wxml.includes('class="item-card"'), '两列网格 + 每个道具一张卡');
   assert.ok(wxml.includes('{{item.glyph}}'), '卡上图位用派生好的首字，不在 wxml 里拼字符串');
-  assert.ok(wxml.includes('持有 {{cards}} 张'), '持卡数要在卡上带出来，兑换前就该知道自己有几张');
+  assert.ok(wxml.includes('持有{{cards}}张'), '持卡数要在卡上带出来，兑换前就该知道自己有几张');
+  assert.ok(wxml.includes('goExchangeRecords'), '标题右侧要有兑换记录入口');
 });
 
 test('PP6 签到：POST /points/sign-in 后刷新汇总', async () => {
@@ -654,6 +655,35 @@ test('PP12 明细页使用 /points/records，规则页含签到/有效期/补签
   assert.ok(rules.includes('次日'));
   assert.ok(rules.includes('补签卡'));
   assert.ok(rules.includes('100'));
+});
+
+test('PP13b 明细页带 type 进入：筛选参数透传 + 筛选标签展示', async () => {
+  reset({ loggedIn: true });
+  appLoggedIn = true;
+  summaryRespond = () => Promise.resolve({ balance: 9, total: 1, items: [recordItem({ type: 'exchange' })] });
+  const def = loadPage('miniprogram/pages/points-records/points-records.js');
+  // 模拟「兑换记录」入口：onLoad({ type: 'exchange' })
+  const p = Object.assign({}, def);
+  p.data = JSON.parse(JSON.stringify(def.data));
+  p.setData = (patch = {}) => Object.assign(p.data, patch);
+  p.onLoad({ type: 'exchange' });
+  await tick();
+  assert.equal(p.data.typeFilter, 'exchange');
+  const recCalls = calls().filter((c) => c.startsWith('GET /points/records'));
+  assert.ok(recCalls.length >= 1);
+  assert.deepEqual(apiCalls.find((c) => c.url === '/points/records').params.type, 'exchange');
+  assert.ok(read('miniprogram/pages/points-records/points-records.wxml').includes('仅看兑换记录'));
+
+  // 不带 type：不透传筛选
+  apiCalls.length = 0;
+  const q = Object.assign({}, def);
+  q.data = JSON.parse(JSON.stringify(def.data));
+  q.setData = (patch = {}) => Object.assign(q.data, patch);
+  q.onLoad();
+  await tick();
+  assert.equal(q.data.typeFilter, '');
+  const plain = apiCalls.find((c) => c.url === '/points/records');
+  assert.ok(plain && !('type' in plain.params), '无筛选时不应带 type 参数');
 });
 
 test('PP13 app.json 注册积分明细与积分规则页', () => {

@@ -8,7 +8,7 @@
    左「N 积分 ›」进明细、右「规则 ›」，七格/签到按钮在其下；页面不再有独立头部 */
 .signin-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   padding: 4rpx 4rpx 0;
 }
@@ -28,13 +28,19 @@
 }
 
 .balance-label {
-  font-size: 24rpx;
+  font-size: 26rpx;
   color: #2b6cf6;
+  padding: 12rpx 0 12rpx 4rpx; /* 加大点击热区（2026-10-26）：文字不变，热区包住上下 */
 }
 
+/* 规则入口改成胶囊：命中区大、不用眯眼找小字 */
 .rules-link {
-  font-size: 24rpx;
-  color: #8a93a6;
+  flex: none;
+  font-size: 26rpx;
+  color: #404653;
+  background: #f2f3f5;
+  border-radius: 999rpx;
+  padding: 12rpx 28rpx;
 }
 
 .row-hover {
@@ -171,6 +177,19 @@
   margin-bottom: 4rpx;
 }
 
+/* 分区标题行：左标题右链接（兑换记录） */
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.section-link {
+  font-size: 26rpx;
+  color: #2b6cf6;
+  padding: 8rpx 0 8rpx 16rpx; /* 左侧留白扩热区 */
+}
+
 .task-row {
   display: flex;
   align-items: center;
@@ -215,43 +234,42 @@
   border: none;
 }
 
-/* 道具卡：浅灰底自成一块（一道具一张），图位白底金字，与商品页头图同一套观感 */
-.item-card {
-  display: flex;
-  align-items: center;
+/* 道具卡：一行两个竖排卡（2026-10-26 改版），图位白底金字在上，价格+兑换钮压底 */
+.item-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 16rpx;
   margin-top: 12rpx;
-  padding: 16rpx;
+}
+
+.item-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+  padding: 20rpx;
   border-radius: 16rpx;
   background: #f7f8fa;
 }
 
 .item-glyph {
   flex: none;
-  width: 64rpx;
-  height: 64rpx;
-  border-radius: 14rpx;
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 20rpx;
   background: #fff;
   color: #8a5f12;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 32rpx;
+  font-size: 44rpx;
   font-weight: 700;
-}
-
-.item-body {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6rpx;
 }
 
 .item-name-row {
   display: flex;
   align-items: center;
-  gap: 12rpx;
+  flex-wrap: wrap;
+  gap: 8rpx;
 }
 
 .item-name {
@@ -291,9 +309,20 @@
   color: #667080;
 }
 
-.link-arrow {
-  color: #8a93a6;
-  font-size: 32rpx;
+/* 卡底行：价格左、兑换钮右；margin-top:auto 保证多行副标题时钮仍贴底 */
+.item-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+}
+
+.item-go {
+  font-size: 24rpx;
+  color: #fff;
+  background: #2b6cf6;
+  border-radius: 999rpx;
+  padding: 10rpx 28rpx;
 }
 
 .empty {
