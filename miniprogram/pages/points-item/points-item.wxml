@@ -1,7 +1,8 @@
 <view class="page">
   <view wx:if="{{loading}}" class="state">加载中…</view>
   <view wx:elif="{{failed}}" class="state state-tap" bindtap="onRetry">加载失败，点击重试</view>
-  <view wx:elif="{{!loggedIn}}" class="state state-tap" bindtap="onLoginTap">登录后兑换补签卡</view>
+  <!-- 商品由 ?key= 决定，游客态拿不到商品时按老口径（补签卡）出文案 -->
+  <view wx:elif="{{!loggedIn}}" class="state state-tap" bindtap="onLoginTap">{{isMakeup ? '登录后兑换补签卡' : '登录后兑换'}}</view>
   <block wx:elif="{{item}}">
     <view class="card card-first">
       <!-- 商品头（并入首卡，2026-10-26 去色块）：图位 + 名称/副题 + 右侧价格 -->
@@ -23,23 +24,23 @@
         <text class="meta-label">有效期</text>
         <text class="meta-value">兑换后 {{item.validDays}} 天</text>
       </view>
-      <view class="meta-row" wx:if="{{cards > 0}}">
+      <!-- 持卡数只有补签卡有「我的补签卡」这一栏（免广告卡没有同类持有物） -->
+      <view class="meta-row" wx:if="{{isMakeup && cards > 0}}">
         <text class="meta-label">我的补签卡</text>
         <text class="meta-value">{{cards}} 张</text>
       </view>
     </view>
 
-    <view class="card">
+    <!-- 兑换说明由服务端 notes 下发（每件商品一套），没有就整块不出现 -->
+    <view class="card" wx:if="{{item.notes && item.notes.length}}">
       <view class="section-title">兑换说明</view>
-      <view class="note">· 每张补签卡仅可使用一次，每个漏签日最多补一次</view>
-      <view class="note">· 兑换后 {{item.validDays}} 天内有效，过期作废</view>
-      <view class="note">· 兑换后不退积分</view>
+      <view class="note" wx:for="{{item.notes}}" wx:key="*this">· {{item}}</view>
     </view>
 
     <view class="links">
       <text class="link" bindtap="goExchanges">兑换记录 ›</text>
       <!-- 入口判据来自 summary 的 cells（有 makeup 格才显示），不再看持卡数：能补的不止昨天 -->
-      <text class="link" wx:if="{{canMakeup}}" bindtap="goMakeup">去补签 ›</text>
+      <text class="link" wx:if="{{isMakeup && canMakeup}}" bindtap="goMakeup">去补签 ›</text>
     </view>
 
     <view class="buy-space"></view>

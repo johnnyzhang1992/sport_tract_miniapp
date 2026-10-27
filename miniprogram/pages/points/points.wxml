@@ -70,7 +70,7 @@
         <text class="section-link" hover-class="row-hover" hover-stay-time="80" bindtap="goExchangeRecords">兑换记录 ›</text>
       </view>
       <view class="item-grid">
-        <view wx:for="{{items}}" wx:key="key" class="item-card" hover-class="row-hover" hover-stay-time="80" bindtap="goItem">
+        <view wx:for="{{items}}" wx:key="key" class="item-card" data-key="{{item.key}}" hover-class="row-hover" hover-stay-time="80" bindtap="goItem">
           <view class="item-glyph">{{item.glyph}}</view>
           <view class="item-name-row">
             <text class="item-name">{{item.name}}</text>

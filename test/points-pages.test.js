@@ -405,6 +405,19 @@ test('PP10 入口跳转：明细/规则/补签卡兑换页，补签不再用 mak
     '/pages/points-item/points-item',
   ]);
 
+  // Task 14：点哪张道具卡就把 key 带进详情页；无参调用（补签无卡跳兑换）仍是老链接
+  navs.length = 0;
+  p.goItem({ currentTarget: { dataset: { key: 'ad_free_7d' } } });
+  p.goItem({ currentTarget: { dataset: {} } });
+  assert.deepEqual(navs, [
+    '/pages/points-item/points-item?key=ad_free_7d',
+    '/pages/points-item/points-item',
+  ], 'goItem 从 data-key 取 key；没有 key 时不拼空参数');
+  assert.ok(
+    read('miniprogram/pages/points/points.wxml').includes('data-key="{{item.key}}"'),
+    '道具卡要把 key 回传给 goItem',
+  );
+
   const js = read('miniprogram/pages/points/points.js');
   assert.ok(js.includes('/points/signin/makeup'), '补签走服务端按日接口 POST /points/signin/makeup');
   assert.ok(!js.includes('/points/cards/'), '旧「按卡 id 消耗」端点已删除，前端不再挑卡');
@@ -935,7 +948,8 @@ test('PP21 app.json 注册补签卡详情与兑换记录页；两页接入正确
   assert.ok(app.pages.includes('pages/points-exchanges/points-exchanges'));
 
   const item = read(ITEM_JS);
-  assert.ok(item.includes('makeup_card/exchange'));
+  // Task 14：兑换接口按商品自己的 key 拼，补签卡（makeup_card）只是它的一个实例
+  assert.ok(item.includes('/points/items/${this.data.item.key}/exchange'), '兑换走 /points/items/{key}/exchange');
   assert.ok(item.includes('requestId'));
   assert.ok(read(EX_JS).includes('/points/exchanges'));
 });
@@ -958,16 +972,21 @@ test('PP22 商品页：/points/items + /points/summary 映射价格/余额/卡�
 
   const wxml = read(ITEM_WXML);
   assert.ok(wxml.includes('{{priceText}}'), '底部按钮文案由接口价格拼出「200 积分兑换」');
-  // round 1 收紧：兑换说明钉在 note 行本身，不再对全文取裸子串——wxml 注释里出现「昨天」
-  // 顶不掉断言，旧「只能补签昨天」静态说明（与同屏服务端描述矛盾）若复活必红。
-  const notes = [...wxml.matchAll(/<view class="note">([\s\S]*?)<\/view>/g)].map((m) => m[1]).join(' ');
-  assert.ok(notes.includes('每张补签卡仅可使用一次'), '兑换说明须保留「每张补签卡仅可使用一次」note');
-  assert.ok(notes.includes('不退积分'), '兑换说明须保留「不退积分」note');
-  assert.ok(!notes.includes('昨天'), 'note 行不得再出现「只能补签昨天」旧窗口口径——可补范围以服务端下发描述为准');
+  // 兑换说明改成按服务端下发的 item.notes 循环（每件商品自己的一套），补签卡三条不再写死在 wxml
+  assert.ok(
+    /<view class="note" wx:for="\{\{item\.notes\}\}" wx:key="\*this">· \{\{item\}\}<\/view>/.test(wxml),
+    '兑换说明按 item.notes 循环，说明文案归服务端',
+  );
+  assert.ok(!wxml.includes('每张补签卡仅可使用一次'), '补签卡专属说明由服务端 notes 下发，wxml 不再硬编码');
+  assert.ok(!wxml.includes('不退积分'), '说明三条一并交给服务端，wxml 不留补签卡专属文本');
+  // 说明行本身（含 wx:for 属性）不得再夹带写死的旧窗口口径；wxml 注释里提「昨天」不算
+  const noteRows = [...wxml.matchAll(/<view class="note"[^>]*>([\s\S]*?)<\/view>/g)].map((m) => m[1]).join(' ');
+  assert.ok(!noteRows.includes('昨天'), 'note 行不得再出现「只能补签昨天」旧窗口口径——可补范围以服务端下发 notes 为准');
   assert.ok(!wxml.includes('只能补签昨天'), '静态旧文案「只能补签昨天」不得以任何节点复活');
-  assert.ok(wxml.includes('{{item.validDays}} 天内有效'), '有效期天数由接口 validDays 拼出，不写死 30');
+  assert.ok(wxml.includes('{{item.validDays}} 天'), '有效期天数由接口 validDays 拼出，不写死 30');
   assert.ok(!wxml.includes('30 天'), 'WXML 里不能再硬编码 30 天');
   assert.ok(wxml.includes('我的补签卡'), '已有未使用卡时展示「我的补签卡 N 张」');
+  assert.ok(wxml.includes('wx:if="{{isMakeup && cards > 0}}"'), '这一栏是补签卡专属，非补签商品不出现');
   assert.ok(wxml.includes('兑换记录'));
   assert.ok(wxml.includes('bindtap="goExchanges"'));
 
@@ -1093,6 +1112,74 @@ test('PP26 商品页请求失败：failed 置位可点击重试，重试成功�
   assert.equal(p.data.balance, 200);
 });
 
+test('PP39 商品详情页按 ?key= 取商品：免广告卡走自己的兑换接口、不出补签块；无 key/未知 key 仍落补签卡', async () => {
+  const adFree = {
+    key: 'ad_free_7d',
+    name: '免广告卡 7 天',
+    subtitle: '7 天内免广告',
+    price: 100,
+    validDays: 7,
+    description: '兑换后 7 天内免广告',
+    notes: ['每张仅限本人使用', '兑换后不退积分'],
+    effect: { kind: 'ad_free', days: 7 },
+  };
+  /** 两件在架商品，/points/summary 用 PP37 那份（含 makeup 格，余额够买免广告卡） */
+  const twoItems = (p) => {
+    if (p === '/points/items') return Promise.resolve([itemFixture(), adFree]);
+    return Promise.resolve(Object.assign({}, summaryFixture(), { balance: 300 }));
+  };
+  const bootItemPage = (query) => {
+    const def = loadPage(ITEM_JS);
+    const p = Object.assign({}, def);
+    p.data = JSON.parse(JSON.stringify(def.data));
+    p.setData = (patch = {}) => Object.assign(p.data, patch);
+    p.onLoad(query);
+    return p;
+  };
+
+  reset();
+  summaryRespond = twoItems;
+  const p = bootItemPage({ key: 'ad_free_7d' });
+  await tick();
+  assert.equal(p.data.item.key, 'ad_free_7d');
+  assert.equal(p.data.isMakeup, false, '免广告卡不是补签卡：我的补签卡/去补签/补签文案都不出');
+  assert.equal(p.data.priceText, '100 积分兑换', '价格文案仍由这件商品的 price 拼');
+  assert.equal(p.data.canMakeup, true, '可补判定照常从 cells 派生（只是非补签商品不显示入口）');
+  assert.deepEqual(p.data.item.notes, adFree.notes, '兑换说明原样用服务端下发的 notes');
+
+  apiCalls.length = 0;
+  postRespond = () => Promise.resolve({});
+  await p.onExchange();
+  await tick();
+  assert.equal(
+    apiCalls.find((c) => c.method === 'POST').url,
+    '/points/items/ad_free_7d/exchange',
+    '兑换按这件商品自己的 key 提交，不再写死 makeup_card',
+  );
+
+  // 老链接（无 key）与未知 key 都回落第一项＝补签卡（服务端把 makeup_card 排最前）
+  reset();
+  summaryRespond = twoItems;
+  const legacy = bootItemPage();
+  await tick();
+  assert.equal(legacy.data.item.key, 'makeup_card');
+  assert.equal(legacy.data.isMakeup, true, 'effect 缺失的老商品按补签卡处理，补签块照常显示');
+
+  reset();
+  summaryRespond = twoItems;
+  const unknown = bootItemPage({ key: 'nope' });
+  await tick();
+  assert.equal(unknown.data.item.key, 'makeup_card', 'key 查不到也不破，回落补签卡');
+
+  // wxml：兑换说明是 notes 循环，补签文案按 isMakeup 二选一
+  const wxml = read(ITEM_WXML);
+  assert.ok(wxml.includes('wx:for="{{item.notes}}"'), '兑换说明按服务端 notes 循环');
+  assert.ok(
+    wxml.includes("{{isMakeup ? '登录后兑换补签卡' : '登录后兑换'}}"),
+    '游客态文案按 isMakeup 分流：非补签商品读「登录后兑换」',
+  );
+});
+
 test('PP27 兑换记录页：状态映射、未知状态兜底、时间与消耗格式化（行内补签入口已收口，见 PP38）', async () => {
   reset();
   const future = Date.now() + 86400000;
@@ -1204,11 +1291,12 @@ test('PP37 商品页「去补签」入口以 cells 为准：有 makeup 格才出
   assert.equal(s.data.failed, false);
   assert.equal(s.data.canMakeup, false);
 
-  // ④ wxml 钉牢：链接的显示条件绑 canMakeup（由 cells 派生），文案不再写死「昨天」
+  // ④ wxml 钉牢：链接的显示条件绑 canMakeup（由 cells 派生），文案不再写死「昨天」；
+  //    非补签商品（免广告卡）也不该露这个入口，故与 isMakeup 同时成立才显示
   const wxml = read(ITEM_WXML);
   assert.ok(
-    wxml.includes('<text class="link" wx:if="{{canMakeup}}" bindtap="goMakeup">去补签 ›</text>'),
-    '链接整标签匹配：wx:if 是 canMakeup、文案是「去补签」（能补的不止昨天）',
+    wxml.includes('<text class="link" wx:if="{{isMakeup && canMakeup}}" bindtap="goMakeup">去补签 ›</text>'),
+    '链接整标签匹配：wx:if 是 isMakeup && canMakeup、文案是「去补签」（能补的不止昨天）',
   );
   assert.ok(!wxml.includes('去补签昨天'), '旧文案「去补签昨天」要删');
 });

@@ -211,7 +211,12 @@ Page({
     wx.navigateTo({ url: '/pages/points-rules/points-rules' });
   },
 
-  goItem() {
-    wx.navigateTo({ url: '/pages/points-item/points-item' });
+  /**
+   * 进商品详情：key 由卡片 data-key 回传（点哪张卡进哪件商品）。
+   * 无参调用（补签时手里没卡，直接去兑换补签卡）不带 key，详情页回落第一项＝补签卡。
+   */
+  goItem(e) {
+    const key = (e && e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.key) || '';
+    wx.navigateTo({ url: `/pages/points-item/points-item${key ? `?key=${key}` : ''}` });
   },
 });
