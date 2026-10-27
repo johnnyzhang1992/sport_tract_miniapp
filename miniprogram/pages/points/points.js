@@ -202,9 +202,9 @@ Page({
     wx.navigateTo({ url: '/pages/points-records/points-records' });
   },
 
-  // 兑换记录：明细页带 type=exchange 筛选（2026-10-26）
+  // 兑换记录：进专页（我的订单 + 道具兑换记录），明细页筛 type=exchange 只有账本行、看不到卡状态与订单
   goExchangeRecords() {
-    wx.navigateTo({ url: '/pages/points-records/points-records?type=exchange' });
+    wx.navigateTo({ url: '/pages/points-exchanges/points-exchanges' });
   },
 
   goRules() {

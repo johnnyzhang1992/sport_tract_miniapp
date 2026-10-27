@@ -136,8 +136,9 @@
   color: #2b6cf6;
 }
 
+/* 滚动区尾部留白：要盖住「提示行 + 按钮 + 内边距」整条购买栏（约 179rpx），再叠安全区 */
 .buy-space {
-  height: 140rpx;
+  height: calc(184rpx + env(safe-area-inset-bottom));
 }
 
 .buy-bar {
@@ -145,7 +146,8 @@
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 16rpx 32rpx 32rpx;
+  /* 底部垫安全区：不垫的话按钮压在 iPhone 的 Home 条上 */
+  padding: 16rpx 32rpx calc(32rpx + env(safe-area-inset-bottom));
   background: #fff;
   box-shadow: 0 -2rpx 12rpx rgba(31, 35, 41, 0.06);
 }
@@ -173,4 +175,82 @@
 .buy-btn.off {
   background: #64748f;
   color: #fff;
+}
+
+/* ===== 实物商品（2026-10-27 实物批次）===== */
+/* 头图位：与 .hero-icon 同尺寸，换成图以后版面不动（图缺省时仍走首字方块） */
+.hero-img {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 20rpx;
+  background: #f7f8fa;
+  flex-shrink: 0;
+}
+
+/* 商品详情图：整宽竖排，高度随原图比例走（服务端下发 medium 档 w_800，够整宽用） */
+.detail-list {
+  margin-top: 20rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+.detail-img {
+  width: 100%;
+  border-radius: 16rpx;
+  background: #f7f8fa;
+}
+
+/* 收货地址：标签左 / 控件右，输入框带可见底框（没底框看不出这一格能填） */
+.addr-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 12rpx 0;
+  border-bottom: 1rpx solid #f2f3f5;
+}
+.addr-row-top {
+  align-items: flex-start;
+}
+.addr-label {
+  width: 120rpx;
+  flex-shrink: 0;
+  font-size: 26rpx;
+  color: #8a93a6;
+}
+.addr-input {
+  flex: 1;
+  min-width: 0;
+  height: 64rpx;
+  box-sizing: border-box;
+  padding: 0 16rpx;
+  font-size: 26rpx;
+  color: #1f2329;
+  background: #f7f8fa;
+  border: 1rpx solid #e6e8eb;
+  border-radius: 12rpx;
+}
+.addr-textarea {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  box-sizing: border-box;
+  padding: 12rpx 16rpx;
+  height: 64rpx;
+  font-size: 26rpx;
+  color: #1f2329;
+  background: #f7f8fa;
+  border: 1rpx solid #e6e8eb;
+  border-radius: 12rpx;
+}
+/* 校验错误只在点过兑换之后出现（边输边报很吵），文案由 utils/points-item-view 给 */
+.addr-err {
+  margin-top: 14rpx;
+  font-size: 24rpx;
+  color: #e34d59;
+}
+.addr-tip {
+  margin-top: 12rpx;
+  font-size: 22rpx;
+  color: #8a93a6;
+  line-height: 1.6;
 }

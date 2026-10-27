@@ -44,8 +44,12 @@
       <view class="section-title">每日任务</view>
       <view wx:for="{{taskGroups.dailyTasks}}" wx:key="key" class="task-row">
         <view>
-          <text class="task-title">{{item.title}}</text>
-          <text class="task-points">+{{item.points}}</text>
+          <view>
+            <text class="task-title">{{item.title}}</text>
+            <text class="task-points">+{{item.points}}</text>
+          </view>
+          <!-- 每日多次的任务（看视频）补一行剩余次数，按钮文案说不清「还剩几次」 -->
+          <view class="task-sub" wx:if="{{item.timesText}}">{{item.timesText}}</view>
         </view>
         <view class="task-action {{item.statusClass}}" data-key="{{item.key}}" bindtap="onClaim">{{item.actionText}}</view>
       </view>
@@ -63,7 +67,7 @@
       </view>
     </view>
 
-    <!-- 道具区：接口下发整张商品表，一行两个竖排卡（2026-10-26 改版）；标题右「兑换记录」进明细筛选 -->
+    <!-- 道具区：接口下发整张商品表，一行两个竖排卡（2026-10-26 改版）；标题右「兑换记录」进兑换记录页（含我的订单） -->
     <view class="card" wx:if="{{items.length}}">
       <view class="section-head">
         <view class="section-title">积分兑换</view>
@@ -76,10 +80,11 @@
             <text class="item-name">{{item.name}}</text>
             <text class="item-owned" wx:if="{{cards > 0}}">持有{{cards}}张</text>
           </view>
-          <text class="item-sub">{{item.subtitle}} · {{item.validDays}}天有效</text>
+          <text class="item-sub">{{item.subtitle}}</text>
+          <text class="item-meta">{{item.metaText}}</text>
           <view class="item-foot">
             <view class="item-side">
-              <text class="item-price">{{item.price}}</text>
+              <text class="item-price">{{item.priceText}}</text>
               <text class="item-price-unit">积分</text>
             </view>
             <view class="item-go">兑换</view>

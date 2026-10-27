@@ -1,1 +1,5 @@
-{ "navigationBarTitleText": "补签卡" }
+{
+  "navigationBarTitleText": "补签卡",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark"
+}

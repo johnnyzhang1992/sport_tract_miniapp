@@ -106,7 +106,8 @@ test('PV6 道具卡：图位取名称首字，价格/有效期原样带出', () 
   ]);
   assert.equal(cards.length, 1);
   assert.deepEqual(cards[0], {
-    key: 'makeup_card', name: '补签卡', subtitle: '恢复连续打卡记录', price: 200, validDays: 30, glyph: '补',
+    key: 'makeup_card', name: '补签卡', subtitle: '恢复连续打卡记录', price: 200, priceText: '200', validDays: 30,
+    validText: '30 天有效', stockText: '', metaText: '30 天有效', glyph: '补',
   });
   assert.deepEqual(buildItemCards(undefined), [], '接口没下发商品表时给空数组，wxml 的 wx:if 才不会红');
 });
@@ -164,4 +165,45 @@ test('PV10 shiftDateKey 纯 UTC 算术：不因本地时区漂日，跨月跨年
   assert.equal(shiftDateKey('2026-10-31', 1), '2026-11-01');
   assert.equal(shiftDateKey('2026-12-31', 1), '2027-01-01');
   assert.equal(shiftDateKey('2027-01-01', -1), '2026-12-31');
+});
+
+test('PV9 每日多次任务带出剩余次数：看视频 3 次递减，领满/老接口都不显示副行', () => {
+  const g = buildTaskRows([
+    { key: 'daily_video', title: '观看广告视频', points: 5, status: 'claimable', actionText: '去观看', times: 3, timesLeft: 2 },
+    { key: 'daily_activity', title: '运动记录', points: 1, status: 'locked', actionText: '去运动', times: 1, timesLeft: 1 },
+  ]);
+  assert.deepEqual(g.dailyTasks.map((r) => [r.times, r.timesLeft, r.timesText]), [
+    [3, 2, '今日还剩 2 次'],
+    [1, 1, ''],
+  ]);
+
+  // 领满：服务端给 claimed + timesLeft 0，副行不显示（按钮已经写「已领取」）
+  const done = buildTaskRows([{ key: 'daily_video', title: '观看广告视频', points: 5, status: 'claimed', actionText: '已领取', times: 3, timesLeft: 0 }]);
+  assert.equal(done.dailyTasks[0].timesText, '');
+
+  // 老接口缺字段：按 1 次处理，不显示副行
+  const legacy = buildTaskRows([{ key: 'daily_video', title: '观看广告视频', points: 5, status: 'claimable', actionText: '去观看' }]);
+  assert.deepEqual([legacy.dailyTasks[0].times, legacy.dailyTasks[0].timesLeft, legacy.dailyTasks[0].timesText], [1, 1, '']);
+});
+
+test('PV11 道具卡价格走千分位：与详情页按钮 28,900 同口径，不出现 28900', () => {
+  const cards = buildItemCards([
+    { key: 'mi_band_11', name: '小米手环11标准版', subtitle: '', price: 28900, validDays: 30 },
+    { key: 'makeup_card', name: '补签卡', subtitle: '', price: 200, validDays: 30 },
+  ]);
+  assert.deepEqual(cards.map((c) => c.priceText), ['28,900', '200']);
+});
+
+test('PV12 道具卡有效期/库存成一行 meta：有效期不再跟副标题挤在一行折断', () => {
+  const cards = buildItemCards([
+    { key: 'makeup_card', name: '补签卡', subtitle: '恢复连续打卡记录', price: 200, validDays: 30, stockLeft: null },
+    { key: 'mi_band_11', name: '小米手环11标准版', subtitle: '24 小时心率与血氧', price: 28900, validDays: 30, stockLeft: 9997 },
+    // 老接口没下发 stockLeft：只显示有效期，别瞎猜「不限量」
+    { key: 'ad_free_7d', name: '免广告卡', subtitle: '', price: 200, validDays: 30 },
+  ]);
+  assert.deepEqual(cards.map((c) => c.validText), ['30 天有效', '30 天有效', '30 天有效']);
+  assert.deepEqual(cards.map((c) => c.stockText), ['不限量', '剩余 9,997 件', '']);
+  assert.deepEqual(cards.map((c) => c.metaText), ['30 天有效 · 不限量', '30 天有效 · 剩余 9,997 件', '30 天有效']);
+  // 副标题保持原样，不再被拼上有效期
+  assert.equal(cards[1].subtitle, '24 小时心率与血氧');
 });

@@ -3,7 +3,47 @@
   <view wx:elif="{{failed}}" class="state state-tap" bindtap="onRetry">加载失败，点击重试</view>
   <view wx:elif="{{!loggedIn}}" class="state state-tap" bindtap="onLoginTap">登录后查看兑换记录</view>
   <block wx:else>
+    <!-- 我的订单（实物）：待发货 → 已发货 → 已完成，只有已发货能给「确认收货」 -->
+    <view class="card" wx:if="{{orders.length || ordersFailed}}">
+      <view class="section-title">我的订单</view>
+      <view wx:if="{{ordersFailed}}" class="order-fail">订单暂时读不到，退出重进本页可再试一次</view>
+      <view class="exchange-list">
+        <view wx:for="{{orders}}" wx:key="id" class="order-row">
+          <view class="order-head">
+            <text class="exchange-title">{{item.title}}</text>
+            <text class="exchange-status order-status-{{item.status}}">{{item.statusText}}</text>
+            <text class="exchange-cost">{{item.costText}}</text>
+          </view>
+          <view class="order-meta">
+            <view class="meta-line" wx:if="{{item.addrPerson}}">
+              <text class="meta-label">寄往</text>
+              <text class="meta-text">{{item.addrPerson}}</text>
+            </view>
+            <view
+              wx:if="{{item.trackingNo}}"
+              class="meta-line"
+              data-no="{{item.trackingNo}}"
+              bindtap="onCopyTracking"
+            >
+              <text class="meta-label">物流</text>
+              <text class="meta-text">{{item.trackingText}}</text>
+              <text class="track-copy">复制</text>
+            </view>
+          </view>
+          <text class="order-time">{{item.timeLine}}</text>
+          <view class="order-actions" wx:if="{{item.canConfirm}}">
+            <view
+              class="confirm-btn {{confirming === item.id ? 'off' : ''}}"
+              data-id="{{item.id}}"
+              bindtap="onConfirmReceipt"
+            >{{confirming === item.id ? '提交中…' : '确认收货'}}</view>
+          </view>
+        </view>
+      </view>
+    </view>
+
     <view wx:if="{{items.length}}" class="card">
+      <view class="section-title" wx:if="{{orders.length}}">道具兑换记录</view>
       <view class="exchange-list">
         <view wx:for="{{items}}" wx:key="id" class="exchange-row">
           <view class="exchange-main">
@@ -21,9 +61,10 @@
         </view>
       </view>
     </view>
-    <view wx:else class="empty">
+    <!-- 两边都空才出空态；只有订单没有兑换记录时不该说「还没有兑换记录」 -->
+    <view wx:elif="{{!orders.length}}" class="empty">
       <text class="empty-title">还没有兑换记录</text>
-      <text class="empty-link" bindtap="goItem">去兑换补签卡 ›</text>
+      <text class="empty-link" bindtap="goItem">去兑换 ›</text>
     </view>
   </block>
 </view>

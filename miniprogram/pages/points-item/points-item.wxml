@@ -7,7 +7,8 @@
     <view class="card card-first">
       <!-- 商品头（并入首卡，2026-10-26 去色块）：图位 + 名称/副题 + 右侧价格 -->
       <view class="item-head">
-        <view class="hero-icon">签</view>
+        <image wx:if="{{heroImage}}" class="hero-img" src="{{heroImage}}" mode="aspectFill" />
+        <view wx:else class="hero-icon">{{heroChar}}</view>
         <view class="item-head-main">
           <text class="hero-name">{{item.name}}</text>
           <text class="hero-sub">{{item.subtitle}}</text>
@@ -18,11 +19,28 @@
         </view>
       </view>
 
+      <!-- 实物详情图：后台最多传 6 张，整宽竖排、按原比例自适应高度（服务端下发 medium 档）；虚拟道具没有这一组 -->
+      <view wx:if="{{detailImages.length}}" class="detail-list">
+        <image
+          wx:for="{{detailImages}}"
+          wx:key="*this"
+          class="detail-img"
+          src="{{item}}"
+          mode="widthFix"
+          lazy-load="{{true}}"
+        />
+      </view>
+
       <view class="section-title">商品介绍</view>
       <text class="desc">{{item.description}}</text>
-      <view class="meta-row">
+      <!-- 有效期只对「发卡」有意义：实物落的是订单，卡片不发、也就没有兑换后 N 天这一说 -->
+      <view class="meta-row" wx:if="{{!isPhysical}}">
         <text class="meta-label">有效期</text>
         <text class="meta-value">兑换后 {{item.validDays}} 天</text>
+      </view>
+      <view class="meta-row" wx:if="{{isPhysical && item.perUserLimit > 0}}">
+        <text class="meta-label">每人限购</text>
+        <text class="meta-value">{{item.perUserLimit}} 件</text>
       </view>
       <!-- 持卡数只有补签卡有「我的补签卡」这一栏（免广告卡没有同类持有物） -->
       <view class="meta-row" wx:if="{{isMakeup && cards > 0}}">
@@ -35,6 +53,47 @@
     <view class="card" wx:if="{{item.notes && item.notes.length}}">
       <view class="section-title">兑换说明</view>
       <view class="note" wx:for="{{item.notes}}" wx:key="*this">· {{item}}</view>
+    </view>
+
+    <!-- 实物必填收货地址：常驻显示（不做"点兑换才弹出来"，那样人会因为看不见才点得下去） -->
+    <view class="card" wx:if="{{isPhysical}}">
+      <view class="section-title">收货地址</view>
+      <view class="addr-row">
+        <text class="addr-label">收货人</text>
+        <input
+          class="addr-input"
+          placeholder="姓名（1–20 字）"
+          value="{{addr.receiver}}"
+          data-field="receiver"
+          bindinput="onAddrInput"
+        />
+      </view>
+      <view class="addr-row">
+        <text class="addr-label">手机号</text>
+        <input
+          class="addr-input"
+          type="number"
+          maxlength="11"
+          placeholder="11 位大陆手机号"
+          value="{{addr.phone}}"
+          data-field="phone"
+          bindinput="onAddrInput"
+        />
+      </view>
+      <view class="addr-row addr-row-top">
+        <text class="addr-label">详细地址</text>
+        <textarea
+          class="addr-textarea"
+          placeholder="省 / 市 / 区 + 街道门牌（5–120 字）"
+          value="{{addr.detail}}"
+          data-field="detail"
+          bindinput="onAddrInput"
+          auto-height
+          maxlength="120"
+        />
+      </view>
+      <view class="addr-err" wx:if="{{addrErr}}">{{addrErr}}</view>
+      <view class="addr-tip">下单后由客服发货，物流单号在「兑换记录」里查看</view>
     </view>
 
     <view class="links">

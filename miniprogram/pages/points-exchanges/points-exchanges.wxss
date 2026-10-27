@@ -82,6 +82,23 @@
   color: #8a93a6;
 }
 
+/* 物流单号行：整行可点复制，右侧显式「复制」胶囊（不靠用户猜；灰底是为了不跟确认收货抢蓝色） */
+.meta-line {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  min-width: 0;
+}
+
+.track-copy {
+  flex-shrink: 0;
+  padding: 2rpx 12rpx;
+  border-radius: 999rpx;
+  background: #f2f3f5;
+  color: #4e5969;
+  font-size: 20rpx;
+}
+
 .exchange-side {
   display: flex;
   flex-direction: column;
@@ -111,4 +128,102 @@
 .empty-link {
   font-size: 24rpx;
   color: #2b6cf6;
+}
+
+/* ===== 我的订单（2026-10-27 实物批次）===== */
+.section-title {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #1f2329;
+  padding: 24rpx 0 4rpx;
+}
+
+/* 行结构与兑换记录一致（左信息右操作），只是右侧多一枚「确认收货」 */
+/* 订单卡三段式：头行（标题+状态+金额）/ 信息组 / 时间行 / 操作行（贴底右对齐）
+   不再用左右两列——右列只有两行时 align-items:center 会把金额和按钮都吊在卡片中部 */
+.order-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+  padding: 26rpx 0;
+  border-bottom: 1rpx solid #f2f3f5;
+}
+.order-row:last-child {
+  border-bottom: none;
+}
+
+.order-head {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+/* 金额靠右与标题同基线：跟头行一起排，不再单独成一列 */
+.order-head .exchange-cost {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.order-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+
+/* 两字标签当列：寄往/物流自然等宽，值再往右对齐成一列 */
+.meta-label {
+  flex-shrink: 0;
+  font-size: 22rpx;
+  color: #a8adb8;
+}
+
+.meta-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 22rpx;
+  color: #5c6472;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.order-time {
+  font-size: 22rpx;
+  color: #8a93a6;
+}
+
+/* 操作行单独一条分隔线，按钮贴右下；没有可点的操作时整行不渲染 */
+.order-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 6rpx;
+  padding-top: 18rpx;
+  border-top: 1rpx solid #f5f6f8;
+}
+
+/* 状态胶囊沿用兑换记录的约定：基类中性灰 = 已完成，还没走完的两档才给蓝 */
+.exchange-status.order-status-pending_ship,
+.exchange-status.order-status-shipped {
+  background: #eaf1ff;
+  color: #2b6cf6;
+}
+
+.confirm-btn {
+  padding: 10rpx 22rpx;
+  border-radius: 999rpx;
+  background: #eaf1ff;
+  color: #2b6cf6;
+  font-size: 24rpx;
+  line-height: 1.4;
+}
+/* 提交中：整页禁用态用观感一致的浅灰，不透明度只压这一枚按钮（别整卡 opacity 压对比度） */
+.confirm-btn.off {
+  background: #f2f3f5;
+  color: #a8adb8;
+}
+
+.order-fail {
+  padding: 24rpx 0;
+  font-size: 24rpx;
+  color: #8a93a6;
 }

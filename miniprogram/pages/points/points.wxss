@@ -212,6 +212,13 @@
   margin-left: 8rpx;
 }
 
+/* 每日多次任务的剩余次数：跟在标题下面一行，不抢主文案 */
+.task-sub {
+  margin-top: 2rpx;
+  font-size: 22rpx;
+  color: #8a93a6;
+}
+
 .task-action {
   padding: 6rpx 20rpx;
   border-radius: 999rpx;
@@ -289,6 +296,16 @@
 .item-sub {
   font-size: 22rpx;
   color: #667080;
+  /* 副标题锁单行：两列窄卡里长文案折行会从词中间断开（「30天有/效」），宁可省略 */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 有效期 + 库存：一行灰字，跟副标题分开，不再被挤断 */
+.item-meta {
+  font-size: 22rpx;
+  color: #8a93a6;
 }
 
 .item-side {

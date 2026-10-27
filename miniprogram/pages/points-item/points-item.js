@@ -13,7 +13,11 @@
  */
 const api = require('../../services/api');
 const { ensureLogin, waitSession } = require('../../utils/login-gate');
-const { pickItem, isMakeup } = require('../../utils/points-item-view');
+const { pickItem, isMakeup, isPhysical, addressError, cleanAddress } = require('../../utils/points-item-view');
+const { formatThousands } = require('../../utils/format');
+
+/** 上次填过的收货地址存在本地，下次买实物不用重打一遍（服务端订单里也有快照，但那是别人的单读不到） */
+const ADDR_KEY = 'points_addr_last';
 
 Page({
   data: {
@@ -25,6 +29,14 @@ Page({
     item: null,
     // 游客态不发请求、拿不到商品，按老口径默认补签卡；拉到商品后由 effect 覆盖
     isMakeup: true,
+    // 实物商品：多出「商品详情图」与「收货地址」两块，兑换按钮改成下单语义
+    isPhysical: false,
+    detailImages: [],
+    heroImage: '',
+    heroChar: '签',
+    addr: { receiver: '', phone: '', detail: '' },
+    /** 地址校验错误（点兑换时才校验，边输边报会很吵） */
+    addrErr: '',
     balance: 0,
     cards: 0,
     canMakeup: false,
@@ -34,6 +46,10 @@ Page({
 
   onLoad(query) {
     this.data.key = (query && query.key) || '';
+    const saved = wx.getStorageSync(ADDR_KEY);
+    if (saved && typeof saved === 'object') {
+      this.data.addr = { receiver: '', phone: '', detail: '', ...saved };
+    }
     this.fetch();
   },
 
@@ -46,8 +62,9 @@ Page({
     this.fetch();
   },
 
-  async fetch() {
-    this.setData({ loading: true, failed: false });
+  async fetch(silent = false) {
+    // 下拉刷新走静默：已有内容不闪骨架；进页/重进才给 loading
+    if (!silent) this.setData({ loading: true, failed: false });
     // 登录闸门走触点级：进页不自动弹登录，游客不发请求；冷启动直达时先等 onLaunch 那次静默登录
     if (!(await waitSession())) {
       this.setData({ loading: false, loggedIn: false });
@@ -59,13 +76,21 @@ Page({
         api.get('/points/summary'),
       ]);
       const item = pickItem(items, this.data.key);
+      this.applyTitle(item);
       this.setData({
         loggedIn: true,
         loading: false,
         item,
         isMakeup: isMakeup(item),
-        // 按钮文案由接口价格拼出（当前为「200 积分兑换」），避免前后端各写一份价格
-        priceText: item ? `${item.price} 积分兑换` : '',
+        isPhysical: isPhysical(item),
+        // 服务端已逐张签好缩略档地址；空串是脏数据，过滤掉免得端上渲染出破图
+        detailImages: (item && item.detailImages ? item.detailImages : []).filter(Boolean),
+        // 头图：有商品图用图，没图用名称首字（原来写死「签」，免广告卡和实物都顶着错字）
+        heroImage: item && item.imageUrl ? item.imageUrl : '',
+        heroChar: item && item.name ? String(item.name).slice(0, 1) : '签',
+        // 按钮文案由接口价格拼出（当前为「200 积分兑换」），避免前后端各写一份价格；
+        // 千分位是精确值（价格不是统计量，实物 28900 分要说清 28,900，不能缩成 2.9万）
+        priceText: item ? `${formatThousands(item.price)} 积分兑换` : '',
         balance: (summary && summary.balance) || 0,
         cards: (summary && summary.signin && summary.signin.cards) || 0,
         // 补签入口以服务端 cells 为准：手里有卡但当前没有可补日时，不该再给入口（判据只有 state === 'makeup'）
@@ -77,9 +102,20 @@ Page({
     }
   },
 
+  /** 标题跟着商品走：这一页早已不只展示补签卡，写死「补签卡」会让免广告卡/实物顶着错标题 */
+  applyTitle(item) {
+    wx.setNavigationBarTitle({ title: (item && item.name) || '兑换商品' });
+  },
   /** 游客点「登录后兑换…」：登录成功才请求（不在进页时弹登录） */
   async onLoginTap() {
     if (await ensureLogin(this.data.isMakeup ? '登录后兑换补签卡。' : '登录后兑换。')) this.fetch();
+  },
+
+  /** 地址输入：只更新对应字段并清掉上一次的报错（边输边报很吵，点兑换时才校验） */
+  onAddrInput(e) {
+    const field = e.currentTarget.dataset.field;
+    if (!field || !(field in this.data.addr)) return;
+    this.setData({ addr: Object.assign({}, this.data.addr, { [field]: e.detail.value }), addrErr: '' });
   },
 
   async onExchange() {
@@ -91,13 +127,25 @@ Page({
       });
       return;
     }
+    const physical = this.data.isPhysical;
+    let address = null;
+    if (physical) {
+      // 实物必填地址（服务端也会校验，这里先拦一层，免得点下去才知道哪个格子没填）
+      const err = addressError(this.data.addr);
+      if (err) {
+        this.setData({ addrErr: err });
+        return;
+      }
+      address = cleanAddress(this.data.addr);
+    }
     this.setData({ busy: true });
     // 每次点击都换新 requestId：同一 requestId 在服务端只会扣一次分、发一次道具
     const requestId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     try {
       // 按这件商品自己的 key 兑换：补签卡是 /items/makeup_card/exchange，免广告卡是 /items/ad_free_7d/exchange
-      await api.post(`/points/items/${this.data.item.key}/exchange`, { requestId });
-      wx.showToast({ title: '兑换成功', icon: 'success' });
+      await api.post(`/points/items/${this.data.item.key}/exchange`, { requestId, ...(address ? { address } : {}) });
+      if (physical) wx.setStorageSync(ADDR_KEY, address);
+      wx.showToast({ title: physical ? '已下单，等待发货' : '兑换成功', icon: 'success' });
       // 等刷新落地再清 busy，避免卡数/余额还是旧值时按钮先恢复可点
       await this.fetch();
     } catch (e) {
@@ -109,6 +157,15 @@ Page({
 
   onRetry() {
     return this.fetch();
+  },
+
+  /** 下拉刷新：静默重拉商品与汇总（价格/余额/库存会变），失败也收起动画 */
+  async onPullDownRefresh() {
+    try {
+      await this.fetch(true);
+    } finally {
+      wx.stopPullDownRefresh();
+    }
   },
 
   goMakeup() {

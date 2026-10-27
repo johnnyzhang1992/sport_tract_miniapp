@@ -41,10 +41,14 @@ Page({
     this.fetch(1);
   },
 
-  async fetch(page) {
-    // 加载态先落（翻页只亮底栏，不把整页打回「加载中」），再过登录闸门
-    if (page === 1) this.setData({ loading: true, failed: false, loadMoreFailed: false });
-    else this.setData({ loadingMore: true, loadMoreFailed: false });
+  async fetch(page, silent = false) {
+    // 加载态先落（翻页只亮底栏，不把整页打回「加载中」），再过登录闸门；
+    // 下拉刷新（silent）跳过 loading，已有行不闪骨架
+    if (page === 1) {
+      this.setData(silent
+        ? { failed: false, loadMoreFailed: false }
+        : { loading: true, failed: false, loadMoreFailed: false });
+    } else this.setData({ loadingMore: true, loadMoreFailed: false });
     // 登录闸门走触点级：游客不发请求；冷启动直达时先等 onLaunch 那次静默登录
     if (!(await waitSession())) {
       this.setData({
@@ -104,5 +108,14 @@ Page({
 
   onRetry() {
     return this.fetch(1);
+  },
+
+  /** 下拉刷新：收回第一页静默重拉（余额与明细都会变），失败也收起动画 */
+  async onPullDownRefresh() {
+    try {
+      await this.fetch(1, true);
+    } finally {
+      wx.stopPullDownRefresh();
+    }
   },
 });
