@@ -7,6 +7,7 @@
     "share-card": "/components/share-card/share-card",
     "t-button": "tdesign-miniprogram/button/button",
     "t-tag": "tdesign-miniprogram/tag/tag",
-    "t-popup": "tdesign-miniprogram/popup/popup"
+    "t-popup": "tdesign-miniprogram/popup/popup",
+    "ad-template": "/components/ad-template/ad-template"
   }
 }

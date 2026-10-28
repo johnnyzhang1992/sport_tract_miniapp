@@ -3,6 +3,7 @@
   "enablePullDownRefresh": true,
   "usingComponents": {
     "campaign-member-sheet": "/components/campaign-member-sheet/campaign-member-sheet",
-    "stat-chart": "/components/stat-chart/stat-chart"
+    "stat-chart": "/components/stat-chart/stat-chart",
+    "ad-template": "/components/ad-template/ad-template"
   }
 }

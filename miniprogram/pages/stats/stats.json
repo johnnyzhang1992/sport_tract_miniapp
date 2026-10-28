@@ -4,7 +4,8 @@
   "backgroundTextStyle": "dark",
   "usingComponents": {
     "stat-chart": "/components/stat-chart/stat-chart",
-    "lit-map": "/packageFootprint/components/lit-map/lit-map"
+    "lit-map": "/packageFootprint/components/lit-map/lit-map",
+    "ad-template": "/components/ad-template/ad-template"
   },
   "componentPlaceholder": {
     "lit-map": "view"

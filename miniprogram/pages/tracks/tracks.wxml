@@ -157,6 +157,7 @@
             </view>
           </view>
         </t-swipe-cell>
+        <ad-template wx:if="{{item.adAfter}}" adslot="tracks_list" />
       </view>
     </view>
   </block>
@@ -225,9 +226,11 @@
           <view class="map-arrow">›</view>
         </view>
       </t-swipe-cell>
+      <ad-template wx:if="{{item.adAfter}}" adslot="tracks_list" />
     </view>
   </view>
 
   <view wx:if="{{loading && items.length > 0}}" class="text-muted loading-tip">加载中…</view>
   <view wx:if="{{!hasMore && items.length > 0}}" class="text-muted loading-tip">没有更多了</view>
+
 </view>

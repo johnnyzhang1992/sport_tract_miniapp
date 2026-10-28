@@ -1,6 +1,8 @@
 const api = require('./services/api');
 const { request } = api;
 const { getToken, setToken, clearToken, getProfileGuideDone, setProfileGuideDone } = require('./services/storage');
+const { setAdFreeUntil } = require('./utils/ad-free');
+const { refreshAdSlots } = require('./utils/ad-slots');
 
 App({
   globalData: {
@@ -19,6 +21,8 @@ App({
     }
     // 隐私合规（决策 M5）：检查隐私协议状态，未同意时引导（微信后台已配置《用户隐私保护指引》）
     this.checkPrivacy();
+    // 广告位在架配置：进小程序拉一次（缓存 5 分钟内不重复请求）；后台下架最迟一个 TTL 生效
+    refreshAdSlots();
   },
 
   /** 本地是否有登录会话（已注册用户静默恢复的依据；游客无 token 视为未注册） */
@@ -135,6 +139,8 @@ App({
     setToken(data.accessToken, data.refreshToken);
     this.globalData.userInfo = data.user;
     this.globalData.loggedIn = true;
+    // 免广告权益跟着登录回来（端上广告组件只读本地缓存，不为它单独多发一次请求）
+    setAdFreeUntil(data.user && data.user.adFreeUntil);
     this.globalData.isNewUser = !!data.isNewUser; // 首次注册标记（引导完善资料用）
     return data.user;
   },

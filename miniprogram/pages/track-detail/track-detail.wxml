@@ -109,6 +109,9 @@
     </view>
   </view>
 
+  <!-- 模板广告位（后台「广告管理」可开关；免广告卡生效时不渲染） -->
+  <ad-template adslot="track_detail" />
+
   <!-- 表现分：大号分数 + 等级刻度条 + 计算逻辑说明（类跑步类型且有落库分才显示） -->
   <view class="card perf-card" wx:if="{{perf.show}}">
     <view class="perf-head">

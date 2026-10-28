@@ -180,7 +180,7 @@ Page({
       // 个人最佳与列表并行拉取：每次刷新都取实时值（缓存不失效，新纪录要立刻在卡片亮出）
       const [data, best] = await Promise.all([api.get('/activities', this.buildParams(1)), this.loadBest()]);
       this._best = best;
-      const items = data.items.map((it) => this.decorate(it, best));
+      const items = this.markAdAfter(data.items.map((it) => this.decorate(it, best)));
       const monthly = mergeMonthly({}, data.monthlyStats);
       this._monthlyStats = monthly; // 列表响应附带页内月份的全量聚合
       this.setData({
@@ -233,7 +233,7 @@ Page({
     try {
       this.setData({ loading: true });
       const data = await api.get('/activities', this.buildParams(next));
-      const items = this.data.items.concat(data.items.map((it) => this.decorate(it, this._best)));
+      const items = this.markAdAfter(this.data.items.concat(data.items.map((it) => this.decorate(it, this._best))));
       const monthly = mergeMonthly(this._monthlyStats, data.monthlyStats); // 新出现月份增量并入
       this._monthlyStats = monthly;
       this.setData({
@@ -248,6 +248,12 @@ Page({
     } finally {
       this.setData({ loading: false });
     }
+  },
+
+  /** 广告位只插在「第 3 条」后面：不足 3 条时第三条不存在，自然不展示（后台开关/免广告另由组件判定） */
+  markAdAfter(items) {
+    items.forEach((it, i) => { it.adAfter = i === 2; });
+    return items;
   },
 
   /** 列表模式按月分组：items 时间倒序，依次归入「YYYY年M月」组（分页/删除后全量重建）；
@@ -383,7 +389,7 @@ Page({
     if (!res.confirm) return;
     try {
       await api.del(`/activities/${id}`);
-      const items = this.data.items.filter((i) => i.id !== id);
+      const items = this.markAdAfter(this.data.items.filter((i) => i.id !== id));
       this.setData({
         items,
         totalCount: Math.max(0, this.data.totalCount - 1),

@@ -153,6 +153,9 @@
       />
     </view>
 
+    <!-- 模板广告位（后台「广告管理」可开关；免广告卡生效时不渲染） -->
+    <ad-template adslot="campaign_detail" />
+
     <!-- 成员：成员列表＝活动内排行榜（按当前指标降序，点行看该成员汇总与「我 vs TA」） -->
     <view class="card" wx:if="{{isMember}}">
       <view class="card-head">

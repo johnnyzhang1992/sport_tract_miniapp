@@ -1,5 +1,8 @@
 {
   "navigationBarTitleText": "运动榜",
   "enablePullDownRefresh": true,
-  "backgroundTextStyle": "dark"
+  "backgroundTextStyle": "dark",
+  "usingComponents": {
+    "ad-template": "/components/ad-template/ad-template"
+  }
 }

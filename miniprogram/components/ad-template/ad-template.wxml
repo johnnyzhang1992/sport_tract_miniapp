@@ -1,0 +1,9 @@
+<!-- 原生模板广告：宽度吃满外层容器、高度由模板自适应；无广告展示时 ad-custom 不占高度 -->
+<view class="ad-template" wx:if="{{show}}">
+  <ad-custom
+    unit-id="{{unitId}}"
+    ad-intervals="{{intervals}}"
+    bindload="onAdLoad"
+    binderror="onAdError"
+  />
+</view>
