@@ -275,7 +275,7 @@ test('PP4 登录用户进页：只读一次汇总并映射余额/cells 七格/�
   assert.equal(p.data.items.length, 1);
   assert.deepEqual(p.data.items[0], {
     key: 'makeup_card', name: '补签卡', subtitle: '恢复连续打卡记录', price: 30, priceText: '30', validDays: 30,
-    validText: '30 天有效', stockText: '', metaText: '30 天有效', glyph: '补',
+    validText: '30 天有效', stockText: '', metaText: '30 天有效', glyph: '补', imageUrl: '',
   });
 });
 
@@ -318,7 +318,7 @@ test('PP5b 冷启动竞态：首屏停在游客引导，回到本页时会话已
   assert.equal(p.data.loggedIn, true, '回到本页要自己补拉，不能继续要用户点引导');
 });
 
-test('PP5c 道具区是卡片列表：一行两个竖排卡，图位用名称首字', () => {
+test('PP5c 道具区是卡片列表：一行两个竖排卡，没道具图时图位回落名称首字', () => {
   const wxml = read('miniprogram/pages/points/points.wxml');
   assert.ok(/wx:for="{{items}}"/.test(wxml), '道具区要按接口下发的商品表循环，不能写死一张');
   assert.ok(wxml.includes('class="item-grid"') && wxml.includes('class="item-card"'), '两列网格 + 每个道具一张卡');
@@ -571,7 +571,7 @@ test('PP33 登录用户汇总失败：显示重试块（不是游客引导），
   assert.deepEqual(calls(), ['GET /points/summary', 'GET /points/summary']);
 });
 
-test('PP34 连签 ≥7：显示「已连续 N 天 · 每日 7 分」，未满 7 天不显示', async () => {
+test('PP34 连签天数常驻卡头：旧的「已连续 N 天 · 每日 7 分」整行随改版撤掉', async () => {
   reset();
   summaryRespond = () => Promise.resolve(Object.assign({}, summaryFixture(), {
     signin: Object.assign({}, summaryFixture().signin, {
@@ -582,16 +582,16 @@ test('PP34 连签 ≥7：显示「已连续 N 天 · 每日 7 分」，未满 7 
           : { ...c, state: 'signed', streakDay: 3 + i, reward: 7 }
       )),
     }),
+    streakPercentile: 91,
   }));
   const p = boot();
   await tick();
-  assert.equal(p.data.streakText, '已连续 9 天 · 每日 7 分');
-  assert.ok(read('miniprogram/pages/points/points.wxml').includes('{{streakText}}'), '签到卡内要渲染连续天数文案');
-
-  reset(); // fixture 只有连签 2 天
-  const q = boot();
-  await tick();
-  assert.equal(q.data.streakText, '', '未满 7 天不显示该文案');
+  // 2026-10-28 改版：连签天数不再分「满 7 天才提示」，卡头常驻「连签 N 天」+ 百分位副题
+  assert.equal(p.data.streakText, undefined, 'streakText 字段随 streak-note 那行一起撤走');
+  assert.equal(p.data.streakSub, '超过 91% 用户');
+  const wxml = read('miniprogram/pages/points/points.wxml');
+  assert.ok(!wxml.includes('streakText') && !wxml.includes('streak-note'),
+    '旧文案节点不得以另一个名字复活');
 });
 
 test('PP35 补签入口收口在七格：cells 里没有 makeup 格时不出现补签入口，也没有单独的胶囊行', async () => {
@@ -827,10 +827,15 @@ test('PP17 规则页：答案钉在实际渲染的 Q&A 文本上，补签条目�
   // 与 PP22 同一收紧思路：断言只作用在 `<text class="a">` 答案叶子文本上——
   // wxml 注释里塞「昨天」或「只能补签昨天」顶不掉正向钉、也躲不掉负向钉（正向钉必须真渲染）。
   const answers = [...rules.matchAll(/<text class="a">([\s\S]*?)<\/text>/g)].map((m) => m[1]).join(' ');
-  ['连续签到', '第 7 天', '断签', '次日', '视频', '次年', '100', '200', '30 天',
+  ['连续签到', '第 7 天', '断签', '次日', '视频', '次年', '100', '30 天', '当前标价',
     '近 7 天窗口', '漏签日', '窗口内需有签到记录', '今天已签到也能补'].forEach((s) => {
     assert.ok(answers.includes(s), `规则页答案缺少「${s}」`);
   });
+  // 价格是后台可改的运营配置（2026-10-28 补签卡 200→49）：静态规则页写死数字必然说谎
+  assert.ok(
+    !/补签卡[^。]*?\d{2,}\s*积分/.test(answers),
+    '规则页不得写死补签卡价格，只能指向商品卡下发的标价',
+  );
   assert.ok(answers.includes('min(N, 7)'), '连续签到奖励应写明 min(N, 7)');
   assert.ok(!answers.includes('昨天'), '补签规则答案不得再出现「昨天」旧窗口口径——可补范围以近 7 天窗口为准（段长上限已放宽）');
   assert.ok(!rules.includes('只能补签昨天'), '静态旧文案「只能补签昨天」不得以任何节点复活');
@@ -1706,4 +1711,252 @@ test('PP51 商品页底部安全区：购买栏垫 safe-area，滚动留白也�
   assert.ok(/calc\([^)]*env\(safe-area-inset-bottom\)/.test(space), '滚动区尾部留白也要加安全区，否则内容被栏盖住');
   const heightRpx = Number((space.match(/(\d+)rpx/) || [])[1]);
   assert.ok(heightRpx >= 170, `留白至少覆盖「提示行+按钮+内边距」（实测约 179rpx），实际 ${heightRpx}rpx`);
+});
+
+test('PP52 道具卡图位：有道具图走整宽图位，没图才回落到名称首字方块', () => {
+  const wxml = read('miniprogram/pages/points/points.wxml');
+  assert.ok(
+    /<image[^>]*class="item-art"[^>]*src="{{item\.imageUrl}}"[^>]*mode="aspectFill"/.test(wxml),
+    '图位节点要挂 item.imageUrl 并裁切填满（签名链由服务端下发）',
+  );
+  assert.ok(
+    /class="item-art"[\s\S]{0,220}?<view wx:else class="item-glyph"/.test(wxml),
+    '缺图时 wx:else 回落首字占位，别留白块',
+  );
+  const wxss = read('miniprogram/pages/points/points.wxss');
+  const art = wxss.slice(wxss.indexOf('.item-art'), wxss.indexOf('.item-art') + 200);
+  assert.ok(/height:\s*\d+rpx/.test(art) && /border-radius/.test(art), '图位要有固定高度与圆角（否则 aspectFill 撑不出来）');
+});
+
+test('PP53 商品详情头图不被裁：横版道具图用 aspectFit，图位框按图片比例给宽高', () => {
+  const wxml = read(ITEM_WXML);
+  const tag = (wxml.match(/<image[^>]*class="hero-img"[^>]*>/) || [])[0] || '';
+  assert.ok(tag, '头图节点要在');
+  assert.ok(/mode="aspectFit"/.test(tag), 'aspectFill 会把 2.1:1 的道具图裁成中间一条');
+
+  const wxss = read('miniprogram/pages/points-item/points-item.wxss');
+  const block = wxss.slice(wxss.indexOf('.hero-img'), wxss.indexOf('.hero-img') + 220);
+  const w = Number((block.match(/width:\s*(\d+)rpx/) || [])[1]);
+  const h = Number((block.match(/height:\s*(\d+)rpx/) || [])[1]);
+  assert.ok(w && h, '图位要给显式宽高');
+  const ratio = w / h;
+  assert.ok(ratio > 1.9 && ratio < 2.3, `图位宽高比要贴着道具图的 2.1:1，实际 ${ratio.toFixed(2)}（方框会裁图）`);
+});
+
+/* ------------------- 2026-10-28 改版：积分卡 / 签到卡头 / 月历半屏 ------------------- */
+
+test('PP60 结构：积分卡独立在前，签到卡头改成连签天数 + 百分位，月历组件已注册', () => {
+  const wxml = read('miniprogram/pages/points/points.wxml');
+  const pts = wxml.indexOf('class="card points-card"');
+  const sign = wxml.indexOf('class="card signin-card"');
+  assert.ok(pts > 0 && sign > pts, '紧凑积分卡要排在签到卡之前');
+  // 余额与两个入口留在积分卡内；连签与百分位占掉签到卡头（原余额位）
+  const head = wxml.slice(pts, sign);
+  assert.ok(head.includes('{{balance}}') && head.includes('goRecords') && head.includes('goRules'),
+    '积分卡内要有余额 + 明细 + 规则');
+  assert.ok(head.includes('wx:if="{{expiring}}"') && head.includes('天后过期'),
+    '过期提醒按服务端下发的 expiring 条件渲染，端上不判阈值');
+  const card = wxml.slice(sign, wxml.indexOf('每日任务'));
+  assert.ok(card.includes('连签 {{signin.streakDay}} 天') && card.includes('{{streakSub}}'),
+    '签到卡头是连签天数与百分位副题');
+  assert.ok(card.includes('openCalendar') && card.includes('签到日历 ›'), '入口要有文字与箭头，不能靠猜');
+  assert.ok(card.includes('wx:for="{{strip}}"'), '七格仍留在签到卡内（用户点名保留）');
+  assert.ok(wxml.includes('<signin-calendar'), '月历半屏挂在页面尾部');
+  const json = JSON.parse(read('miniprogram/pages/points/points.json'));
+  assert.ok((json.usingComponents || {})['signin-calendar'], '组件要在页面 json 里注册');
+});
+
+test('PP61 打开月历才取数：GET /points/signin/calendar 带当月，失败只在弹窗内降级', async () => {
+  reset();
+  const p = boot();
+  await tick();
+  assert.deepEqual(calls(), ['GET /points/summary'], '进页不该顺手拉月历');
+  p.openCalendar();
+  await tick();
+  const { currentMonth } = require('../miniprogram/utils/footprint-calendar.js');
+  assert.deepEqual(calls(), ['GET /points/summary', 'GET /points/signin/calendar']);
+  const cal = apiCalls.find((c) => c.url === '/points/signin/calendar');
+  assert.equal(cal.params.month, currentMonth(), '缺省拉当月');
+  assert.equal(p.data.calVisible, true);
+
+  // 翻月：换 month 重拉
+  p.onCalMonthChange({ detail: { month: '2026-05' } });
+  await tick();
+  assert.equal(apiCalls.filter((c) => c.url === '/points/signin/calendar').length, 2);
+  assert.equal(apiCalls[apiCalls.length - 1].params.month, '2026-05');
+
+  // 失败：只置 calFailed，整页内容与登录态不受影响
+  summaryRespond = (url) => (url === '/points/signin/calendar'
+    ? Promise.reject(new Error('boom')) : Promise.resolve(summaryFixture()));
+  p.onCalRetry();
+  await tick();
+  assert.equal(p.data.calFailed, true);
+  assert.equal(p.data.failed, false, '局部失败不能顶掉整页');
+  assert.equal(p.data.loggedIn, true);
+});
+
+test('PP62 补签流程七格与月历共用：无卡落兑换页不发请求，有卡弹确认后 POST', async () => {
+  reset();
+  const p = boot();
+  await tick();
+  p.setData({ cards: 0 });
+  p.onCalMakeup({ detail: { dateKey: '2026-10-19' } });
+  assert.deepEqual(calls(), ['GET /points/summary'], '没卡就不该发补签请求');
+  assert.equal(navs[navs.length - 1], '/pages/points-item/points-item', '无卡要落去兑换页');
+
+  p.setData({ cards: 1 });
+  // 历史月的 missed：端上不拦（2026-10-28 拍板），照常发请求由接口回 400 文案
+  p.onCalMakeup({ detail: { dateKey: '2026-03-11' } });
+  assert.equal(modals.length, 1, '点漏签日要弹确认');
+  assert.ok(modals[0].content.includes('03.11'), `确认文案带 MM.DD：${modals[0].content}`);
+  assert.equal(modals[0].content.includes('今天可拿'), false, '历史日没有 todayRewardAfter，不该编那半句');
+  postRespond = () => Promise.resolve({ credited: 4, toppedUp: 2 });
+  await tick();
+  const mk = apiCalls.find((c) => c.url === '/points/signin/makeup');
+  assert.equal(mk.data.dateKey, '2026-03-11');
+});
+
+test('PP63 弹窗开着时补签/签到成功要顺手重拉月历，关着不多打一次', async () => {
+  reset();
+  const p = boot();
+  await tick();
+  postRespond = () => Promise.resolve({ credited: 4, toppedUp: 2 });
+  p.setData({ cards: 1 });
+  p.onMakeup({ currentTarget: { dataset: { dateKey: '2026-10-19' } } });
+  await tick();
+  assert.equal(apiCalls.filter((c) => c.url === '/points/signin/calendar').length, 0,
+    '从没打开过：只刷汇总');
+
+  // 打开过再关掉也要停：calMonth 留着上次的值，此时若无条件重拉就是白打一次请求
+  p.openCalendar();
+  await tick();
+  assert.equal(apiCalls.filter((c) => c.url === '/points/signin/calendar').length, 1);
+  p.closeCalendar();
+  p.onMakeup({ currentTarget: { dataset: { dateKey: '2026-10-24' } } });
+  await tick();
+  assert.equal(apiCalls.filter((c) => c.url === '/points/signin/calendar').length, 1,
+    '弹窗关着时刷新汇总就够了，别管 calMonth 里还留着哪个月');
+
+  p.openCalendar();
+  await tick();
+  const before = apiCalls.filter((c) => c.url === '/points/signin/calendar').length;
+  p.onCalMakeup({ detail: { dateKey: '2026-10-19' } });
+  await tick();
+  assert.equal(apiCalls.filter((c) => c.url === '/points/signin/calendar').length, before + 1,
+    '弹窗开着时，补签成功后的汇总刷新要顺手重拉当月格子');
+});
+
+test('PP64 概览文案：百分位与过期提醒都来自接口，连签 0 天不出现「超过 0% 用户」', async () => {
+  reset();
+  summaryRespond = () => Promise.resolve(Object.assign({}, summaryFixture(), {
+    expiring: { points: 84, daysLeft: 23 },
+    streakPercentile: 75,
+  }));
+  let p = boot();
+  await tick();
+  assert.equal(p.data.streakSub, '超过 75% 用户');
+  assert.deepEqual(p.data.expiring, { points: 84, daysLeft: 23 });
+
+  reset();
+  summaryRespond = () => Promise.resolve(Object.assign({}, summaryFixture(), {
+    signin: Object.assign({}, summaryFixture().signin, { streakDay: 0 }),
+  }));
+  p = boot();
+  await tick();
+  assert.equal(p.data.streakSub, '今天签到开启连签', '0 天时不报「超过 0% 用户」');
+  assert.equal(p.data.expiring, null, '服务端没下发就是 null，整行不渲染');
+});
+
+test('PP65 月历里的兑换入口：绑到页面方法且显式带补签卡 key', () => {
+  const wxml = read('miniprogram/pages/points/points.wxml');
+  assert.match(wxml, /bind:exchange="goMakeupItem"/, '组件 exchange 事件要接住');
+  const js = read('miniprogram/pages/points/points.js');
+  assert.match(js, /goMakeupItem\(\)\s*\{[\s\S]{0,120}points-item\?key=makeup_card/,
+    '要显式带 key，不能靠详情页回落第一项');
+});
+
+/* ------------------- 2026-10-28 商品详情顶部改版（hero 带 + 价格行，底色最终定白） ------------------- */
+
+/** WCAG 对比度：色值守卫不比字符串，改色值前先过 4.5（#fff 与 #ffffff 同解） */
+const hex6 = (h) => (h.length === 4 ? `#${h[1]}${h[1]}${h[2]}${h[2]}${h[3]}${h[3]}` : h);
+const relLum = (hex) => {
+  const c = [1, 3, 5].map((i) => parseInt(hex6(hex).slice(i, i + 2), 16) / 255)
+    .map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+};
+const ratioOf = (fg, bg) => {
+  const [hi, lo] = [relLum(fg), relLum(bg)].sort((a, b) => b - a);
+  return (hi + 0.05) / (lo + 0.05);
+};
+/** 取某条 css 规则的声明块（只到第一个右花括号，别把下一条的规则体算进来） */
+const cssBlock = (css, selector) => {
+  const at = css.indexOf(`${selector} {`);
+  assert.ok(at >= 0, `样式里找不到 ${selector} 规则`);
+  return css.slice(at, css.indexOf('}', at));
+};
+const cssColor = (block) => (block.match(/color:\s*(#[0-9a-fA-F]{6})/) || [])[1];
+
+test('PP66 顶部 hero：白底带独立在首卡之前，名称/副题在左、道具图在右', () => {
+  const wxml = read(ITEM_WXML);
+  const wxss = read('miniprogram/pages/points-item/points-item.wxss');
+  const heroAt = wxml.indexOf('<view class="hero">');
+  const cardAt = wxml.indexOf('<view class="card">');
+  assert.ok(heroAt >= 0, 'hero 带要在（它是整块深色底，塞进白卡里会露白边）');
+  assert.ok(cardAt > heroAt, 'hero 带独立在首卡之前');
+  const heroBody = wxml.slice(heroAt, cardAt);
+  assert.ok(heroBody.includes('class="hero-main"'), '名称/副题成一块');
+  assert.ok(heroBody.indexOf('class="hero-main"') < heroBody.indexOf('class="hero-img"'),
+    '左文右图：文字块要在图位之前（老版是图在左、价在右）');
+  assert.ok(/<image[^>]*class="hero-img"[^>]*wx:if|class="hero-img"/.test(heroBody)
+    && heroBody.includes('wx:if="{{heroImage}}"') && heroBody.includes('wx:else class="hero-icon"'),
+    '有图用图、缺图回落首字方块，两条都得留在 hero 里');
+  // 老结构必须真删了：留着会和白底价格行重复一遍
+  assert.ok(!wxml.includes('class="item-head"'), '旧的横向商品头要撤掉');
+
+  const heroBg = (cssBlock(wxss, '.hero').match(/background:\s*(#[0-9a-fA-F]{3,6})/) || [])[1];
+  assert.ok(heroBg, 'hero 要有底色');
+  // 2026-10-28 用户改口要白底（深灰蓝 A2 撤掉）：这条钉住「浅底」，别哪天又漂回深色
+  assert.ok(relLum(heroBg) > 0.9, `hero 底色要够浅（白底），实际 ${heroBg}`);
+
+  const name = cssColor(cssBlock(wxss, '.hero-name'));
+  const sub = cssColor(cssBlock(wxss, '.hero-sub'));
+  assert.ok(ratioOf(name, heroBg) >= 4.5, `商品名 ${name} 在 ${heroBg} 上只有 ${ratioOf(name, heroBg).toFixed(2)}:1`);
+  assert.ok(ratioOf(sub, heroBg) >= 4.5, `副题 ${sub} 在 ${heroBg} 上只有 ${ratioOf(sub, heroBg).toFixed(2)}:1`);
+  // 缺图回落的首字方块：字要在自己的浅灰底上够清楚（不比色值字符串）
+  const icon = cssBlock(wxss, '.hero-icon');
+  const iconBg = (icon.match(/background:\s*(#[0-9a-fA-F]{3,6})/) || [])[1];
+  assert.ok(iconBg && ratioOf(cssColor(icon), iconBg) >= 4.5, `回落首字 ${cssColor(icon)} on ${iconBg} 看不清`);
+});
+
+test('PP67 价格行：价格独立成大字 + 库存胶囊共用 stockTextOf，商品名不在这里重复第二遍', () => {
+  const wxml = read(ITEM_WXML);
+  const js = read(ITEM_JS);
+  const wxss = read('miniprogram/pages/points-item/points-item.wxss');
+  const row = wxml.slice(wxml.indexOf('<view class="price-row">'), wxml.indexOf('</view>', wxml.indexOf('stock-pill')));
+  assert.ok(row.includes('{{priceNumberText}}'), '大字价格用派生字段（千分位），不直接铺原始数');
+  assert.ok(row.includes('wx:if="{{stockText}}"'), '库存胶囊按服务端口径条件渲染，缺字段就整颗不出现');
+  assert.ok(!row.includes('item.name'), '名称已在 hero 里，价格行不再重复一遍');
+
+  // 与积分页共用同一份库存文案口径（不限量/剩余 N 件），端上别各写一套
+  assert.match(js, /require\('\.\.\/\.\.\/utils\/points-view'\)/);
+  assert.match(js, /stockText:\s*item \? stockTextOf\(item\.stockLeft\) : ''/);
+  const { stockTextOf } = require('../miniprogram/utils/points-view');
+  assert.equal(stockTextOf(null), '不限量');
+  assert.equal(stockTextOf(3), '剩余 3 件');
+  assert.equal(stockTextOf(undefined), '', '老接口没下发 stockLeft 时不能猜成不限量');
+
+  const numBlock = cssBlock(wxss, '.price-num');
+  const numSize = Number((numBlock.match(/font-size:\s*(\d+)rpx/) || [])[1]);
+  assert.ok(numSize >= 44, `价格要够分量（实际 ${numSize}rpx）`);
+  const cardBg = '#ffffff';
+  for (const sel of ['.price-num', '.price-unit', '.stock-pill']) {
+    const block = cssBlock(wxss, sel);
+    const fg = cssColor(block);
+    const bg = sel === '.stock-pill' ? (block.match(/background:\s*(#[0-9a-fA-F]{6})/) || [])[1] : cardBg;
+    assert.ok(fg && bg && ratioOf(fg, bg) >= 4.5, `${sel} ${fg} on ${bg} = ${ratioOf(fg || '', bg || '').toFixed(2)}:1 低于 4.5`);
+    if (sel === '.stock-pill') {
+      // 胶囊要有自己的底色，跟白卡同色就只剩一行裸字，看不出这是个状态标记
+      assert.notEqual(bg, cardBg, '库存胶囊的底色不能和白卡一样');
+    }
+  }
 });

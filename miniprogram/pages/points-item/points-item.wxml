@@ -4,19 +4,24 @@
   <!-- 商品由 ?key= 决定，游客态拿不到商品时按老口径（补签卡）出文案 -->
   <view wx:elif="{{!loggedIn}}" class="state state-tap" bindtap="onLoginTap">{{isMakeup ? '登录后兑换补签卡' : '登录后兑换'}}</view>
   <block wx:elif="{{item}}">
-    <view class="card card-first">
-      <!-- 商品头（并入首卡，2026-10-26 去色块）：图位 + 名称/副题 + 右侧价格 -->
-      <view class="item-head">
-        <image wx:if="{{heroImage}}" class="hero-img" src="{{heroImage}}" mode="aspectFill" />
-        <view wx:else class="hero-icon">{{heroChar}}</view>
-        <view class="item-head-main">
-          <text class="hero-name">{{item.name}}</text>
-          <text class="hero-sub">{{item.subtitle}}</text>
-        </view>
-        <view class="hero-price">
-          <text class="price">{{item.price}}</text>
+    <!-- 商品头（2026-10-28）：白底 hero 带，名称/副题在左、道具图放大在右；缺图回落首字方块 -->
+    <view class="hero">
+      <view class="hero-main">
+        <text class="hero-name">{{item.name}}</text>
+        <text class="hero-sub">{{item.subtitle}}</text>
+      </view>
+      <image wx:if="{{heroImage}}" class="hero-img" src="{{heroImage}}" mode="aspectFit" />
+      <view wx:else class="hero-icon">{{heroChar}}</view>
+    </view>
+
+    <view class="card">
+      <!-- 价格行：价格从原来名称右侧的小字提成独立大字，右侧带库存状态（口径与积分页同一份 stockTextOf） -->
+      <view class="price-row">
+        <view class="price">
+          <text class="price-num">{{priceNumberText}}</text>
           <text class="price-unit">积分</text>
         </view>
+        <text wx:if="{{stockText}}" class="stock-pill">{{stockText}}</text>
       </view>
 
       <!-- 实物详情图：后台最多传 6 张，整宽竖排、按原比例自适应高度（服务端下发 medium 档）；虚拟道具没有这一组 -->

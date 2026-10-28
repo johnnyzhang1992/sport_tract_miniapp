@@ -1,7 +1,9 @@
 const api = require('../../services/api');
 const { ensureLogin, waitSession } = require('../../utils/login-gate');
 const { buildSigninStrip, buildTaskRows, buildItemCards, md } = require('../../utils/points-view');
+const { setAdFreeUntil } = require('../../utils/ad-free');
 const { createRewardedAd, isAdRewardEligible } = require('../../utils/rewarded-ad');
+const { currentMonth } = require('../../utils/footprint-calendar');
 // cells 的 dateKey 是东八区 YYYY-MM-DD，「今天」比对键必须同口径：用 bjDate，不再写一份时区偏移
 const { bjDate } = require('../../utils/bj-date');
 
@@ -14,11 +16,21 @@ Page({
     signin: {},
     strip: [],
     chips: [],
-    streakText: '',
+    // 百分位副题：连签 0 天时不显示「超过 0% 用户」，换成引导语（口径见服务端 streakPercentile）
+    streakSub: '',
+    streakPercent: 0,
+    // 过期提醒：服务端只在最早批次 ≤30 天时下发，null 就整行不渲染
+    expiring: null,
     taskGroups: { onceTasks: [], dailyTasks: [] },
     items: [],
     cards: 0,
     videoBusy: false,
+    // 签到月历半屏：月份与逐日状态都由本页取数，组件只渲染（同足迹弹窗口径）
+    calVisible: false,
+    calMonth: '',
+    calDays: [],
+    calLoading: false,
+    calFailed: false,
   },
 
   onLoad() {
@@ -50,6 +62,8 @@ Page({
     }
     try {
       const data = await api.get('/points/summary');
+      // 免广告权益的第二个来源：兑换/激活/到期后回到本页就刷新端上缓存（广告组件读它）
+      setAdFreeUntil(data.adFreeUntil);
       const signin = data.signin || {};
       const streakDay = Number(signin.streakDay) || 0;
       // 只格式化、不推导：位置/分值/可补性一律来自服务端 cells（spec §5.1），state==='makeup' 是唯一入口判据
@@ -59,14 +73,17 @@ Page({
         loading: false,
         balance: data.balance ?? 0,
         signin,
+        expiring: data.expiring || null,
         strip: buildSigninStrip(cells, bjDate(Date.now())),
         hasMakeup: cells.some((c) => c.state === 'makeup'),
-        // 连签 ≥7 天七格全勾后，还要按需求 §4.2 显示「已连续 N 天 · 每日 7 分」
-        streakText: streakDay >= 7 ? `已连续 ${streakDay} 天 · 每日 7 分` : '',
+        streakSub: streakDay > 0 ? `超过 ${Number(data.streakPercentile) || 0}% 用户` : '今天签到开启连签',
+        streakPercent: Number(data.streakPercentile) || 0,
         taskGroups: buildTaskRows(data.tasks || []),
         items: buildItemCards(data.items),
         cards: signin.cards || 0,
       });
+      // 弹窗开着时补签/签到会改变整月状态，跟着重拉当月；关着就不多打一次请求
+      if (this.data.calVisible) this.loadCalendar(this.data.calMonth);
     } catch (e) {
       if (silent) {
         // 静默刷新失败：保留已有内容，toast 提示即可（顶掉整页失败块反而晃眼）
@@ -155,26 +172,83 @@ Page({
   },
 
   /**
-   * 补某个漏签日（直接点七格里的「补」字，dateKey 由 data-date-key 回传）：
+   * 补某个漏签日（七格上的「补」字，或月历里点出来的 makeup 事件）：
    * 有卡 → 确认后 POST；无卡 → 落兑换页、不发请求。
-   * 卡由服务端挑（spec §5.2），请求体只有 { dateKey }；可补判定的唯一来源是 cells 里的 makeup 格。
+   * 卡由服务端挑（spec §5.2），请求体只有 { dateKey }。
+   * after 只有七格拿得到（服务端 cells 的 todayRewardAfter），月历点历史格时省略那半句。
    */
-  onMakeup(e) {
-    const dateKey = e.currentTarget.dataset.dateKey;
-    const cell = this.data.strip.find((c) => c.dateKey === dateKey);
-    if (!cell || cell.state !== 'makeup') return;
+  askMakeup(dateKey, after) {
     if (!(this.data.cards > 0)) {
       this.goItem();
       return;
     }
     wx.showModal({
       title: '补签该日',
-      // 日期用七格 sub 的 MM.DD 格式，不打 ISO 日期给用户看；todayRewardAfter 由服务端 cells 下发
-      content: `使用 1 张补签卡补签 ${md(dateKey)}？补完连签将重排，今天可拿 ${cell.todayRewardAfter} 分`,
+      // 日期用 md() 的 MM.DD 格式，不把 ISO 日期丢给用户看
+      content: after
+        ? `使用 1 张补签卡补签 ${md(dateKey)}？补完连签将重排，今天可拿 ${after} 分`
+        : `使用 1 张补签卡补签 ${md(dateKey)}？补完连签会重新排`,
       success: (res) => {
         if (res && res.confirm) this.useMakeupCard(dateKey);
       },
     });
+  },
+
+  onMakeup(e) {
+    const dateKey = e.currentTarget.dataset.dateKey;
+    const cell = this.data.strip.find((c) => c.dateKey === dateKey);
+    if (!cell || cell.state !== 'makeup') return;
+    this.askMakeup(dateKey, cell.todayRewardAfter);
+  },
+
+  // ---------- 签到月历半屏 ----------
+
+  openCalendar() {
+    const month = currentMonth();
+    this.setData({ calVisible: true, calMonth: month, calFailed: false });
+    this.loadCalendar(month);
+  },
+
+  closeCalendar() {
+    this.setData({ calVisible: false });
+  },
+
+  onCalMonthChange(e) {
+    const month = e.detail.month;
+    this.setData({ calMonth: month, calFailed: false });
+    this.loadCalendar(month);
+  },
+
+  /** 只翻当月这一页数据：失败不顶掉整页，弹窗内出重试（同积分页其它局部降级） */
+  async loadCalendar(month) {
+    if (!month) return;
+    this.setData({ calLoading: true, calFailed: false });
+    try {
+      const data = await api.get('/points/signin/calendar', { month });
+      this.setData({ calLoading: false, calDays: (data && data.days) || [] });
+    } catch (e) {
+      this.setData({ calLoading: false, calFailed: true, calDays: [] });
+    }
+  },
+
+  onCalRetry() {
+    this.loadCalendar(this.data.calMonth);
+  },
+
+  /**
+   * 月历里点漏签格：判据不在端上拦（2026-10-28 拍板），历史月的 missed 也照常发请求，
+   * 由补签接口的 400 文案说清为什么不行——文案归服务端。
+   */
+  onCalMakeup(e) {
+    const dateKey = e.detail && e.detail.dateKey;
+    if (!dateKey) return;
+    const cell = this.data.strip.find((c) => c.dateKey === dateKey);
+    this.askMakeup(dateKey, cell && cell.todayRewardAfter);
+  },
+
+  /** 弹窗里点「今天」等价于页内那颗签到按钮——弹层遮住按钮时不能留死区 */
+  onCalSignin() {
+    this.onSignIn();
   },
 
   async useMakeupCard(dateKey) {
@@ -209,6 +283,11 @@ Page({
 
   goRules() {
     wx.navigateTo({ url: '/pages/points-rules/points-rules' });
+  },
+
+  /** 月历里的「兑换补签卡 ›」：显式带 key，不靠详情页回落第一项（后台多一件在架道具就会串页） */
+  goMakeupItem() {
+    wx.navigateTo({ url: '/pages/points-item/points-item?key=makeup_card' });
   },
 
   /**

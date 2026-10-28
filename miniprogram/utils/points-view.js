@@ -85,7 +85,9 @@ function buildItemCards(items) {
     stockText: stockTextOf(it.stockLeft),
     metaText: [`${it.validDays} 天有效`, stockTextOf(it.stockLeft)].filter(Boolean).join(' · '),
     glyph: (it.name || '').charAt(0),
+    // 道具图：服务端已按缩略档签好名，端上只贴链不拼参数；缺图时 wxml 回落首字占位
+    imageUrl: it.imageUrl || '',
   }));
 }
 
-module.exports = { buildSigninStrip, shiftDateKey, buildTaskRows, buildItemCards, md, buildTaskGroups: buildTaskRows };
+module.exports = { buildSigninStrip, shiftDateKey, buildTaskRows, buildItemCards, md, buildTaskGroups: buildTaskRows, stockTextOf };

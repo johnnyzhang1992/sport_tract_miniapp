@@ -9,14 +9,26 @@
     </view>
   </block>
   <block wx:elif="{{loggedIn}}">
-    <view class="card signin-card">
-      <!-- 卡头：左=积分余额（点进积分明细），右=积分规则胶囊；加大字号与点击热区（2026-10-26 二轮） -->
+    <!-- 积分卡（紧凑版）：只放余额 + 两个入口 + 过期提醒；提醒由服务端判阈值，null 就整行不出 -->
+    <view class="card points-card">
       <view class="signin-head">
         <view class="balance-box" hover-class="row-hover" hover-stay-time="80" bindtap="goRecords">
           <text class="balance-num">{{balance}}</text>
           <text class="balance-label">积分明细 ›</text>
         </view>
         <view class="rules-link" hover-class="row-hover" hover-stay-time="80" bindtap="goRules">积分规则</view>
+      </view>
+      <view wx:if="{{expiring}}" class="expire-note">{{expiring.points}} 积分将在 {{expiring.daysLeft}} 天后过期</view>
+    </view>
+
+    <view class="card signin-card">
+      <!-- 卡头：连签天数 + 百分位（占原余额位），点整行开签到月历；箭头明说这里能进 -->
+      <view class="streak-head" hover-class="row-hover" hover-stay-time="80" bindtap="openCalendar">
+        <view class="streak-box">
+          <text class="streak-num">连签 {{signin.streakDay}} 天</text>
+          <text class="streak-sub">{{streakSub}}</text>
+        </view>
+        <text class="cal-link">签到日历 ›</text>
       </view>
 
       <view class="signin-strip">
@@ -28,7 +40,6 @@
           <text class="sub">{{item.sub}}</text>
         </view>
       </view>
-      <view wx:if="{{streakText}}" class="streak-note">{{streakText}}</view>
       <view class="signin-btn" wx:if="{{!signin.todaySigned}}" bindtap="onSignIn">今日签到</view>
       <!-- 已签态：中间数字 = 今天签到实际拿到的积分（今日再点无动作，纯状态展示） -->
       <view class="signin-btn off" wx:else>
@@ -38,6 +49,9 @@
       </view>
       <view class="makeup-note" wx:if="{{hasMakeup}}">点「补」字直接补签 · 1 张补签卡补 1 格 · 补完连签重排</view>
     </view>
+
+    <!-- 模板广告位：签到卡与每日任务之间（首屏之下第一屏可见，且不挨着「看视频赚分」按钮） -->
+    <ad-template adslot="points" />
 
     <!-- 每日任务（0 点重置）：放新手卡前面，每日可做的离签到更近 -->
     <view class="card">
@@ -75,7 +89,8 @@
       </view>
       <view class="item-grid">
         <view wx:for="{{items}}" wx:key="key" class="item-card" data-key="{{item.key}}" hover-class="row-hover" hover-stay-time="80" bindtap="goItem">
-          <view class="item-glyph">{{item.glyph}}</view>
+          <image wx:if="{{item.imageUrl}}" class="item-art" src="{{item.imageUrl}}" mode="aspectFill" lazy-load />
+          <view wx:else class="item-glyph">{{item.glyph}}</view>
           <view class="item-name-row">
             <text class="item-name">{{item.name}}</text>
             <text class="item-owned" wx:if="{{cards > 0}}">持有{{cards}}张</text>
@@ -94,4 +109,23 @@
     </view>
   </block>
   <view wx:else class="empty" bindtap="onLoginTap">登录后查看积分</view>
+
+  <!-- 签到月历半屏：数据与请求都在本页，组件只渲染与发事件 -->
+  <signin-calendar
+    visible="{{calVisible}}"
+    month="{{calMonth}}"
+    days="{{calDays}}"
+    streak="{{signin.streakDay}}"
+    percent="{{streakPercent}}"
+    cards="{{cards}}"
+    loading="{{calLoading}}"
+    failed="{{calFailed}}"
+    bottom="{{true}}"
+    bind:close="closeCalendar"
+    bind:exchange="goMakeupItem"
+    bind:monthchange="onCalMonthChange"
+    bind:retry="onCalRetry"
+    bind:makeup="onCalMakeup"
+    bind:signin="onCalSignin"
+  />
 </view>

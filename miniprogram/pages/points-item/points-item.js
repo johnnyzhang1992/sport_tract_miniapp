@@ -15,6 +15,7 @@ const api = require('../../services/api');
 const { ensureLogin, waitSession } = require('../../utils/login-gate');
 const { pickItem, isMakeup, isPhysical, addressError, cleanAddress } = require('../../utils/points-item-view');
 const { formatThousands } = require('../../utils/format');
+const { stockTextOf } = require('../../utils/points-view');
 
 /** 上次填过的收货地址存在本地，下次买实物不用重打一遍（服务端订单里也有快照，但那是别人的单读不到） */
 const ADDR_KEY = 'points_addr_last';
@@ -42,6 +43,9 @@ Page({
     canMakeup: false,
     busy: false,
     priceText: '',
+    // 价格行（2026-10-28 hero 改版）：大字价格与库存胶囊分开给，胶囊文案与积分页共用 stockTextOf
+    priceNumberText: '',
+    stockText: '',
   },
 
   onLoad(query) {
@@ -91,6 +95,10 @@ Page({
         // 按钮文案由接口价格拼出（当前为「200 积分兑换」），避免前后端各写一份价格；
         // 千分位是精确值（价格不是统计量，实物 28900 分要说清 28,900，不能缩成 2.9万）
         priceText: item ? `${formatThousands(item.price)} 积分兑换` : '',
+        // 价格行的数字与底部按钮同源同口径（千分位精确值，不缩成 2.9万）
+        priceNumberText: item ? formatThousands(item.price) : '',
+        // 库存胶囊复用积分页那一份口径：null=不限量、限量给剩余数、老接口缺字段则整颗胶囊不出现
+        stockText: item ? stockTextOf(item.stockLeft) : '',
         balance: (summary && summary.balance) || 0,
         cards: (summary && summary.signin && summary.signin.cards) || 0,
         // 补签入口以服务端 cells 为准：手里有卡但当前没有可补日时，不该再给入口（判据只有 state === 'makeup'）

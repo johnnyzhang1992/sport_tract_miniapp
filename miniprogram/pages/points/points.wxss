@@ -148,11 +148,51 @@
   margin-top: 12rpx;
 }
 
-.streak-note {
-  text-align: center;
-  font-size: 22rpx;
-  color: #8a93a6;
+/* 积分卡（紧凑版）：卡内只有一行余额 + 两个入口，底部留白收掉，别撑成签到卡那么高 */
+.points-card {
+  padding-bottom: 20rpx;
+}
+
+/* 过期提醒：琥珀小字，只有服务端下发时才出现 */
+.expire-note {
   margin-top: 12rpx;
+  font-size: 22rpx;
+  color: #b45309;
+}
+
+/* 签到卡头：连签天数（点开月历）+ 百分位副题，占原来余额那一行的位置 */
+.streak-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4rpx;
+}
+
+.streak-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.streak-num {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #1f2329;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.streak-sub {
+  font-size: 22rpx;
+  color: #667080;
+}
+
+/* 入口要有明确指向：整行可点，右侧给「签到日历 ›」而不是靠用户猜 */
+.cal-link {
+  flex: none;
+  font-size: 26rpx;
+  color: #2b6cf6;
+  padding: 16rpx 0 16rpx 24rpx;
 }
 
 .state-block {
@@ -219,8 +259,12 @@
   color: #8a93a6;
 }
 
+/* 三态按钮：透明边框常驻占位（描边态不撑高、底边不被行分隔线盖住），
+   box-sizing 必须显式——不加时 1rpx 边框会把元素撑大，真机上底边渲染不全 */
 .task-action {
-  padding: 6rpx 20rpx;
+  box-sizing: border-box;
+  border: 1rpx solid transparent;
+  padding: 5rpx 19rpx;
   border-radius: 999rpx;
   background: #2b6cf6;
   color: #fff;
@@ -231,14 +275,13 @@
 .task-action.off {
   background: #fff;
   color: #2b6cf6;
-  border: 1rpx solid #2b6cf6;
+  border-color: #2b6cf6;
 }
 
 /* claimed（已领取）＝完成态：浅灰底灰字沉底，与待做/待领取一眼区分 */
 .task-action.done {
   background: #f2f3f5;
   color: #8a93a6;
-  border: none;
 }
 
 /* 道具卡：一行两个竖排卡（2026-10-26 改版），图位白底金字在上，价格+兑换钮压底 */
@@ -256,6 +299,14 @@
   padding: 20rpx;
   border-radius: 16rpx;
   background: #f7f8fa;
+}
+
+/* 道具图占满卡宽：竖排卡里 88rpx 小方块放不下带文案的道具图（字会糊），整宽才看得清 */
+.item-art {
+  width: 100%;
+  height: 150rpx;
+  border-radius: 12rpx;
+  background: #fff;
 }
 
 .item-glyph {

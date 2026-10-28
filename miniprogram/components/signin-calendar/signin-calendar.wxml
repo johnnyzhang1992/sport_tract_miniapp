@@ -1,0 +1,48 @@
+<view wx:if="{{visible}}" class="mask" bindtap="onClose">
+  <view class="sheet {{bottom ? '' : 'sheet-no-safe'}}" catchtap="noop">
+    <view class="sheet-head">
+      <view class="sheet-title">签到日历</view>
+      <view class="sheet-close" catchtap="onClose">✕</view>
+    </view>
+
+    <!-- 概览行：连签天数与百分位都由服务端下发，这里只负责摆；0 天时不显示「超过 0% 用户」 -->
+    <view class="summary">
+      <text class="summary-num">连续签到 {{streak}} 天</text>
+      <text wx:if="{{streak > 0}}" class="summary-sub">超过 {{percent}}% 用户</text>
+      <text wx:else class="summary-sub">今天签到开启连签</text>
+    </view>
+    <!-- 说明与兑换入口同行：没卡的人在这儿就能直接去兑换，不用先点格子撞一次跳转 -->
+    <view class="note-row">
+      <text class="note">点漏签的格子补签 · 持卡 {{cards}} 张</text>
+      <text class="note-link" catchtap="onExchange">兑换补签卡 ›</text>
+    </view>
+
+    <view class="month-bar">
+      <view wx:if="{{canPrev}}" class="month-nav" catchtap="onPrev">‹</view>
+      <view wx:else class="month-nav month-nav-off">‹</view>
+      <view class="month-label">{{label}}</view>
+      <view wx:if="{{canNext}}" class="month-nav" catchtap="onNext">›</view>
+      <view wx:else class="month-nav month-nav-off">›</view>
+    </view>
+
+    <view wx:if="{{loading}}" class="sheet-state">加载中…</view>
+    <view wx:elif="{{failed}}" class="sheet-state sheet-state-tap" catchtap="onRetry">这个月没加载出来，点击重试</view>
+    <block wx:else>
+      <view class="week">
+        <view wx:for="{{weekLabels}}" wx:key="*this" class="week-cell">{{item}}</view>
+      </view>
+      <view class="grid">
+        <view wx:for="{{cells}}" wx:key="key" class="cell">
+          <!-- 补位格（out）也渲染真实日期与状态，只是整格置灰；今天没签的格子点一下等于页内那颗签到按钮 -->
+          <view
+            class="dot dot-{{item.state}} {{item.isToday ? 'dot-today-ring' : ''}} {{item.out ? 'dot-out' : ''}}"
+            data-date="{{item.date}}"
+            data-state="{{item.state}}"
+            catchtap="onDayTap"
+          >{{item.mark}}</view>
+          <text class="cell-label {{item.isToday ? 'cell-label-today' : ''}} {{item.out ? 'cell-label-out' : ''}}">{{item.label}}</text>
+        </view>
+      </view>
+    </block>
+  </view>
+</view>

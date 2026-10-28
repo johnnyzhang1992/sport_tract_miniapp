@@ -107,7 +107,7 @@ test('PV6 道具卡：图位取名称首字，价格/有效期原样带出', () 
   assert.equal(cards.length, 1);
   assert.deepEqual(cards[0], {
     key: 'makeup_card', name: '补签卡', subtitle: '恢复连续打卡记录', price: 200, priceText: '200', validDays: 30,
-    validText: '30 天有效', stockText: '', metaText: '30 天有效', glyph: '补',
+    validText: '30 天有效', stockText: '', metaText: '30 天有效', glyph: '补', imageUrl: '',
   });
   assert.deepEqual(buildItemCards(undefined), [], '接口没下发商品表时给空数组，wxml 的 wx:if 才不会红');
 });
@@ -206,4 +206,14 @@ test('PV12 道具卡有效期/库存成一行 meta：有效期不再跟副标题
   assert.deepEqual(cards.map((c) => c.metaText), ['30 天有效 · 不限量', '30 天有效 · 剩余 9,997 件', '30 天有效']);
   // 副标题保持原样，不再被拼上有效期
   assert.equal(cards[1].subtitle, '24 小时心率与血氧');
+});
+
+test('PV13 道具卡透传服务端签名图链：有图给图、缺字段给空串（端上据此回落到首字占位）', () => {
+  const cards = buildItemCards([
+    { key: 'ad_free_7d', name: '免广告卡·7 天', subtitle: '', price: 200, validDays: 30, imageUrl: 'https://oss/x.png?sig=1' },
+    { key: 'makeup_card', name: '补签卡', subtitle: '', price: 200, validDays: 30 },
+  ]);
+  assert.equal(cards[0].imageUrl, 'https://oss/x.png?sig=1', '签名链原样透传，端上不自己拼 OSS 参数');
+  assert.equal(cards[1].imageUrl, '', '老接口没下发 imageUrl 时给空串，wxml 的 wx:if 才不会拿到 undefined 判断');
+  assert.equal(cards[1].glyph, '补', '没图仍有首字占位');
 });

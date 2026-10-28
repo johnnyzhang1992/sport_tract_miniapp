@@ -1,5 +1,9 @@
 {
   "navigationBarTitleText": "我的积分",
   "enablePullDownRefresh": true,
-  "backgroundTextStyle": "dark"
+  "backgroundTextStyle": "dark",
+  "usingComponents": {
+    "signin-calendar": "/components/signin-calendar/signin-calendar",
+    "ad-template": "/components/ad-template/ad-template"
+  }
 }

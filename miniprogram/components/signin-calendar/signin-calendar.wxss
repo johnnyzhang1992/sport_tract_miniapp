@@ -1,0 +1,218 @@
+.mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+}
+
+.sheet {
+  width: 100%;
+  box-sizing: border-box;
+  background: #fff;
+  border-radius: 24rpx 24rpx 0 0;
+  padding: 0 32rpx calc(32rpx + env(safe-area-inset-bottom));
+  /* 月历最多 6 行，加上概览与翻月条仍可能顶到小屏底边，超出交给内部滚动 */
+  max-height: 82vh;
+  overflow-y: auto;
+}
+
+.sheet-no-safe {
+  padding-bottom: 32rpx;
+}
+
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28rpx 0 4rpx;
+}
+
+.sheet-title {
+  flex: 1;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+
+.sheet-close {
+  flex: none;
+  padding: 8rpx 0 8rpx 24rpx;
+  font-size: 30rpx;
+  color: #667080;
+}
+
+.summary {
+  display: flex;
+  align-items: baseline;
+  gap: 16rpx;
+  padding-top: 8rpx;
+}
+
+.summary-num {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+
+.summary-sub {
+  font-size: 24rpx;
+  color: #667080;
+}
+
+.note-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  padding-top: 6rpx;
+}
+
+.note {
+  flex: 1;
+  min-width: 0;
+  font-size: 22rpx;
+  color: #8a93a6;
+}
+
+/* 入口给足上下内边距：文字只有 24rpx，热区不能跟着一起小 */
+.note-link {
+  flex: none;
+  font-size: 24rpx;
+  color: #2b6cf6;
+  padding: 12rpx 0 12rpx 8rpx;
+}
+
+.month-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 20rpx;
+  background: #f7f8fa;
+  border-radius: 16rpx;
+  padding: 8rpx 0;
+}
+
+.month-nav {
+  width: 96rpx;
+  text-align: center;
+  font-size: 40rpx;
+  line-height: 1.2;
+  color: #2b6cf6;
+}
+
+/* 不可翻的一侧留灰三角：位置不跳，比整条按钮消失好读 */
+.month-nav-off {
+  color: #c3cad6;
+}
+
+.month-label {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+
+.sheet-state {
+  padding: 56rpx 0;
+  text-align: center;
+  font-size: 26rpx;
+  color: #667080;
+}
+
+.sheet-state-tap {
+  color: #2b6cf6;
+}
+
+.week {
+  display: flex;
+  margin-top: 16rpx;
+}
+
+.week-cell {
+  flex: 1;
+  text-align: center;
+  font-size: 22rpx;
+  color: #8a93a6;
+}
+
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+  padding-bottom: 8rpx;
+}
+
+.cell {
+  width: 14.285%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10rpx 0;
+}
+
+/* 圆点 64rpx + 下方标签，整格点击区约 96rpx 见方，够 76rpx 热区口径 */
+.dot {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24rpx;
+  font-weight: 600;
+}
+
+.dot-signed {
+  background: #eaf1fe;
+  color: #2b6cf6;
+}
+
+.dot-today {
+  background: #fff;
+  color: #2b6cf6;
+  border: 2rpx solid #2b6cf6;
+}
+
+/* 可补格＝补签卡那套琥珀描边，和积分页七格同形态 */
+.dot-makeup {
+  background: #fff;
+  color: #b45309;
+  border: 2rpx dashed #f59e0b;
+}
+
+.dot-missed {
+  background: #fff;
+  color: #c3cad6;
+  border: 2rpx dashed #dfe3ea;
+}
+
+.dot-future {
+  background: #fdf3e7;
+  color: #b45309;
+}
+
+/* 补位格（相邻月份的日期）：状态照常画但换中性色，不用 opacity——整格半透明会把✓压到 1.9:1 读不清 */
+.dot-out {
+  background: transparent;
+  border-color: #e6e9ef;
+  color: #8a93a6;
+}
+
+.cell-label-out {
+  color: #8a93a6;
+}
+
+.cell-label {
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: #667080;
+}
+
+.cell-label-today {
+  color: #2b6cf6;
+  font-weight: 600;
+}
