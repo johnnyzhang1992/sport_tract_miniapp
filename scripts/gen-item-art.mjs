@@ -46,6 +46,17 @@ const GLYPHS = {
     ],
     accent: 'm9 15 2 2 4-4',
   },
+  // 免广告：完整喇叭 + 一道斜杠＝不推广告。
+  // 用 megaphone-off 试过一版：它把喇叭拆成两截，缩到商品卡尺寸（≈180px 宽）就糊成一个「桶」，
+  // 所以这里拿完整喇叭自己叠斜杠，语义一样但小尺寸还认得出。
+  megaphone: {
+    paths: [
+      'M11 6a13 13 0 0 0 8.4-2.8A1 1 0 0 1 21 4v12a1 1 0 0 1-1.6.8A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z',
+      'M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14',
+      'M8 6v8',
+    ],
+    accent: 'm2 2 20 20',
+  },
 };
 
 /** 暖金：七格 makeup 态描边是 #8a5f12（浅底），蓝底上要提亮一档才看得见；
@@ -54,7 +65,8 @@ const ACCENT = '#f0b64f';
 
 /**
  * 道具规格：一条 = 一张商品图。
- * tilt 让卡片别正着摆（正摆＋直角＝生硬）；gloss 是斜向高光带的角度与浓度；
+ * tilt 一律 0：道具图在商品卡里是整宽小图位（150rpx 高），倾斜会把卡角切掉、
+ * 有效画面变小，2026-10-28 用户拍板摆正；gloss 是斜向高光带的角度与浓度；
  * sheen 是顶部高光（压到 .10 以下，否则右上角会从品牌蓝抬到 #5387f4 那种发白）。
  */
 const ITEMS = {
@@ -62,18 +74,37 @@ const ITEMS = {
     glyph: 'calendar-check',
     from: '#2465e8',
     to: '#306ef4',
-    tilt: -4.5,
+    tilt: 0,
     gloss: -22,
     glossAlpha: 0.045,
     sheenAlpha: 0.1,
     iconScale: 0.56,
     iconAlpha: 0.38,
     iconInset: 0.015, // 图标贴右边缘的内缩量（占卡宽比例）
-    label: '补打卡', // 留空＝不烧字，交给端上叠文本节点
+    label: '补签卡', // 与目录里的道具名一字不差；留空＝不烧字，交给端上叠文本节点
     labelRatio: 0.24, // 字号占卡高比例
     labelInset: 0.09, // 文案左边距（占卡宽比例）
     labelAlpha: 0.72, // 纯白压在卡面上太扎眼，让卡蓝透出来一点
     shadow: false, // 只出卡片本身：投影在透明底上会糊成一圈深色描边，反而脏
+  },
+  'ad-free-card': {
+    glyph: 'megaphone',
+    // 与补签卡同一套品牌蓝：两张卡并排时靠图标+文案区分，别让色板自己先打起来
+    from: '#2465e8',
+    to: '#306ef4',
+    tilt: 0,
+    gloss: 22,
+    glossAlpha: 0.045,
+    sheenAlpha: 0.1,
+    iconScale: 0.54,
+    iconAlpha: 0.42,
+    iconInset: 0.045,
+    label: '免广告',
+    labelRatio: 0.24,
+    labelInset: 0.09,
+    labelAlpha: 0.72,
+    accentWidth: 1.45, // 斜杠别压过喇叭本体：它是注解不是主体
+    shadow: false,
   },
 };
 
@@ -141,7 +172,7 @@ function svgFor(spec) {
       </g>
       <g transform="translate(${iconX} ${iconY}) scale(${iconK})" fill="none" stroke="#fff" stroke-opacity="${spec.iconAlpha}" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round">
         ${paths}
-        <path d="${g.accent}" stroke="${ACCENT}" stroke-opacity="1" stroke-width="1.6"/>
+        <path d="${g.accent}" stroke="${ACCENT}" stroke-opacity="1" stroke-width="${spec.accentWidth ?? 1.6}"/>
       </g>
       ${
         spec.label
