@@ -65,6 +65,20 @@
   line-height: 1.7;
 }
 
+/* 榜单奖励逐句：text 默认 inline，必须 block 才能每句独占一行、分隔线才连得起来 */
+.rule {
+  display: block;
+  font-size: 26rpx;
+  color: #4e5969;
+  line-height: 1.7;
+  padding: 18rpx 0;
+  border-bottom: 1rpx solid #f2f3f5;
+}
+
+.rule:last-child {
+  border-bottom: none;
+}
+
 .footer {
   padding: 36rpx 8rpx 0;
   text-align: center;

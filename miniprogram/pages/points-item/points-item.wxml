@@ -47,6 +47,10 @@
         <text class="meta-label">每人限购</text>
         <text class="meta-value">{{item.perUserLimit}} 件</text>
       </view>
+      <!-- 今日剩余（Task 12）：与积分页道具卡同一份文案；todayLeft 为 null（不限投放）时整行不渲染 -->
+      <view class="meta-row" wx:if="{{todayText}}">
+        <text class="meta-value">{{todayText}}</text>
+      </view>
       <!-- 持卡数只有补签卡有「我的补签卡」这一栏（免广告卡没有同类持有物） -->
       <view class="meta-row" wx:if="{{isMakeup && cards > 0}}">
         <text class="meta-label">我的补签卡</text>

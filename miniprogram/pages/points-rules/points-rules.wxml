@@ -4,6 +4,13 @@
     <text class="intro-sub">签到、做任务都能获得积分，积分可在积分商城兑换补签卡。</text>
   </view>
 
+  <!-- 榜单奖励：整段由服务端 boardRules 下发（分值/门槛/3 榜上限都从后台配置插值），
+       这里只逐句渲染、不写第二份数字；拉取失败时数组为空，整段静默缺席 -->
+  <view class="card" wx:if="{{boardRules.length}}">
+    <view class="section-title">榜单奖励</view>
+    <text class="rule" wx:for="{{boardRules}}" wx:key="*this">{{item}}</text>
+  </view>
+
   <view class="card">
     <view class="section-title">如何获得积分</view>
 

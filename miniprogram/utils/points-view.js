@@ -70,6 +70,17 @@ function stockTextOf(stockLeft) {
   return `剩余 ${formatThousands(stockLeft)} 件`;
 }
 
+/**
+ * 今日剩余文案：数字由服务端算（ItemDto.todayLeft = 当日投放 − 全平台已兑，封底 0），端上只显示。
+ * null = 不限投放 ⇒ 空串（整行不渲染，0 会被读成「兑完」）；老接口缺字段同样不渲染，别猜成不限。
+ */
+function todayLeftTextOf(todayLeft) {
+  if (todayLeft === null || todayLeft === undefined) return '';
+  const n = Number(todayLeft);
+  if (!Number.isFinite(n)) return '';
+  return `今日剩余 ${n} 张`;
+}
+
 /** 道具卡：接口下发整张商品表，卡片图位用名称首字（与头像首字占位同一套做法） */
 function buildItemCards(items) {
   return (items || []).map((it) => ({
@@ -83,6 +94,8 @@ function buildItemCards(items) {
     // 有效期与库存各成字段，由页面拼成一行 meta：副标题保持单行，不再被「·30天有效」挤到折行
     validText: `${it.validDays} 天有效`,
     stockText: stockTextOf(it.stockLeft),
+    // 今日剩余（Task 12）：限量投放才有；null/缺字段都是空串 ⇒ wxml 的 wx:if 整行不出
+    todayText: todayLeftTextOf(it.todayLeft),
     metaText: [`${it.validDays} 天有效`, stockTextOf(it.stockLeft)].filter(Boolean).join(' · '),
     glyph: (it.name || '').charAt(0),
     // 道具图：服务端已按缩略档签好名，端上只贴链不拼参数；缺图时 wxml 回落首字占位
@@ -90,4 +103,4 @@ function buildItemCards(items) {
   }));
 }
 
-module.exports = { buildSigninStrip, shiftDateKey, buildTaskRows, buildItemCards, md, buildTaskGroups: buildTaskRows, stockTextOf };
+module.exports = { buildSigninStrip, shiftDateKey, buildTaskRows, buildItemCards, md, buildTaskGroups: buildTaskRows, stockTextOf, todayLeftTextOf };

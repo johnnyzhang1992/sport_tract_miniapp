@@ -68,7 +68,7 @@ const summaryFixture = () => ({
     { key: 'newbie_profile', title: '完善资料', points: 10, status: 'claimable', actionText: '领取' },
     { key: 'daily_video', title: '每日看视频', points: 5, status: 'claimable', actionText: '去观看', times: 3, timesLeft: 2 },
   ],
-  items: [{ key: 'makeup_card', name: '补签卡', subtitle: '恢复连续打卡记录', price: 30, validDays: 30 }],
+  items: [{ key: 'makeup_card', name: '补签卡', subtitle: '恢复连续打卡记录', price: 30, validDays: 30, todayLeft: 2 }],
 });
 
 const fakeApi = {
@@ -275,7 +275,7 @@ test('PP4 登录用户进页：只读一次汇总并映射余额/cells 七格/�
   assert.equal(p.data.items.length, 1);
   assert.deepEqual(p.data.items[0], {
     key: 'makeup_card', name: '补签卡', subtitle: '恢复连续打卡记录', price: 30, priceText: '30', validDays: 30,
-    validText: '30 天有效', stockText: '', metaText: '30 天有效', glyph: '补', imageUrl: '',
+    validText: '30 天有效', stockText: '', todayText: '今日剩余 2 张', metaText: '30 天有效', glyph: '补', imageUrl: '',
   });
 });
 
@@ -648,6 +648,8 @@ const PAGE_LOADERS = {
     require('../miniprogram/pages/points-item/points-item.js'),
   'miniprogram/pages/points-exchanges/points-exchanges.js': () =>
     require('../miniprogram/pages/points-exchanges/points-exchanges.js'),
+  'miniprogram/pages/points-rules/points-rules.js': () =>
+    require('../miniprogram/pages/points-rules/points-rules.js'),
 };
 
 function loadPage(relPath) {
@@ -1958,5 +1960,79 @@ test('PP67 价格行：价格独立成大字 + 库存胶囊共用 stockTextOf，
       // 胶囊要有自己的底色，跟白卡同色就只剩一行裸字，看不出这是个状态标记
       assert.notEqual(bg, cardBg, '库存胶囊的底色不能和白卡一样');
     }
+  }
+});
+
+/* ------------------- 规则页榜单段落 / 商品今日剩余（Task 12） ------------------- */
+
+const RULES_WXML = 'miniprogram/pages/points-rules/points-rules.wxml';
+const RULES_JS = 'miniprogram/pages/points-rules/points-rules.js';
+
+/** 去注释后再做「不许写死榜单分值」的源码守卫：注释里出现同名字样不该把守卫骗成红/绿 */
+const stripWxmlComments = (s) => s.replace(/<!--[\s\S]*?-->/g, '');
+
+test('PP68 规则页榜单段落走服务端文案：wxml 里不许出现写死的榜单分值', () => {
+  const wxml = stripWxmlComments(read(RULES_WXML));
+  // 锚定「周/月/年榜 + 数字 + 分」这种句式（注释已剥掉）：分值只许来自接口 boardRules
+  for (const period of ['周榜', '月榜', '年榜']) {
+    assert.ok(
+      // 锚在渲染文本里的「周榜……分」句式上（中间允许「第 1 名」这类数字片段）；
+      // 注释已在上面剥掉，不会因为注释里写了同样一句就把守卫骗红/骗绿
+      !new RegExp(`${period}[^\\n]{0,40}?\\d+\\s*分`).test(wxml),
+      `规则页里不该出现写死的${period}分值（分值由服务端 boardRules 下发）`,
+    );
+  }
+  assert.ok(wxml.includes('wx:for="{{boardRules}}"'), '榜单奖励整段由服务端 boardRules 数组渲染');
+  assert.ok(wxml.includes('{{item}}'), '逐句渲染服务端文案本身，不在端上二次拼数字');
+  // 不许回落硬编码文案：JS 里也不留备份的六句（同一条正则守住）
+  assert.ok(!/周榜[^0-9]{0,12}\d+\s*分/.test(read(RULES_JS)), 'JS 里同样不许写死榜单分值');
+});
+
+test('PP69 商品卡/详情页显示「今日剩余 N 张」，不限（null）时整行不渲染', () => {
+  const cardWxml = read('miniprogram/pages/points/points.wxml');
+  assert.ok(cardWxml.includes('wx:if="{{item.todayText}}"'), '整行按派生 todayText 条件渲染（null ⇒ 空串 ⇒ 不渲染）');
+  assert.ok(cardWxml.includes('{{item.todayText}}'), '文案整句来自 utils/points-view，wxml 不拼数字');
+  assert.ok(!/item\.todayLeft\s*[-+*]/.test(cardWxml), '端上不许自己算今日剩余');
+
+  const itemWxml = read(ITEM_WXML);
+  assert.ok(itemWxml.includes('wx:if="{{todayText}}"'), '详情页 meta 行与列表卡同口径条件渲染');
+  assert.ok(itemWxml.includes('{{todayText}}'), '详情页同样渲染整句，不自己拼「今日剩余」+数字');
+  const itemJs = read(ITEM_JS);
+  assert.match(itemJs, /todayLeftTextOf/, '详情页复用 utils/points-view 的今日剩余口径');
+  assert.match(itemJs, /todayText:\s*item \? todayLeftTextOf\(item\.todayLeft\) : ''/);
+
+  const { todayLeftTextOf } = require('../miniprogram/utils/points-view');
+  assert.equal(todayLeftTextOf(null), '', '不限投放（null）⇒ 空串 ⇒ 整行不渲染');
+  assert.equal(todayLeftTextOf(undefined), '', '老接口缺字段也不渲染（别猜成不限或 0）');
+  assert.equal(todayLeftTextOf(2), '今日剩余 2 张');
+  assert.equal(todayLeftTextOf(0), '今日剩余 0 张', '当日抢完显示 0，不是隐藏');
+});
+
+test('PP70 规则页从 GET /points/rules 读榜单数组；请求失败整段缺席（不回落硬编码）', async () => {
+  reset();
+  summaryRespond = (p) => {
+    assert.equal(p, '/points/rules', '规则页只该取公开的 /points/rules');
+    return Promise.resolve({ boardRules: ['服务端第一句', '服务端第二句'] });
+  };
+  const def = loadPage(RULES_JS);
+  const p = bootWith(def);
+  await tick();
+  assert.deepEqual(p.data.boardRules, ['服务端第一句', '服务端第二句'], '整段文案原样落到页面数据');
+  assert.ok(apiCalls.some((c) => c.url === '/points/rules'), '进页即取一次榜单文案');
+
+  // 失败：静默（不弹 toast、不进 failed 块），静态段落照常，榜单段落因空数组整段不渲染
+  reset();
+  summaryRespond = () => Promise.reject(new Error('network down'));
+  const def2 = loadPage(RULES_JS);
+  const p2 = bootWith(def2);
+  await tick();
+  assert.deepEqual(p2.data.boardRules, [], '失败时保持空数组 ⇒ wx:if 让榜单段落缺席');
+  assert.equal(toasts.length, 0, '规则页失败不打扰用户');
+});
+
+test('PP71 实物商品页不加「长期目标/需要稳定上榜」说明（spec §4.8 明确不加）', () => {
+  for (const p of [ITEM_WXML, ITEM_JS, RULES_WXML, RULES_JS,
+    'miniprogram/pages/points/points.wxml', 'miniprogram/utils/points-view.js']) {
+    assert.ok(!/长期目标|稳定上榜/.test(read(p)), `${p} 不该出现「长期目标/稳定上榜」类说明文案`);
   }
 });

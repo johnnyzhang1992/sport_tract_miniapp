@@ -97,6 +97,8 @@
           </view>
           <text class="item-sub">{{item.subtitle}}</text>
           <text class="item-meta">{{item.metaText}}</text>
+          <!-- 今日剩余（Task 12）：todayText 空串＝该道具不限投放或老接口缺字段，整行不渲染 -->
+          <text class="item-meta" wx:if="{{item.todayText}}">{{item.todayText}}</text>
           <view class="item-foot">
             <view class="item-side">
               <text class="item-price">{{item.priceText}}</text>

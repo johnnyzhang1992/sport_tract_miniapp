@@ -9,7 +9,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const {
-  buildSigninStrip, shiftDateKey, buildTaskRows, buildItemCards,
+  buildSigninStrip, shiftDateKey, buildTaskRows, buildItemCards, todayLeftTextOf,
 } = require('../miniprogram/utils/points-view.js');
 
 /** 按「起点 dateKey + 每天 [state, streakDay(, todayRewardAfter)]」造 cells；reward 走服务端口径 min(streakDay,7) */
@@ -107,7 +107,7 @@ test('PV6 道具卡：图位取名称首字，价格/有效期原样带出', () 
   assert.equal(cards.length, 1);
   assert.deepEqual(cards[0], {
     key: 'makeup_card', name: '补签卡', subtitle: '恢复连续打卡记录', price: 200, priceText: '200', validDays: 30,
-    validText: '30 天有效', stockText: '', metaText: '30 天有效', glyph: '补', imageUrl: '',
+    validText: '30 天有效', stockText: '', todayText: '', metaText: '30 天有效', glyph: '补', imageUrl: '',
   });
   assert.deepEqual(buildItemCards(undefined), [], '接口没下发商品表时给空数组，wxml 的 wx:if 才不会红');
 });
@@ -216,4 +216,20 @@ test('PV13 道具卡透传服务端签名图链：有图给图、缺字段给空
   assert.equal(cards[0].imageUrl, 'https://oss/x.png?sig=1', '签名链原样透传，端上不自己拼 OSS 参数');
   assert.equal(cards[1].imageUrl, '', '老接口没下发 imageUrl 时给空串，wxml 的 wx:if 才不会拿到 undefined 判断');
   assert.equal(cards[1].glyph, '补', '没图仍有首字占位');
+});
+
+test('PV14 今日剩余只格式化接口 todayLeft：null/undefined（不限）给空串，限量给整句', () => {
+  // 数字由服务端算（dailyQuota − 当日已兑），端上只显示；null＝不限 ⇒ 整行不渲染
+  assert.equal(todayLeftTextOf(null), '');
+  assert.equal(todayLeftTextOf(undefined), '');
+  assert.equal(todayLeftTextOf(2), '今日剩余 2 张');
+  assert.equal(todayLeftTextOf(0), '今日剩余 0 张', '当日抢光显示 0 张，不是隐藏整行');
+  // 非数字脏值同样不渲染，别把 NaN 印给用户
+  assert.equal(todayLeftTextOf('x'), '');
+  const cards = buildItemCards([
+    { key: 'a', name: 'A', price: 1, validDays: 1, todayLeft: 3 },
+    { key: 'b', name: 'B', price: 1, validDays: 1, todayLeft: null },
+    { key: 'c', name: 'C', price: 1, validDays: 1 },
+  ]);
+  assert.deepEqual(cards.map((c) => c.todayText), ['今日剩余 3 张', '', '']);
 });
