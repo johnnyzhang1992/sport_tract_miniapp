@@ -1226,11 +1226,13 @@ test('PP27 兑换记录页：状态映射、未知状态兜底、时间与消耗
     exchangeRow({ id: 'e6', itemKey: 'ad_free_30d', status: 'expired', statusText: '已过期', expiresAt: past, cost: 1200 }),
   ];
   // 两个 GET 分流：兑换记录与实物订单各走各的接口（订单区是实物批次加的）
-  summaryRespond = (url) => Promise.resolve(url === '/points/orders' ? [] : rows);
+  summaryRespond = (url) => Promise.resolve(
+    url === '/points/orders' || url === '/points/cards' ? [] : rows,
+  );
   const def = loadPage(EX_JS);
   const p = bootWith(def);
   await tick();
-  assert.deepEqual(calls(), ['GET /points/exchanges', 'GET /points/orders']);
+  assert.deepEqual(calls(), ['GET /points/exchanges', 'GET /points/orders', 'GET /points/cards']);
   assert.equal(p.data.orders.length, 0, '没有订单时订单区不该凭空出行');
   assert.equal(p.data.ordersFailed, false, '订单接口正常返回时不许挂着「读不到」提示');
   assert.equal(p.data.loggedIn, true);
@@ -1267,7 +1269,7 @@ test('PP28 兑换记录页：游客不请求、空态文案、失败可重试', 
   await p.onLoginTap();
   await tick();
   assert.equal(loginCalls, 1);
-  assert.deepEqual(calls(), ['GET /points/exchanges', 'GET /points/orders']);
+  assert.deepEqual(calls(), ['GET /points/exchanges', 'GET /points/orders', 'GET /points/cards']);
   assert.equal(p.data.items.length, 0);
   assert.ok(read(EX_WXML).includes('还没有兑换记录'));
   // 两段都空才出空态：只有订单没有兑换记录时，不该说「还没有兑换记录」
@@ -1280,7 +1282,7 @@ test('PP28 兑换记录页：游客不请求、空态文案、失败可重试', 
   assert.equal(q.data.failed, true);
   assert.equal(q.data.loading, false);
 
-  summaryRespond = (url) => Promise.resolve(url === '/points/orders' ? [] : [exchangeRow()]);
+  summaryRespond = (url) => Promise.resolve(url === '/points/orders' || url === '/points/cards' ? [] : [exchangeRow()]);
   await q.onRetry();
   await tick();
   assert.equal(q.data.failed, false);
@@ -1536,15 +1538,74 @@ test('PP43 订单时间行：同一天只写一次日期，跨天发货带上自
   ]);
 });
 
+test('PP45 我的卡：三来源全可见、文案与激活按钮只给未激活免广告卡、激活后重拉', async () => {
+  reset();
+  const future = Date.now() + 86400000;
+  const past = Date.now() - 86400000;
+  const cardRows = [
+    // 后台发放的未激活免广告卡：能激活（用户报障的主角）
+    { id: 'c1', itemKey: 'ad_free_7d', name: '免广告卡·7 天', kind: 'ad_free', status: 'unused',
+      statusText: '待使用', benefitDays: 7, source: 'admin', sourceText: '后台发放', expiresAt: future },
+    // 已激活生效中：没有按钮，meta 是到期区间
+    { id: 'c2', itemKey: 'ad_free_30d', name: '免广告卡·30 天', kind: 'ad_free', status: 'active',
+      statusText: '生效中', benefitDays: 30, source: 'exchange', sourceText: '兑换获得',
+      startAt: Date.now() - 3600_000, endAt: Date.now() + 29 * 86400000, expiresAt: future },
+    // 未使用的补签卡：没有按钮（走积分页「补」字）
+    { id: 'c3', itemKey: 'makeup_card', name: '补签卡', kind: 'makeup', status: 'unused',
+      statusText: '待使用', benefitDays: 0, source: 'system', sourceText: '系统赠送', expiresAt: future },
+    // 排队中的第二张
+    { id: 'c4', itemKey: 'ad_free_7d', name: '免广告卡·7 天', kind: 'ad_free', status: 'queued',
+      statusText: '待生效', benefitDays: 7, source: 'exchange', sourceText: '兑换获得',
+      startAt: Date.now() + 86400000, endAt: Date.now() + 8 * 86400000, expiresAt: future },
+    // 过期的未激活卡：没按钮
+    { id: 'c5', itemKey: 'ad_free_7d', name: '免广告卡·7 天', kind: 'ad_free', status: 'expired',
+      statusText: '已过期', benefitDays: 7, source: 'exchange', sourceText: '兑换获得', expiresAt: past },
+  ];
+  summaryRespond = (url) => {
+    if (url === '/points/orders') return Promise.resolve([]);
+    if (url === '/points/cards') return Promise.resolve(cardRows);
+    return Promise.resolve([]);
+  };
+  const p = bootWith(loadPage(EX_JS));
+  await tick();
+  assert.equal(p.data.cards.length, 5);
+  assert.deepEqual(p.data.cards.map((c) => c.canActivate), [true, false, false, false, false],
+    '只有未激活的免广告卡给「立即激活」');
+  assert.ok(p.data.cards[0].metaText.includes('7 天免广告'), '未激活文案要带权益天数');
+  assert.ok(p.data.cards[0].metaText.includes('前激活有效'));
+  assert.ok(p.data.cards[1].metaText.includes('到期'));
+  assert.ok(p.data.cards[2].metaText.includes('「补」字'), '补签卡指引去积分页用「补」字');
+  assert.ok(p.data.cards[4].metaText.includes('已过期'));
+  // 来源文案三来源齐全（发放/赠送不再隐形）
+  assert.deepEqual([...new Set(p.data.cards.map((c) => c.sourceText))].sort(),
+    ['兑换获得', '后台发放', '系统赠送']);
+  assert.ok(read(EX_WXML).includes('我的卡'));
+  assert.ok(read(EX_WXML).includes('onActivateCard'));
+
+  // 激活闭环：POST 卡券激活接口 → 回执带 adFreeUntil → 静默重拉三接口
+  apiCalls.length = 0;
+  postRespond = (url) => {
+    assert.equal(url, '/points/cards/c1/activate');
+    return Promise.resolve({ cardId: 'c1', adFreeUntil: Date.now() + 7 * 86400000 });
+  };
+  await p.onActivateCard({ currentTarget: { dataset: { id: 'c1' } } });
+  await tick();
+  assert.deepEqual(calls(), [
+    'POST /points/cards/c1/activate',
+    'GET /points/exchanges', 'GET /points/orders', 'GET /points/cards',
+  ], '激活成功后要重拉（卡状态从待使用变生效中）');
+  assert.equal(p.data.activating, '');
+});
+
 test('PP44 兑换记录页下拉刷新：重拉两个接口、不闪骨架、完成或失败都收起下拉动画', async () => {
   const json = JSON.parse(read('miniprogram/pages/points-exchanges/points-exchanges.json'));
   assert.equal(json.enablePullDownRefresh, true, '不加这个配置，下拉手势根本不会派发 onPullDownRefresh');
 
   reset();
-  summaryRespond = (url) => Promise.resolve(url === '/points/orders' ? [] : [exchangeRow()]);
+  summaryRespond = (url) => Promise.resolve(url === '/points/orders' || url === '/points/cards' ? [] : [exchangeRow()]);
   const p = bootWith(loadPage(EX_JS));
   await tick();
-  assert.deepEqual(calls(), ['GET /points/exchanges', 'GET /points/orders']);
+  assert.deepEqual(calls(), ['GET /points/exchanges', 'GET /points/orders', 'GET /points/cards']);
 
   // 记录每次 setData 的 patch，专门看 loading 有没有被翻成 true（翻 true 就会闪骨架）
   const patches = [];
@@ -1556,10 +1617,10 @@ test('PP44 兑换记录页下拉刷新：重拉两个接口、不闪骨架、完
   apiCalls.length = 0;
   pullStops = 0;
 
-  summaryRespond = (url) => Promise.resolve(url === '/points/orders' ? [] : [exchangeRow({ id: 'e9' })]);
+  summaryRespond = (url) => Promise.resolve(url === '/points/orders' || url === '/points/cards' ? [] : [exchangeRow({ id: 'e9' })]);
   await p.onPullDownRefresh();
   await tick();
-  assert.deepEqual(calls(), ['GET /points/exchanges', 'GET /points/orders'], '下拉要把两个接口都重拉');
+  assert.deepEqual(calls(), ['GET /points/exchanges', 'GET /points/orders', 'GET /points/cards'], '下拉要把三个接口都重拉');
   assert.equal(p.data.items[0].id, 'e9', '新数据要落到页面');
   assert.ok(patches.every((x) => x.loading !== true), '静默刷新：已有内容不闪骨架');
   assert.equal(pullStops, 1, '完成后必须收起下拉动画');

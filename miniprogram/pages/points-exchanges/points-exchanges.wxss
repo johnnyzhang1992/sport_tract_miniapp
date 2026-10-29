@@ -227,3 +227,40 @@
   font-size: 24rpx;
   color: #8a93a6;
 }
+
+/* ===== 我的卡（三来源可见 + 行内激活） ===== */
+.card-source {
+  font-size: 20rpx;
+  color: #8a93a6;
+  margin-top: 4rpx;
+}
+
+.exchange-meta {
+  font-size: 22rpx;
+  color: #667080;
+  margin-top: 6rpx;
+}
+
+/* 免广告卡激活后的两态新配色：生效中绿 / 待生效橙（done 走 status-expired 灰，不单设） */
+.card-status-active {
+  color: #1f9d61;
+  background: #e6f7ef;
+}
+
+.card-status-queued {
+  color: #b26a00;
+  background: #fff3e0;
+}
+
+.activate-btn {
+  flex: none;
+  font-size: 24rpx;
+  color: #fff;
+  background: #2b6cf6;
+  border-radius: 999rpx;
+  padding: 12rpx 26rpx;
+}
+
+.activate-btn.off {
+  opacity: 0.5;
+}

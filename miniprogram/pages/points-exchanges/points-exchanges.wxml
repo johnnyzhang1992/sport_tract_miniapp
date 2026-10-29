@@ -3,6 +3,32 @@
   <view wx:elif="{{failed}}" class="state state-tap" bindtap="onRetry">加载失败，点击重试</view>
   <view wx:elif="{{!loggedIn}}" class="state state-tap" bindtap="onLoginTap">登录后查看兑换记录</view>
   <block wx:else>
+    <!-- 我的卡（2026-10-29）：兑换/后台发放/系统赠送三来源全量；未激活免广告卡行内直接激活 -->
+    <view class="card" wx:if="{{cards.length || cardsFailed}}">
+      <view class="section-title">我的卡</view>
+      <view wx:if="{{cardsFailed}}" class="order-fail">卡信息暂时读不到，下拉刷新可再试</view>
+      <view class="exchange-list">
+        <view wx:for="{{cards}}" wx:key="id" class="exchange-row">
+          <view class="exchange-main">
+            <view class="exchange-head">
+              <text class="exchange-title">{{item.name}}</text>
+              <text class="exchange-status {{item.statusClass}}">{{item.statusText}}</text>
+            </view>
+            <text class="exchange-meta">{{item.metaText}}</text>
+            <text class="card-source">{{item.sourceText}}</text>
+          </view>
+          <view class="exchange-side">
+            <view
+              wx:if="{{item.canActivate}}"
+              class="activate-btn {{activating === item.id ? 'off' : ''}}"
+              data-id="{{item.id}}"
+              bindtap="onActivateCard"
+            >{{activating === item.id ? '激活中…' : '立即激活'}}</view>
+          </view>
+        </view>
+      </view>
+    </view>
+
     <!-- 我的订单（实物）：待发货 → 已发货 → 已完成，只有已发货能给「确认收货」 -->
     <view class="card" wx:if="{{orders.length || ordersFailed}}">
       <view class="section-title">我的订单</view>

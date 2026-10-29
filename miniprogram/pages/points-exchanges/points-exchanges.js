@@ -6,6 +6,8 @@
  * - 状态映射 unused → 未使用 / used → 已使用 / 其余（含 expired 与未知值）→ 已过期；
  * - 本页不再提供补签入口（Task 8 收口，spec §7）：逐日补签的唯一入口是积分页的补签胶囊，
  *   此前行内「去补签」只看持卡状态、不看 cells，会邀请用户进补不成的流程；已用的卡仍显示补了哪天（MM.DD）；
+ * - 「我的卡」区（GET /points/cards，2026-10-29）：兑换/后台发放/系统赠送三来源的卡全部可见——
+ *   发放不落 exchange，这里是发放卡唯一的用户侧出口；免广告卡未激活的行内直接给「立即激活」；
  * - 实物批次加了「我的订单」区（GET /points/orders）：两个接口各自降级 ——
  *   订单拉不到只把订单区置空并提示，不能连兑换记录一起白屏（首页日历就是这么消失过的）；
  * - 登录闸门走触点级：进页不弹登录、游客不发请求，点引导才 ensureLogin。
@@ -77,12 +79,57 @@ function toOrderRow(r) {
   };
 }
 
+/**
+ * 卡行：状态与生效窗口全部采信服务端推导（顺延重放算术在 API 侧，端上不复制第二份）。
+ * metaText 按 kind × status 组装一句话说明；canActivate 只给未激活的免广告卡。
+ */
+function toCardRow(r) {
+  const expiresAt = toMs(r.expiresAt);
+  const startAt = r.startAt ? toMs(r.startAt) : 0;
+  const endAt = r.endAt ? toMs(r.endAt) : 0;
+  let metaText = '';
+  if (r.kind === 'ad_free') {
+    if (r.status === 'unused') metaText = `${r.benefitDays} 天免广告 · ${bjDate(expiresAt)} 前激活有效`;
+    else if (r.status === 'active') metaText = `${bjDateTime(startAt).slice(5, 11)} 起 · ${bjDateTime(endAt).slice(5, 11)} 到期`;
+    else if (r.status === 'queued') metaText = `预计 ${bjDateTime(startAt).slice(5, 11)} 开始生效`;
+    else if (r.status === 'done') metaText = `${r.benefitDays} 天免广告已用完`;
+    else metaText = `${bjDate(expiresAt)} 已过期，权益未生效`;
+  } else if (r.status === 'used') {
+    metaText = `已补签 ${r.usedForDate ? md(r.usedForDate) : ''}`;
+  } else if (r.status === 'expired') {
+    metaText = `${bjDate(expiresAt)} 已过期`;
+  } else {
+    metaText = '积分页点七格「补」字使用';
+  }
+  // 徽标类名映射进既有 .status-* 配色：生效中绿、待生效橙单独新增，已结束复用灰
+  const statusClass = r.status === 'active' ? 'card-status-active'
+    : r.status === 'queued' ? 'card-status-queued'
+    : r.status === 'done' ? 'status-expired'
+    : `status-${r.status}`;
+  return {
+    id: r.id,
+    name: r.name || '道具卡',
+    sourceText: r.sourceText || '兑换获得',
+    status: r.status,
+    statusClass,
+    statusText: r.statusText,
+    metaText,
+    // 只有未激活的免广告卡可激活；补签卡走积分页「补」字，过期卡激活接口也会 400
+    canActivate: r.kind === 'ad_free' && r.status === 'unused',
+  };
+}
+
 Page({
   data: {
     loggedIn: false,
     loading: true,
     failed: false,
     items: [],
+    /** 我的卡（三来源全量，未使用的排最前）；cardsFailed 单栏降级 */
+    cards: [],
+    cardsFailed: false,
+    /** 正在激活的卡 id：只禁用那一行的按钮 */
+    activating: '',
     /** 实物订单（倒序）；ordersFailed = 只这一栏拉挂了，兑换记录照常显示 */
     orders: [],
     ordersFailed: false,
@@ -112,10 +159,11 @@ Page({
       return;
     }
     try {
-      // 两段各自 catch：订单接口挂了只影响订单栏（兑换记录是主内容，不能被连带白屏）
-      const [rows, orderRows] = await Promise.all([
+      // 三段各自 catch：订单/卡接口挂了只影响各自栏（兑换记录是主内容，不能被连带白屏）
+      const [rows, orderRows, cardRows] = await Promise.all([
         api.get('/points/exchanges'),
         api.get('/points/orders').catch(() => null),
+        api.get('/points/cards').catch(() => null),
       ]);
       const now = Date.now();
       this.setData({
@@ -124,9 +172,29 @@ Page({
         items: (rows || []).map((r) => toRow(r, now)),
         ordersFailed: orderRows === null,
         orders: (orderRows || []).map(toOrderRow),
+        cardsFailed: cardRows === null,
+        cards: (cardRows || []).map(toCardRow),
       });
     } catch (e) {
       this.setData({ loading: false, failed: true });
+    }
+  },
+
+  /** 立即激活免广告卡：服务端 CAS 兜连点；成功回执带 adFreeUntil，直接念到期时间 */
+  async onActivateCard(e) {
+    const id = e.currentTarget.dataset.id;
+    if (!id || this.data.activating) return;
+    this.setData({ activating: id });
+    try {
+      const r = await api.post(`/points/cards/${id}/activate`, {});
+      const until = r && r.adFreeUntil ? bjDateTime(toMs(r.adFreeUntil)) : '';
+      wx.showToast({ title: until ? `已激活 · ${until.slice(5, 11)} 到期` : '已激活', icon: 'none' });
+      await this.fetch(true);
+    } catch (err) {
+      wx.showToast({ title: (err && err.message) || '激活失败', icon: 'none' });
+      await this.fetch(true); // 失败（如已被他端激活）也重拉，让行回到真实状态
+    } finally {
+      this.setData({ activating: '' });
     }
   },
 
