@@ -1,7 +1,8 @@
 .page {
   min-height: 100vh;
   background: #f5f6f8;
-  padding-bottom: 24rpx;
+  /* 底部留白 + Home 指示条安全区：不垫的话最后一张卡会被压在下巴上 */
+  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
 }
 
 /* 签到卡头（2026-10-26 布局重排）：余额并入签到卡——
