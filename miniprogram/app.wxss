@@ -6,6 +6,13 @@ page {
   line-height: 1.6;
 }
 
+/*
+ * 页面容器。底部安全区约定（2026-10-29）：
+ * - **tab 页**（首页/轨迹/足迹/我的）不加 env(safe-area-inset-bottom)：原生 tabBar 已经在指示条之上，再加会多出一截。
+ * - **非 tab 页**如果内容能滚到屏幕底，自己把根节点的 padding-bottom 写成 calc(基础留白 + env(safe-area-inset-bottom))；
+ *   有固定底栏的页面，底栏自身也要垫 env()，滚动区按「栏高 + env()」预留（照 campaign-detail）。
+ * - 视口是画到屏幕物理底边的（iPhone 12/13：screenHeight 844、safeArea.bottom 810），底部 34px 会被 Home 指示条盖住。
+ */
 .container {
   padding: 24rpx;
 }

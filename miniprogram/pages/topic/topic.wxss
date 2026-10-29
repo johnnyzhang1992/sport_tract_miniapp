@@ -1,5 +1,6 @@
 .container {
-  padding: 32rpx 32rpx 64rpx;
+  /* 底部 64rpx + Home 指示条安全区 */
+  padding: 32rpx 32rpx calc(64rpx + env(safe-area-inset-bottom));
 }
 
 .cover {

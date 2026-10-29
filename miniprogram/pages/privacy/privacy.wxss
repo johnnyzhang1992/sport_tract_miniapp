@@ -1,5 +1,6 @@
 .privacy-page {
-  padding: 40rpx 32rpx 60rpx;
+  /* 底部 60rpx + Home 指示条安全区 */
+  padding: 40rpx 32rpx calc(60rpx + env(safe-area-inset-bottom));
   background: #fff;
   min-height: 100vh;
   box-sizing: border-box;

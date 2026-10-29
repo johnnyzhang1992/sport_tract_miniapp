@@ -179,3 +179,8 @@
   background: #aab0bb;
   color: #fff;
 }
+
+/* 非 tab 页：内容可滚到屏幕底，底部垫 Home 指示条安全区 */
+.container {
+  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
+}
