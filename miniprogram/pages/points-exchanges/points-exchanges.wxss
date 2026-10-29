@@ -20,7 +20,7 @@
 .card {
   background: #fff;
   border-radius: 20rpx;
-  padding: 8rpx 28rpx;
+  padding: 24rpx;
 }
 
 /* 列表包裹层：让 .exchange-row:last-child 真正命中末行去分隔线 */
