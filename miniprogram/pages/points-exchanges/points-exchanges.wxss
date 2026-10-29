@@ -1,8 +1,8 @@
 .page {
   min-height: 100vh;
   background: #f5f6f8;
-  /* 底部 48rpx + Home 指示条安全区 */
-  padding: 24rpx 24rpx calc(48rpx + env(safe-area-inset-bottom));
+  /* 底部 96rpx + Home 指示条安全区（2026-10-29 用户反馈：列表下方空白偏小） */
+  padding: 24rpx 24rpx calc(96rpx + env(safe-area-inset-bottom));
   box-sizing: border-box;
 }
 
@@ -237,13 +237,13 @@
 .card-list {
   display: flex;
   flex-direction: column;
-  gap: 16rpx;
+  gap: 12rpx;
 }
 
 .card-item {
   background: #f7f8fa;
   border-radius: 16rpx;
-  padding: 24rpx;
+  padding: 20rpx;
 }
 
 .card-head {
@@ -265,7 +265,7 @@
   flex: none;
   font-size: 20rpx;
   line-height: 1;
-  padding: 8rpx 16rpx;
+  padding: 6rpx 14rpx;
   border-radius: 999rpx;
   color: #667080;
   background: #eceef1;
@@ -287,10 +287,10 @@
 }
 
 .card-meta {
-  margin-top: 16rpx;
+  margin-top: 12rpx;
   display: flex;
   flex-direction: column;
-  gap: 8rpx;
+  gap: 6rpx;
 }
 
 .meta-row {
@@ -316,8 +316,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 16rpx;
-  padding-top: 16rpx;
+  margin-top: 12rpx;
+  padding-top: 12rpx;
   border-top: 1rpx solid #eceef1;
 }
 
@@ -339,7 +339,7 @@
   color: #fff;
   background: #2b6cf6;
   border-radius: 999rpx;
-  padding: 12rpx 28rpx;
+  padding: 10rpx 24rpx;
 }
 
 .activate-btn.off {
