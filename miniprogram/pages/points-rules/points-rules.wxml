@@ -31,7 +31,7 @@
 
     <view class="qa">
       <text class="q">看视频能得积分吗？</text>
-      <text class="a">每日看视频奖励每天仅限一次，需完整看完广告后领取；提前关闭广告不发积分。</text>
+      <text class="a">每日看视频奖励每日最多可领 3 次，需完整看完广告后领取；提前关闭广告不发积分。</text>
     </view>
   </view>
 
@@ -45,7 +45,7 @@
 
     <view class="qa">
       <text class="q">每天最多能获得多少积分？</text>
-      <text class="a">每个自然日最多获得 100 积分，达到上限后当日不再入账，签到、任务与补签都计入上限。</text>
+      <text class="a">每个自然日最多获得 100 积分，达到上限后当日不再入账，签到、任务与补签都计入上限；榜单奖励单独计算。</text>
     </view>
 
     <view class="qa">
