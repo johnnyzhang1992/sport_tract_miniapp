@@ -38,3 +38,33 @@
 }
 .msg-date { margin-top: 8rpx; font-size: 24rpx; color: #667080; }
 .msg-arrow { color: #667080; font-size: 28rpx; margin-left: 16rpx; }
+
+/* 一键全读：列表顶部右对齐小按钮，无未读整行不渲染 */
+.readall-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4rpx 4rpx 12rpx;
+  border-bottom: 1rpx solid #f2f3f5;
+}
+
+.readall-count {
+  font-size: 22rpx;
+  color: #8a93a6;
+  font-variant-numeric: tabular-nums;
+}
+
+.readall-btn {
+  font-size: 24rpx;
+  color: #2b6cf6;
+  padding: 8rpx 20rpx;
+  border-radius: 999rpx;
+}
+
+.readall-btn.off {
+  opacity: 0.5;
+}
+
+.readall-hover {
+  opacity: 0.7;
+}

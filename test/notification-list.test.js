@@ -5,6 +5,9 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
+const fs = require('node:fs');
+const path = require('node:path');
+const read = (rel) => fs.readFileSync(path.join(__dirname, '..', rel), 'utf8');
 const apiCalls = [];
 let respond = () => Promise.resolve({});
 const fakeApi = {
@@ -12,16 +15,22 @@ const fakeApi = {
     apiCalls.push({ method: 'GET', path: p });
     return respond(p);
   },
+  post(p) {
+    apiCalls.push({ method: 'POST', path: p });
+    return Promise.resolve({ unreadCount: 0 });
+  },
 };
 const apiPath = require.resolve('../miniprogram/services/api.js');
 require.cache[apiPath] = { id: apiPath, filename: apiPath, loaded: true, exports: fakeApi, children: [], paths: [] };
 
 const navs = [];
+const toasts = [];
 global.wx = {
   navigateTo: (o) => navs.push(o && o.url),
   stopPullDownRefresh: () => {},
   getStorageSync: () => '',
   setStorageSync: () => {},
+  showToast: (o) => toasts.push(o && o.title),
 };
 
 let session = true;
@@ -49,6 +58,7 @@ function makePage(def) {
 function resetEnv() {
   apiCalls.length = 0;
   navs.length = 0;
+  toasts.length = 0;
   session = true;
   respond = () => Promise.resolve({});
 }
@@ -86,6 +96,51 @@ test('NL3 点击列表项 → 带 id 进详情', () => {
   const page = makePage(listDef);
   page.goDetail({ currentTarget: { dataset: { id: 'n9' } } });
   assert.deepEqual(navs, ['/pages/notification/notification?id=n9']);
+});
+
+test('NL5 一键全读：有未读才出按钮，点了 POST read-all + 重拉 + 回执', async () => {
+  resetEnv();
+  const future = Date.now();
+  // 第一拉：一条未读一条已读 → hasUnread true
+  respond = () =>
+    Promise.resolve({
+      items: [
+        { id: 'n2', title: '新通知', publishedAt: future, read: false },
+        { id: 'n1', title: '旧通知', publishedAt: future - 1000, read: true },
+      ],
+      unreadCount: 1,
+    });
+  const page = makePage(listDef);
+  await page.fetch();
+  assert.equal(page.data.hasUnread, true, '有未读 → 按钮行出现');
+  assert.equal(page.data.unreadText, '1 条未读', '左侧未读数带具体条数');
+  assert.ok(read('miniprogram/pages/notification-list/notification-list.wxml').includes('wx:if="{{hasUnread}}"'), '按钮行挂 hasUnread 条件');
+  assert.ok(read('miniprogram/pages/notification-list/notification-list.wxml').includes('{{unreadText}}'), '未读数贴左展示');
+
+  // 点击：POST read-all → 重拉全 read → hasUnread 翻 false（按钮行随之消失）
+  apiCalls.length = 0;
+  respond = () =>
+    Promise.resolve({
+      items: [
+        { id: 'n2', title: '新通知', publishedAt: future, read: true },
+        { id: 'n1', title: '旧通知', publishedAt: future - 1000, read: true },
+      ],
+      unreadCount: 0,
+    });
+  await page.onReadAll();
+  assert.deepEqual(apiCalls, [
+    { method: 'POST', path: '/notifications/read-all' },
+    { method: 'GET', path: '/notifications' },
+  ], '先上报全读，再重拉列表');
+  assert.equal(page.data.hasUnread, false, '全 read 后按钮行不再渲染');
+  assert.equal(page.data.unreadText, '', '未读数清空');
+  assert.ok(toasts.includes('已全部读'), `要有回执，实际 ${JSON.stringify(toasts)}`);
+  assert.equal(page.data.readingAll, false, '结束时复位 busy');
+
+  // 无未读时点按钮：不发请求（防御）
+  apiCalls.length = 0;
+  await page.onReadAll();
+  assert.deepEqual(apiCalls, [], '没有未读就不该发请求');
 });
 
 test('NM1 个人中心：unreadCount>0 时角标有数', async () => {

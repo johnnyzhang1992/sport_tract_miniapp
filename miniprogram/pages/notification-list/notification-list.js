@@ -7,6 +7,10 @@ Page({
     items: [],
     loading: true,
     failed: false,
+    hasUnread: false,
+    unreadCount: 0,
+    unreadText: '',
+    readingAll: false,
   },
 
   onShow() {
@@ -28,7 +32,14 @@ Page({
         dateText: this.fmtDate(it.publishedAt),
         unread: loggedIn && !it.read,
       }));
-      this.setData({ items, loading: false });
+      const unreadCount = res && res.unreadCount ? Number(res.unreadCount) || 0 : 0;
+      this.setData({
+        items,
+        loading: false,
+        unreadCount,
+        unreadText: unreadCount > 0 ? `${unreadCount} 条未读` : '',
+        hasUnread: items.some((it) => it.unread) || unreadCount > 0,
+      });
     } catch (e) {
       this.setData({ loading: false, failed: true });
     }
@@ -36,6 +47,21 @@ Page({
 
   fmtDate(ts) {
     return bjDate(ts);
+  },
+
+  // 一键全读：服务端幂等（并发撞唯一键只跳过），成功即重拉（未读点全灭）并回执
+  async onReadAll() {
+    if (this.data.readingAll || !this.data.hasUnread) return;
+    this.setData({ readingAll: true });
+    try {
+      await api.post('/notifications/read-all', {});
+      wx.showToast({ title: '已全部读', icon: 'success' });
+      await this.fetch();
+    } catch (e) {
+      wx.showToast({ title: (e && e.message) || '操作失败', icon: 'none' });
+    } finally {
+      this.setData({ readingAll: false });
+    }
   },
 
   goDetail(e) {

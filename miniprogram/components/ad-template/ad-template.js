@@ -67,11 +67,16 @@ Component({
       if (show !== this.data.show || unitId !== this.data.unitId) this.setData({ show, unitId });
     },
     onAdLoad(e) {
+      // 渲染留痕（2026-10-29）：开发版/体验版 vConsole 可逐位子确认 load；正式版 console 自动静默
+      console.log('[ad] load', this.data.adslot, this.data.unitId || '');
       this.triggerEvent('load', (e && e.detail) || {});
     },
     onAdError(e) {
+      // 错误码速查：200500 无填充（新位子常见）、200506 单元无效；驳回/未开通也会走到这
+      const detail = (e && e.detail) || {};
+      console.warn('[ad] error', this.data.adslot, this.data.unitId || '', detail.errCode, detail.errMsg || '');
       this.setData({ show: false });
-      this.triggerEvent('error', (e && e.detail) || {});
+      this.triggerEvent('error', detail);
     },
   },
 });
