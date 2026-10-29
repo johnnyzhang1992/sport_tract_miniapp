@@ -6,7 +6,6 @@
     <!-- 我的卡（2026-10-29 统一卡结构）：兑换/后台发放/系统赠送三来源一张列表——
          名称+右上角状态徽章；获得方式/时间/有效期/积分四行元信息；未激活免广告卡行内激活 -->
     <view class="card" wx:if="{{cards.length || cardsFailed}}">
-      <view class="section-title">我的卡</view>
       <view wx:if="{{cardsFailed}}" class="order-fail">卡信息暂时读不到，下拉刷新可再试</view>
       <view class="card-list">
         <view wx:for="{{cards}}" wx:key="id" class="card-item">
