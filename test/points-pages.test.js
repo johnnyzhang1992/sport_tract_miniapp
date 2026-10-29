@@ -1268,10 +1268,10 @@ test('PP27 我的卡统一卡结构：名称+右上角徽章/获得方式/时间
   assert.ok(p.data.cards[2].validText.startsWith('生效至 ') && p.data.cards[2].validText.includes(String(new Date().getFullYear())));
   assert.equal(p.data.cards[4].validText, `${bjDate(past)} 已过期`);
   assert.equal(p.data.cards[5].validText, '权益已用完');
-  // 积分：兑换=实价千分位；发放/赠送=免费
-  assert.equal(p.data.cards[0].costText, '-200');
-  assert.equal(p.data.cards[1].costText, '免费', '发放的卡不出现「-0」');
-  assert.equal(p.data.cards[4].costText, '-1,200', '四位数千分位与订单/明细同口径');
+  // 积分不显负数（2026-10-29 定稿）：数量+单位，千分位保留；发放/赠送=0积分
+  assert.equal(p.data.cards[0].costText, '200积分');
+  assert.equal(p.data.cards[1].costText, '0积分', '发放的卡是 0积分，不是免费也不是 -0');
+  assert.equal(p.data.cards[4].costText, '1,200积分', '四位数千分位与订单/明细同口径');
   // 补了哪天 MM.DD；激活按钮只给未激活免广告卡
   assert.equal(p.data.cards[3].usedForDateText, '10.21');
   assert.deepEqual(p.data.cards.map((c) => c.canActivate), [false, true, false, false, false, false]);
@@ -1303,7 +1303,8 @@ test('PP28 兑换记录页：游客不请求、空态文案、失败可重试', 
   assert.equal(p.data.cards.length, 0);
   assert.ok(read(EX_WXML).includes('还没有卡券记录'));
   // 两段都空才出空态：只有订单没有卡时，不该说「还没有卡券记录」
-  assert.ok(read(EX_WXML).includes('wx:if="{{!cards.length && !orders.length}}"'), '空态判据要同时看订单');
+  assert.ok(read(EX_WXML).includes('wx:if="{{!cardsFailed && !cards.length && !orders.length}}"'),
+    '空态判据同时看卡与订单，且卡失败时只出失败提示不出空态');
 
   reset();
   summaryRespond = () => Promise.reject(new Error('boom'));
@@ -1585,7 +1586,7 @@ test('PP45 我的卡激活闭环：三来源可见、免费不显 -0、激活 PO
   await tick();
   assert.deepEqual(p.data.cards.map((c) => c.sourceText).sort(), ['兑换获得', '后台发放', '系统赠送'],
     '三来源（发放/赠送/兑换）全部可见，发放赠送不再隐形');
-  assert.deepEqual(p.data.cards.map((c) => c.costText), ['免费', '免费', '-600']);
+  assert.deepEqual(p.data.cards.map((c) => c.costText), ['0积分', '0积分', '600积分']);
   assert.deepEqual(p.data.cards.map((c) => c.canActivate), [true, false, true],
     '激活按钮只给未激活的免广告卡；补签卡走积分页「补」字');
   assert.ok(read(EX_WXML).includes('onActivateCard'));

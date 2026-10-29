@@ -16,7 +16,7 @@
           <text class="balance-num">{{balance}}</text>
           <text class="balance-label">积分明细 ›</text>
         </view>
-        <view class="rules-link" hover-class="row-hover" hover-stay-time="80" bindtap="goRules">积分规则</view>
+        <view class="rules-link" hover-class="row-hover" hover-stay-time="80" bindtap="goRules">积分规则 ›</view>
       </view>
       <view wx:if="{{expiring}}" class="expire-note">{{expiring.points}} 积分将在 {{expiring.daysLeft}} 天后过期</view>
     </view>

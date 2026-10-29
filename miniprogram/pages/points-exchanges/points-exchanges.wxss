@@ -293,9 +293,18 @@
   gap: 6rpx;
 }
 
+/* 卡内元信息行两端贴边：label 顶左、值顶右（定宽 label 是订单区寄往/物流的排法，卡内不用） */
 .meta-row {
   display: flex;
   align-items: baseline;
+}
+
+.card-meta .meta-row {
+  justify-content: space-between;
+}
+
+.card-meta .meta-label {
+  width: auto;
 }
 
 .meta-label {
@@ -321,9 +330,10 @@
   border-top: 1rpx solid #eceef1;
 }
 
-.cost-row {
+.foot-right {
   display: flex;
-  align-items: baseline;
+  align-items: center;
+  gap: 16rpx;
 }
 
 .cost-value {

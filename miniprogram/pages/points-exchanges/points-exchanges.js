@@ -66,8 +66,8 @@ function toCardRow(r) {
     timeText: bjDateTime(toMs(r.createdAt)),
     validText,
     usedForDateText: r.usedForDate ? md(r.usedForDate) : '',
-    // 发放/赠送的卡没花积分：显示「免费」，不出现「-0 积分」
-    costText: (r.cost || 0) > 0 ? `-${formatThousands(r.cost)}` : '免费',
+    // 积分不显负数：兑换显示「200积分」，发放/赠送显示「0积分」（2026-10-29 用户定稿）
+    costText: `${formatThousands(r.cost || 0)}积分`,
     // 只有未激活的免广告卡可激活；补签卡走积分页「补」字，过期卡激活接口也会 400
     canActivate: r.kind === 'ad_free' && r.status === 'unused',
   };

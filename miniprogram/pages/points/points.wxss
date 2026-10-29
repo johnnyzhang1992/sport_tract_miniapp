@@ -34,14 +34,12 @@
   padding: 12rpx 0 12rpx 4rpx; /* 加大点击热区（2026-10-26）：文字不变，热区包住上下 */
 }
 
-/* 规则入口改成胶囊：命中区大、不用眯眼找小字 */
+/* 规则入口与「积分明细 ›」同款纯文字链接（2026-10-29：去胶囊底色 + 加箭头），热区保留 */
 .rules-link {
   flex: none;
   font-size: 26rpx;
-  color: #404653;
-  background: #f2f3f5;
-  border-radius: 999rpx;
-  padding: 12rpx 28rpx;
+  color: #2b6cf6;
+  padding: 12rpx 0 12rpx 16rpx;
 }
 
 .row-hover {

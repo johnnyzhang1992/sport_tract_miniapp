@@ -32,16 +32,16 @@
             </view>
           </view>
           <view class="card-foot">
-            <view class="cost-row">
-              <text class="meta-label">积分</text>
+            <text class="meta-label">积分</text>
+            <view class="foot-right">
               <text class="cost-value">{{item.costText}}</text>
+              <view
+                wx:if="{{item.canActivate}}"
+                class="activate-btn {{activating === item.id ? 'off' : ''}}"
+                data-id="{{item.id}}"
+                bindtap="onActivateCard"
+              >{{activating === item.id ? '激活中…' : '立即激活'}}</view>
             </view>
-            <view
-              wx:if="{{item.canActivate}}"
-              class="activate-btn {{activating === item.id ? 'off' : ''}}"
-              data-id="{{item.id}}"
-              bindtap="onActivateCard"
-            >{{activating === item.id ? '激活中…' : '立即激活'}}</view>
           </view>
         </view>
       </view>
@@ -86,8 +86,8 @@
       </view>
     </view>
 
-    <!-- 两边都空才出空态：只有订单（或只有卡）时不说「还没有」 -->
-    <view wx:if="{{!cards.length && !orders.length}}" class="empty">
+    <!-- 两边都空才出空态；卡接口挂了走失败提示，不与「还没有」同屏 -->
+    <view wx:if="{{!cardsFailed && !cards.length && !orders.length}}" class="empty">
       <text class="empty-title">还没有卡券记录</text>
       <text class="empty-link" bindtap="goItem">去兑换 ›</text>
     </view>
