@@ -90,8 +90,8 @@ function toCardRow(r) {
   let metaText = '';
   if (r.kind === 'ad_free') {
     if (r.status === 'unused') metaText = `${r.benefitDays} 天免广告 · ${bjDate(expiresAt)} 前激活有效`;
-    else if (r.status === 'active') metaText = `${bjDateTime(startAt).slice(5, 11)} 起 · ${bjDateTime(endAt).slice(5, 11)} 到期`;
-    else if (r.status === 'queued') metaText = `预计 ${bjDateTime(startAt).slice(5, 11)} 开始生效`;
+    else if (r.status === 'active') metaText = `${bjDateTime(startAt)} 起 · ${bjDateTime(endAt)} 到期`;
+    else if (r.status === 'queued') metaText = `预计 ${bjDateTime(startAt)} 开始生效`;
     else if (r.status === 'done') metaText = `${r.benefitDays} 天免广告已用完`;
     else metaText = `${bjDate(expiresAt)} 已过期，权益未生效`;
   } else if (r.status === 'used') {
@@ -188,7 +188,7 @@ Page({
     try {
       const r = await api.post(`/points/cards/${id}/activate`, {});
       const until = r && r.adFreeUntil ? bjDateTime(toMs(r.adFreeUntil)) : '';
-      wx.showToast({ title: until ? `已激活 · ${until.slice(5, 11)} 到期` : '已激活', icon: 'none' });
+      wx.showToast({ title: until ? `已激活 · ${until.slice(0, 10)} 到期` : '已激活', icon: 'none' });
       await this.fetch(true);
     } catch (err) {
       wx.showToast({ title: (err && err.message) || '激活失败', icon: 'none' });

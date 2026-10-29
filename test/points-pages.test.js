@@ -1574,6 +1574,9 @@ test('PP45 我的卡：三来源全可见、文案与激活按钮只给未激活
   assert.ok(p.data.cards[0].metaText.includes('7 天免广告'), '未激活文案要带权益天数');
   assert.ok(p.data.cards[0].metaText.includes('前激活有效'));
   assert.ok(p.data.cards[1].metaText.includes('到期'));
+  // 有效日期展示完整年月日（2026-10-29 用户要求）：meta 里必须带年份，不许再 slice 成 MM-DD
+  assert.ok(p.data.cards[1].metaText.includes(String(new Date().getFullYear())), `生效窗口要带完整年份：${p.data.cards[1].metaText}`);
+  assert.ok(p.data.cards[3].metaText.includes(String(new Date().getFullYear())), `排队开始要带完整年份：${p.data.cards[3].metaText}`);
   assert.ok(p.data.cards[2].metaText.includes('「补」字'), '补签卡指引去积分页用「补」字');
   assert.ok(p.data.cards[4].metaText.includes('已过期'));
   // 来源文案三来源齐全（发放/赠送不再隐形）
