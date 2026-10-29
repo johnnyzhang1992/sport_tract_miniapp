@@ -316,53 +316,29 @@ ad-template + .card {
 }
 
 .item-glyph {
-  flex: none;
-  width: 88rpx;
-  height: 88rpx;
-  border-radius: 20rpx;
+  /* 与 .item-art 同尺寸同圆角：有图无图卡面高度一致（2026-10-29 用户反馈兜底图尺寸不同） */
+  width: 100%;
+  height: 150rpx;
+  border-radius: 12rpx;
   background: #fff;
   color: #8a5f12;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 44rpx;
+  font-size: 48rpx;
   font-weight: 700;
 }
 
-.item-name-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8rpx;
-}
-
 .item-name {
+  display: block;
+  margin-top: 12rpx;
   font-size: 28rpx;
   font-weight: 600;
   color: #1f2329;
-}
-
-.item-owned {
-  font-size: 20rpx;
-  color: #2b6cf6;
-  background: #eaf1ff;
-  border-radius: 6rpx;
-  padding: 2rpx 10rpx;
-}
-
-.item-sub {
-  font-size: 22rpx;
-  color: #667080;
-  /* 副标题锁单行：两列窄卡里长文案折行会从词中间断开（「30天有/效」），宁可省略 */
+  /* 锁单行：两列窄卡里长名折行会把底行挤下去，省略号交给详情页展开 */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-/* 有效期 + 库存：一行灰字，跟副标题分开，不再被挤断 */
-.item-meta {
-  font-size: 22rpx;
-  color: #8a93a6;
 }
 
 .item-side {
@@ -392,11 +368,11 @@ ad-template + .card {
 }
 
 .item-go {
-  font-size: 24rpx;
+  font-size: 22rpx;
   color: #fff;
   background: #2b6cf6;
   border-radius: 999rpx;
-  padding: 10rpx 28rpx;
+  padding: 8rpx 22rpx;
 }
 
 .empty {

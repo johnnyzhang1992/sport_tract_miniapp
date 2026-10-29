@@ -37,7 +37,7 @@ test('PP2 积分页：签到/任务/兑换入口存在，有效期由接口 vali
   assert.ok(wxml.includes('补签卡'));
   assert.ok(wxml.includes('积分规则'));
   assert.ok(wxml.includes('积分明细'));
-  assert.ok(wxml.includes('{{item.metaText}}'), '兑换卡有效期（含库存）由派生 metaText 渲染，来自接口 validDays/stockLeft');
+  assert.ok(!wxml.includes('{{item.metaText}}'), '卡面收敛后不渲染 metaText（详情页展示有效期/库存）');
   assert.ok(!wxml.includes('30 天有效'), '不能在 WXML 写死 30 天');
 });
 
@@ -322,8 +322,11 @@ test('PP5c 道具区是卡片列表：一行两个竖排卡，没道具图时图
   const wxml = read('miniprogram/pages/points/points.wxml');
   assert.ok(/wx:for="{{items}}"/.test(wxml), '道具区要按接口下发的商品表循环，不能写死一张');
   assert.ok(wxml.includes('class="item-grid"') && wxml.includes('class="item-card"'), '两列网格 + 每个道具一张卡');
-  assert.ok(wxml.includes('{{item.glyph}}'), '卡上图位用派生好的首字，不在 wxml 里拼字符串');
-  assert.ok(wxml.includes('持有{{cards}}张'), '持卡数要在卡上带出来，兑换前就该知道自己有几张');
+  assert.ok(wxml.includes('{{item.glyph}}'), '没道具图时图位回落名称首字');
+  assert.ok(wxml.includes('{{item.imageUrl}}'), '有道具图优先渲染图');
+  assert.ok(wxml.includes('{{item.priceText}}') && wxml.includes('item-go'), '卡面只留 积分+兑换钮');
+  assert.ok(!wxml.includes('持有'), '持卡数移交详情页，卡面不再展示');
+  assert.ok(read('miniprogram/pages/points-item/points-item.wxml').includes('持有'), '详情页要能看到持卡数');
   assert.ok(wxml.includes('goExchangeRecords'), '标题右侧要有兑换记录入口');
 });
 
@@ -1753,16 +1756,18 @@ test('PP48 每日多次任务：页面透传剩余次数并渲染副行（看视
   assert.ok(/task-sub[\s\S]{0,80}?item\.timesText/.test(wxml), '副行文案要来自派生字段，不在 wxml 里拼');
 });
 
-test('PP49 道具卡：副标题单行省略，有效期与库存走服务端字段、由页面一次渲染成 meta 行', () => {
+test('PP49 道具卡收敛：卡面只留 图/名称/积分/兑换，文案细节移交详情页', () => {
   const wxml = read('miniprogram/pages/points/points.wxml');
-  assert.ok(wxml.includes('{{item.subtitle}}'), '副标题单独一行');
-  assert.ok(!/item\.subtitle\}\}\s*·/.test(wxml), '有效期不能继续拼在副标题后面（会从中间折断）');
-  assert.ok(wxml.includes('{{item.metaText}}'), '有效期/库存由派生字段一次渲染');
-  assert.ok(/item-meta/.test(wxml));
-
+  assert.ok(!wxml.includes('{{item.subtitle}}'), '副标题不在列表卡（详情页 hero-sub 有）');
+  assert.ok(!wxml.includes('{{item.metaText}}') && !/item-meta/.test(wxml), '有效期/库存行不在列表卡');
+  assert.ok(wxml.includes("{{item.name}}"), '名称保留');
+  // 名称锁单行：两列窄卡长名折行会把底行挤下去
   const wxss = read('miniprogram/pages/points/points.wxss');
-  const sub = wxss.slice(wxss.indexOf('.item-sub'), wxss.indexOf('.item-sub') + 200);
-  assert.ok(/white-space:\s*nowrap/.test(sub) && /text-overflow:\s*ellipsis/.test(sub), '长副标题单行省略，不折行');
+  const name = wxss.slice(wxss.indexOf('.item-name {'), wxss.indexOf('.item-name {') + 260);
+  assert.ok(/white-space:\s*nowrap/.test(name) && /text-overflow:\s*ellipsis/.test(name), '长名单行省略');
+
+  const itemWxml = read('miniprogram/pages/points-item/points-item.wxml');
+  assert.ok(itemWxml.includes('{{item.subtitle}}'), '副标题在详情页展示');
 });
 
 test('PP50 商品详情图：整宽竖排、按原比例自适应高度（不再横滑 220rpx 方图）', () => {
@@ -2065,9 +2070,7 @@ test('PP68 规则页榜单段落走服务端文案：wxml 里不许出现写死�
 
 test('PP69 商品卡/详情页显示「今日剩余 N 张」，不限（null）时整行不渲染', () => {
   const cardWxml = read('miniprogram/pages/points/points.wxml');
-  assert.ok(cardWxml.includes('wx:if="{{item.todayText}}"'), '整行按派生 todayText 条件渲染（null ⇒ 空串 ⇒ 不渲染）');
-  assert.ok(cardWxml.includes('{{item.todayText}}'), '文案整句来自 utils/points-view，wxml 不拼数字');
-  assert.ok(!/item\.todayLeft\s*[-+*]/.test(cardWxml), '端上不许自己算今日剩余');
+  assert.ok(!cardWxml.includes('todayText'), '列表卡收敛后不渲染今日剩余（详情页展示）');
 
   const itemWxml = read(ITEM_WXML);
   assert.ok(itemWxml.includes('wx:if="{{todayText}}"'), '详情页 meta 行与列表卡同口径条件渲染');

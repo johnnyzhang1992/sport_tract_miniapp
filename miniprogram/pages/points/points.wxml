@@ -91,14 +91,8 @@
         <view wx:for="{{items}}" wx:key="key" class="item-card" data-key="{{item.key}}" hover-class="row-hover" hover-stay-time="80" bindtap="goItem">
           <image wx:if="{{item.imageUrl}}" class="item-art" src="{{item.imageUrl}}" mode="aspectFill" lazy-load />
           <view wx:else class="item-glyph">{{item.glyph}}</view>
-          <view class="item-name-row">
-            <text class="item-name">{{item.name}}</text>
-            <text class="item-owned" wx:if="{{cards > 0}}">持有{{cards}}张</text>
-          </view>
-          <text class="item-sub">{{item.subtitle}}</text>
-          <text class="item-meta">{{item.metaText}}</text>
-          <!-- 今日剩余（Task 12）：todayText 空串＝该道具不限投放或老接口缺字段，整行不渲染 -->
-          <text class="item-meta" wx:if="{{item.todayText}}">{{item.todayText}}</text>
+          <!-- 2026-10-29 收敛：卡上只留 图/名称/积分/兑换；副标题·有效期·今日剩余·持卡数全在详情页 -->
+          <text class="item-name">{{item.name}}</text>
           <view class="item-foot">
             <view class="item-side">
               <text class="item-price">{{item.priceText}}</text>
