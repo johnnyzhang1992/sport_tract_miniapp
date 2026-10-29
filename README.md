@@ -53,6 +53,44 @@
 - **隐私合规**：定位权限 desc + requiredPrivateInfos、隐私政策页、启动隐私引导、内容安全检测
 - **坐标系**：第三方导入 WGS-84 → GCJ-02（与 eviltransform 一致）
 
+## 样式约定 · 底部安全区（Home 指示条）
+
+**问题**：小程序页面视口是画到屏幕物理底边的，带 Home 指示条的机型底部会被盖掉一截。
+实测 iPhone 12/13（Pro）：`windowHeight 753` / `screenHeight 844` / `safeArea.bottom 810` ⇒ **底部 34px 不可用**。
+不垫的后果：最后一行文字、最后一张卡、底部按钮会被指示条压住或贴着它。
+
+**三条规则**（改页面底部前先对照）：
+
+1. **tab 页不加**——首页 / 轨迹 / 足迹 / 我的。原生 tabBar 已经排在指示条之上，页面里再加 `env(safe-area-inset-bottom)` 会多出一截空白。
+2. **非 tab 页且内容能滚到底**：根节点底部留白 = 基础留白 + 安全区，基础值保持不变，只加 `env()`：
+   ```css
+   .page {
+     padding: 24rpx 24rpx calc(48rpx + env(safe-area-inset-bottom));
+   }
+   ```
+3. **有固定底栏的页面**：底栏自己垫安全区，滚动区按「栏高 + 安全区」预留，**两边各垫一次、不要重复**：
+   ```css
+   .buy-bar  { padding: 16rpx 32rpx calc(32rpx + env(safe-area-inset-bottom)); }
+   .buy-space { height: calc(184rpx + env(safe-area-inset-bottom)); }
+   ```
+
+**现状**（2026-10-29 全量扫过一遍）：
+
+| 类别 | 页面 |
+|---|---|
+| 已按规则 2 处理 | 积分 / 积分明细 / 兑换记录 / 积分规则 / 隐私政策 / 专题详情 / 活动创建 / 活动列表 / 通知列表 / 通知详情 / 设置 / 统计 / 总览 / 报告 / 体重趋势 / 年度报告 / 足迹列表 |
+| 已按规则 3 处理 | 商品详情（购买栏）、活动详情（`.page` 预留 170rpx）、运动榜（预留 150rpx）、轨迹详情（操作栏 + 180rpx）、录制页（100vh 内部布局）、活动列表（悬浮按钮） |
+| 按规则 1 不加 | 首页 / 轨迹 / 足迹 / 我的（tab 页） |
+| 固定布局、无需处理 | 足迹地图（`100vh` + `overflow: hidden`，底栏自带 `env()`） |
+
+**新增/改页面时的检查清单**：
+
+- [ ] 这个页面是 tab 页吗？是 ⇒ 底部不要 `env()`。
+- [ ] 内容能滚到屏幕底吗？能 ⇒ 根节点 `calc(基础值 + env(safe-area-inset-bottom))`。
+- [ ] 有固定底栏吗？有 ⇒ 底栏垫一次、滚动区预留「栏高 + 安全区」，别重复。
+- [ ] 模拟器（iPhone 12/13）滚到底截图，确认最后一行不压指示条；`wx.getSystemInfoSync()` 可读 `windowHeight / screenHeight / safeArea.bottom` 做交叉核对。
+
+
 ## 快速开始
 
 ```bash
