@@ -17,6 +17,7 @@ const { getPaceScale } = require('../../utils/pace-scale');
 const { computeRunPaceZones } = require('../../utils/track-pace');
 const { simplifyForMap } = require('../../utils/track-simplify');
 const { buildAltitudeChart, usesAltitudeColor } = require('../../utils/track-altitude');
+const { hasNoPace } = require('../../utils/pace-types');
 
 Page({
   data: {
@@ -82,7 +83,7 @@ Page({
       const endTime = activity.endTime || activity.startTime + (activity.duration || 0) * 1000;
       // 最快 1km（服务端分段计算；游泳/骑行无配速概念不展示）
       const fastestParts =
-        activity.fastestKm && !['swimming', 'cycling'].includes(activity.type)
+        activity.fastestKm && !hasNoPace(activity.type)
           ? formatPaceParts(activity.fastestKm)
           : null;
       // 运动数据网格（参考 Keep：标签在上、大数值 + 小单位在下；缺数据的格不占位）

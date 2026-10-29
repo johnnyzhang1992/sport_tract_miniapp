@@ -6,6 +6,7 @@ const config = require('../config/index');
 const { resolveAccuracy, describeAccuracyFields } = require('../utils/loc-accuracy');
 const { createVehicleWatcher } = require('../utils/vehicle-live');
 const { createStandstillWatcher, createMovementWatcher } = require('../utils/standstill-live');
+const { hasNoPace } = require('../utils/pace-types');
 
 const EARTH_RADIUS_M = 6371000;
 /** 节流：最小采点距离（米） */
@@ -601,7 +602,7 @@ class Tracker {
       durationSec: Math.round(durationSec),
       // 配速：秒/公里（游泳/骑行不展示；距离过短配速无意义）
       pace:
-        this.distance >= MIN_PACE_DISTANCE_M && !['swimming', 'cycling'].includes(this.type)
+        this.distance >= MIN_PACE_DISTANCE_M && !hasNoPace(this.type)
           ? Math.round(durationSec / (this.distance / 1000))
           : null,
       calories: Math.round(met * this.weightKg * (durationSec / 3600)),

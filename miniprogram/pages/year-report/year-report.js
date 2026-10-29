@@ -9,6 +9,7 @@ const config = require('../../config/index');
 const loading = require('../../utils/loading');
 const { formatDuration } = require('../../utils/format');
 const { posterViewHeight, yearPosterHeight, YEAR_POSTER } = require('../../utils/poster-layout');
+const { hasNoPace } = require('../../utils/pace-types');
 
 /** 圆角矩形路径 */
 function roundRect(ctx, x, y, w, h, r) {
@@ -166,7 +167,7 @@ Page({
     const withDate = (t) => ymd(t.startTime);
     const best = (arr, fn) => arr.reduce((a, b) => (fn(b) > fn(a) ? b : a), arr[0]);
     const bestPacePool = tracks.filter(
-      (t) => t.fastestKm > 0 && !['swimming', 'cycling'].includes(t.type),
+      (t) => t.fastestKm > 0 && !hasNoPace(t.type),
     );
     const highlights = [];
     if (tracks.length) {
