@@ -1,7 +1,8 @@
 .page {
   min-height: 100vh;
   background: #f5f6f8;
-  padding: 24rpx 24rpx 48rpx;
+  /* 底部 48rpx + Home 指示条安全区 */
+  padding: 24rpx 24rpx calc(48rpx + env(safe-area-inset-bottom));
   box-sizing: border-box;
 }
 
@@ -229,27 +230,107 @@
 }
 
 /* ===== 我的卡（三来源可见 + 行内激活） ===== */
-.card-source {
+
+/* ===== 我的卡：统一卡结构（三来源一张列表） =====
+   设计口径：白卡容器 + 浅灰卡块；徽章右上角；元信息 label 定宽对齐；
+   积分用本项目的荣誉金；唯一彩色动作是「立即激活」，其余全部黑白灰 */
+.card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.card-item {
+  background: #f7f8fa;
+  border-radius: 16rpx;
+  padding: 24rpx;
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
+.card-name {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1f2329;
+  min-width: 0;
+}
+
+/* 徽章：右上角、胶囊、细分状态配色 */
+.card-badge {
+  flex: none;
   font-size: 20rpx;
-  color: #8a93a6;
-  margin-top: 4rpx;
-}
-
-.exchange-meta {
-  font-size: 22rpx;
+  line-height: 1;
+  padding: 8rpx 16rpx;
+  border-radius: 999rpx;
   color: #667080;
-  margin-top: 6rpx;
+  background: #eceef1;
 }
 
-/* 免广告卡激活后的两态新配色：生效中绿 / 待生效橙（done 走 status-expired 灰，不单设） */
-.card-status-active {
+.card-badge.status-unused {
+  color: #2b6cf6;
+  background: #eaf1ff;
+}
+
+.card-badge.card-status-active {
   color: #1f9d61;
   background: #e6f7ef;
 }
 
-.card-status-queued {
+.card-badge.card-status-queued {
   color: #b26a00;
   background: #fff3e0;
+}
+
+.card-meta {
+  margin-top: 16rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.meta-row {
+  display: flex;
+  align-items: baseline;
+}
+
+.meta-label {
+  flex: none;
+  width: 128rpx;
+  font-size: 22rpx;
+  color: #8a93a6;
+}
+
+.meta-value {
+  font-size: 22rpx;
+  color: #404653;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 底行：积分左、激活钮右，细分隔线与元信息区隔开 */
+.card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16rpx;
+  padding-top: 16rpx;
+  border-top: 1rpx solid #eceef1;
+}
+
+.cost-row {
+  display: flex;
+  align-items: baseline;
+}
+
+.cost-value {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #8a5f12;
+  font-variant-numeric: tabular-nums;
 }
 
 .activate-btn {
@@ -258,7 +339,7 @@
   color: #fff;
   background: #2b6cf6;
   border-radius: 999rpx;
-  padding: 12rpx 26rpx;
+  padding: 12rpx 28rpx;
 }
 
 .activate-btn.off {

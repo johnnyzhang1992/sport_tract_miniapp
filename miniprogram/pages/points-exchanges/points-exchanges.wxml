@@ -3,21 +3,40 @@
   <view wx:elif="{{failed}}" class="state state-tap" bindtap="onRetry">加载失败，点击重试</view>
   <view wx:elif="{{!loggedIn}}" class="state state-tap" bindtap="onLoginTap">登录后查看兑换记录</view>
   <block wx:else>
-    <!-- 我的卡（2026-10-29）：兑换/后台发放/系统赠送三来源全量；未激活免广告卡行内直接激活 -->
+    <!-- 我的卡（2026-10-29 统一卡结构）：兑换/后台发放/系统赠送三来源一张列表——
+         名称+右上角状态徽章；获得方式/时间/有效期/积分四行元信息；未激活免广告卡行内激活 -->
     <view class="card" wx:if="{{cards.length || cardsFailed}}">
       <view class="section-title">我的卡</view>
       <view wx:if="{{cardsFailed}}" class="order-fail">卡信息暂时读不到，下拉刷新可再试</view>
-      <view class="exchange-list">
-        <view wx:for="{{cards}}" wx:key="id" class="exchange-row">
-          <view class="exchange-main">
-            <view class="exchange-head">
-              <text class="exchange-title">{{item.name}}</text>
-              <text class="exchange-status {{item.statusClass}}">{{item.statusText}}</text>
-            </view>
-            <text class="exchange-meta">{{item.metaText}}</text>
-            <text class="card-source">{{item.sourceText}}</text>
+      <view class="card-list">
+        <view wx:for="{{cards}}" wx:key="id" class="card-item">
+          <view class="card-head">
+            <text class="card-name">{{item.name}}</text>
+            <text class="card-badge {{item.statusClass}}">{{item.statusText}}</text>
           </view>
-          <view class="exchange-side">
+          <view class="card-meta">
+            <view class="meta-row">
+              <text class="meta-label">获得方式</text>
+              <text class="meta-value">{{item.sourceText}}</text>
+            </view>
+            <view class="meta-row">
+              <text class="meta-label">{{item.timeLabel}}</text>
+              <text class="meta-value">{{item.timeText}}</text>
+            </view>
+            <view class="meta-row">
+              <text class="meta-label">有效期</text>
+              <text class="meta-value">{{item.validText}}</text>
+            </view>
+            <view class="meta-row" wx:if="{{item.usedForDateText}}">
+              <text class="meta-label">已补签</text>
+              <text class="meta-value">{{item.usedForDateText}}</text>
+            </view>
+          </view>
+          <view class="card-foot">
+            <view class="cost-row">
+              <text class="meta-label">积分</text>
+              <text class="cost-value">{{item.costText}}</text>
+            </view>
             <view
               wx:if="{{item.canActivate}}"
               class="activate-btn {{activating === item.id ? 'off' : ''}}"
@@ -68,28 +87,9 @@
       </view>
     </view>
 
-    <view wx:if="{{items.length}}" class="card">
-      <view class="section-title" wx:if="{{orders.length}}">道具兑换记录</view>
-      <view class="exchange-list">
-        <view wx:for="{{items}}" wx:key="id" class="exchange-row">
-          <view class="exchange-main">
-            <view class="exchange-head">
-              <text class="exchange-title">{{item.title}}</text>
-              <text class="exchange-status status-{{item.status}}">{{item.statusText}}</text>
-            </view>
-            <text class="exchange-time">兑换时间 {{item.timeText}}</text>
-            <text class="exchange-expire">有效期至 {{item.expiresText}}</text>
-            <text class="exchange-used" wx:if="{{item.usedForDateText}}">已补签 {{item.usedForDateText}}</text>
-          </view>
-          <view class="exchange-side">
-            <text class="exchange-cost">{{item.costText}}</text>
-          </view>
-        </view>
-      </view>
-    </view>
-    <!-- 两边都空才出空态；只有订单没有兑换记录时不该说「还没有兑换记录」 -->
-    <view wx:elif="{{!orders.length}}" class="empty">
-      <text class="empty-title">还没有兑换记录</text>
+    <!-- 两边都空才出空态：只有订单（或只有卡）时不说「还没有」 -->
+    <view wx:if="{{!cards.length && !orders.length}}" class="empty">
+      <text class="empty-title">还没有卡券记录</text>
       <text class="empty-link" bindtap="goItem">去兑换 ›</text>
     </view>
   </block>

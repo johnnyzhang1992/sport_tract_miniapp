@@ -1210,46 +1210,73 @@ test('PP39 商品详情页按 ?key= 取商品：免广告卡走自己的兑换�
   );
 });
 
-test('PP27 兑换记录页：状态映射、未知状态兜底、时间与消耗格式化（行内补签入口已收口，见 PP38）', async () => {
+test('PP27 我的卡统一卡结构：名称+右上角徽章/获得方式/时间/有效期/积分一行不缺', async () => {
   reset();
   const future = Date.now() + 86400000;
   const past = Date.now() - 86400000;
-  const rows = [
-    exchangeRow({ id: 'e1', status: 'unused', statusText: '未使用', expiresAt: future }),
-    // 服务端已把过期未使用推导成 expired；页面再兜一层
-    exchangeRow({ id: 'e2', status: 'unused', statusText: '未使用', expiresAt: past }),
-    exchangeRow({ id: 'e3', status: 'used', statusText: '已使用', usedForDate: '2026-10-21', expiresAt: future }),
-    exchangeRow({ id: 'e4', status: 'expired', statusText: '已过期', expiresAt: past }),
-    // 未知状态不能当「未使用」；入口虽已删，状态归一（含过期兜底）仍是列表正确渲染的前提
-    exchangeRow({ id: 'e5', status: 'mystery', statusText: '未使用', expiresAt: future }),
-    // 四位数消耗：金额要千分位（免广告卡 600 还看不出来，1200 才看得出）
-    exchangeRow({ id: 'e6', itemKey: 'ad_free_30d', status: 'expired', statusText: '已过期', expiresAt: past, cost: 1200 }),
+  const cardRows = [
+    // 兑换的未使用补签卡：cost 从 exchange 行带出
+    { id: 'c1', itemKey: 'makeup_card', name: '补签卡', kind: 'makeup', status: 'unused',
+      statusText: '待使用', benefitDays: 0, source: 'exchange', sourceText: '兑换获得',
+      cost: 200, expiresAt: future, createdAt: Date.now() - 7200_000 },
+    // 后台发放的未激活免广告卡：cost 0 → 免费；时间标签变「发放时间」；能激活
+    { id: 'c2', itemKey: 'ad_free_7d', name: '免广告卡·7 天', kind: 'ad_free', status: 'unused',
+      statusText: '待使用', benefitDays: 7, source: 'admin', sourceText: '后台发放',
+      cost: 0, expiresAt: future, createdAt: Date.now() - 3600_000 },
+    // 生效中：有效期给到期时刻
+    { id: 'c3', itemKey: 'ad_free_30d', name: '免广告卡·30 天', kind: 'ad_free', status: 'active',
+      statusText: '生效中', benefitDays: 30, source: 'exchange', sourceText: '兑换获得',
+      cost: 600, startAt: Date.now() - 3600_000, endAt: Date.now() + 29 * 86400000,
+      expiresAt: future, createdAt: past },
+    // 已使用的补签卡：带出补了哪天（MM.DD，与积分页同口径）
+    { id: 'c4', itemKey: 'makeup_card', name: '补签卡', kind: 'makeup', status: 'used',
+      statusText: '已使用', benefitDays: 0, source: 'exchange', sourceText: '兑换获得',
+      cost: 49, usedForDate: '2026-10-21', expiresAt: future, createdAt: past },
+    // 过期：有效期一句「已过期」；四位数千分位
+    { id: 'c5', itemKey: 'ad_free_30d', name: '免广告卡·30 天', kind: 'ad_free', status: 'expired',
+      statusText: '已过期', benefitDays: 30, source: 'exchange', sourceText: '兑换获得',
+      cost: 1200, expiresAt: past, createdAt: past },
+    // 已结束（顺延窗口走完）：复用灰
+    { id: 'c6', itemKey: 'ad_free_7d', name: '免广告卡·7 天', kind: 'ad_free', status: 'done',
+      statusText: '已结束', benefitDays: 7, source: 'system', sourceText: '系统赠送',
+      cost: 0, expiresAt: future, createdAt: past },
   ];
-  // 两个 GET 分流：兑换记录与实物订单各走各的接口（订单区是实物批次加的）
-  summaryRespond = (url) => Promise.resolve(
-    url === '/points/orders' || url === '/points/cards' ? [] : rows,
-  );
-  const def = loadPage(EX_JS);
-  const p = bootWith(def);
+  summaryRespond = (url) => Promise.resolve(url === '/points/orders' ? [] : cardRows);
+  const p = bootWith(loadPage(EX_JS));
   await tick();
-  assert.deepEqual(calls(), ['GET /points/exchanges', 'GET /points/orders', 'GET /points/cards']);
-  assert.equal(p.data.orders.length, 0, '没有订单时订单区不该凭空出行');
-  assert.equal(p.data.ordersFailed, false, '订单接口正常返回时不许挂着「读不到」提示');
+  assert.deepEqual(calls(), ['GET /points/cards', 'GET /points/orders']);
   assert.equal(p.data.loggedIn, true);
   assert.equal(p.data.loading, false);
-  assert.deepEqual(p.data.items.map((i) => i.statusText), ['未使用', '已过期', '已使用', '已过期', '已过期', '已过期']);
-  assert.deepEqual(p.data.items.map((i) => i.status), ['unused', 'expired', 'used', 'expired', 'expired', 'expired']);
-  assert.ok(p.data.items.every((i) => i.canMakeup === undefined), '行数据不再自带可补判定——入口判据收口到积分页 cells');
-
-  const ts = rows[0].createdAt;
-  assert.equal(p.data.items[0].timeText, bjDateTime(ts));
-  assert.equal(p.data.items[0].expiresText, bjDate(future));
-  assert.equal(p.data.items[0].costText, '-200 积分');
-  assert.equal(p.data.items[5].costText, '-1,200 积分', '四位数消耗也要千分位（订单卡与明细卡同口径）');
-  assert.equal(p.data.items[2].usedForDateText, '10.21', '补掉的哪天：与积分页七格/胶囊同为 MM.DD 口径');
+  assert.equal(p.data.orders.length, 0);
+  assert.equal(p.data.ordersFailed, false);
+  assert.deepEqual(p.data.cards.map((c) => c.statusText),
+    ['待使用', '待使用', '生效中', '已使用', '已过期', '已结束']);
+  // 徽章类名：生效中绿/待生效橙单设，已结束与过期同灰，未使用蓝
+  assert.deepEqual(p.data.cards.map((c) => c.statusClass),
+    ['status-unused', 'status-unused', 'card-status-active', 'status-used', 'status-expired', 'card-status-done']);
+  // 时间标签随来源变化：兑换→「兑换时间」，发放/赠送→「发放时间」；完整年月日时分
+  assert.deepEqual(p.data.cards.map((c) => c.timeLabel),
+    ['兑换时间', '发放时间', '兑换时间', '兑换时间', '兑换时间', '发放时间']);
+  assert.equal(p.data.cards[0].timeText, bjDateTime(cardRows[0].createdAt));
+  assert.ok(p.data.cards[0].timeText.includes(String(new Date().getFullYear())), '时间要完整年月日');
+  // 有效期一句话：按 kind × 状态
+  assert.equal(p.data.cards[0].validText, `${bjDate(future)} 前有效`);
+  assert.equal(p.data.cards[1].validText, `${bjDate(future)} 前激活有效`, '免广告卡要说清「激活」这道闸');
+  assert.ok(p.data.cards[2].validText.startsWith('生效至 ') && p.data.cards[2].validText.includes(String(new Date().getFullYear())));
+  assert.equal(p.data.cards[4].validText, `${bjDate(past)} 已过期`);
+  assert.equal(p.data.cards[5].validText, '权益已用完');
+  // 积分：兑换=实价千分位；发放/赠送=免费
+  assert.equal(p.data.cards[0].costText, '-200');
+  assert.equal(p.data.cards[1].costText, '免费', '发放的卡不出现「-0」');
+  assert.equal(p.data.cards[4].costText, '-1,200', '四位数千分位与订单/明细同口径');
+  // 补了哪天 MM.DD；激活按钮只给未激活免广告卡
+  assert.equal(p.data.cards[3].usedForDateText, '10.21');
+  assert.deepEqual(p.data.cards.map((c) => c.canActivate), [false, true, false, false, false, false]);
 
   const wxml = read(EX_WXML);
-  assert.ok(wxml.includes('兑换时间'));
+  assert.ok(wxml.includes('获得方式') && wxml.includes('有效期') && wxml.includes('积分'), '四行元信息结构齐');
+  assert.ok(wxml.includes('card-badge {{item.statusClass}}'), '状态徽章在右上角（头行 flex 右侧）');
+  assert.ok(wxml.includes('{{item.timeLabel}}'), '时间标签随来源切换');
 });
 
 test('PP28 兑换记录页：游客不请求、空态文案、失败可重试', async () => {
@@ -1269,11 +1296,11 @@ test('PP28 兑换记录页：游客不请求、空态文案、失败可重试', 
   await p.onLoginTap();
   await tick();
   assert.equal(loginCalls, 1);
-  assert.deepEqual(calls(), ['GET /points/exchanges', 'GET /points/orders', 'GET /points/cards']);
-  assert.equal(p.data.items.length, 0);
-  assert.ok(read(EX_WXML).includes('还没有兑换记录'));
-  // 两段都空才出空态：只有订单没有兑换记录时，不该说「还没有兑换记录」
-  assert.ok(read(EX_WXML).includes('wx:elif="{{!orders.length}}"'), '空态判据要同时看订单');
+  assert.deepEqual(calls(), ['GET /points/cards', 'GET /points/orders']);
+  assert.equal(p.data.cards.length, 0);
+  assert.ok(read(EX_WXML).includes('还没有卡券记录'));
+  // 两段都空才出空态：只有订单没有卡时，不该说「还没有卡券记录」
+  assert.ok(read(EX_WXML).includes('wx:if="{{!cards.length && !orders.length}}"'), '空态判据要同时看订单');
 
   reset();
   summaryRespond = () => Promise.reject(new Error('boom'));
@@ -1282,12 +1309,16 @@ test('PP28 兑换记录页：游客不请求、空态文案、失败可重试', 
   assert.equal(q.data.failed, true);
   assert.equal(q.data.loading, false);
 
-  summaryRespond = (url) => Promise.resolve(url === '/points/orders' || url === '/points/cards' ? [] : [exchangeRow()]);
+  summaryRespond = (url) => Promise.resolve(url === '/points/orders' ? [] : [{
+    id: 'c1', itemKey: 'makeup_card', name: '补签卡', kind: 'makeup', status: 'unused',
+    statusText: '待使用', benefitDays: 0, source: 'exchange', sourceText: '兑换获得',
+    cost: 49, expiresAt: Date.now() + 86400000, createdAt: Date.now(),
+  }]);
   await q.onRetry();
   await tick();
   assert.equal(q.data.failed, false);
-  assert.equal(q.data.items.length, 1);
-  assert.equal(q.data.items[0].status, 'unused');
+  assert.equal(q.data.cards.length, 1);
+  assert.equal(q.data.cards[0].status, 'unused');
 });
 
 /* ------------- Task 8：其它两页补签入口按 cells 收口（spec §7 最后一条） ------------- */
@@ -1344,29 +1375,25 @@ test('PP37 商品页「去补签」入口以 cells 为准：有 makeup 格才出
 test('PP38 兑换记录页去掉行内「去补签」入口：按钮/判据/handler/wxss 一并收口，已用的卡仍显示补了哪天', async () => {
   reset();
   const future = Date.now() + 86400000;
-  summaryRespond = () => Promise.resolve([
-    exchangeRow({ id: 'e1', status: 'unused', expiresAt: future }),
-    exchangeRow({ id: 'e3', status: 'used', usedForDate: '2026-10-21', expiresAt: future }),
+  summaryRespond = (url) => Promise.resolve(url === '/points/orders' ? [] : [
+    { id: 'c1', itemKey: 'makeup_card', name: '补签卡', kind: 'makeup', status: 'unused',
+      statusText: '待使用', benefitDays: 0, source: 'exchange', sourceText: '兑换获得',
+      cost: 49, expiresAt: future, createdAt: Date.now() },
+    { id: 'c2', itemKey: 'makeup_card', name: '补签卡', kind: 'makeup', status: 'used',
+      statusText: '已使用', benefitDays: 0, source: 'exchange', sourceText: '兑换获得',
+      cost: 49, usedForDate: '2026-10-21', expiresAt: future, createdAt: Date.now() },
   ]);
   const p = bootWith(loadPage(EX_JS));
   await tick();
-  assert.equal(p.data.items[0].canMakeup, undefined, '行内入口的判据整个拿掉：行数据不带 canMakeup');
-  assert.equal(p.data.items[1].usedForDateText, '10.21', '补签日期与积分页 cells/胶囊同用 MM.DD，不留一处 10-21 一处 10.21');
+  assert.equal(p.data.cards[1].usedForDateText, '10.21', '补签日期与积分页 cells/胶囊同用 MM.DD，不留一处 10-21 一处 10.21');
 
   const wxml = read(EX_WXML);
   const js = read(EX_JS);
-  const wxss = read(EX_WXSS);
   assert.ok(!wxml.includes('exchange-action'), '行内补签按钮要删掉，它此前只看持卡状态');
   assert.ok(!js.includes('goMakeup') && !js.includes('canMakeup'), 'js 里的 goMakeup/canMakeup 一并删除');
-  assert.ok(!wxss.includes('exchange-action'), '对应 wxss 规则同步删除，不留孤儿规则');
-  assert.ok(wxml.includes('已补签'), '已用的卡仍要显示补了哪天');
-  assert.ok(
-    /<text class="exchange-used" wx:if="\{\{item\.usedForDateText\}\}">已补签 \{\{item\.usedForDateText\}\}<\/text>/.test(wxml),
-    '「已补签 MM.DD」合成一句渲染：wx:if 与内容都走格式化字段，不在 wxml 里自拼',
-  );
+  // 卡上要保留使用痕迹：已补签行仍在（统一卡结构的条件行）
+  assert.ok(wxml.includes('已补签'), '已用的卡仍显示补了哪天');
 });
-
-/* ---------------- 实物批次：订单区与地址表单（P7/P8） ---------------- */
 
 test('PP40 兑换记录页订单区：三态渲染、只有已发货给确认、订单接口挂了不牵连兑换记录', async () => {
   reset();
@@ -1378,9 +1405,10 @@ test('PP40 兑换记录页订单区：三态渲染、只有已发货给确认、
     // 未知状态：文案原样显示（不硬套三档），更不能给一枚「确认收货」把人送进必然 400 的请求
     { id: 'o4', itemKey: 'x', itemName: '未知单', cost: 1, status: 'mystery', statusText: '', address: {}, trackingNo: '', trackingCompany: '', createdAt: base },
   ];
-  summaryRespond = (url) => Promise.resolve(url === '/points/orders' ? orders : [exchangeRow()]);
+  summaryRespond = (url) => Promise.resolve(url === '/points/orders' ? orders : []);
   const p = bootWith(loadPage(EX_JS));
   await tick();
+  assert.deepEqual(p.data.cards, [], '卡接口给空就是空，不许从订单 fixture 里借数据');
   assert.deepEqual(p.data.orders.map((o) => o.statusText), ['待发货', '已发货', '已完成', 'mystery']);
   assert.deepEqual(p.data.orders.map((o) => o.canConfirm), [false, true, false, false]);
   assert.equal(p.data.orders[0].addrPerson, '张三 13800001234', '收货人单独成行，「寄往」只当标签列');
@@ -1396,14 +1424,12 @@ test('PP40 兑换记录页订单区：三态渲染、只有已发货给确认、
 
   // 三段式结构：头行（标题+状态+金额）→ 信息组（寄往/物流）→ 时间行 → 操作行（贴底右对齐）
   const wxml = read(EX_WXML);
-  const block = wxml.slice(wxml.indexOf('wx:for="{{orders}}"'), wxml.indexOf('道具兑换记录'));
+  const block = wxml.slice(wxml.indexOf('wx:for="{{orders}}"'), wxml.indexOf('还没有卡券记录'));
   assert.ok(
     /order-head[\s\S]*exchange-cost[\s\S]*order-meta[\s\S]*order-time[\s\S]*order-actions/.test(block),
     '金额要在头行、操作按钮要落到独立一行（别悬在卡片中部）',
   );
   assert.ok(/order-actions[\s\S]{0,220}?bindtap="onConfirmReceipt"/.test(block), '确认收货挂在操作行里');
-  assert.equal(p.data.items.length, 1, '兑换记录照常显示');
-
   postRespond = () => Promise.resolve({ id: 'o2', status: 'completed' });
   await p.onConfirmReceipt({ currentTarget: { dataset: { id: 'o2' } } });
   await tick();
@@ -1411,13 +1437,12 @@ test('PP40 兑换记录页订单区：三态渲染、只有已发货给确认、
   assert.deepEqual(post.map((c) => c.url), ['/points/orders/o2/confirm']);
   assert.ok(toasts.includes('已确认收货'), `确认成功要有回执提示，实际 ${JSON.stringify(toasts)}`);
 
-  // 订单接口挂掉：只提示订单读不到，兑换记录不能被连带白屏
+  // 订单接口挂掉：只提示订单读不到，卡列表不能被连带白屏
   reset();
-  summaryRespond = (url) => (url === '/points/orders' ? Promise.reject(new Error('boom')) : Promise.resolve([exchangeRow()]));
+  summaryRespond = (url) => (url === '/points/orders' ? Promise.reject(new Error('boom')) : Promise.resolve([]));
   const q = bootWith(loadPage(EX_JS));
   await tick();
   assert.equal(q.data.failed, false, '订单接口失败不该把整页判成加载失败');
-  assert.equal(q.data.items.length, 1);
   assert.equal(q.data.orders.length, 0);
   assert.equal(q.data.ordersFailed, true);
 });
@@ -1495,7 +1520,7 @@ test('PP42 兑换记录页：物流单号可整串复制（微信物流接口对
     // 待发货没有单号：复制入口不能渲染出来（wxml 以 trackingNo 为判据）
     { id: 'o2', itemKey: 'mi_band_11', itemName: '小米手环11标准版', cost: 28900, status: 'pending_ship', statusText: '待发货', address: {}, trackingNo: '', trackingCompany: '', shippedAt: 0, completedAt: 0, createdAt: base - 1000 },
   ];
-  summaryRespond = (url) => Promise.resolve(url === '/points/orders' ? orders : [exchangeRow()]);
+  summaryRespond = (url) => Promise.resolve(url === '/points/orders' ? orders : []);
   const p = bootWith(loadPage(EX_JS));
   await tick();
 
@@ -1538,54 +1563,31 @@ test('PP43 订单时间行：同一天只写一次日期，跨天发货带上自
   ]);
 });
 
-test('PP45 我的卡：三来源全可见、文案与激活按钮只给未激活免广告卡、激活后重拉', async () => {
+test('PP45 我的卡激活闭环：三来源可见、免费不显 -0、激活 POST 后重拉两接口', async () => {
   reset();
   const future = Date.now() + 86400000;
-  const past = Date.now() - 86400000;
   const cardRows = [
-    // 后台发放的未激活免广告卡：能激活（用户报障的主角）
     { id: 'c1', itemKey: 'ad_free_7d', name: '免广告卡·7 天', kind: 'ad_free', status: 'unused',
-      statusText: '待使用', benefitDays: 7, source: 'admin', sourceText: '后台发放', expiresAt: future },
-    // 已激活生效中：没有按钮，meta 是到期区间
-    { id: 'c2', itemKey: 'ad_free_30d', name: '免广告卡·30 天', kind: 'ad_free', status: 'active',
-      statusText: '生效中', benefitDays: 30, source: 'exchange', sourceText: '兑换获得',
-      startAt: Date.now() - 3600_000, endAt: Date.now() + 29 * 86400000, expiresAt: future },
-    // 未使用的补签卡：没有按钮（走积分页「补」字）
-    { id: 'c3', itemKey: 'makeup_card', name: '补签卡', kind: 'makeup', status: 'unused',
-      statusText: '待使用', benefitDays: 0, source: 'system', sourceText: '系统赠送', expiresAt: future },
-    // 排队中的第二张
-    { id: 'c4', itemKey: 'ad_free_7d', name: '免广告卡·7 天', kind: 'ad_free', status: 'queued',
-      statusText: '待生效', benefitDays: 7, source: 'exchange', sourceText: '兑换获得',
-      startAt: Date.now() + 86400000, endAt: Date.now() + 8 * 86400000, expiresAt: future },
-    // 过期的未激活卡：没按钮
-    { id: 'c5', itemKey: 'ad_free_7d', name: '免广告卡·7 天', kind: 'ad_free', status: 'expired',
-      statusText: '已过期', benefitDays: 7, source: 'exchange', sourceText: '兑换获得', expiresAt: past },
+      statusText: '待使用', benefitDays: 7, source: 'admin', sourceText: '后台发放',
+      cost: 0, expiresAt: future, createdAt: Date.now() },
+    { id: 'c2', itemKey: 'makeup_card', name: '补签卡', kind: 'makeup', status: 'unused',
+      statusText: '待使用', benefitDays: 0, source: 'system', sourceText: '系统赠送',
+      cost: 0, expiresAt: future, createdAt: Date.now() },
+    { id: 'c3', itemKey: 'ad_free_30d', name: '免广告卡·30 天', kind: 'ad_free', status: 'unused',
+      statusText: '待使用', benefitDays: 30, source: 'exchange', sourceText: '兑换获得',
+      cost: 600, expiresAt: future, createdAt: Date.now() },
   ];
-  summaryRespond = (url) => {
-    if (url === '/points/orders') return Promise.resolve([]);
-    if (url === '/points/cards') return Promise.resolve(cardRows);
-    return Promise.resolve([]);
-  };
+  summaryRespond = (url) => Promise.resolve(url === '/points/orders' ? [] : cardRows);
   const p = bootWith(loadPage(EX_JS));
   await tick();
-  assert.equal(p.data.cards.length, 5);
-  assert.deepEqual(p.data.cards.map((c) => c.canActivate), [true, false, false, false, false],
-    '只有未激活的免广告卡给「立即激活」');
-  assert.ok(p.data.cards[0].metaText.includes('7 天免广告'), '未激活文案要带权益天数');
-  assert.ok(p.data.cards[0].metaText.includes('前激活有效'));
-  assert.ok(p.data.cards[1].metaText.includes('到期'));
-  // 有效日期展示完整年月日（2026-10-29 用户要求）：meta 里必须带年份，不许再 slice 成 MM-DD
-  assert.ok(p.data.cards[1].metaText.includes(String(new Date().getFullYear())), `生效窗口要带完整年份：${p.data.cards[1].metaText}`);
-  assert.ok(p.data.cards[3].metaText.includes(String(new Date().getFullYear())), `排队开始要带完整年份：${p.data.cards[3].metaText}`);
-  assert.ok(p.data.cards[2].metaText.includes('「补」字'), '补签卡指引去积分页用「补」字');
-  assert.ok(p.data.cards[4].metaText.includes('已过期'));
-  // 来源文案三来源齐全（发放/赠送不再隐形）
-  assert.deepEqual([...new Set(p.data.cards.map((c) => c.sourceText))].sort(),
-    ['兑换获得', '后台发放', '系统赠送']);
-  assert.ok(read(EX_WXML).includes('我的卡'));
+  assert.deepEqual(p.data.cards.map((c) => c.sourceText).sort(), ['兑换获得', '后台发放', '系统赠送'],
+    '三来源（发放/赠送/兑换）全部可见，发放赠送不再隐形');
+  assert.deepEqual(p.data.cards.map((c) => c.costText), ['免费', '免费', '-600']);
+  assert.deepEqual(p.data.cards.map((c) => c.canActivate), [true, false, true],
+    '激活按钮只给未激活的免广告卡；补签卡走积分页「补」字');
   assert.ok(read(EX_WXML).includes('onActivateCard'));
 
-  // 激活闭环：POST 卡券激活接口 → 回执带 adFreeUntil → 静默重拉三接口
+  // 激活闭环：POST 卡券激活接口 → 回执带 adFreeUntil（toast 念完整年月日）→ 静默重拉两接口
   apiCalls.length = 0;
   postRespond = (url) => {
     assert.equal(url, '/points/cards/c1/activate');
@@ -1595,8 +1597,9 @@ test('PP45 我的卡：三来源全可见、文案与激活按钮只给未激活
   await tick();
   assert.deepEqual(calls(), [
     'POST /points/cards/c1/activate',
-    'GET /points/exchanges', 'GET /points/orders', 'GET /points/cards',
+    'GET /points/cards', 'GET /points/orders',
   ], '激活成功后要重拉（卡状态从待使用变生效中）');
+  assert.ok(toasts.some((t) => t.includes('已激活')), `激活要有回执，实际 ${JSON.stringify(toasts)}`);
   assert.equal(p.data.activating, '');
 });
 
@@ -1605,10 +1608,14 @@ test('PP44 兑换记录页下拉刷新：重拉两个接口、不闪骨架、完
   assert.equal(json.enablePullDownRefresh, true, '不加这个配置，下拉手势根本不会派发 onPullDownRefresh');
 
   reset();
-  summaryRespond = (url) => Promise.resolve(url === '/points/orders' || url === '/points/cards' ? [] : [exchangeRow()]);
+  summaryRespond = (url) => Promise.resolve(url === '/points/orders' ? [] : [
+    { id: 'c1', itemKey: 'makeup_card', name: '补签卡', kind: 'makeup', status: 'unused',
+      statusText: '待使用', benefitDays: 0, source: 'exchange', sourceText: '兑换获得',
+      cost: 49, expiresAt: Date.now() + 86400000, createdAt: Date.now() },
+  ]);
   const p = bootWith(loadPage(EX_JS));
   await tick();
-  assert.deepEqual(calls(), ['GET /points/exchanges', 'GET /points/orders', 'GET /points/cards']);
+  assert.deepEqual(calls(), ['GET /points/cards', 'GET /points/orders']);
 
   // 记录每次 setData 的 patch，专门看 loading 有没有被翻成 true（翻 true 就会闪骨架）
   const patches = [];
@@ -1620,11 +1627,15 @@ test('PP44 兑换记录页下拉刷新：重拉两个接口、不闪骨架、完
   apiCalls.length = 0;
   pullStops = 0;
 
-  summaryRespond = (url) => Promise.resolve(url === '/points/orders' || url === '/points/cards' ? [] : [exchangeRow({ id: 'e9' })]);
+  summaryRespond = (url) => Promise.resolve(url === '/points/orders' ? [] : [
+    { id: 'c9', itemKey: 'makeup_card', name: '补签卡', kind: 'makeup', status: 'unused',
+      statusText: '待使用', benefitDays: 0, source: 'exchange', sourceText: '兑换获得',
+      cost: 49, expiresAt: Date.now() + 86400000, createdAt: Date.now() },
+  ]);
   await p.onPullDownRefresh();
   await tick();
-  assert.deepEqual(calls(), ['GET /points/exchanges', 'GET /points/orders', 'GET /points/cards'], '下拉要把三个接口都重拉');
-  assert.equal(p.data.items[0].id, 'e9', '新数据要落到页面');
+  assert.deepEqual(calls(), ['GET /points/cards', 'GET /points/orders'], '下拉要把两个接口都重拉');
+  assert.equal(p.data.cards[0].id, 'c9', '新数据要落到页面');
   assert.ok(patches.every((x) => x.loading !== true), '静默刷新：已有内容不闪骨架');
   assert.equal(pullStops, 1, '完成后必须收起下拉动画');
 
