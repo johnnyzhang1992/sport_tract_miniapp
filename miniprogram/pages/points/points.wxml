@@ -51,7 +51,7 @@
     </view>
 
     <!-- 模板广告位：签到卡与每日任务之间（首屏之下第一屏可见，且不挨着「看视频赚分」按钮） -->
-    <ad-template adslot="points" />
+    <ad-template adslot="points" margin="16rpx 24rpx 0" radius="{{20}}" />
 
     <!-- 每日任务（0 点重置）：放新手卡前面，每日可做的离签到更近 -->
     <view class="card">

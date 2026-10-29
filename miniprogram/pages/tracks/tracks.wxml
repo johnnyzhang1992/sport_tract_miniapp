@@ -157,7 +157,7 @@
             </view>
           </view>
         </t-swipe-cell>
-        <ad-template wx:if="{{item.adAfter}}" adslot="tracks_list" />
+        <ad-template wx:if="{{item.adAfter}}" adslot="tracks_list" margin="0 0 16rpx" />
       </view>
     </view>
   </block>
@@ -226,7 +226,7 @@
           <view class="map-arrow">›</view>
         </view>
       </t-swipe-cell>
-      <ad-template wx:if="{{item.adAfter}}" adslot="tracks_list" />
+      <ad-template wx:if="{{item.adAfter}}" adslot="tracks_list" margin="0 0 16rpx" />
     </view>
   </view>
 

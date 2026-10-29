@@ -58,6 +58,11 @@
   margin-top: 16rpx;
 }
 
+/* 广告卡与下方卡片之间也按 16rpx（广告宿主节点永远在，广告不展示时正好等于卡片之间的间距） */
+ad-template + .card {
+  margin-top: 16rpx;
+}
+
 .signin-strip {
   display: flex;
   justify-content: space-between;

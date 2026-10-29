@@ -84,7 +84,7 @@
     </view>
 
     <!-- 模板广告位（后台「广告管理」可开关；免广告卡生效时不渲染） -->
-    <ad-template adslot="leaderboard" />
+    <ad-template adslot="leaderboard" radius="{{20}}" />
 
     <!-- 全国点亮地图 -->
     <view class="card map-card">

@@ -1,5 +1,6 @@
-<!-- 原生模板广告：宽度吃满外层容器、高度由模板自适应；无广告展示时 ad-custom 不占高度 -->
-<view class="ad-template" wx:if="{{show}}">
+<!-- 原生模板广告：外观跟页面卡片一致（白底 + 圆角），间距由各页传入的 margin 决定；
+     无广告展示时整块不渲染（宿主节点不占高度，也不会留下外边距） -->
+<view class="ad-template" wx:if="{{show}}" style="margin:{{margin}};border-radius:{{radius}}rpx;">
   <ad-custom
     unit-id="{{unitId}}"
     ad-intervals="{{intervals}}"

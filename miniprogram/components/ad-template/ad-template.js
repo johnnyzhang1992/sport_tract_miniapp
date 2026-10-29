@@ -21,6 +21,14 @@ Component({
     adslot: { type: String, value: '' },
     /** 自动刷新间隔（秒，官方要求 >= 30；不传则模板广告不自动刷新） */
     intervals: { type: Number, value: 30 },
+    /**
+     * 外边距（CSS 简写，rpx 自带单位）：默认对应 .container 里 .card 的 margin-bottom:24rpx。
+     * 页面按自己的卡片节奏传：积分页 "16rpx 24rpx 0"、轨迹列表 "0 0 16rpx"。
+     * 写在渲染出来的内层节点上（不是宿主），广告不展示时不会留下空隙。
+     */
+    margin: { type: String, value: '0 0 24rpx' },
+    /** 圆角（rpx）：跟宿主页卡片的 border-radius 对齐（全局 .card 16、积分/榜单/活动页 20） */
+    radius: { type: Number, value: 16 },
   },
 
   data: { show: false, unitId: '' },
