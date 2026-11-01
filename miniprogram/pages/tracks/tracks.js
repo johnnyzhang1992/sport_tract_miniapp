@@ -5,6 +5,8 @@ const { matchBest } = require('../../utils/best-records');
 const config = require('../../config/index');
 const { markHomeDirty } = require('../../utils/home-refresh');
 const { ensureLogin } = require('../../utils/login-gate');
+const loading = require('../../utils/loading');
+const { GPX_MAX_ITEMS, buildGpxQuery, downloadExport, shareExportFile, fileStamp } = require('../../utils/export-file');
 
 const PAGE_SIZE = 20;
 const VIEW_MODE_KEY = 'tracksViewMode';
@@ -57,6 +59,8 @@ Page({
     initialized: false,
     loadError: false, // 首屏加载失败（与「还没有运动记录」区分，展示重试入口）
     notLoggedIn: false, // 游客态：展示登录引导卡（2026-10-26 补缺省态）
+    selectMode: false, // 多选模式：点条目勾选/取消，底部栏批量导出 GPX
+    selectedCount: 0,
   },
 
   onLoad() {
@@ -80,6 +84,79 @@ Page({
     try {
       wx.setStorageSync(VIEW_MODE_KEY, mode);
     } catch (err) {}
+  },
+
+  /** 进入/退出多选：进出都清勾选（refresh/筛选切换同样先退出，避免计数与勾选串味） */
+  onToggleSelect() {
+    if (this.data.selectMode) {
+      this.exitSelectMode();
+      return;
+    }
+    const items = this.data.items.map((it) => ({ ...it, checked: false }));
+    this.setData({ selectMode: true, selectedCount: 0, items, groups: this.buildGroups(items) });
+  },
+
+  exitSelectMode() {
+    const items = this.data.items.map((it) => ({ ...it, checked: false }));
+    this.setData({ selectMode: false, selectedCount: 0, items, groups: this.buildGroups(items) });
+  },
+
+  /** 勾选/取消一条：items 与 groups 共享对象引用，重建两组保持同步 */
+  onToggleItem(e) {
+    const id = e.currentTarget.dataset.id;
+    if (!id) return;
+    const items = this.data.items.map((it) => (it.id === id ? { ...it, checked: !it.checked } : it));
+    this.setData({
+      items,
+      groups: this.buildGroups(items),
+      selectedCount: items.filter((it) => it.checked).length,
+    });
+  },
+
+  /** 批量导出勾选轨迹：上限截断提示 → 位置隐私确认 → 打包下载 → 分享 */
+  async onExportSelected() {
+    if (this._exporting) return;
+    const ids = this.data.items.filter((it) => it.checked).map((it) => it.id);
+    if (!ids.length) {
+      wx.showToast({ title: '先勾选要导出的轨迹', icon: 'none' });
+      return;
+    }
+    const { query, overflow } = buildGpxQuery(ids);
+    if (overflow) {
+      wx.showToast({ title: `一次最多 ${GPX_MAX_ITEMS} 条，已按勾选顺序截取`, icon: 'none', duration: 2500 });
+    }
+    const count = Math.min(ids.length, GPX_MAX_ITEMS);
+    const confirmed = await new Promise((resolve) => {
+      wx.showModal({
+        title: '导出轨迹 GPX',
+        content: `将导出 ${count} 条轨迹的坐标明细并打包为 zip（含位置信息），通过文件传输助手可传到电脑，是否继续？`,
+        confirmText: '导出',
+        success: (r) => resolve(r.confirm),
+        fail: () => resolve(false),
+      });
+    });
+    if (!confirmed) return;
+    this._exporting = true;
+    const fileName = `轨迹导出_${fileStamp()}.zip`;
+    let filePath = '';
+    try {
+      loading.show('打包中…');
+      filePath = await downloadExport(`/activities/export/gpx${query}`, fileName);
+    } catch (e) {
+      loading.hide();
+      wx.showToast({ title: (e && e.message) || '导出失败', icon: 'none' });
+      this._exporting = false;
+      return;
+    }
+    loading.hide();
+    this._exporting = false;
+    try {
+      await shareExportFile(filePath, fileName);
+      wx.showToast({ title: '已导出', icon: 'success' });
+      this.exitSelectMode();
+    } catch (e) {
+      wx.showToast({ title: (e && e.message) || '分享未完成', icon: 'none' });
+    }
   },
 
   onShow() {
@@ -159,6 +236,8 @@ Page({
   },
 
   async refresh() {
+    // 筛选/下拉刷新会重建 items：多选先退出，避免勾选计数与已加载条目错位
+    if (this.data.selectMode) this.exitSelectMode();
     const app = getApp();
     // 已注册用户（本地有 token）静默恢复登录；游客不自动登录
     if (app.hasSession() && !app.globalData.loggedIn) {
@@ -355,10 +434,15 @@ Page({
     return out;
   },
 
-  /** 进入轨迹详情：地图与卡片共用，短时锁防止连点重复导航 */
+  /** 进入轨迹详情：地图与卡片共用，短时锁防止连点重复导航；多选模式下点击=勾选 */
   onTapItem(e) {
     const id = e.currentTarget.dataset.id;
-    if (!id || this._navLock) return;
+    if (!id) return;
+    if (this.data.selectMode) {
+      this.onToggleItem(e);
+      return;
+    }
+    if (this._navLock) return;
     this._navLock = true;
     wx.navigateTo({
       url: `/pages/track-detail/track-detail?id=${id}`,
@@ -394,6 +478,8 @@ Page({
         items,
         totalCount: Math.max(0, this.data.totalCount - 1),
         groups: this.buildGroups(items),
+        // 多选中删掉勾选项会改变计数：索性退出多选，回到普通浏览
+        ...(this.data.selectMode ? { selectMode: false, selectedCount: 0 } : {}),
       });
       this.syncMonthlyStats(); // 删除影响整月累计，重新拉取聚合
       markHomeDirty(); // 首页累计数据 / 榜名次 / 日历都会变

@@ -76,7 +76,8 @@ Page({
         expiring: data.expiring || null,
         strip: buildSigninStrip(cells, bjDate(Date.now())),
         hasMakeup: cells.some((c) => c.state === 'makeup'),
-        streakSub: streakDay > 0 ? `超过 ${Number(data.streakPercentile) || 0}% 用户` : '今天签到开启连签',
+        // 百分比精确到小数点后两位（2026-10-29）：91.67 / 75.00 / 99.99
+        streakSub: streakDay > 0 ? `超过 ${(Number(data.streakPercentile) || 0).toFixed(2)}% 用户` : '今天签到开启连签',
         streakPercent: Number(data.streakPercentile) || 0,
         taskGroups: buildTaskRows(data.tasks || []),
         items: buildItemCards(data.items),

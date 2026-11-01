@@ -92,17 +92,22 @@
   align-items: center;
   justify-content: space-between;
   margin-top: 20rpx;
-  background: #f7f8fa;
-  border-radius: 16rpx;
-  padding: 8rpx 0;
+  /* 箭头按钮中心对齐日历首/末列中心（列宽 = 100%/7，按钮半宽 28rpx），与 stats 日历同口径 */
+  padding-left: calc(100% / 14 - 28rpx);
+  padding-right: calc(100% / 14 - 28rpx);
 }
 
 .month-nav {
-  width: 96rpx;
-  text-align: center;
-  font-size: 40rpx;
-  line-height: 1.2;
+  width: 56rpx;
+  height: 56rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36rpx;
+  line-height: 1;
   color: #2b6cf6;
+  background: #f5f7fb;
+  border-radius: 12rpx;
 }
 
 /* 不可翻的一侧留灰三角：位置不跳，比整条按钮消失好读 */

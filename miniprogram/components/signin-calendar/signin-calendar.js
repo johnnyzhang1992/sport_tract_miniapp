@@ -21,6 +21,7 @@ Component({
     bottom: { type: Boolean, value: true }, // tab 页弹层压在 tabBar 上方时传 false
   },
   data: {
+    percentText: '',
     weekLabels: WEEK_LABELS,
     cells: [],
     label: '',
@@ -28,6 +29,10 @@ Component({
     canPrev: false,
   },
   observers: {
+    // 两位小数展示值（data 字段非 property——SH0 钉 properties 禁驼峰）：75 → '75.00'
+    percent(v) {
+      this.setData({ percentText: (Number(v) || 0).toFixed(2) });
+    },
     'visible, month, days, loading, failed': function (visible, month) {
       if (!visible || !month) return;
       const latest = currentMonth();

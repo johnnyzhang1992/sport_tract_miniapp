@@ -8,7 +8,7 @@
     <!-- 概览行：连签天数与百分位都由服务端下发，这里只负责摆；0 天时不显示「超过 0% 用户」 -->
     <view class="summary">
       <text class="summary-num">连续签到 {{streak}} 天</text>
-      <text wx:if="{{streak > 0}}" class="summary-sub">超过 {{percent}}% 用户</text>
+      <text wx:if="{{streak > 0}}" class="summary-sub">超过 {{percentText}}% 用户</text>
       <text wx:else class="summary-sub">今天签到开启连签</text>
     </view>
     <!-- 说明与兑换入口同行：没卡的人在这儿就能直接去兑换，不用先点格子撞一次跳转 -->

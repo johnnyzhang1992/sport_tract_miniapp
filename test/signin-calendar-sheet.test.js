@@ -104,7 +104,7 @@ test('SH5 关闭与重试事件带当月参数', () => {
 
 test('SH6 概览分支写在模板里：连签 0 天不出现「超过 0% 用户」', () => {
   const wxml = fs.readFileSync(path.join(__dirname, '../miniprogram/components/signin-calendar/signin-calendar.wxml'), 'utf8');
-  assert.match(wxml, /wx:if="\{\{streak > 0\}\}"[^>]*>[\s\S]{0,80}超过 \{\{percent\}\}% 用户/);
+  assert.match(wxml, /wx:if="\{\{streak > 0\}\}"[^>]*>[\s\S]{0,80}超过 \{\{percentText\}\}% 用户/);
   assert.match(wxml, /wx:else[\s\S]{0,60}今天签到开启连签/);
   // 组件不查库：数据与请求都归页面，这里出现 api 引用就是越界
   const js = fs.readFileSync(path.join(__dirname, '../miniprogram/components/signin-calendar/signin-calendar.js'), 'utf8');
