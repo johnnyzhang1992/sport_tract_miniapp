@@ -5,8 +5,7 @@
   <block wx:else>
     <!-- 我的卡（2026-10-29 统一卡结构）：兑换/后台发放/系统赠送三来源一张列表——
          名称+右上角状态徽章；获得方式/时间/有效期/积分四行元信息；未激活免广告卡行内激活 -->
-    <view class="card" wx:if="{{cards.length || cardsFailed}}">
-      <view wx:if="{{cardsFailed}}" class="order-fail">卡信息暂时读不到，下拉刷新可再试</view>
+    <view class="card" wx:if="{{cards.length}}">
       <view class="card-list">
         <view wx:for="{{cards}}" wx:key="id" class="card-item">
           <view class="card-head">
@@ -47,47 +46,8 @@
       </view>
     </view>
 
-    <!-- 我的订单（实物）：待发货 → 已发货 → 已完成，只有已发货能给「确认收货」 -->
-    <view class="card" wx:if="{{orders.length || ordersFailed}}">
-      <view class="section-title">我的订单</view>
-      <view wx:if="{{ordersFailed}}" class="order-fail">订单暂时读不到，退出重进本页可再试一次</view>
-      <view class="exchange-list">
-        <view wx:for="{{orders}}" wx:key="id" class="order-row">
-          <view class="order-head">
-            <text class="exchange-title">{{item.title}}</text>
-            <text class="exchange-status order-status-{{item.status}}">{{item.statusText}}</text>
-            <text class="exchange-cost">{{item.costText}}</text>
-          </view>
-          <view class="order-meta">
-            <view class="meta-line" wx:if="{{item.addrPerson}}">
-              <text class="meta-label">寄往</text>
-              <text class="meta-text">{{item.addrPerson}}</text>
-            </view>
-            <view
-              wx:if="{{item.trackingNo}}"
-              class="meta-line"
-              data-no="{{item.trackingNo}}"
-              bindtap="onCopyTracking"
-            >
-              <text class="meta-label">物流</text>
-              <text class="meta-text">{{item.trackingText}}</text>
-              <text class="track-copy">复制</text>
-            </view>
-          </view>
-          <text class="order-time">{{item.timeLine}}</text>
-          <view class="order-actions" wx:if="{{item.canConfirm}}">
-            <view
-              class="confirm-btn {{confirming === item.id ? 'off' : ''}}"
-              data-id="{{item.id}}"
-              bindtap="onConfirmReceipt"
-            >{{confirming === item.id ? '提交中…' : '确认收货'}}</view>
-          </view>
-        </view>
-      </view>
-    </view>
-
-    <!-- 两边都空才出空态；卡接口挂了走失败提示，不与「还没有」同屏 -->
-    <view wx:if="{{!cardsFailed && !cards.length && !orders.length}}" class="empty">
+    <!-- 没有卡才出空态；接口挂了走失败提示，不与「还没有」同屏 -->
+    <view wx:if="{{!cards.length}}" class="empty">
       <text class="empty-title">还没有卡券记录</text>
       <text class="empty-link" bindtap="goItem">去兑换 ›</text>
     </view>

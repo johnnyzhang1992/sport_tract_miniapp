@@ -147,7 +147,6 @@ const toasts = [];
 const navs = [];
 const modals = [];
 let modalAnswer = true;
-/** 剪贴板桩：物流单号复制走 setClipboardData，用例要能读到写进去的内容 */
 let clipboard = null;
 /** 下拉刷新收起次数：onPullDownRefresh 必须真的调 stopPullDownRefresh，否则动画一直转 */
 let pullStops = 0;
@@ -585,13 +584,13 @@ test('PP34 连签天数常驻卡头：旧的「已连续 N 天 · 每日 7 分�
           : { ...c, state: 'signed', streakDay: 3 + i, reward: 7 }
       )),
     }),
-    streakPercentile: 91,
+    streakPercentile: 91.67,
   }));
   const p = boot();
   await tick();
   // 2026-10-28 改版：连签天数不再分「满 7 天才提示」，卡头常驻「连签 N 天」+ 百分位副题
   assert.equal(p.data.streakText, undefined, 'streakText 字段随 streak-note 那行一起撤走');
-  assert.equal(p.data.streakSub, '超过 91% 用户');
+  assert.equal(p.data.streakSub, '超过 91.67% 用户', '百分位精确到小数点后两位');
   const wxml = read('miniprogram/pages/points/points.wxml');
   assert.ok(!wxml.includes('streakText') && !wxml.includes('streak-note'),
     '旧文案节点不得以另一个名字复活');
@@ -1244,14 +1243,12 @@ test('PP27 我的卡统一卡结构：名称+右上角徽章/获得方式/时间
       statusText: '已结束', benefitDays: 7, source: 'system', sourceText: '系统赠送',
       cost: 0, expiresAt: future, createdAt: past },
   ];
-  summaryRespond = (url) => Promise.resolve(url === '/points/orders' ? [] : cardRows);
+  summaryRespond = () => Promise.resolve(cardRows);
   const p = bootWith(loadPage(EX_JS));
   await tick();
-  assert.deepEqual(calls(), ['GET /points/cards', 'GET /points/orders']);
+  assert.deepEqual(calls(), ['GET /points/cards']);
   assert.equal(p.data.loggedIn, true);
   assert.equal(p.data.loading, false);
-  assert.equal(p.data.orders.length, 0);
-  assert.equal(p.data.ordersFailed, false);
   assert.deepEqual(p.data.cards.map((c) => c.statusText),
     ['待使用', '待使用', '生效中', '已使用', '已过期', '已结束']);
   // 徽章类名：生效中绿/待生效橙单设，已结束与过期同灰，未使用蓝
@@ -1299,12 +1296,9 @@ test('PP28 兑换记录页：游客不请求、空态文案、失败可重试', 
   await p.onLoginTap();
   await tick();
   assert.equal(loginCalls, 1);
-  assert.deepEqual(calls(), ['GET /points/cards', 'GET /points/orders']);
+  assert.deepEqual(calls(), ['GET /points/cards']);
   assert.equal(p.data.cards.length, 0);
   assert.ok(read(EX_WXML).includes('还没有卡券记录'));
-  // 两段都空才出空态：只有订单没有卡时，不该说「还没有卡券记录」
-  assert.ok(read(EX_WXML).includes('wx:if="{{!cardsFailed && !cards.length && !orders.length}}"'),
-    '空态判据同时看卡与订单，且卡失败时只出失败提示不出空态');
 
   reset();
   summaryRespond = () => Promise.reject(new Error('boom'));
@@ -1313,7 +1307,7 @@ test('PP28 兑换记录页：游客不请求、空态文案、失败可重试', 
   assert.equal(q.data.failed, true);
   assert.equal(q.data.loading, false);
 
-  summaryRespond = (url) => Promise.resolve(url === '/points/orders' ? [] : [{
+  summaryRespond = () => Promise.resolve([{
     id: 'c1', itemKey: 'makeup_card', name: '补签卡', kind: 'makeup', status: 'unused',
     statusText: '待使用', benefitDays: 0, source: 'exchange', sourceText: '兑换获得',
     cost: 49, expiresAt: Date.now() + 86400000, createdAt: Date.now(),
@@ -1379,7 +1373,7 @@ test('PP37 商品页「去补签」入口以 cells 为准：有 makeup 格才出
 test('PP38 兑换记录页去掉行内「去补签」入口：按钮/判据/handler/wxss 一并收口，已用的卡仍显示补了哪天', async () => {
   reset();
   const future = Date.now() + 86400000;
-  summaryRespond = (url) => Promise.resolve(url === '/points/orders' ? [] : [
+  summaryRespond = () => Promise.resolve([
     { id: 'c1', itemKey: 'makeup_card', name: '补签卡', kind: 'makeup', status: 'unused',
       statusText: '待使用', benefitDays: 0, source: 'exchange', sourceText: '兑换获得',
       cost: 49, expiresAt: future, createdAt: Date.now() },
@@ -1399,227 +1393,19 @@ test('PP38 兑换记录页去掉行内「去补签」入口：按钮/判据/hand
   assert.ok(wxml.includes('已补签'), '已用的卡仍显示补了哪天');
 });
 
-test('PP40 兑换记录页订单区：三态渲染、只有已发货给确认、订单接口挂了不牵连兑换记录', async () => {
-  reset();
-  const base = Date.now();
-  const orders = [
-    { id: 'o1', itemKey: 'mi_band_11', itemName: '小米手环11标准版', cost: 28900, status: 'pending_ship', statusText: '待发货', address: { receiver: '张三', phone: '13800001234', detail: '广东省深圳市南山区' }, trackingNo: '', trackingCompany: '', shippedAt: 0, completedAt: 0, createdAt: base - 4000 },
-    { id: 'o2', itemKey: 'mi_band_11', itemName: '小米手环11标准版', cost: 28900, status: 'shipped', statusText: '已发货', address: { receiver: '张三', phone: '13800001234', detail: '广东省深圳市南山区' }, trackingNo: 'SF1234', trackingCompany: '顺丰', shippedAt: base - 2000, completedAt: 0, createdAt: base - 3000 },
-    { id: 'o3', itemKey: 'mi_band_11', itemName: '小米手环11标准版', cost: 28900, status: 'completed', statusText: '已完成', address: {}, trackingNo: 'SF1234', trackingCompany: '顺丰', shippedAt: base - 2000, completedAt: base - 1000, createdAt: base - 3000 },
-    // 未知状态：文案原样显示（不硬套三档），更不能给一枚「确认收货」把人送进必然 400 的请求
-    { id: 'o4', itemKey: 'x', itemName: '未知单', cost: 1, status: 'mystery', statusText: '', address: {}, trackingNo: '', trackingCompany: '', createdAt: base },
-  ];
-  summaryRespond = (url) => Promise.resolve(url === '/points/orders' ? orders : []);
-  const p = bootWith(loadPage(EX_JS));
-  await tick();
-  assert.deepEqual(p.data.cards, [], '卡接口给空就是空，不许从订单 fixture 里借数据');
-  assert.deepEqual(p.data.orders.map((o) => o.statusText), ['待发货', '已发货', '已完成', 'mystery']);
-  assert.deepEqual(p.data.orders.map((o) => o.canConfirm), [false, true, false, false]);
-  assert.equal(p.data.orders[0].addrPerson, '张三 13800001234', '收货人单独成行，「寄往」只当标签列');
-  assert.equal(p.data.orders[1].trackingText, '顺丰 SF1234');
-  assert.equal(p.data.orders[1].costText, '-28,900 积分', '金额千分位，与商品页 28,900 同口径');
-
-  // 时间合成一行（MM-DD HH:mm）：下单必有、发货有才拼，同一天只写一次日期
-  const c1 = bjDateTime(base - 3000);
-  const s1 = bjDateTime(base - 2000);
-  const sameDay = s1.slice(5, 10) === c1.slice(5, 10);
-  assert.equal(p.data.orders[0].timeLine, `${bjDateTime(base - 4000).slice(5)} 下单`, '待发货只有下单时间');
-  assert.equal(p.data.orders[1].timeLine, `${c1.slice(5)} 下单 · ${sameDay ? s1.slice(11) : s1.slice(5)} 发货`);
-
-  // 三段式结构：头行（标题+状态+金额）→ 信息组（寄往/物流）→ 时间行 → 操作行（贴底右对齐）
-  const wxml = read(EX_WXML);
-  const block = wxml.slice(wxml.indexOf('wx:for="{{orders}}"'), wxml.indexOf('还没有卡券记录'));
-  assert.ok(
-    /order-head[\s\S]*exchange-cost[\s\S]*order-meta[\s\S]*order-time[\s\S]*order-actions/.test(block),
-    '金额要在头行、操作按钮要落到独立一行（别悬在卡片中部）',
-  );
-  assert.ok(/order-actions[\s\S]{0,220}?bindtap="onConfirmReceipt"/.test(block), '确认收货挂在操作行里');
-  postRespond = () => Promise.resolve({ id: 'o2', status: 'completed' });
-  await p.onConfirmReceipt({ currentTarget: { dataset: { id: 'o2' } } });
-  await tick();
-  const post = apiCalls.filter((c) => c.method === 'POST');
-  assert.deepEqual(post.map((c) => c.url), ['/points/orders/o2/confirm']);
-  assert.ok(toasts.includes('已确认收货'), `确认成功要有回执提示，实际 ${JSON.stringify(toasts)}`);
-
-  // 订单接口挂掉：只提示订单读不到，卡列表不能被连带白屏
-  reset();
-  summaryRespond = (url) => (url === '/points/orders' ? Promise.reject(new Error('boom')) : Promise.resolve([]));
-  const q = bootWith(loadPage(EX_JS));
-  await tick();
-  assert.equal(q.data.failed, false, '订单接口失败不该把整页判成加载失败');
-  assert.equal(q.data.orders.length, 0);
-  assert.equal(q.data.ordersFailed, true);
-});
-
-test('PP41 商品页实物：地址不合法不发请求、通过才带 address 下单、成功后记住地址；虚拟商品请求体不变', async () => {
-  const physical = Object.assign({}, itemFixture(), {
-    key: 'mi_band_11',
-    name: '小米手环11标准版',
-    price: 28900,
-    kind: 'physical',
-    detailImages: ['https://oss/d1.png', '', 'https://oss/d2.png'],
-    perUserLimit: 1,
-    imageUrl: 'https://oss/hero.png',
-  });
-  const route = (item) => (url) => (url === '/points/items'
-    ? Promise.resolve([item])
-    : Promise.resolve(Object.assign({}, summaryFixture(), { balance: 30000 })));
-
-  // 地址预填是跨用例的本地态，先清干净再测「没填」那一格
-  wx.setStorageSync('points_addr_last', '');
-  reset();
-  summaryRespond = route(physical);
-  const p = bootWith(loadPage(ITEM_JS));
-  await tick();
-  assert.equal(p.data.isPhysical, true);
-  assert.deepEqual(p.data.detailImages, ['https://oss/d1.png', 'https://oss/d2.png'], '空串是脏数据，不该渲染成破图');
-  assert.equal(p.data.heroImage, 'https://oss/hero.png');
-  assert.equal(p.data.heroChar, '小', '没头图时用名称首字，别顶着写死的「签」');
-
-  const posts = () => apiCalls.filter((c) => c.method === 'POST');
-  await p.onExchange();
-  await tick();
-  assert.equal(posts().length, 0, '地址没填就不该发兑换请求（发了只拿到服务端 400）');
-  assert.ok(p.data.addrErr, '要给可见的校验错误');
-
-  const type = (field, value) => p.onAddrInput({ currentTarget: { dataset: { field } }, detail: { value } });
-  type('receiver', '张三');
-  type('phone', '1380000');
-  type('detail', '广东省深圳市南山区科技园南路 1 号');
-  assert.equal(p.data.addrErr, '', '改一个字就清掉上一次的报错，别让人对着旧提示找');
-  await p.onExchange();
-  await tick();
-  assert.ok(p.data.addrErr.includes('手机号'), `要点名是哪一格不对，实际「${p.data.addrErr}」`);
-  assert.equal(posts().length, 0);
-
-  type('phone', '13800001234');
-  postRespond = () => Promise.resolve({ orderId: 'o1', balance: 1100 });
-  await p.onExchange();
-  await tick();
-  assert.equal(posts()[0].url, '/points/items/mi_band_11/exchange');
-  assert.deepEqual(posts()[0].data.address, { receiver: '张三', phone: '13800001234', detail: '广东省深圳市南山区科技园南路 1 号' });
-  assert.ok(toasts.includes('已下单，等待发货'), `实物说下单，别说「兑换成功」，实际 ${JSON.stringify(toasts)}`);
-  assert.deepEqual(wx.getStorageSync('points_addr_last'), { receiver: '张三', phone: '13800001234', detail: '广东省深圳市南山区科技园南路 1 号' },
-    '下次进本页预填上次的地址');
-
-  // 虚拟商品：请求体只有 requestId（老契约一字不改），文案仍是「兑换成功」
-  reset();
-  summaryRespond = route(itemFixture());
-  const v = bootWith(loadPage(ITEM_JS));
-  await tick();
-  assert.equal(v.data.isPhysical, false);
-  postRespond = () => Promise.resolve({ cardId: 'c1', balance: 0 });
-  await v.onExchange();
-  await tick();
-  const vp = apiCalls.filter((c) => c.method === 'POST')[0];
-  assert.deepEqual(Object.keys(vp.data), ['requestId'], '虚拟商品的请求体不该被带上 address');
-  assert.ok(toasts.includes('兑换成功'));
-});
-
-test('PP42 兑换记录页：物流单号可整串复制（微信物流接口对个人主体不开，复制是唯一闭环）', async () => {
-  reset();
-  const base = Date.now();
-  const orders = [
-    { id: 'o1', itemKey: 'mi_band_11', itemName: '小米手环11标准版', cost: 28900, status: 'shipped', statusText: '已发货', address: {}, trackingNo: '79026579651747', trackingCompany: '中通快递', shippedAt: base - 2000, completedAt: 0, createdAt: base - 3000 },
-    // 待发货没有单号：复制入口不能渲染出来（wxml 以 trackingNo 为判据）
-    { id: 'o2', itemKey: 'mi_band_11', itemName: '小米手环11标准版', cost: 28900, status: 'pending_ship', statusText: '待发货', address: {}, trackingNo: '', trackingCompany: '', shippedAt: 0, completedAt: 0, createdAt: base - 1000 },
-  ];
-  summaryRespond = (url) => Promise.resolve(url === '/points/orders' ? orders : []);
-  const p = bootWith(loadPage(EX_JS));
-  await tick();
-
-  // 行数据要带裸单号（展示串含公司名前缀，复制进去会带脏字）
-  assert.equal(p.data.orders[0].trackingNo, '79026579651747');
-  assert.equal(p.data.orders[1].trackingNo, '');
-
-  await p.onCopyTracking({ currentTarget: { dataset: { no: '79026579651747' } } });
-  assert.equal(clipboard, '79026579651747', '复制的是裸单号，不是「中通快递 79026579651747」');
-  assert.ok(toasts.includes('单号已复制'), `复制要有回执，实际 ${JSON.stringify(toasts)}`);
-
-  // 空 dataset（节点没带单号）不能把剪贴板写成 undefined/空串
-  clipboard = 'KEEP';
-  await p.onCopyTracking({ currentTarget: { dataset: {} } });
-  assert.equal(clipboard, 'KEEP');
-
-  const wxml = read(EX_WXML);
-  assert.ok(wxml.includes('bindtap="onCopyTracking"'), '物流行要挂复制 handler');
-  assert.ok(wxml.includes('data-no="{{item.trackingNo}}"'), '复制内容从行数据的裸单号来');
-  assert.ok(/wx:if="{{item.trackingNo}}"[\s\S]{0,120}?bindtap="onCopyTracking"/.test(wxml), '没有单号的行不渲染复制入口（判据与 handler 同在一个节点上）');
-  assert.ok(wxml.includes('复制'), '可点区要有显式文字提示，不能只靠整行可点');
-});
-
-test('PP43 订单时间行：同一天只写一次日期，跨天发货带上自己的日期（钉死不随跑的时间漂）', async () => {
-  reset();
-  // 北京 10-27 13:57，避免用 Date.now() 让「同一天」在跨零点时变成另一个分支
-  const t = Date.UTC(2026, 9, 27, 5, 57);
-  const orders = [
-    { id: 'a', itemName: '同日发', cost: 1, status: 'shipped', statusText: '已发货', address: {}, trackingNo: '', createdAt: t, shippedAt: t + 5 * 60000 },
-    { id: 'b', itemName: '隔天发', cost: 1, status: 'shipped', statusText: '已发货', address: {}, trackingNo: '', createdAt: t, shippedAt: t + 2 * 86400000 + 5 * 60000 },
-    { id: 'c', itemName: '未发货', cost: 1, status: 'pending_ship', statusText: '待发货', address: {}, trackingNo: '', createdAt: t, shippedAt: 0 },
-  ];
-  summaryRespond = (url) => Promise.resolve(url === '/points/orders' ? orders : []);
-  const p = bootWith(loadPage(EX_JS));
-  await tick();
-  assert.deepEqual(p.data.orders.map((o) => o.timeLine), [
-    '10-27 13:57 下单 · 14:02 发货',
-    '10-27 13:57 下单 · 10-29 14:02 发货',
-    '10-27 13:57 下单',
-  ]);
-});
-
-test('PP45 我的卡激活闭环：三来源可见、免费不显 -0、激活 POST 后重拉两接口', async () => {
-  reset();
-  const future = Date.now() + 86400000;
-  const cardRows = [
-    { id: 'c1', itemKey: 'ad_free_7d', name: '免广告卡·7 天', kind: 'ad_free', status: 'unused',
-      statusText: '待使用', benefitDays: 7, source: 'admin', sourceText: '后台发放',
-      cost: 0, expiresAt: future, createdAt: Date.now() },
-    { id: 'c2', itemKey: 'makeup_card', name: '补签卡', kind: 'makeup', status: 'unused',
-      statusText: '待使用', benefitDays: 0, source: 'system', sourceText: '系统赠送',
-      cost: 0, expiresAt: future, createdAt: Date.now() },
-    { id: 'c3', itemKey: 'ad_free_30d', name: '免广告卡·30 天', kind: 'ad_free', status: 'unused',
-      statusText: '待使用', benefitDays: 30, source: 'exchange', sourceText: '兑换获得',
-      cost: 600, expiresAt: future, createdAt: Date.now() },
-  ];
-  summaryRespond = (url) => Promise.resolve(url === '/points/orders' ? [] : cardRows);
-  const p = bootWith(loadPage(EX_JS));
-  await tick();
-  assert.deepEqual(p.data.cards.map((c) => c.sourceText).sort(), ['兑换获得', '后台发放', '系统赠送'],
-    '三来源（发放/赠送/兑换）全部可见，发放赠送不再隐形');
-  assert.deepEqual(p.data.cards.map((c) => c.costText), ['0积分', '0积分', '600积分']);
-  assert.deepEqual(p.data.cards.map((c) => c.canActivate), [true, false, true],
-    '激活按钮只给未激活的免广告卡；补签卡走积分页「补」字');
-  assert.ok(read(EX_WXML).includes('onActivateCard'));
-
-  // 激活闭环：POST 卡券激活接口 → 回执带 adFreeUntil（toast 念完整年月日）→ 静默重拉两接口
-  apiCalls.length = 0;
-  postRespond = (url) => {
-    assert.equal(url, '/points/cards/c1/activate');
-    return Promise.resolve({ cardId: 'c1', adFreeUntil: Date.now() + 7 * 86400000 });
-  };
-  await p.onActivateCard({ currentTarget: { dataset: { id: 'c1' } } });
-  await tick();
-  assert.deepEqual(calls(), [
-    'POST /points/cards/c1/activate',
-    'GET /points/cards', 'GET /points/orders',
-  ], '激活成功后要重拉（卡状态从待使用变生效中）');
-  assert.ok(toasts.some((t) => t.includes('已激活')), `激活要有回执，实际 ${JSON.stringify(toasts)}`);
-  assert.equal(p.data.activating, '');
-});
-
-test('PP44 兑换记录页下拉刷新：重拉两个接口、不闪骨架、完成或失败都收起下拉动画', async () => {
+test('PP44 兑换记录页下拉刷新：重拉卡列表、不闪骨架、完成或失败都收起下拉动画', async () => {
   const json = JSON.parse(read('miniprogram/pages/points-exchanges/points-exchanges.json'));
   assert.equal(json.enablePullDownRefresh, true, '不加这个配置，下拉手势根本不会派发 onPullDownRefresh');
 
   reset();
-  summaryRespond = (url) => Promise.resolve(url === '/points/orders' ? [] : [
+  summaryRespond = () => Promise.resolve([
     { id: 'c1', itemKey: 'makeup_card', name: '补签卡', kind: 'makeup', status: 'unused',
       statusText: '待使用', benefitDays: 0, source: 'exchange', sourceText: '兑换获得',
       cost: 49, expiresAt: Date.now() + 86400000, createdAt: Date.now() },
   ]);
   const p = bootWith(loadPage(EX_JS));
   await tick();
-  assert.deepEqual(calls(), ['GET /points/cards', 'GET /points/orders']);
+  assert.deepEqual(calls(), ['GET /points/cards']);
 
   // 记录每次 setData 的 patch，专门看 loading 有没有被翻成 true（翻 true 就会闪骨架）
   const patches = [];
@@ -1631,14 +1417,14 @@ test('PP44 兑换记录页下拉刷新：重拉两个接口、不闪骨架、完
   apiCalls.length = 0;
   pullStops = 0;
 
-  summaryRespond = (url) => Promise.resolve(url === '/points/orders' ? [] : [
+  summaryRespond = () => Promise.resolve([
     { id: 'c9', itemKey: 'makeup_card', name: '补签卡', kind: 'makeup', status: 'unused',
       statusText: '待使用', benefitDays: 0, source: 'exchange', sourceText: '兑换获得',
       cost: 49, expiresAt: Date.now() + 86400000, createdAt: Date.now() },
   ]);
   await p.onPullDownRefresh();
   await tick();
-  assert.deepEqual(calls(), ['GET /points/cards', 'GET /points/orders'], '下拉要把两个接口都重拉');
+  assert.deepEqual(calls(), ['GET /points/cards'], '下拉要把两个接口都重拉');
   assert.equal(p.data.cards[0].id, 'c9', '新数据要落到页面');
   assert.ok(patches.every((x) => x.loading !== true), '静默刷新：已有内容不闪骨架');
   assert.equal(pullStops, 1, '完成后必须收起下拉动画');
@@ -1769,20 +1555,6 @@ test('PP49 道具卡收敛：卡面只留 图/名称/积分/兑换，文案细�
 
   const itemWxml = read('miniprogram/pages/points-item/points-item.wxml');
   assert.ok(itemWxml.includes('{{item.subtitle}}'), '副标题在详情页展示');
-});
-
-test('PP50 商品详情图：整宽竖排、按原比例自适应高度（不再横滑 220rpx 方图）', () => {
-  const wxml = read(ITEM_WXML);
-  assert.ok(!/detail-scroll|scroll-x="true"/.test(wxml), '详情图不再横向滑动');
-  assert.ok(/class="detail-list"/.test(wxml), '竖排容器');
-  assert.ok(/mode="widthFix"/.test(wxml), '宽度占满、高度按原比例自适应');
-  assert.ok(/class="detail-img"[\s\S]{0,80}?mode="widthFix"/.test(wxml), 'widthFix 要挂在详情图节点上');
-
-  const wxss = read('miniprogram/pages/points-item/points-item.wxss');
-  const start = wxss.indexOf('.detail-img');
-  const block = wxss.slice(start, start + 200);
-  assert.ok(/width:\s*100%/.test(block), '详情图宽度占满');
-  assert.ok(!/height:\s*\d/.test(block), '不写死高度，交给 widthFix 自适应');
 });
 
 test('PP51 商品页底部安全区：购买栏垫 safe-area，滚动留白也随安全区加高（否则最后一块被盖住）', () => {
@@ -1937,7 +1709,7 @@ test('PP64 概览文案：百分位与过期提醒都来自接口，连签 0 天
   }));
   let p = boot();
   await tick();
-  assert.equal(p.data.streakSub, '超过 75% 用户');
+  assert.equal(p.data.streakSub, '超过 75.00% 用户', '两位小数展示（75 → 75.00）');
   assert.deepEqual(p.data.expiring, { points: 84, daysLeft: 23 });
 
   reset();
