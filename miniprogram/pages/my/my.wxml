@@ -85,12 +85,12 @@
   <!-- 菜单（用户卡资产行之外的常驻积分入口）
        箭头统一用 .link-arrow（与上面三张卡同字形同色同右距），不再用组件的 arrow 图标 -->
   <t-cell-group class="card menu-card">
-    <t-cell title="我的积分" t-class-left="cell-left" t-class-title="cell-title" bind:click="goPoints">
-      <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-coins.png" mode="aspectFit" />
-      <view slot="right-icon" class="link-arrow">›</view>
-    </t-cell>
     <t-cell title="轨迹合集" t-class-left="cell-left" t-class-title="cell-title" bind:click="goOverview">
       <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-compass.png" mode="aspectFit" />
+      <view slot="right-icon" class="link-arrow">›</view>
+    </t-cell>
+    <t-cell title="我的积分" t-class-left="cell-left" t-class-title="cell-title" bind:click="goPoints">
+      <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-coins.png" mode="aspectFit" />
       <view slot="right-icon" class="link-arrow">›</view>
     </t-cell>
     <t-cell title="数据导入" t-class-left="cell-left" t-class-title="cell-title" bind:click="goImport">
