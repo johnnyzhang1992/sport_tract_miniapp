@@ -19,7 +19,7 @@ Page({
     unreadCount: 0, // 未读通知数（0=不显示角标）
     // 签到条（登录后显示）：未签点击直接签到，已签点击进积分页
     signin: { loaded: false, signedToday: false, streakDay: 0, nextReward: 0, balance: null },
-    // 数据导出半屏弹层：范围 + 类型 → 汇总 CSV（多条 GPX 打包在轨迹页多选）
+    // 数据导出半屏弹层：范围 + 类型 → 汇总 CSV（多条 GPX 打包在轨迹页多选；该入口 2026-10-30 起临时关闭）
     exportVisible: false,
     exportRange: 'all',
     exportType: '',
