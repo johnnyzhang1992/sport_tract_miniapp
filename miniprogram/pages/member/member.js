@@ -3,6 +3,7 @@ const storage = require('../../services/storage');
 const { setAdFreeUntil } = require('../../utils/ad-free');
 const { payForMember } = require('../../utils/member-pay');
 const { buildPlanCards, payVisible } = require('../../utils/member-view');
+const { compareVersion, MIN_IOS_CLIENT } = require('../../utils/compare-version');
 const { ensureLogin } = require('../../utils/login-gate');
 
 /**
@@ -51,12 +52,15 @@ Page({
         statusText: (d && d.statusText) || '',
         cards: buildPlanCards(d && d.items),
         entitlements: (d && d.entitlements) || null,
-        // iOS 未开 IAP 时整块隐藏；本期 iOS 一律 false（spec §8）
+        // iOS IAP 已在 MP 后台开通（2026-11-03）：客户端 ≥ 8.0.68（MIN_IOS_CLIENT，spec §2.1）
+        // 才显示付费入口；不达标的老微信仍整块隐藏（问询/退款链路服务端已就绪）
         showPay: payVisible({
           enabled: !!(d && d.enabled),
           platform: sys.platform,
           sdkVersion: sys.SDKVersion,
-          iosPayReady: false,
+          iosPayReady: sys.platform === 'ios'
+            ? compareVersion(sys.version, MIN_IOS_CLIENT) >= 0
+            : false,
         }),
       });
       if (d && d.entitlements && d.entitlements.adFreeUntil) setAdFreeUntil(d.entitlements.adFreeUntil);

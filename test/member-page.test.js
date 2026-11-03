@@ -186,11 +186,16 @@ test('MP5 关闭态：不渲染档位与按钮，展示服务端说明', async (
   assert.equal(p.data.showPay, false);
 });
 
-test('MP6 iOS 不显示付费入口；安卓且版本达标才显示', async () => {
+test('MP6 付费入口可见性：iOS IAP 已开通，需微信 ≥ 8.0.68；安卓看基础库', async () => {
   reset({ sysInfo: { platform: 'ios', SDKVersion: '3.0.0', version: '8.0.68' } });
   let p = boot();
   await tick();
-  assert.equal(p.data.showPay, false, 'iOS 未开 IAP 一律隐藏');
+  assert.equal(p.data.showPay, true, 'iOS IAP 已开通且客户端达标 → 显示');
+
+  reset({ sysInfo: { platform: 'ios', SDKVersion: '3.0.0', version: '8.0.50' } });
+  p = boot();
+  await tick();
+  assert.equal(p.data.showPay, false, 'iOS 老微信（< 8.0.68，spec §2.1 MIN_IOS_CLIENT）仍隐藏');
 
   reset({ sysInfo: { platform: 'android', SDKVersion: '2.19.1', version: '8.0.50' } });
   p = boot();
