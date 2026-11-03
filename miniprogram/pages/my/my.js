@@ -262,6 +262,15 @@ Page({
     this._exporting = false;
   },
 
+  /** 统计卡：游客点它先登录（跳统计页也会被闸门拦住，等于一次死点） */
+  async onTapStats() {
+    if (!this.data.loggedIn) {
+      await ensureLogin('登录后查看运动统计。');
+      return;
+    }
+    this.goStats();
+  },
+
   goStats() {
     wx.navigateTo({ url: '/pages/stats/stats' });
   },

@@ -312,3 +312,11 @@
   font-size: 24rpx;
   color: #8a93a6;
 }
+
+/* 游客态统计卡：一句引导取代三格空格子（高度接近，避免整页跳动） */
+.stats-guide {
+  margin-top: 12rpx;
+  padding: 12rpx 0 4rpx;
+  font-size: 26rpx;
+  color: #8a93a6;
+}

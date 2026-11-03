@@ -39,7 +39,7 @@
   </view>
 
   <!-- 数据统计卡片（今日/本周/本月运动距离，整卡可点） -->
-  <view class="card stats-card" hover-class="card-hover" hover-stay-time="100" bindtap="goStats">
+  <view class="card stats-card" hover-class="card-hover" hover-stay-time="100" bindtap="onTapStats">
     <view class="stats-head">
       <view class="stats-title-row">
         <image class="stats-icon" src="/assets/icons/lucide-chart.png" mode="aspectFit" />
@@ -48,7 +48,7 @@
       <view class="link-arrow">›</view>
     </view>
     <!-- 单行三格（简洁版）：本周 / 累计 距离 + 运动天数 -->
-    <view class="stats-grid">
+    <view class="stats-grid" wx:if="{{loggedIn}}">
       <view class="stats-cell">
         <view class="stats-num">{{stats.weekKm}}<text class="stats-unit">km</text></view>
         <view class="stats-label">本周</view>
@@ -62,6 +62,8 @@
         <view class="stats-label">天</view>
       </view>
     </view>
+    <!-- 游客态：三格数字全是空的，只留卡头 + 一句引导（点整卡走登录闸门） -->
+    <view class="stats-guide" wx:else>登录后查看运动统计</view>
   </view>
 
   <!-- 运动报告入口（汇总 + 亮点 + 环比 + 分类型/日期明细 + 海报；个人最佳与轨迹记录已迁走） -->
