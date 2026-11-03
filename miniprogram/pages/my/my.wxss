@@ -306,3 +306,9 @@
   font-size: 22rpx;
   color: #8a93a6;
 }
+
+/* 会员入口右侧的状态副标题（未开通 / 到期日）：比正文淡一档，不与箭头抢注意力 */
+.member-hint {
+  font-size: 24rpx;
+  color: #8a93a6;
+}

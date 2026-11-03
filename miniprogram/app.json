@@ -28,7 +28,8 @@
     "pages/points-records/points-records",
     "pages/points-rules/points-rules",
     "pages/points-item/points-item",
-    "pages/points-exchanges/points-exchanges"
+    "pages/points-exchanges/points-exchanges",
+    "pages/member/member"
   ],
   "window": {
     "navigationBarBackgroundColor": "#ffffff",

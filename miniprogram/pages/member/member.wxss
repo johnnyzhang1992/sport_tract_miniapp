@@ -1,0 +1,103 @@
+/* 会员中心：沿用积分/榜单页的卡片节奏（24rpx 页边距、16rpx 圆角、#2b6cf6 主色） */
+.page {
+  padding: 24rpx;
+  /* 非 tab 页：底部垫安全区，最后一张卡不贴指示条 */
+  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
+}
+
+.state-block {
+  padding: 120rpx 0;
+  text-align: center;
+  color: #8a93a6;
+  font-size: 26rpx;
+}
+
+.state-text {
+  color: #333;
+  font-size: 28rpx;
+  margin-bottom: 12rpx;
+}
+
+.state-link {
+  color: #2b6cf6;
+  font-size: 26rpx;
+}
+
+.status-line {
+  font-size: 24rpx;
+  color: #5b6474;
+  margin: 4rpx 4rpx 20rpx;
+}
+
+.closed-block {
+  padding: 80rpx 0;
+  text-align: center;
+  color: #8a93a6;
+  font-size: 26rpx;
+}
+
+.plan-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.plan-name {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+
+.plan-duration {
+  font-size: 24rpx;
+  color: #8a93a6;
+}
+
+.plan-price-row {
+  display: flex;
+  align-items: baseline;
+  margin-top: 12rpx;
+}
+
+.plan-price {
+  font-size: 44rpx;
+  font-weight: 700;
+  color: #1f2329;
+  line-height: 1.2;
+}
+
+.plan-perday {
+  margin-left: 12rpx;
+  font-size: 24rpx;
+  color: #8a93a6;
+}
+
+.perk-list {
+  margin-top: 16rpx;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.perk-item {
+  width: 50%;
+  font-size: 24rpx;
+  color: #5b6474;
+  line-height: 1.9;
+}
+
+/* 与积分页任务按钮同形态：2rpx 描边、999rpx 胶囊（描边不用 1rpx，真机会淡掉） */
+.plan-btn {
+  margin-top: 20rpx;
+  height: 76rpx;
+  line-height: 76rpx;
+  text-align: center;
+  border-radius: 999rpx;
+  background: #2b6cf6;
+  color: #fff;
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.plan-btn-busy {
+  opacity: 0.6;
+}

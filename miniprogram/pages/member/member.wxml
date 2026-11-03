@@ -1,0 +1,43 @@
+<view class="page">
+  <block wx:if="{{!loggedIn}}">
+    <view class="state-block" bindtap="onTapGate">
+      <view class="state-text">登录后查看会员</view>
+      <view class="state-link">点这里登录</view>
+    </view>
+  </block>
+
+  <block wx:elif="{{loading}}">
+    <view class="state-block">加载中…</view>
+  </block>
+
+  <block wx:elif="{{failed}}">
+    <view class="state-block" bindtap="onRetry">
+      <view class="state-text">加载失败</view>
+      <view class="state-link">重试</view>
+    </view>
+  </block>
+
+  <block wx:else>
+    <view class="status-line" wx:if="{{statusText}}">{{statusText}}</view>
+
+    <view class="closed-block" wx:if="{{!enabled}}">{{notice}}</view>
+
+    <view class="plan-card card" wx:for="{{cards}}" wx:key="key" wx:for-item="plan">
+      <view class="plan-head">
+        <text class="plan-name">{{plan.name}}</text>
+        <text class="plan-duration">{{plan.durationText}}</text>
+      </view>
+      <view class="plan-price-row">
+        <text class="plan-price">{{plan.priceText}}</text>
+        <text class="plan-perday">{{plan.perDayText}}</text>
+      </view>
+      <view class="perk-list">
+        <view class="perk-item" wx:for="{{plan.perkLines}}" wx:key="*this" wx:for-item="line">{{line}}</view>
+      </view>
+      <view class="plan-btn {{paying ? 'plan-btn-busy' : ''}}"
+            wx:if="{{showPay}}" data-key="{{plan.key}}" bindtap="onBuy">
+        {{entitlements.memberActive ? '续费' : '立即开通'}}
+      </view>
+    </view>
+  </block>
+</view>
