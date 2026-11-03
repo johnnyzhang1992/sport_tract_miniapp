@@ -52,11 +52,11 @@
     >
       <image class="mode-icon" src="/assets/icons/lucide-layout-grid{{viewMode === 'grid' ? '-blue' : ''}}.png" mode="aspectFit" />
     </view>
-    <!-- 多选入口（批量导出 GPX）：2026-10-30 主人要求先不开放，按钮临时注释掉；
-         重新开放时把下面整段还原即可（页面 js 与底部操作栏都没删，selectMode 只有这一个入口） -->
-    <!-- <view class="mode-btn select-toggle {{selectMode ? 'select-toggle-on' : ''}}" hover-class="mode-btn-hover" bindtap="onToggleSelect">
+    <!-- 多选入口（批量导出 GPX）：2026-11-03 按会员权益恢复（spec §8）。
+         判据是服务端下发的 canExportBundle；非会员点它是引导弹窗，不是静默无反应 -->
+    <view class="mode-btn select-toggle {{selectMode ? 'select-toggle-on' : ''}}" hover-class="mode-btn-hover" bindtap="onToggleSelect">
       <text>{{selectMode ? '取消' : '多选'}}</text>
-    </view> -->
+    </view>
     </view>
   </view>
 

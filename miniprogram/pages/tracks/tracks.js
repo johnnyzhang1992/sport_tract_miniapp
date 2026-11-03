@@ -61,6 +61,7 @@ Page({
     notLoggedIn: false, // 游客态：展示登录引导卡（2026-10-26 补缺省态）
     selectMode: false, // 多选模式：点条目勾选/取消，底部栏批量导出 GPX
     selectedCount: 0,
+    canExportBundle: false, // 多条轨迹打包＝会员权益（服务端下发，端上不自算）
   },
 
   onLoad() {
@@ -88,12 +89,30 @@ Page({
 
   /** 进入/退出多选：进出都清勾选（refresh/筛选切换同样先退出，避免计数与勾选串味） */
   onToggleSelect() {
+    // 打包导出是会员权益：非会员点「多选」走引导，不是静默无反应
+    if (!this.data.canExportBundle) {
+      this.openExportGuide();
+      return;
+    }
     if (this.data.selectMode) {
       this.exitSelectMode();
       return;
     }
     const items = this.data.items.map((it) => ({ ...it, checked: false }));
     this.setData({ selectMode: true, selectedCount: 0, items, groups: this.buildGroups(items) });
+  },
+
+  /** 非会员引导（文案 2026-11-03 批准稿 MC-13） */
+  openExportGuide() {
+    wx.showModal({
+      title: '打包导出',
+      content: '开通会员后可一次导出多条轨迹',
+      confirmText: '去开通',
+      cancelText: '取消',
+      success: (r) => {
+        if (r.confirm) wx.navigateTo({ url: '/pages/member/member' });
+      },
+    });
   },
 
   exitSelectMode() {
@@ -257,7 +276,13 @@ Page({
       this._monthlyStats = {}; // 重置聚合缓存，防上一次筛选的数据串味（只在 JS 用，不进 data）
       this.setData({ loading: true, page: 1 });
       // 个人最佳与列表并行拉取：每次刷新都取实时值（缓存不失效，新纪录要立刻在卡片亮出）
-      const [data, best] = await Promise.all([api.get('/activities', this.buildParams(1)), this.loadBest()]);
+      // 权益与列表并行：打包入口的判据走服务端；权益拉不到就按非会员（宁可少给，不可错给）
+      const [data, best, ent] = await Promise.all([
+        api.get('/activities', this.buildParams(1)),
+        this.loadBest(),
+        api.get('/member/entitlements').catch(() => null),
+      ]);
+      if (ent) this.setData({ canExportBundle: !!ent.canExportBundle });
       this._best = best;
       const items = this.markAdAfter(data.items.map((it) => this.decorate(it, best)));
       const monthly = mergeMonthly({}, data.monthlyStats);

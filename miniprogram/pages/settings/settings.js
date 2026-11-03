@@ -3,6 +3,8 @@
  * 单位切换（公制/英制）、默认运动类型、高精度定位开关 → PUT /users/me settings
  */
 const api = require('../../services/api');
+const storage = require('../../services/storage');
+const { setAdFreeUntil } = require('../../utils/ad-free');
 const config = require('../../config/index');
 
 Page({
@@ -21,6 +23,19 @@ Page({
 
   onLoad() {
     this.loadSettings();
+    this.refreshEntitlements();
+  },
+
+  /**
+   * 会员是免广告的第二条来源：设置页顺带刷一次缓存，付完会员回来广告组件才会收掉。
+   * 拉不到就沿用上次缓存，不打扰用户（权益读取失败按非会员降级由服务端保证）。
+   */
+  refreshEntitlements() {
+    const token = storage.getToken();
+    if (!(token && token.accessToken)) return;
+    api.get('/member/entitlements').then((e) => {
+      if (e && e.adFreeUntil) setAdFreeUntil(e.adFreeUntil);
+    }).catch(() => {});
   },
 
   /** 退出登录：清本地令牌回游客态（云端数据保留，重新登录可同步） */
