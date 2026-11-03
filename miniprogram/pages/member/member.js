@@ -106,4 +106,8 @@ Page({
   onRetry() {
     this.syncData();
   },
+
+  goOrders() {
+    wx.navigateTo({ url: '/pages/member-orders/member-orders' });
+  },
 });

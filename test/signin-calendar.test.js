@@ -26,7 +26,7 @@ test('SC1 网格填满：2026-10 周四开局 → 首行补 9/28-9/30、末行�
   assert.deepEqual(sc.WEEK_LABELS, ['一', '二', '三', '四', '五', '六', '日']);
 });
 
-test('SC2 状态映射：已签✓ / 可补补 / 未来+N / 漏签空 / 今天标「今天」', () => {
+test('SC2 状态映射：已签出分值 / 可补补 / 未来+N / 漏签空 / 今天标「今天」', () => {
   const days = [
     day('2026-10-01', 'signed', 1, 1),
     day('2026-10-02', 'makeup', 2, 2),
@@ -35,7 +35,7 @@ test('SC2 状态映射：已签✓ / 可补补 / 未来+N / 漏签空 / 今天�
   ];
   const cells = sc.buildSigninMonth('2026-10', days, { today: '2026-10-28' });
   const at = (d) => cells.find((c) => c.date === d);
-  assert.equal(at('2026-10-01').mark, '✓');
+  assert.equal(at('2026-10-01').mark, '+1', '已签格显示这天的连签分值（与积分页七格同一份名义算法），不再打勾');
   assert.equal(at('2026-10-01').state, 'signed');
   assert.equal(at('2026-10-02').mark, '补');
   assert.equal(at('2026-10-02').makeupable, true, '可补格要带标记，组件据此决定点不点得动');
@@ -43,9 +43,24 @@ test('SC2 状态映射：已签✓ / 可补补 / 未来+N / 漏签空 / 今天�
   assert.equal(at('2026-10-29').mark, '+7', '未来格显示一路签下去能拿的分，不是日期推算');
   const today = at('2026-10-28');
   assert.equal(today.state, 'today');
+  assert.equal(today.mark, '', '今天还没签：留空圈等用户点，画勾就是谎话');
   assert.equal(today.isToday, true);
   assert.equal(today.label, '今天', '今天格下方写「今天」而不是日号');
   assert.equal(at('2026-10-01').label, 1, '其余格下方是日号');
+});
+
+test('SC2b 今天这格打勾：其余已签格照常出分值，缺分值才回落勾不画 +0', () => {
+  const days = [
+    day('2026-10-27', 'signed', 3, 3),
+    day('2026-10-28', 'signed', 4, 4), // 今天签了：服务端下发的是 signed，不是 today
+    day('2026-10-26', 'signed', 0, 0), // 脏数据兜底：已签却没带分值
+  ];
+  const cells = sc.buildSigninMonth('2026-10', days, { today: '2026-10-28' });
+  const at = (d) => cells.find((c) => c.date === d);
+  assert.equal(at('2026-10-28').mark, '✓', '当天用勾标出「今天已签」');
+  assert.equal(at('2026-10-28').isToday, true);
+  assert.equal(at('2026-10-27').mark, '+3', '历史格不因今天是今天而变样');
+  assert.equal(at('2026-10-26').mark, '✓', '拿不到分值时回落打勾：画 +0 会被读成这天白签');
 });
 
 test('SC3 缺日兜底：接口少发某天按漏签渲染，不崩也不留空穴', () => {
@@ -55,7 +70,7 @@ test('SC3 缺日兜底：接口少发某天按漏签渲染，不崩也不留空�
   assert.equal(missing.mark, '');
 });
 
-test('SC4 补位格也带真实状态：上月签过的日子在首行显示✓，不被画成灰圈', () => {
+test('SC4 补位格也带真实状态：上月签过的日子在首行照常出分值，不被画成灰圈', () => {
   const days = [
     day('2026-09-30', 'signed', 5),   // 落在 10 月视图的首行补位
     day('2026-10-01', 'signed', 6),
@@ -63,7 +78,7 @@ test('SC4 补位格也带真实状态：上月签过的日子在首行显示✓�
   ];
   const cells = sc.buildSigninMonth('2026-10', days, { today: '2026-10-28' });
   assert.equal(cells[2].date, '2026-09-30');
-  assert.equal(cells[2].mark, '✓', '补位格的状态来自同一条 days，不能一律置灰');
+  assert.equal(cells[2].mark, '+5', '补位格的状态来自同一条 days，不能一律置灰');
   assert.equal(cells[2].out, true, '但仍标着不属于本月，样式上要淡一档');
   assert.equal(cells[34].mark, '+7');
   assert.equal(cells.filter((c) => !c.out).length, 31, '补位不挤掉当月任何一天');

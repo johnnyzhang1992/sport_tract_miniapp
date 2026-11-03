@@ -43,12 +43,14 @@ test('SH0 组件属性名全小写单词（微信不做 kebab→camel 转换，�
 });
 
 test('SH1 打开当月：出月标题与整月格子，当月不可再往前翻', () => {
-  const c = mount({ month: NOW_MONTH, days: [day(`${NOW_MONTH}-02`, 'signed')] });
+  const c = mount({ month: NOW_MONTH, days: [day(`${NOW_MONTH}-02`, 'signed', 2)] });
   assert.equal(c.data.label, `${Number(NOW_MONTH.slice(0, 4))}年${Number(NOW_MONTH.slice(5))}月`);
   assert.equal(c.data.canNext, false, '未来月份没数据，› 必须灰掉');
   assert.equal(c.data.canPrev, true);
   assert.ok(c.data.cells.filter((x) => x.date).length >= 28, '整月逐日出格');
-  assert.equal(c.data.cells.find((x) => x.date === `${NOW_MONTH}-02`).mark, '✓');
+  // 2 号只在「今天就是 2 号」时才当今天格（那格画勾）；其余情况必须出分值
+  const expect = c.data.cells.find((x) => x.date === `${NOW_MONTH}-02`).isToday ? '✓' : '+2';
+  assert.equal(c.data.cells.find((x) => x.date === `${NOW_MONTH}-02`).mark, expect);
 });
 
 test('SH2 翻到历史月：› 恢复可点；往前翻不越过 12 个月', () => {

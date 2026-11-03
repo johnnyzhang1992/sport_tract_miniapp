@@ -1,0 +1,55 @@
+<view class="page">
+  <view wx:if="{{!loggedIn}}" class="gate">
+    <view class="gate-tip">登录后查看你的订单与退款</view>
+    <button class="gate-btn" bindtap="onTapGate">微信登录</button>
+  </view>
+
+  <block wx:else>
+    <view wx:if="{{loading}}" class="tip">加载中…</view>
+    <view wx:elif="{{failed}}" class="tip tap" bindtap="onRetry">加载失败，点击重试</view>
+
+    <block wx:else>
+      <view wx:if="{{notice}}" class="notice">{{notice}}</view>
+      <view wx:if="{{!items.length}}" class="tip">还没有订单，去会员中心开通吧</view>
+
+      <view class="card order" wx:for="{{items}}" wx:key="outTradeNo">
+        <view class="row1">
+          <text class="name">{{item.name}}</text>
+          <text class="status s-{{item.status}}">{{item.statusText}}</text>
+        </view>
+        <view class="row2">
+          <text class="price">￥{{item.priceText}}</text>
+          <text class="time">{{item.createdAtText}}</text>
+        </view>
+        <view wx:if="{{item.periodText}}" class="period">有效期 {{item.periodText}}</view>
+        <view wx:if="{{item.refundedText}}" class="refunded">已退款 ￥{{item.refundedText}}</view>
+
+        <view class="actions" wx:if="{{item.canPay || item.canCancel || item.canRefund}}">
+          <button wx:if="{{item.canPay}}" class="act primary" size="mini"
+                  disabled="{{busy === 'pay:' + item.outTradeNo}}"
+                  bindtap="onPay" data-id="{{item.outTradeNo}}">继续支付</button>
+          <button wx:if="{{item.canCancel}}" class="act" size="mini"
+                  disabled="{{busy === 'cancel:' + item.outTradeNo}}"
+                  bindtap="onCancel" data-id="{{item.outTradeNo}}">取消订单</button>
+          <button wx:if="{{item.canRefund}}" class="act" size="mini"
+                  bindtap="toggleRefund" data-id="{{item.outTradeNo}}">
+            {{expanded === item.outTradeNo ? '收起退款' : '申请退款'}}
+          </button>
+        </view>
+
+        <view wx:if="{{expanded === item.outTradeNo}}" class="refund-panel">
+          <picker range="{{reasonLabels}}" bindchange="onReason">
+            <view class="picker">退款原因：{{reasonIndex >= 0 ? reasonLabels[reasonIndex] : '请选择（必选）'}}</view>
+          </picker>
+          <input class="note" placeholder="补充说明（选填，100 字内）"
+                 value="{{note}}" bindinput="onNote" maxlength="100"/>
+          <button class="act warn" size="mini"
+                  disabled="{{busy === 'refund:' + item.outTradeNo}}"
+                  bindtap="onSubmitRefund" data-id="{{item.outTradeNo}}">提交退款申请</button>
+        </view>
+      </view>
+
+      <view class="back-link" bindtap="goMember">返回会员中心</view>
+    </block>
+  </block>
+</view>

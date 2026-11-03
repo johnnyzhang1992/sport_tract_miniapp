@@ -12,12 +12,19 @@ const { WEEK_LABELS, shiftMonth, monthLabel } = require('./footprint-calendar.js
 
 const pad = (n) => String(n).padStart(2, '0');
 
-/** 圆点里的内容：已签打勾、可补标「补」、未来日标能拿的分；今天没签和漏签都留空圈 */
-function markOf(state, reward) {
-  if (state === 'signed') return '✓';
+/**
+ * 圆点里的内容：已签标这天的连签分值、可补标「补」、未来日标能拿的分；今天没签和漏签都留空圈。
+ * 分值是服务端按连签位置算的名义值，与积分页顶部七格同一份算法（不是账本实发额）。
+ * 唯独今天画勾：整月只有这一格是「正在进行」，勾标的是今天已签这个事实——它能不能签、
+ * 签了拿几分都由页内那颗按钮在报，格子里再放一个数字只是重复。
+ */
+function markOf(state, reward, isToday) {
   if (state === 'makeup') return '补';
   if (state === 'future') return reward > 0 ? `+${reward}` : '';
-  return '';
+  if (state !== 'signed') return '';
+  if (isToday) return '✓';
+  // 已签却没带分值（接口缺字段）：回落打勾，画 +0 会被读成「这天白签」
+  return reward > 0 ? `+${reward}` : '✓';
 }
 
 /**
@@ -44,7 +51,7 @@ function buildSigninMonth(month, days, opts) {
       day,
       out,
       state,
-      mark: markOf(state, rec ? rec.reward : 0),
+      mark: markOf(state, rec ? rec.reward : 0, dateKey === today),
       label: dateKey === today ? '今天' : day,
       isToday: dateKey === today,
       makeupable: state === 'makeup',

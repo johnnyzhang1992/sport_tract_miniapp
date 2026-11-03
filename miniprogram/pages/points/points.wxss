@@ -263,11 +263,12 @@ ad-template + .card {
   color: #8a93a6;
 }
 
-/* 三态按钮：透明边框常驻占位（描边态不撑高、底边不被行分隔线盖住），
-   box-sizing 必须显式——不加时 1rpx 边框会把元素撑大，真机上底边渲染不全 */
+/* 三态按钮：透明边框常驻占位（三态宽度一致，切换状态时字不跳位），box-sizing 必须显式 */
 .task-action {
   box-sizing: border-box;
-  border: 1rpx solid transparent;
+  /* 描边 2rpx 起：1rpx 在真机只有约 1.5 设备像素，盒底落在半像素上时底边被劈成两行、
+     各只盖一小半，渲染成整条淡出（2026-11-03 真机「去运动」复现；box-sizing 治不了这个） */
+  border: 2rpx solid transparent;
   padding: 5rpx 19rpx;
   border-radius: 999rpx;
   background: #2b6cf6;

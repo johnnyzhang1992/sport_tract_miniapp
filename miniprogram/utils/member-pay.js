@@ -89,4 +89,33 @@ async function payForMember(productKey, info) {
   return { status: 'pending', outTradeNo: order.outTradeNo };
 }
 
-module.exports = { payForMember, pollOrder, requestVirtualPayment, wxLogin, payFailCopy, POLL_MAX };
+/**
+ * 继续支付：对待支付订单复用原 outTradeNo 重拉支付（服务端 repay 重签 payData，不建新单）。
+ * 返回形态与 payForMember 一致。
+ */
+async function repayForMember(outTradeNo, info) {
+  const platform = (info && info.platform) || '';
+  const code = await wxLogin();
+  let order;
+  try {
+    order = await api.post(`/member/order/${outTradeNo}/repay`, { code, channel: platform === 'ios' ? 'ios' : 'android' });
+  } catch (e) {
+    return { status: 'failed', message: (e && e.message) || '支付参数获取失败，请稍后再试' };
+  }
+
+  try {
+    await requestVirtualPayment(order.payData);
+  } catch (e) {
+    const errMsg = (e && (e.errMsg || e.message)) || '';
+    if (/cancel|用户取消/i.test(errMsg)) return { status: 'cancelled' };
+    return { status: 'failed', message: payFailCopy(e) };
+  }
+
+  const final = await pollOrder(order.outTradeNo).catch(() => null);
+  if (final && final.status === 'delivered') {
+    return { status: 'delivered', entitlements: final.entitlements, order: final };
+  }
+  return { status: 'pending', outTradeNo: order.outTradeNo };
+}
+
+module.exports = { payForMember, repayForMember, pollOrder, requestVirtualPayment, wxLogin, payFailCopy, POLL_MAX };

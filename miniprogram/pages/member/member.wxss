@@ -101,3 +101,10 @@
 .plan-btn-busy {
   opacity: 0.6;
 }
+
+.orders-link {
+  text-align: center;
+  color: #5b6474;
+  font-size: 26rpx;
+  padding: 28rpx 0 8rpx;
+}

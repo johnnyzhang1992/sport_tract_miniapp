@@ -29,7 +29,8 @@
     "pages/points-rules/points-rules",
     "pages/points-item/points-item",
     "pages/points-exchanges/points-exchanges",
-    "pages/member/member"
+    "pages/member/member",
+    "pages/member-orders/member-orders"
   ],
   "window": {
     "navigationBarBackgroundColor": "#ffffff",
