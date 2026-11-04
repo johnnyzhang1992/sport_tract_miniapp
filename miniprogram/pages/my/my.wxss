@@ -24,8 +24,8 @@
 /* 头像右下角会员徽标：金色圆底宝石，白描边与头像分开 */
 .avatar-member-badge {
   position: absolute;
-  right: -2rpx;
-  bottom: -2rpx;
+  right: 0;
+  bottom: 8rpx;
   width: 32rpx;
   height: 32rpx;
 }
