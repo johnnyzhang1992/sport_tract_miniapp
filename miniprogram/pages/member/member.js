@@ -78,6 +78,7 @@ Page({
         loading: false,
         failed: false,
         enabled: !!(d && d.enabled),
+        operator: !!(d && d.operator), // 站内运营者（role=admin）：显示运营中心入口
         notice: (d && d.notice) || '',
         statusText,
         cards,
