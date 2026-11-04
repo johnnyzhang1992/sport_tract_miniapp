@@ -34,7 +34,7 @@ test('MP2 页面文案位全部绑变量，不写死价格/日均/权益句', ()
   assert.ok(!wxml.includes('元/天'), '日均价必须来自接口');
   assert.ok(!wxml.includes('免广告'), '权益行必须来自接口 perkLines');
   assert.ok(wxml.includes('{{plan.priceText}}') && wxml.includes('{{plan.perDayText}}'));
-  assert.ok(wxml.includes('{{item}}'), '页头权益行逐个渲染服务端 perkLines');
+  assert.ok(wxml.includes('{{item.text}}'), '页头权益文案逐个渲染服务端 perkLines');
 });
 
 /* --------------------------------- 环境桩 --------------------------------- */
@@ -173,9 +173,12 @@ test('MP4 登录后渲染服务端文案：价格、日均、权益四行、状�
   await tick();
   assert.equal(p.data.loading, false);
   assert.equal(p.data.statusText, '会员生效中 · 有效期至 2026年12月3日');
-  assert.equal(p.data.heroTitle, '会员生效中 · 有效期至 2026年12月3日', '有状态行时页头标题优先用状态行');
+  assert.equal(p.data.heroTitle, '会员生效中', '状态句前半段做大标题');
+  assert.equal(p.data.heroSub, '有效期至 2026年12月3日', '有效期做副标题，不重复整句');
   assert.equal(p.data.cards[0].priceText, '1.99 元');
   assert.equal(p.data.cards[1].perDayText, '约 0.05 元/天');
+  assert.equal(p.data.selectedPriceText, '1.99 元', '按钮上的实付价跟随默认第一档');
+  assert.equal(p.data.bestValueKey, 'year_card', '日均最低落在年卡（1699/365 < 199/30）');
   assert.deepEqual(p.data.cards[0].perkLines, ['免广告', '多条轨迹打包导出 GPX', '照片额度 300 张', '订阅消息提醒']);
 });
 
@@ -276,26 +279,32 @@ test('MP10 加载失败显示重试，重试会再发请求', async () => {
   assert.equal(p.data.cards.length, 2);
 });
 
-test('MP14 页头会员卡使用独立底图，图标文件已入包', () => {
+test('MP14 页头会员卡：渐变底 + 权益图标，五个蓝色字形都入包', () => {
   const w = read('miniprogram/pages/member/member.wxml');
   assert.ok(w.includes('class="member-hero"'), '应有页头会员卡');
-  assert.ok(w.includes('src="/assets/icons/member-hero.png"'), '页头卡使用会员卡插画底图');
-  assert.ok(
-    fs.existsSync(path.join(root, 'miniprogram/assets/icons/member-hero.png')),
-    '底图文件要入包',
-  );
+  assert.ok(w.includes('class="hero-perks"') && w.includes('heroPerksView'), '权益走图标宫格');
+  const css = read('miniprogram/pages/member/member.wxss');
+  assert.ok(!css.includes('member-hero-img'), '不再用插画底图');
+  ['ban', 'download', 'image', 'bell', 'gem'].forEach((n) => {
+    assert.ok(
+      fs.existsSync(path.join(root, `miniprogram/assets/icons/lucide-${n}-blue.png`)),
+      `蓝色字形 ${n} 要入包`,
+    );
+  });
 });
 
-test('MP15 页面结构：页头卡 → 套餐行 → 统一开通按钮', () => {
+test('MP15 页面结构：页头卡 → 三列套餐卡 → 统一支付按钮', () => {
   const w = read('miniprogram/pages/member/member.wxml');
   const posHero = w.indexOf('class="member-hero"');
-  const posList = w.indexOf('class="plan-list"');
-  const posRow = w.indexOf('class="plan-row');
+  const posCards = w.indexOf('class="plan-cards"');
+  const posCard = w.indexOf('class="plan-card ');
   const posCta = w.indexOf('data-key="{{selectedKey}}"');
-  assert.ok(posHero > 0 && posList > posHero, '页头卡在前，套餐列表在后');
-  assert.ok(posRow > posList && posCta > posRow, '套餐行之后才是统一开通按钮');
-  assert.match(w, /bindtap="onSelectPlan"/, '套餐行可切换选中');
-  assert.equal((w.match(/bindtap="onBuy"/g) || []).length, 1, '每档不再各带一个开通按钮');
+  assert.ok(posHero > 0 && posCards > posHero, '页头卡在前，套餐区在后');
+  assert.ok(posCard > posCards && posCta > posCard, '套餐卡之后才是统一支付按钮');
+  assert.match(w, /bindtap="onSelectPlan"/, '套餐卡可切换选中');
+  assert.equal((w.match(/bindtap="onBuy"/g) || []).length, 1, '只保留一个统一支付按钮');
+  assert.match(w, /plan\.key === bestValueKey/, '日均最低一档挂角标');
+  assert.match(w, /{{selectedPriceText}}/, '按钮显示实付价');
 });
 
 test('MP16 选中档位：默认第一档，切换后页头权益与下单 key 一起变', async () => {
@@ -308,11 +317,14 @@ test('MP16 选中档位：默认第一档，切换后页头权益与下单 key �
   assert.equal(p.data.selectedKey, 'month_card', '首次进页默认选第一档');
   assert.deepEqual(p.data.heroPerks, ['月卡权益']);
   assert.equal(p.data.heroTitle, '会员月卡', '无状态行时页头标题用选中套餐名');
+  assert.equal(p.data.selectedPriceText, '1.99 元', '按钮实付价跟随默认档');
+  assert.equal(p.data.heroPerksView[0].icon, '/assets/icons/lucide-gem-blue.png', '认不出的权益用中性字形兜底');
 
   p.onSelectPlan({ currentTarget: { dataset: { key: 'year_card' } } });
   assert.equal(p.data.selectedKey, 'year_card');
   assert.deepEqual(p.data.heroPerks, ['年卡权益'], '页头权益跟随选中档位');
   assert.equal(p.data.heroTitle, '会员年卡', '页头标题跟随选中档位');
+  assert.equal(p.data.selectedPriceText, '16.99 元', '按钮实付价跟随选中档');
 
   p.onSelectPlan({ currentTarget: { dataset: { key: 'nope' } } });
   assert.equal(p.data.selectedKey, 'year_card', '未知 key 不改变选择');
@@ -372,4 +384,11 @@ test('MP13 登录后下拉：静默重拉不闪加载态；失败保留内容并
   assert.equal(p.data.failed, false, '下拉失败不整页转错误态');
   assert.ok(toasts.includes('刷新失败'), '失败要给一句反馈');
   assert.equal(stops, 2, '失败也要收 spinner');
+});
+
+test('MP18 页头状态句只出现一次：heroTitle 已承担，不再重复渲染 statusText', () => {
+  const w = read('miniprogram/pages/member/member.wxml');
+  assert.equal((w.match(/\{\{statusText\}\}/g) || []).length, 0, 'statusText 不进模板，只通过 heroTitle 输出');
+  assert.ok(!w.includes('class="hero-status"'), '旧的状态行已删除，避免与标题重复');
+  assert.ok(w.includes('class="hero-title"') && w.includes('{{heroTitle}}'), '标题位仍在');
 });

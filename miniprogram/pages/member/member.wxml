@@ -21,44 +21,45 @@
     <view class="closed-block" wx:if="{{!enabled}}">{{notice}}</view>
 
     <block wx:if="{{enabled}}">
-      <!-- 页头会员卡：卡面插画做底，状态与权益行都由接口下发 -->
+      <!-- 页头会员卡：深蓝渐变 + 状态大字 + 权益图标；文案全部来自接口 -->
       <view class="member-hero">
-        <image class="member-hero-img" src="/assets/icons/member-hero.png" mode="aspectFill" />
-        <view class="member-hero-body">
+        <view class="hero-top">
           <view class="hero-badge">迹路者会员</view>
-          <view class="hero-title" wx:if="{{heroTitle}}">{{heroTitle}}</view>
-          <view class="hero-bottom">
-            <view class="hero-status" wx:if="{{statusText}}">{{statusText}}</view>
-            <view class="hero-perks">
-              <text class="hero-perk" wx:for="{{heroPerks}}" wx:key="*this">{{item}}</text>
+          <image class="hero-gem" src="/assets/icons/member-badge.png" mode="aspectFit" />
+        </view>
+        <view class="hero-title" wx:if="{{heroTitle}}">{{heroTitle}}</view>
+        <view class="hero-sub" wx:if="{{heroSub}}">{{heroSub}}</view>
+        <view class="hero-perks">
+          <view class="hero-perk" wx:for="{{heroPerksView}}" wx:key="text">
+            <view class="hero-perk-ico">
+              <image class="hero-perk-icon" src="{{item.icon}}" mode="aspectFit" />
             </view>
+            <text class="hero-perk-text">{{item.text}}</text>
           </view>
         </view>
       </view>
 
-      <!-- 套餐选择：选中档位决定底部开通按钮买哪一单 -->
-      <view class="plan-list">
+      <!-- 套餐选择：横排三档，选中描边；日均最低一档挂角标（金额文案仍来自接口） -->
+      <view class="plan-cards">
         <view
-          class="plan-row {{showPay && selectedKey === plan.key ? 'plan-row-on' : ''}}"
-          hover-class="{{showPay ? 'plan-row-hover' : ''}}"
+          class="plan-card {{showPay && selectedKey === plan.key ? 'plan-card-on' : ''}}"
+          hover-class="{{showPay ? 'plan-card-hover' : ''}}"
+          hover-stay-time="80"
           wx:for="{{cards}}" wx:key="key" wx:for-item="plan"
           data-key="{{plan.key}}" bindtap="onSelectPlan"
         >
-          <view class="plan-row-main">
-            <text class="plan-row-name">{{plan.name}}</text>
-            <text class="plan-row-duration">{{plan.durationText}}</text>
-          </view>
-          <view class="plan-row-price">
-            <text class="plan-row-price-main">{{plan.priceText}}</text>
-            <text class="plan-row-perday">{{plan.perDayText}}</text>
-          </view>
-          <view class="plan-row-tick" wx:if="{{showPay}}">✓</view>
+          <view class="plan-tag" wx:if="{{plan.key === bestValueKey}}">日均最低</view>
+          <view class="plan-tick" wx:if="{{showPay}}">✓</view>
+          <text class="plan-name">{{plan.name}}</text>
+          <text class="plan-duration">{{plan.durationText}}</text>
+          <text class="plan-price">{{plan.priceText}}</text>
+          <text class="plan-perday">{{plan.perDayText}}</text>
         </view>
       </view>
 
       <view class="plan-btn {{paying ? 'plan-btn-busy' : ''}}"
             wx:if="{{showPay}}" data-key="{{selectedKey}}" bindtap="onBuy">
-        {{entitlements.memberActive ? '续费' : '立即开通'}}
+        立即支付 <text class="plan-btn-price">{{selectedPriceText}}</text>
       </view>
     </block>
 

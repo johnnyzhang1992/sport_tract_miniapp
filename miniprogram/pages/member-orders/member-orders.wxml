@@ -24,6 +24,7 @@
         <view class="price-row">
           <text class="price"><text class="price-unit">￥</text>{{item.priceText}}</text>
           <text wx:if="{{item.refundedText}}" class="refunded">已退款 ￥{{item.refundedText}}</text>
+          <text wx:if="{{item.refundHint}}" class="refund-hint">{{item.refundHint}}</text>
         </view>
 
         <view wx:if="{{item.periodText}}" class="meta-row">

@@ -260,3 +260,9 @@
   font-size: 26rpx;
   padding: 32rpx 0 8rpx;
 }
+
+.refund-hint {
+  color: #8a93a6;
+  font-size: 24rpx;
+  margin-top: 8rpx;
+}

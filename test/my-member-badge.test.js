@@ -82,6 +82,7 @@ test('MB-1 结构：徽标绑 loggedIn && isMember，贴在头像右下角', () 
   assert.ok(fs.existsSync(path.join(root, 'miniprogram/assets/icons/member-badge.png')));
   const css = read('miniprogram/pages/my/my.wxss');
   assert.match(css, /\.avatar-member-badge\s*\{[^}]*position:\s*absolute/, '徽标要绝对定位在头像角上');
+  assert.match(css, /\.avatar-member-badge\s*\{[^}]*bottom:\s*-8rpx/, '徽标下缘挂出头像 8rpx，不再压到下方内容');
 });
 
 test('MB-2 登录且会员生效：isMember = true', async () => {

@@ -11,7 +11,9 @@ const root = path.join(__dirname, '..');
 const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
 
 const { compareVersion, MIN_XPAY_SDK, MIN_IOS_CLIENT } = require('../miniprogram/utils/compare-version');
-const { fenToYuanText, buildPlanCards, payVisible } = require('../miniprogram/utils/member-view');
+const {
+  fenToYuanText, buildPlanCards, bestValueKey, splitStatusText, buildPerkItems, payVisible,
+} = require('../miniprogram/utils/member-view');
 
 test('MV1 compareVersion 数值比较，不是字典序：2.19.2 vs 2.9.10', () => {
   assert.equal(compareVersion('2.19.2', '2.9.10'), 1, '字典序会把 2.19 判成小于 2.9');
@@ -55,7 +57,51 @@ test('MV4 付费入口可见性：开关关 / iOS 未开 IAP / 基础库过低 �
   assert.equal(payVisible({ enabled: true, platform: 'android', sdkVersion: '2.19.2' }), true);
 });
 
-test('MV5 状态句不由端上生成：member-view 不拼日期，页面只渲染服务端 statusText', () => {
+test('MV6 日均最低角标：只挑 key，不产出金额文案；缺字段或只有一档不挂', () => {
+  const cards = buildPlanCards([
+    { key: 'm', priceFen: 199, durationDays: 30 },
+    { key: 'q', priceFen: 499, durationDays: 90 },
+    { key: 'y', priceFen: 1699, durationDays: 365 },
+  ]);
+  assert.equal(bestValueKey(cards), 'y', '1699/365 最小');
+  assert.equal(bestValueKey([cards[0]]), '', '只有一档不比较');
+  assert.equal(bestValueKey(buildPlanCards([{ key: 'm' }, { key: 'y' }])), '', '缺 priceFen/durationDays 不挂角标');
+  // 角标只依赖数值字段，服务端日均文案说什么都不影响
+  const decoy = buildPlanCards([
+    { key: 'm', priceFen: 199, durationDays: 30, perDayText: '约 0.01 元/天' },
+    { key: 'y', priceFen: 1699, durationDays: 365, perDayText: '约 9.99 元/天' },
+  ]);
+  assert.equal(bestValueKey(decoy), 'y', '按 priceFen/durationDays 比，不解析日均文案');
+});
+
+test('MV7 状态句只拆两行，不重写文案：有分隔符拆标题/副标题，没分隔符整句放标题', () => {
+  assert.deepEqual(splitStatusText('会员生效中 · 有效期至 2026年12月4日'), {
+    title: '会员生效中', sub: '有效期至 2026年12月4日',
+  });
+  assert.deepEqual(splitStatusText('会员已到期 · 2026年12月4日到期'), {
+    title: '会员已到期', sub: '2026年12月4日到期',
+  });
+  assert.deepEqual(splitStatusText(''), { title: '', sub: '' });
+  assert.deepEqual(splitStatusText('会员生效中'), { title: '会员生效中', sub: '' }, '没分隔符不硬拆');
+  assert.deepEqual(splitStatusText('会员生效中 · 有效期至 A · 备注 B').sub, '有效期至 A · 备注 B', '只拆第一个分隔符');
+});
+
+test('MV8 权益图标映射：按关键词配字形，认不出来用中性宝石兜底且文件都在', () => {
+  const items = buildPerkItems(['免广告', '多条轨迹打包导出 GPX', '照片额度 300 张', '订阅消息提醒', '神秘权益']);
+  assert.deepEqual(items.map((i) => i.icon), [
+    '/assets/icons/lucide-ban-blue.png',
+    '/assets/icons/lucide-download-blue.png',
+    '/assets/icons/lucide-image-blue.png',
+    '/assets/icons/lucide-bell-blue.png',
+    '/assets/icons/lucide-gem-blue.png',
+  ]);
+  assert.deepEqual(buildPerkItems([]), []);
+  items.forEach((i) => {
+    assert.ok(fs.existsSync(path.join(root, 'miniprogram', i.icon)), `${i.text} 的图标要入包`);
+  });
+});
+
+test('MV9 状态句不由端上生成：member-view 不拼日期，页面只渲染服务端 statusText', () => {
   const util = read('miniprogram/utils/member-view.js');
   assert.ok(!util.includes('到期'), '端上不得拼「到期」类整句');
   assert.ok(!util.includes('年'), '端上不得格式化日期');

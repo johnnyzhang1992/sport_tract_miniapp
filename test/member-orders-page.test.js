@@ -15,6 +15,13 @@ const path = require('node:path');
 const root = path.join(__dirname, '..');
 const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
 
+test('MO1b iOS 行下发退款指引且不渲染退款按钮（wxml 结构断言）', () => {
+  const wxml = read('miniprogram/pages/member-orders/member-orders.wxml');
+  assert.ok(wxml.includes('{{item.refundHint}}'), '指引走服务端下发的 refundHint');
+  const js = read('miniprogram/pages/member-orders/member-orders.js');
+  assert.ok(!js.includes('App Store'), '端上不得自己拼 iOS 退款文案');
+});
+
 test('MO1 app.json 注册订单页，会员中心有「订单与退款」入口', () => {
   const app = JSON.parse(read('miniprogram/app.json'));
   assert.ok(app.pages.includes('pages/member-orders/member-orders'));
@@ -83,6 +90,7 @@ const ordersFixture = (over) => ({
   items: [
     { outTradeNo: 'OTN1', status: 'created', statusText: '待支付', name: '会员月卡', priceFen: 199, refundedFen: 0, periodText: '', createdAtText: '2026-11-04 00:01', canPay: true, canCancel: true, canRefund: false },
     { outTradeNo: 'OTN2', status: 'delivered', statusText: '已生效', name: '会员月卡', priceFen: 199, refundedFen: 0, periodText: '2026年11月4日 ~ 2026年12月3日', createdAtText: '2026-11-03 23:59', canPay: false, canCancel: false, canRefund: true },
+    { outTradeNo: 'OTN3', status: 'delivered', statusText: '已生效', name: '会员月卡', priceFen: 199, refundedFen: 0, periodText: '', createdAtText: '2026-11-04 00:05', canPay: false, canCancel: false, canRefund: false, refundHint: 'iOS 退款请在 App Store 申请，通过后自动同步到这里' },
     ...((over && over.extra) || []),
   ],
   ...over,
@@ -169,7 +177,7 @@ test('MO7 登录后下拉：静默重拉不闪加载态；失败保留列表并 
   reset();
   pageDef.onShow();
   await tick();
-  assert.equal(pageDef.data.items.length, 2);
+  assert.equal(pageDef.data.items.length, 3);
 
   let release = null;
   ordersRespond = () => new Promise((r) => { release = r; });
@@ -184,7 +192,7 @@ test('MO7 登录后下拉：静默重拉不闪加载态；失败保留列表并 
   ordersRespond = () => Promise.reject(new Error(''));
   await pageDef.onPullDownRefresh();
   await tick();
-  assert.equal(pageDef.data.items.length, 2, '刷新失败不清空列表');
+  assert.equal(pageDef.data.items.length, 3, '刷新失败不清空列表');
   assert.equal(pageDef.data.failed, false, '下拉失败不整页转错误态');
   assert.ok(toasts.includes('刷新失败'));
   assert.equal(pullStops, 2);

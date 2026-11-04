@@ -116,9 +116,11 @@
           <image wx:if="{{compare.week.arrowIcon}}" class="metric-badge-icon" src="{{compare.week.arrowIcon}}" mode="aspectFit" />
         </view>
         <view class="metric-body">
-          <text class="metric-label">本周</text>
-          <view class="metric-value-line">
-            <text class="metric-value">{{overview.week.distanceKm}}</text><text class="metric-unit">km</text>
+          <view class="metric-main">
+            <text class="metric-label">本周</text>
+            <view class="metric-value-line">
+              <text class="metric-value">{{overview.week.distanceKm}}</text><text class="metric-unit">km</text>
+            </view>
           </view>
           <view class="metric-foot metric-diff-{{compare.week.cls}}" wx:if="{{compare.week}}">{{compare.week.diffText}}</view>
         </view>
@@ -128,9 +130,11 @@
           <image wx:if="{{compare.month.arrowIcon}}" class="metric-badge-icon" src="{{compare.month.arrowIcon}}" mode="aspectFit" />
         </view>
         <view class="metric-body">
-          <text class="metric-label">本月</text>
-          <view class="metric-value-line">
-            <text class="metric-value">{{overview.month.distanceKm}}</text><text class="metric-unit">km</text>
+          <view class="metric-main">
+            <text class="metric-label">本月</text>
+            <view class="metric-value-line">
+              <text class="metric-value">{{overview.month.distanceKm}}</text><text class="metric-unit">km</text>
+            </view>
           </view>
           <view class="metric-foot metric-diff-{{compare.month.cls}}" wx:if="{{compare.month}}">{{compare.month.diffText}}</view>
         </view>
@@ -147,14 +151,16 @@
         data-key="{{item.key}}"
         bindtap="openTrendSheet"
       >
-        <!-- 左列＝圆圈图标（垂直居中），右侧三行左对齐：名目 / 数值+单位 / 涨跌 -->
+        <!-- 左圆圈图标 + 右侧两行：名目与数值同行靠左 / 涨跌 -->
         <view class="metric-badge">
           <image wx:if="{{item.arrowIcon}}" class="metric-badge-icon" src="{{item.arrowIcon}}" mode="aspectFit" />
         </view>
         <view class="metric-body">
-          <text class="metric-label">{{item.label}}</text>
-          <view class="metric-value-line">
-            <text class="metric-value">{{item.value}}</text><text class="metric-unit">{{item.unit}}</text>
+          <view class="metric-main">
+            <text class="metric-label">{{item.label}}</text>
+            <view class="metric-value-line">
+              <text class="metric-value">{{item.value}}</text><text class="metric-unit">{{item.unit}}</text>
+            </view>
           </view>
           <view class="metric-foot metric-diff-{{item.dir}}">{{item.diffText ? '较前 30 天 ' + item.diffText : '暂无对比'}}</view>
         </view>

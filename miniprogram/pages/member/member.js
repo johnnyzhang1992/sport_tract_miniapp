@@ -2,7 +2,7 @@ const api = require('../../services/api');
 const storage = require('../../services/storage');
 const { setAdFreeUntil } = require('../../utils/ad-free');
 const { payForMember } = require('../../utils/member-pay');
-const { buildPlanCards, payVisible } = require('../../utils/member-view');
+const { buildPlanCards, bestValueKey, splitStatusText, buildPerkItems, payVisible } = require('../../utils/member-view');
 const { compareVersion, MIN_IOS_CLIENT } = require('../../utils/compare-version');
 const { ensureLogin } = require('../../utils/login-gate');
 
@@ -20,8 +20,12 @@ Page({
     statusText: '',
     cards: [],
     selectedKey: '', // 当前选中的套餐（底部开通按它下单）
-    heroPerks: [], // 页头卡面上的权益行：跟随选中套餐的服务端 perkLines
-    heroTitle: '', // 页头标题：有状态行用状态行，否则用选中套餐名（都来自服务端）
+    selectedPriceText: '', // 底部按钮上的实付价：跟随选中套餐的服务端 priceText
+    heroPerks: [], // 页头权益文案：跟随选中套餐的服务端 perkLines
+    heroPerksView: [], // 权益 + 图标（图标由本地按关键词映射）
+    heroTitle: '', // 页头大标题：状态句前半段，否则用选中套餐名（都来自服务端）
+    heroSub: '', // 页头副标题：状态句后半段（有效期）
+    bestValueKey: '', // 「日均最低」角标落在哪一档（本地比 priceFen/durationDays，不产出金额）
     entitlements: null,
     showPay: false,
     paying: false,
@@ -66,6 +70,7 @@ Page({
       // 刷新时保留原选择（档位还在就继续选它），首次进页默认选第一档
       const selected = cards.find((c) => c.key === this.data.selectedKey) || cards[0] || null;
       const statusText = (d && d.statusText) || '';
+      const status = splitStatusText(statusText);
       this.setData({
         loading: false,
         failed: false,
@@ -74,8 +79,12 @@ Page({
         statusText,
         cards,
         selectedKey: selected ? selected.key : '',
+        selectedPriceText: selected ? selected.priceText : '',
         heroPerks: selected ? selected.perkLines : [],
-        heroTitle: statusText || (selected ? selected.name : ''),
+        heroPerksView: buildPerkItems(selected ? selected.perkLines : []),
+        heroTitle: status.title || (selected ? selected.name : ''),
+        heroSub: status.sub,
+        bestValueKey: bestValueKey(cards),
         entitlements: (d && d.entitlements) || null,
         // iOS IAP 已在 MP 后台开通（2026-11-03）：客户端 ≥ 8.0.68（MIN_IOS_CLIENT，spec §2.1）
         // 才显示付费入口；不达标的老微信仍整块隐藏（问询/退款链路服务端已就绪）
@@ -107,10 +116,14 @@ Page({
     if (!key || key === this.data.selectedKey) return;
     const plan = (this.data.cards || []).find((c) => c.key === key);
     if (!plan) return;
+    const status = splitStatusText(this.data.statusText);
     this.setData({
       selectedKey: key,
+      selectedPriceText: plan.priceText,
       heroPerks: plan.perkLines,
-      heroTitle: this.data.statusText || plan.name,
+      heroPerksView: buildPerkItems(plan.perkLines),
+      heroTitle: status.title || plan.name,
+      heroSub: status.sub,
     });
   },
 

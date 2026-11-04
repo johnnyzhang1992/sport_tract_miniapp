@@ -21,11 +21,11 @@
   margin-right: 0;
 }
 
-/* 头像右下角会员徽标：金色圆底宝石，白描边与头像分开 */
+/* 头像右下角会员徽标：金色圆底宝石，白描边与头像分开；下缘挂出头像 8rpx（约四分之一身位） */
 .avatar-member-badge {
   position: absolute;
   right: 0;
-  bottom: 8rpx;
+  bottom: -8rpx;
   width: 32rpx;
   height: 32rpx;
 }

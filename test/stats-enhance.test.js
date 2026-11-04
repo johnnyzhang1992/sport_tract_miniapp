@@ -114,22 +114,35 @@ test('TS3 五张卡固定「全部类型」：半屏切类型只影响图，不�
   assert.ok(!/\/stats\/trend\?days=365\$\{/.test(js), '卡片序列不带 activityType 插值');
 });
 
-test('TS5 趋势区七张卡共用一套内构：左圆圈图标 + 右侧三行左对齐', () => {
-  const src = require('fs')
-    .readFileSync(require('path').join(__dirname, '../miniprogram/pages/stats/stats.wxml'), 'utf8')
+test('TS5 趋势卡右侧压成两行：名目与数值同一行，涨跌单独一行', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const src = fs
+    .readFileSync(path.join(__dirname, '../miniprogram/pages/stats/stats.wxml'), 'utf8')
     .replace(/<!--[\s\S]*?-->/g, '');
+  const css = fs.readFileSync(path.join(__dirname, '../miniprogram/pages/stats/stats.wxss'), 'utf8');
   const count = (re) => (src.match(re) || []).length;
 
-  // 七张卡 = 趋势卡模板 1 份 + 本周/本月 2 份，每份都是同一套部件
-  ['metric-badge', 'metric-body', 'metric-label', 'metric-value-line', 'metric-foot'].forEach((cls) => {
-    assert.equal(count(new RegExp('class="' + cls + '[" ]', 'g')), 3, cls + ' 应是 3 份（趋势模板 + 本周 + 本月）');
-  });
-  // 旧内构与周期格专属结构都该清掉
-  assert.ok(!/metric-head|metric-main|metric-arrow|period-head|period-num|period-label|period-diff/.test(src), '旧内构已清干净');
+  // 一行仍是两张卡（不改成三列）
+  assert.match(css, /\.metric-grid\s*\{[^}]*grid-template-columns:\s*repeat\(2,/, '一行两张卡');
+  assert.ok(!/metric-head/.test(src), '不再拆出独立的图标+名目行');
 
-  // 顺序：圆圈 → 名目 → 数值 → 涨跌（都在同一张卡里自上而下）
-  const order = ['metric-badge', 'metric-label', 'metric-value', 'metric-foot'].map((c) => src.indexOf('class="' + c));
-  assert.ok(order.every((v, i) => i === 0 || v > order[i - 1]), '顺序：圆圈图标 → 名目 → 数值 → 涨跌');
+  // 本周/本月 + 趋势模板，三张卡都改成「main（名目+数值）/ foot（涨跌）」两行
+  assert.equal(count(/class="metric-main"/g), 3, '三张卡各有一行 main');
+  assert.equal(count(/class="metric-body"/g), 3, '都挂在 body 上');
+  assert.equal(count(/class="metric-label"/g), 3);
+  assert.equal(count(/class="metric-value-line"/g), 3);
+  assert.equal(count(/class="metric-foot/g), 3);
+
+  // 名目与数值在同一行：main 内 label 在 value-line 之前
+  const grid = src.slice(src.indexOf('class="metric-grid"'));
+  const order = ['metric-main', 'metric-label', 'metric-value-line', 'metric-foot'].map((c) => grid.indexOf('class="' + c));
+  assert.ok(order.every((v, i) => i === 0 || v > order[i - 1]), 'main（名目→数值）在下、涨跌在上');
+  assert.match(css, /\.metric-main\s*\{[^}]*display:\s*flex[^}]*align-items:\s*baseline[^}]*justify-content:\s*flex-start/, '名目与数值共用一条基线、整体靠左');
+
+  // 本周/本月两张快照卡同样合并（各一份 main）
+  const period = src.slice(src.indexOf('class="period-row"'), src.indexOf('class="metric-grid"'));
+  assert.equal((period.match(/class="metric-main"/g) || []).length, 2, '本周/本月也并成一行');
 });
 
 test('TS4 趋势卡的箭头是 lucide 图标，不是文字箭头', () => {
