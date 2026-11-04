@@ -1,5 +1,3 @@
-const { formatCompactCn } = require('../../utils/format');
-
 /** 时长格式化：≤999分钟→分钟；≤999小时→小时；否则→天 */
 function formatDuration(seconds) {
   const min = seconds / 60;
@@ -18,9 +16,6 @@ const OVERVIEW_CACHE_KEY = 'indexOverviewCache_v1';
 
 /** onShow 自动刷新的节流窗口：切 tab 回来不必每次全量重拉；下拉刷新 / 登录态变化 / homeDirty 可越过它 */
 const HOME_TTL_MS = 60 * 1000;
-
-/** 概览三段在合并响应里的字段 → 卡片上的名字（失败文案要落到自己那张卡上） */
-const SECTION_LABELS = { overview: '累计数据', footprint: '点亮省市', heat: '运动日历' };
 
 /** 榜名次 label 用的周期名（服务端回 period，端上不再自己探周期） */
 const PERIOD_LABEL = { week: '周榜', month: '月榜', year: '年榜', all: '总榜' };
@@ -51,11 +46,8 @@ Page({
     selectedType: 'running',
     overview: null,
     overviewLabel: '今日概览',
-    totalOverview: null, // 累计数据：轨迹数/总公里/点亮省份/城市
     heatData: [],
-    // 各接口失败原因（null=正常）：卡片不能悄悄消失，文案点名到接口与实际报错
-    overviewError: null,
-    footprintError: null,
+    // 日历段失败原因（null=正常）：卡片不能悄悄消失，文案点名到接口与实际报错
     heatError: null,
     notLoggedIn: false, // 游客态：展示登录引导
     loading: false,
@@ -301,11 +293,6 @@ Page({
     });
   },
 
-  /** 点击累计数据卡片 → 数据统计页（tab 页只能 switchTab） */
-  goStats() {
-    wx.switchTab({ url: '/pages/stats/stats' });
-  },
-
   /**
    * 应用设置的默认运动类型（设置页保存到后端用户 settings）。
    * 不再为此单独打 /users/me：登录响应本来就下发 user.settings，设置页保存后也会写回 globalData；
@@ -367,10 +354,7 @@ Page({
       this.setData({
         loading: false,
         notLoggedIn: true,
-        totalOverview: null,
         heatData: emptyHeatData(),
-        overviewError: null,
-        footprintError: null,
         heatError: null,
       });
       return;
@@ -378,59 +362,28 @@ Page({
     this.setData({ notLoggedIn: false });
     // 先用本地缓存渲染（冷启动/切 tab 不再空白），接口返回后再刷新
     const cached = wx.getStorageSync(OVERVIEW_CACHE_KEY);
-    if (cached && cached.totalOverview) {
-      this.setData({ totalOverview: cached.totalOverview, heatData: cached.heatData || [] });
+    if (cached && cached.heatData) {
+      this.setData({ heatData: cached.heatData || [] });
     }
     try {
-      // 三段合成一个请求（/stats/home），服务端按段包成 {ok,data|error}。
-      // 合并**不能**把 3cb2d5e 修掉的「一个接口挂掉、整块卡片消失」请回来：
-      // 每段失败只落到自己那张卡上，旧值不清空；整请求失败则三段一起如实标出来。
+      // /stats/home 仍按段返回 {ok,data|error}；首页 2026-11-04 起只消费日历段
+      // （累计数据已移到「统计」tab），其余两段失败不再影响本页。
       let sections;
       try {
         sections = (await api.get('/stats/home')) || {};
       } catch (e) {
-        const msg = (e && e.message) || String(e);
-        sections = {
-          overview: { ok: false, error: msg },
-          footprint: { ok: false, error: msg },
-          heat: { ok: false, error: msg },
-        };
+        sections = { heat: { ok: false, error: (e && e.message) || String(e) } };
       }
-      const failed = {};
-      for (const key of Object.keys(SECTION_LABELS)) {
-        const sec = sections[key];
-        if (!sec || sec.ok !== true) {
-          failed[key] = `${SECTION_LABELS[key]}：${(sec && sec.error) || '响应缺失'}`;
-        }
-      }
-      const patch = {
-        overviewError: failed.overview || null,
-        footprintError: failed.footprint || null,
-        heatError: failed.heat || null,
-      };
-      if (!failed.overview) {
-        const total = sections.overview.data.total || { count: 0, distance: 0 };
-        const prev = this.data.totalOverview || {};
-        patch.totalOverview = {
-          trackCount: total.count || 0,
-          totalKm: formatCompactCn((total.distance || 0) / 1000), // 公里/千卡 中文缩写（万/亿）
-          // 省市来自另一段：它失败就留着屏上旧值，别把「3 省」刷成 0
-          provinceCount: failed.footprint ? prev.provinceCount || 0 : sections.footprint.data.provinceCount,
-          cityCount: failed.footprint ? prev.cityCount || 0 : sections.footprint.data.cityCount,
-        };
-      }
-      // 日历失败同理不清空：屏上留着近 365 天的旧点，比刷成空白更等得起重试
-      if (!failed.heat) patch.heatData = (sections.heat.data && sections.heat.data.data) || [];
+      const heatSec = sections.heat;
+      // 日历失败不清空：屏上留着近 365 天的旧点，比刷成空白更等得起重试
+      const patch = heatSec && heatSec.ok === true
+        ? { heatError: null, heatData: (heatSec.data && heatSec.data.data) || [] }
+        : { heatError: `运动日历：${(heatSec && heatSec.error) || '响应缺失'}` };
       this.setData(patch);
-      // 全绿才写缓存（下次先展示旧值）；半套数据不落盘——否则下次冷启动会把「某个接口挂了」
-      // 掩盖成「你的数据就是这些」
-      if (!patch.overviewError && !patch.footprintError && !patch.heatError) {
+      // 只有日历成功才写缓存（下次先展示旧值）；失败落盘会把「接口挂了」掩盖成「你没有数据」
+      if (!patch.heatError) {
         try {
-          wx.setStorageSync(OVERVIEW_CACHE_KEY, {
-            totalOverview: patch.totalOverview,
-            heatData: patch.heatData,
-            cachedAt: Date.now(),
-          });
+          wx.setStorageSync(OVERVIEW_CACHE_KEY, { heatData: patch.heatData, cachedAt: Date.now() });
         } catch (e) {
           // 缓存写失败不影响功能
         }
@@ -445,7 +398,7 @@ Page({
 
   /** 卡内「重试」：失败提示已点名是哪个接口，网络恢复后点一下即可。
    *  不做自动重试——断网时反复打后端只会把一次失败变成几次超时等待 */
-  retryOverview() {
+  retryHeat() {
     return this.loadOverview();
   },
 

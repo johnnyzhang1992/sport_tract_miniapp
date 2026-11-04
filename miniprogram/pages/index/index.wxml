@@ -76,40 +76,11 @@
     </block>
     <view class="card-fail" wx:if="{{heatError}}">
       <text class="card-fail-text">{{heatError}}</text>
-      <view class="card-fail-retry" hover-class="card-fail-retry-hover" catchtap="retryOverview">重试</view>
+      <view class="card-fail-retry" hover-class="card-fail-retry-hover" catchtap="retryHeat">重试</view>
     </view>
   </view>
 
-  <!-- 累计数据概览（点击进入统计页） -->
-  <view class="card" wx:if="{{totalOverview || overviewError}}" hover-class="card-hover" hover-stay-time="80" bindtap="goStats">
-    <view class="section-head">
-      <view class="section-title section-title-flat">累计数据</view>
-      <view class="overview-arrow">›</view>
-    </view>
-    <view class="stats-row" wx:if="{{totalOverview}}">
-      <view class="stat-item">
-        <view class="stat-num">{{totalOverview.trackCount}}</view>
-        <view class="stat-label">轨迹</view>
-      </view>
-      <view class="stat-item">
-        <view class="stat-num">{{totalOverview.totalKm}}</view>
-        <view class="stat-label">公里</view>
-      </view>
-      <view class="stat-item">
-        <view class="stat-num">{{totalOverview.provinceCount}}</view>
-        <view class="stat-label">点亮省份</view>
-      </view>
-      <view class="stat-item">
-        <view class="stat-num">{{totalOverview.cityCount}}</view>
-        <view class="stat-label">点亮城市</view>
-      </view>
-    </view>
-    <!-- 用 catchtap：重试只该重发请求，不该顺带触发整卡的 bindtap 跳到统计页 -->
-    <view class="card-fail" wx:if="{{overviewError || footprintError}}">
-      <text class="card-fail-text">{{overviewError || footprintError}}</text>
-      <view class="card-fail-retry" hover-class="card-fail-retry-hover" catchtap="retryOverview">重试</view>
-    </view>
-  </view>
+  <!-- 累计数据已移到「统计」tab；首页不再重复展示 -->
 
   <!-- 运动榜 + 一起运动：一行两格，各占一半 -->
   <view class="duo-row">

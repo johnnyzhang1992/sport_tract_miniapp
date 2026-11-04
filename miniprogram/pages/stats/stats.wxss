@@ -60,16 +60,25 @@
   white-space: nowrap;
 }
 .overview-grid {
-  display: flex;
-  flex-wrap: wrap;
   background: #f7f8fa;
   border-radius: 16rpx;
   padding: 12rpx 0;
 }
+/* 首行 4 格（与首页累计数据同四项）；次行 5 格，字号收一档避免数字挤在一起 */
+.ov-row {
+  display: flex;
+}
+.ov-row-sub {
+  margin-top: 4rpx;
+}
 .ov-item {
-  width: 25%;
+  flex: 1;
+  min-width: 0;
   text-align: center;
   padding: 12rpx 0;
+}
+.ov-item-sub .ov-num {
+  font-size: 30rpx;
 }
 .ov-num {
   font-size: 32rpx;
@@ -80,6 +89,7 @@
   font-size: 22rpx;
   color: #667080;
   margin-top: 4rpx;
+  white-space: nowrap;
 }
 .period-row {
   display: flex;

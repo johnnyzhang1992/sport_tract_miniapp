@@ -52,23 +52,6 @@
   margin-top: 2rpx;
   font-size: 20rpx; /* 文字更小 */
 }
-.stats-row {
-  display: flex;
-}
-.stat-item {
-  flex: 1;
-  text-align: center;
-}
-.stat-num {
-  font-size: 30rpx;
-  font-weight: 600;
-  color: #2b6cf6;
-}
-.stat-label {
-  font-size: 20rpx;
-  color: #999;
-  margin-top: 2rpx;
-}
 .start-btn {
   margin-top: 28rpx;
 }
@@ -442,12 +425,6 @@
 }
 .notice-dot { width: 14rpx; height: 14rpx; border-radius: 50%; background: #c02a30; flex: none; }
 .notice-arrow { color: #667080; font-size: 26rpx; flex: none; }
-/* 累计数据标题行右侧箭头：与运动榜/组队运动标题栏图标同档 */
-.overview-arrow {
-  font-size: 28rpx;
-  color: #667080;
-  flex-shrink: 0;
-}
 
 /* ── 收藏引导浮层：深色气泡指向右上角胶囊，透明遮罩点任意处关闭 ── */
 .fav-guide-mask {

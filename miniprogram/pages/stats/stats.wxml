@@ -6,41 +6,49 @@
 </view>
 
 <view class="container" wx:if="{{overview}}">
-  <!-- 累计概览 -->
+  <!-- 累计概览：首行四项与首页累计数据同口径同顺序；其余指标排下一行 -->
   <view class="card">
-    <view class="section-title">累计</view>
+    <view class="section-title">累计数据</view>
     <view class="overview-grid">
-      <view class="ov-item">
-        <view class="ov-num">{{overview.total.distanceKm}}</view>
-        <view class="ov-label">公里</view>
+      <view class="ov-row">
+        <view class="ov-item">
+          <view class="ov-num">{{overview.total.count}}</view>
+          <view class="ov-label">轨迹</view>
+        </view>
+        <view class="ov-item">
+          <view class="ov-num">{{overview.total.distanceKm}}</view>
+          <view class="ov-label">公里</view>
+        </view>
+        <view class="ov-item">
+          <view class="ov-num">{{provinceCount === null ? '—' : provinceCount}}</view>
+          <view class="ov-label">点亮省份</view>
+        </view>
+        <view class="ov-item">
+          <view class="ov-num">{{cityCount === null ? '—' : cityCount}}</view>
+          <view class="ov-label">点亮城市</view>
+        </view>
       </view>
-      <view class="ov-item">
-        <view class="ov-num">{{overview.total.durationText}}</view>
-        <view class="ov-label">时长</view>
-      </view>
-      <view class="ov-item">
-        <view class="ov-num">{{overview.total.count}}</view>
-        <view class="ov-label">次数</view>
-      </view>
-      <view class="ov-item">
-        <view class="ov-num">{{overview.total.elevationGainText}}</view>
-        <view class="ov-label">爬升 m</view>
-      </view>
-      <view class="ov-item">
-        <view class="ov-num">{{overview.total.caloriesText}}</view>
-        <view class="ov-label">千卡</view>
-      </view>
-      <view class="ov-item">
-        <view class="ov-num">{{overview.total.activeDays}}</view>
-        <view class="ov-label">活跃天数</view>
-      </view>
-      <view class="ov-item">
-        <view class="ov-num">{{typeCount}}</view>
-        <view class="ov-label">运动类型</view>
-      </view>
-      <view class="ov-item">
-        <view class="ov-num">{{provinceCount === null ? '—' : provinceCount}}</view>
-        <view class="ov-label">点亮省份</view>
+      <view class="ov-row ov-row-sub">
+        <view class="ov-item ov-item-sub">
+          <view class="ov-num">{{overview.total.durationText}}</view>
+          <view class="ov-label">时长</view>
+        </view>
+        <view class="ov-item ov-item-sub">
+          <view class="ov-num">{{overview.total.elevationGainText}}</view>
+          <view class="ov-label">爬升 m</view>
+        </view>
+        <view class="ov-item ov-item-sub">
+          <view class="ov-num">{{overview.total.caloriesText}}</view>
+          <view class="ov-label">千卡</view>
+        </view>
+        <view class="ov-item ov-item-sub">
+          <view class="ov-num">{{overview.total.activeDays}}</view>
+          <view class="ov-label">活跃天数</view>
+        </view>
+        <view class="ov-item ov-item-sub">
+          <view class="ov-num">{{typeCount}}</view>
+          <view class="ov-label">运动类型</view>
+        </view>
       </view>
     </view>
   </view>

@@ -94,19 +94,25 @@ test('TB3 我的页脚本：足迹走 navigateTo，统计入口处理函数已�
   assert.deepEqual(navs, ['/pages/footprints/footprints']);
 });
 
-test('TB4 首页 / 报告页跳统计：必须 switchTab（navigateTo 跳 tab 页会失败）', () => {
-  for (const f of ['miniprogram/pages/index/index.js', 'miniprogram/pages/report/report.js']) {
-    const js = read(f);
-    assert.match(
-      js,
-      /goStats\(\)\s*\{\s*wx\.switchTab\(\{\s*url:\s*'\/pages\/stats\/stats'\s*\}\);\s*\}/,
-      `${f} 的 goStats 要改用 switchTab`,
-    );
-    assert.ok(
-      !/wx\.navigateTo\(\{\s*url:\s*'\/pages\/stats\/stats'/.test(js),
-      `${f} 不应再有 navigateTo 跳统计页`,
-    );
-  }
+test('TB4 报告页跳统计：必须 switchTab；首页累计卡撤除后已无该入口', () => {
+  const f = 'miniprogram/pages/report/report.js';
+  const js = read(f);
+  assert.match(
+    js,
+    /goStats\(\)\s*\{\s*wx\.switchTab\(\{\s*url:\s*'\/pages\/stats\/stats'\s*\}\);\s*\}/,
+    `${f} 的 goStats 要改用 switchTab`,
+  );
+  assert.ok(
+    !/wx\.navigateTo\(\{\s*url:\s*'\/pages\/stats\/stats'/.test(js),
+    `${f} 不应再有 navigateTo 跳统计页`,
+  );
+
+  const indexJs = read('miniprogram/pages/index/index.js');
+  assert.ok(!indexJs.includes('goStats'), '首页累计卡已撤除，不该再保留跳统计页的方法');
+  assert.ok(
+    !/wx\.navigateTo\(\{\s*url:\s*'\/pages\/stats\/stats'/.test(indexJs),
+    '首页也不该用 navigateTo 跳 tab 页',
+  );
 });
 
 test('TB5 足迹页退回普通页：三个半屏恢复安全区，浮层与弹层底部垫 env()', () => {

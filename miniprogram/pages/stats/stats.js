@@ -4,7 +4,7 @@
  */
 const api = require('../../services/api');
 const { ensureLogin } = require('../../utils/login-gate');
-const { formatDuration, formatPaceParts, formatDurationStat, formatThousands } = require('../../utils/format');
+const { formatDuration, formatPaceParts, formatDurationStat, formatThousands, formatCompactCn } = require('../../utils/format');
 const { calcDiff } = require('../../utils/diff');
 const { buildTrophies } = require('../../utils/trophy');
 const { buildMetricCards, buildTrendChart, ARROW_ICON } = require('../../utils/stats-metrics');
@@ -54,6 +54,7 @@ Page({
     percentile: null, // 累计距离全站分位（仅全站 ≥2 人时展示）
     typeCount: 0, // 有记录的运动类型数（累计卡）
     provinceCount: null, // 点亮省份数（由 lit-map 组件加载后回传，保持同一口径）
+    cityCount: null, // 点亮城市数（同一次 /stats/footprint，由 lit-map 一起回传）
     typeSummary: [], // 分类型汇总（各类型总距离/总时长/次数）
     sheetVisible: false, // 半屏弹窗：全部纪录 / 奖杯详情
     sheetType: 'best', // best | trophy
@@ -137,10 +138,15 @@ Page({
     }
   },
 
-  /** 点亮地图组件加载完成：把省份数回填到顶部累计卡（与地图同一口径） */
+  /** 点亮地图组件加载完成：把省市两数回填到顶部累计卡（与地图同一口径） */
   onLitMapLoaded(e) {
-    const n = Number(e && e.detail && e.detail.provinceCount);
-    this.setData({ provinceCount: Number.isFinite(n) ? n : 0 });
+    const d = (e && e.detail) || {};
+    const province = Number(d.provinceCount);
+    const city = Number(d.cityCount);
+    this.setData({
+      provinceCount: Number.isFinite(province) ? province : 0,
+      cityCount: Number.isFinite(city) ? city : 0,
+    });
   },
 
   /** 趋势请求 query：窗口 + 可选运动类型 */
@@ -272,6 +278,8 @@ Page({
       year: sec(o.year),
       total: {
         ...sec(o.total),
+        // 与首页累计数据同一口径：formatCompactCn（399.145 → 399.15，别用 toFixed 显示成 399.14）
+        distanceKm: formatCompactCn((o.total.distance || 0) / 1000),
         calories: Math.round(o.total.calories || 0),
         caloriesText: formatThousands(o.total.calories),
         elevationGainText: formatThousands(o.total.elevationGain),

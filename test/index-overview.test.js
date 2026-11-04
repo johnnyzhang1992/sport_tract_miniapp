@@ -3,8 +3,9 @@
  *
  * 背景：首页原来自个儿打 4 个接口（overview / footprint / trend365 / leaderboard + 串行周期回退）。
  * 现在三段并入 GET /stats/home、榜摘要并入 GET /stats/leaderboard-regions?me=1。
- * 合并**不能**把 3cb2d5e 修掉的「一个接口挂掉、整块卡片消失」请回来 —— 所以服务端按段返回
- * {ok,data|error}，端上仍要：失败文案落到自己那张卡上、旧值不清空、全绿才写缓存、卡内可重试。
+ * 2026-11-04 起首页累计数据卡撤除（统计页已承担），概览区只消费 /stats/home 的日历段：
+ * overview / footprint 段失败不再影响首页，也不再产生对应报错字段。
+ * 日历段失败仍要：旧数据不清空、失败文案点名原因、卡内可重试、成功后级联清理。
  * 另外 60s 内切回首页不重复全量拉取；登录态变化或 homeDirty 时无视 TTL 立刻重拉。
  *
  * 运行：npm test；桩：wx / Page / getApp 就地 stub，services/api 用 require.cache 注入假实现。
@@ -119,19 +120,19 @@ function resetEnv() {
 
 /* ---------------------------------- 用例 ---------------------------------- */
 
-test('H1 累计数据段失败不连累日历：日历照常落地，失败文案挂在概览卡上', async () => {
+test('H1 概览段失败不再影响首页：日历照常落地，也不留累计卡的报错字段', async () => {
   resetEnv();
   failSection('overview', '网络请求失败，请检查后端服务是否启动');
   const p = makePage();
   await p.loadOverview();
 
   assert.equal(p.data.heatData.length, 365, 'overview 失败不该把日历一起拖没');
-  assert.match(p.data.overviewError, /累计数据/, '失败提示要点名是哪张卡');
-  assert.match(p.data.overviewError, /后端服务是否启动/, '提示要带上实际原因，不能只说「加载失败」');
-  assert.equal(p.data.totalOverview, null, '拿不到数据就不该编一个 0 出来');
+  assert.equal(p.data.heatError, null);
+  assert.equal(p.data.totalOverview, undefined, '累计卡已撤除');
+  assert.equal(p.data.overviewError, undefined, '累计卡的报错字段已撤除');
 });
 
-test('H2 日历段失败：概览照常展示，旧日历不清空且提示原因', async () => {
+test('H2 日历段失败：旧日历不清空且提示原因', async () => {
   resetEnv();
   healthy();
   const p = makePage();
@@ -144,82 +145,62 @@ test('H2 日历段失败：概览照常展示，旧日历不清空且提示原�
   assert.equal(p.data.heatData.length, 365, '刷新失败要保留屏上旧数据，不能刷成空白');
   assert.match(p.data.heatError, /运动日历/);
   assert.match(p.data.heatError, /网络超时/);
-  assert.equal(p.data.totalOverview.trackCount, 32, '概览不受日历失败影响');
 });
 
-test('H3 省市段失败：屏上数字保留，失败提示单独挂一条', async () => {
+test('H3 省市段失败：首页已无累计卡，不受影响', async () => {
   resetEnv();
   healthy();
   const p = makePage();
   await p.loadOverview();
-  assert.equal(p.data.totalOverview.provinceCount, 3);
+  assert.equal(p.data.heatData.length, 365);
 
   failSection('footprint', '请求失败(500)');
   await p.loadOverview();
 
-  assert.equal(p.data.totalOverview.provinceCount, 3, '省市挂了不该把 3 省刷成 0');
-  assert.equal(p.data.totalOverview.cityCount, 5);
-  assert.match(p.data.footprintError, /点亮省市/);
-  assert.match(p.data.footprintError, /500/);
-});
-
-test('H4 重试成功后三条失败提示各自清掉', async () => {
-  resetEnv();
-  healthy();
-  const p = makePage();
-  respond = (p2) => {
-    if (p2 === '/stats/home') {
-      return Promise.resolve({
-        overview: { ok: false, error: 'boom1' },
-        footprint: { ok: false, error: 'boom3' },
-        heat: { ok: false, error: 'boom2' },
-      });
-    }
-    return Promise.resolve({});
-  };
-  await p.loadOverview();
-  assert.ok(p.data.overviewError && p.data.heatError && p.data.footprintError, '先确认三条都置上了');
-
-  healthy();
-  await p.loadOverview();
-  assert.equal(p.data.overviewError, null);
+  assert.equal(p.data.heatData.length, 365);
   assert.equal(p.data.heatError, null);
-  assert.equal(p.data.footprintError, null);
+  assert.equal(p.data.footprintError, undefined, '累计卡撤除后不再有省市报错字段');
 });
 
-test('H5 部分成功不写缓存（下次冷启动不拿半套数据当最新）', async () => {
+test('H4 日历恢复后重试清掉报错；只有日历段成功才写缓存', async () => {
   resetEnv();
   healthy();
   const p = makePage();
   await p.loadOverview();
   const full = storage.get(CACHE_KEY);
-  assert.ok(full && full.totalOverview && full.heatData.length === 365, '全绿时要写缓存');
+  assert.ok(full && full.heatData.length === 365, '全绿时要写缓存');
+  assert.equal(full.totalOverview, undefined, '缓存里不再保存累计数据');
 
   storage.clear();
-  failSection('overview', 'down');
+  failSection('heat', 'down');
   await p.loadOverview();
-  assert.equal(storage.has(CACHE_KEY), false, '有段失败时不要落盘');
+  assert.equal(storage.has(CACHE_KEY), false, '日历失败时不要落盘');
+
+  healthy();
+  await p.loadOverview();
+  assert.equal(p.data.heatError, null);
+  assert.ok(storage.get(CACHE_KEY).heatData.length === 365, '恢复后重新落盘');
 });
 
-test('H6 卡内「重试」只重打这一个合并接口', async () => {
+test('H5 卡内「重试」只重打这一个合并接口', async () => {
   resetEnv();
-  healthy();
+  failSection('heat', 'down');
   const p = makePage();
-  failSection('overview', 'down');
   await p.loadOverview();
+  assert.ok(p.data.heatError);
   apiCalls.length = 0;
 
   healthy();
   p.data.loading = true;
-  await p.retryOverview();
+  await p.retryHeat();
 
   assert.deepEqual(apiCalls, ['/stats/home'], '三段已合并，一次请求即可');
-  assert.equal(p.data.overviewError, null);
-  assert.equal(p.data.totalOverview.trackCount, 32);
+  assert.equal(p.data.heatError, null);
+  assert.equal(p.data.heatData.length, 365);
   assert.equal(p.data.loading, false, '重试结束后要收掉 loading');
 });
 
-test('H7 游客态：不发请求、不留失败提示', async () => {
+test('H6 游客态：不发请求、不留失败提示', async () => {
   resetEnv();
   loggedIn = false;
   session = false;
@@ -228,11 +209,11 @@ test('H7 游客态：不发请求、不留失败提示', async () => {
 
   assert.deepEqual(apiCalls, []);
   assert.equal(p.data.heatError, null);
-  assert.equal(p.data.overviewError, null);
+  assert.equal(p.data.totalOverview, undefined);
   assert.equal(p.data.notLoggedIn, true);
 });
 
-test('H8 整个请求失败：屏上仍是缓存值，但三段都要如实标出来', async () => {
+test('H7 整个请求失败：屏上仍是缓存日历，并如实标出原因', async () => {
   resetEnv();
   healthy();
   const seeded = makePage();
@@ -243,9 +224,7 @@ test('H8 整个请求失败：屏上仍是缓存值，但三段都要如实标�
   const p = makePage();
   await p.loadOverview();
 
-  assert.equal(p.data.totalOverview.trackCount, 32, '接口全挂时屏上仍是缓存值');
-  assert.equal(p.data.heatData.length, 365);
-  assert.ok(p.data.overviewError && p.data.heatError && p.data.footprintError, '但三段失败要如实标出来');
+  assert.equal(p.data.heatData.length, 365, '接口全挂时屏上仍是缓存值');
   assert.match(p.data.heatError, /运动日历：down/, '整请求失败时也要带上原因');
 });
 
@@ -334,7 +313,7 @@ test('H12 onShow 节流：60s 内切回不重复拉；过期 / 脏标记 / 登�
 
     p.onShow();
     await flush();
-    assert.ok(apiCalls.length >= 3, '首屏要拉（overview / 榜摘要 / 专题 / 活动）');
+    assert.ok(apiCalls.length >= 3, '首屏要拉（日历 / 榜摘要 / 专题 / 活动）');
     const firstBatch = apiCalls.length;
 
     apiCalls.length = 0;
