@@ -24,12 +24,17 @@
 
     <view class="plan-card card" wx:for="{{cards}}" wx:key="key" wx:for-item="plan">
       <view class="plan-head">
-        <text class="plan-name">{{plan.name}}</text>
-        <text class="plan-duration">{{plan.durationText}}</text>
-      </view>
-      <view class="plan-price-row">
-        <text class="plan-price">{{plan.priceText}}</text>
-        <text class="plan-perday">{{plan.perDayText}}</text>
+        <image class="plan-icon" src="/assets/icons/member-card.png" mode="aspectFit" />
+        <view class="plan-info">
+          <view class="plan-name-row">
+            <text class="plan-name">{{plan.name}}</text>
+            <text class="plan-duration">{{plan.durationText}}</text>
+          </view>
+          <view class="plan-price-row">
+            <text class="plan-price">{{plan.priceText}}</text>
+            <text class="plan-perday">{{plan.perDayText}}</text>
+          </view>
+        </view>
       </view>
       <view class="perk-list">
         <view class="perk-item" wx:for="{{plan.perkLines}}" wx:key="*this" wx:for-item="line">{{line}}</view>

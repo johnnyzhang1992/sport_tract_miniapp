@@ -36,7 +36,25 @@
   font-size: 26rpx;
 }
 
+/* 会员卡头部：左侧卡面图标 + 右侧名称/时长与价格两行，信息收进同一视觉块 */
 .plan-head {
+  display: flex;
+  align-items: center;
+}
+
+.plan-icon {
+  width: 112rpx;
+  height: 112rpx;
+  flex: none;
+  margin-right: 20rpx;
+}
+
+.plan-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.plan-name-row {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -56,7 +74,7 @@
 .plan-price-row {
   display: flex;
   align-items: baseline;
-  margin-top: 12rpx;
+  margin-top: 8rpx;
 }
 
 .plan-price {

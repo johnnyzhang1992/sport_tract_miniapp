@@ -274,6 +274,36 @@ test('MP10 加载失败显示重试，重试会再发请求', async () => {
   assert.equal(p.data.cards.length, 2);
 });
 
+test('MP14 套餐卡使用「会员卡」图标，且图标在计划卡内部', () => {
+  const w = read('miniprogram/pages/member/member.wxml');
+  const start = w.indexOf('class="plan-card');
+  const end = w.indexOf('class="perk-list"', start);
+  assert.ok(start > 0 && end > start, '应有套餐卡结构');
+  assert.ok(
+    w.slice(start, end).includes('src="/assets/icons/member-card.png"'),
+    '会员卡图标放在计划卡头部',
+  );
+  assert.ok(
+    fs.existsSync(path.join(root, 'miniprogram/assets/icons/member-card.png')),
+    '图标文件要入包',
+  );
+});
+
+test('MP15 套餐卡布局：图标与文案同一行，价格行在文案列内', () => {
+  const w = read('miniprogram/pages/member/member.wxml');
+  const start = w.indexOf('class="plan-card');
+  const end = w.indexOf('class="perk-list"', start);
+  const block = w.slice(start, end);
+  const posInfo = block.indexOf('class="plan-info"');
+  const posName = block.indexOf('class="plan-name-row"', posInfo);
+  const posPrice = block.indexOf('class="plan-price-row"', posInfo);
+  // plan-head 的闭合行（6 空格缩进）：价格行必须落在它之前，才算在文案列里
+  const headEnd = block.indexOf('\n      </view>', posInfo);
+  assert.ok(posInfo > 0 && posName > posInfo, '名称行在文案列内');
+  assert.ok(posPrice > posName && headEnd > posPrice, '价格行也在文案列内，不能落回卡片层');
+  assert.match(block, /class="plan-head"[\s\S]*class="plan-icon"[\s\S]*class="plan-info"/, '图标 + 文案两列');
+});
+
 test('MP11 会员中心开启下拉刷新', () => {
   const cfg = JSON.parse(read('miniprogram/pages/member/member.json'));
   assert.equal(cfg.enablePullDownRefresh, true);
