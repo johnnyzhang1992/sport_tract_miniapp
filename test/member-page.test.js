@@ -274,14 +274,15 @@ test('MP10 加载失败显示重试，重试会再发请求', async () => {
   assert.equal(p.data.cards.length, 2);
 });
 
-test('MP14 套餐卡使用「会员卡」图标，且图标在计划卡内部', () => {
+test('MP14 套餐卡使用「会员卡」图标做卡头横幅，且图标在计划卡内部', () => {
   const w = read('miniprogram/pages/member/member.wxml');
   const start = w.indexOf('class="plan-card');
-  const end = w.indexOf('class="perk-list"', start);
+  const end = w.indexOf('class="plan-body"', start);
   assert.ok(start > 0 && end > start, '应有套餐卡结构');
   assert.ok(
-    w.slice(start, end).includes('src="/assets/icons/member-card.png"'),
-    '会员卡图标放在计划卡头部',
+    w.slice(start, end).includes('class="plan-banner"') &&
+      w.slice(start, end).includes('src="/assets/icons/member-card.png"'),
+    '会员卡图标放在计划卡卡头横幅',
   );
   assert.ok(
     fs.existsSync(path.join(root, 'miniprogram/assets/icons/member-card.png')),
@@ -289,19 +290,23 @@ test('MP14 套餐卡使用「会员卡」图标，且图标在计划卡内部', 
   );
 });
 
-test('MP15 套餐卡布局：图标与文案同一行，价格行在文案列内', () => {
+test('MP15 套餐卡布局：横幅铺满卡头，名称与价格在横幅下方', () => {
   const w = read('miniprogram/pages/member/member.wxml');
   const start = w.indexOf('class="plan-card');
   const end = w.indexOf('class="perk-list"', start);
   const block = w.slice(start, end);
-  const posInfo = block.indexOf('class="plan-info"');
-  const posName = block.indexOf('class="plan-name-row"', posInfo);
-  const posPrice = block.indexOf('class="plan-price-row"', posInfo);
-  // plan-head 的闭合行（6 空格缩进）：价格行必须落在它之前，才算在文案列里
-  const headEnd = block.indexOf('\n      </view>', posInfo);
-  assert.ok(posInfo > 0 && posName > posInfo, '名称行在文案列内');
-  assert.ok(posPrice > posName && headEnd > posPrice, '价格行也在文案列内，不能落回卡片层');
-  assert.match(block, /class="plan-head"[\s\S]*class="plan-icon"[\s\S]*class="plan-info"/, '图标 + 文案两列');
+  const posBanner = block.indexOf('class="plan-banner"');
+  const posImg = block.indexOf('member-card.png');
+  const posBody = block.indexOf('class="plan-body"');
+  const posName = block.indexOf('class="plan-head"', posBody);
+  const posPrice = block.indexOf('class="plan-price-row"', posName);
+  assert.ok(posBanner >= 0 && posImg > posBanner, '横幅内含卡面图');
+  assert.ok(posBody > posImg && posName > posBody, '文字区在横幅之后');
+  assert.ok(posPrice > posName, '价格行在名称行之后');
+  const css = read('miniprogram/pages/member/member.wxss');
+  assert.match(css, /\.plan-banner-img\s*\{[^}]*width:\s*100%/, '卡面图铺满卡宽');
+  assert.match(css, /\.plan-banner\s*\{[^}]*height:\s*\d+rpx/, '横幅高度要收住（widthFix 会把卡面撑得过大）');
+  assert.match(block, /mode="aspectFit"/, '固定横幅内按比例完整显示卡面，不裁切');
 });
 
 test('MP11 会员中心开启下拉刷新', () => {

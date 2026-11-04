@@ -23,25 +23,25 @@
     <view class="closed-block" wx:if="{{!enabled}}">{{notice}}</view>
 
     <view class="plan-card card" wx:for="{{cards}}" wx:key="key" wx:for-item="plan">
-      <view class="plan-head">
-        <image class="plan-icon" src="/assets/icons/member-card.png" mode="aspectFit" />
-        <view class="plan-info">
-          <view class="plan-name-row">
-            <text class="plan-name">{{plan.name}}</text>
-            <text class="plan-duration">{{plan.durationText}}</text>
-          </view>
-          <view class="plan-price-row">
-            <text class="plan-price">{{plan.priceText}}</text>
-            <text class="plan-perday">{{plan.perDayText}}</text>
-          </view>
+      <view class="plan-banner">
+        <image class="plan-banner-img" src="/assets/icons/member-card.png" mode="aspectFit" />
+      </view>
+      <view class="plan-body">
+        <view class="plan-head">
+          <text class="plan-name">{{plan.name}}</text>
+          <text class="plan-duration">{{plan.durationText}}</text>
         </view>
-      </view>
-      <view class="perk-list">
-        <view class="perk-item" wx:for="{{plan.perkLines}}" wx:key="*this" wx:for-item="line">{{line}}</view>
-      </view>
-      <view class="plan-btn {{paying ? 'plan-btn-busy' : ''}}"
-            wx:if="{{showPay}}" data-key="{{plan.key}}" bindtap="onBuy">
-        {{entitlements.memberActive ? '续费' : '立即开通'}}
+        <view class="plan-price-row">
+          <text class="plan-price">{{plan.priceText}}</text>
+          <text class="plan-perday">{{plan.perDayText}}</text>
+        </view>
+        <view class="perk-list">
+          <view class="perk-item" wx:for="{{plan.perkLines}}" wx:key="*this" wx:for-item="line">{{line}}</view>
+        </view>
+        <view class="plan-btn {{paying ? 'plan-btn-busy' : ''}}"
+              wx:if="{{showPay}}" data-key="{{plan.key}}" bindtap="onBuy">
+          {{entitlements.memberActive ? '续费' : '立即开通'}}
+        </view>
       </view>
     </view>
 

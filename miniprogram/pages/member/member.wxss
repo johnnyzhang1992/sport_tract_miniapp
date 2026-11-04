@@ -36,25 +36,32 @@
   font-size: 26rpx;
 }
 
-/* 会员卡头部：左侧卡面图标 + 右侧名称/时长与价格两行，信息收进同一视觉块 */
-.plan-head {
+/* 会员卡：卡面插画做卡头横幅（铺满卡宽、被卡片圆角裁切），文字区在横幅下方另起一块 */
+.plan-card {
+  padding: 0 0 24rpx;
+  overflow: hidden;
+}
+
+.plan-banner {
+  width: 100%;
+  /* 横幅固定高度，卡面图按比例居中（widthFix 会把卡面撑到 230px 高，太大） */
+  height: 280rpx;
   display: flex;
   align-items: center;
+  justify-content: center;
 }
 
-.plan-icon {
-  width: 112rpx;
-  height: 112rpx;
-  flex: none;
-  margin-right: 20rpx;
+.plan-banner-img {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
-.plan-info {
-  flex: 1;
-  min-width: 0;
+.plan-body {
+  padding: 20rpx 24rpx 0;
 }
 
-.plan-name-row {
+.plan-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
