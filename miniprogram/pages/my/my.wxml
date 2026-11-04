@@ -63,7 +63,7 @@
       <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-compass.png" mode="aspectFit" />
       <view slot="right-icon" class="link-arrow">›</view>
     </t-cell>
-    <!-- 足迹地图：2026-11-04 从 tabBar 移到个人中心（原第三格换成数据统计） -->
+    <!-- 足迹地图：2026-11-04 从 tabBar 移到个人中心（原第三格换成统计页） -->
     <t-cell title="足迹" t-class-left="cell-left" t-class-title="cell-title" bind:click="goFootprints">
       <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-footprints.png" mode="aspectFit" />
       <view slot="right-icon" class="link-arrow">›</view>

@@ -58,7 +58,7 @@
       },
       {
         "pagePath": "pages/stats/stats",
-        "text": "数据统计",
+        "text": "统计",
         "iconPath": "assets/icons/tab-stats-gray.png",
         "selectedIconPath": "assets/icons/tab-stats-blue.png"
       },

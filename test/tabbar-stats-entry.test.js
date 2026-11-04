@@ -53,7 +53,7 @@ function boot() {
   return p;
 }
 
-test('TB1 tabBar：第三格改为数据统计，图标文件齐全，足迹页退回普通页', () => {
+test('TB1 tabBar：第三格改为统计页（文案「统计」），图标文件齐全，足迹页退回普通页', () => {
   const app = JSON.parse(read('miniprogram/app.json'));
   assert.deepEqual(
     app.tabBar.list.map((t) => t.pagePath),
@@ -61,7 +61,7 @@ test('TB1 tabBar：第三格改为数据统计，图标文件齐全，足迹页�
     'tabBar 顺序：首页 / 轨迹 / 数据统计 / 我的',
   );
   const statsTab = app.tabBar.list[2];
-  assert.equal(statsTab.text, '数据统计');
+  assert.equal(statsTab.text, '统计', 'tab 文案压成两字，与首页/轨迹/我的同宽');
   for (const p of [statsTab.iconPath, statsTab.selectedIconPath]) {
     assert.ok(fs.existsSync(path.join(root, 'miniprogram', p)), `tab 图标缺失：${p}`);
   }
