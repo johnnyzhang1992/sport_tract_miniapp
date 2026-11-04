@@ -86,7 +86,7 @@ test('SS5 运动日历上方固定四张卡：文案简写，活跃天数并入'
     const t = m[1].trim();
     if (t) labels.push(t);
   }
-  assert.deepEqual(labels, ['当前连续', '最长连续', '超越迹路者', '活跃天数'], '三张旧卡简写 + 活跃天数');
+  assert.deepEqual(labels, ['当前连续', '最长连续', '活跃天数', '超越迹路者'], '三张旧卡简写 + 活跃天数（排在分位前）');
   assert.equal((block.match(/class="streak-item"/g) || []).length, 4, '固定四张卡');
   assert.ok(block.includes('overview.total.activeDays'), '活跃天数取累计概览同字段');
   assert.ok(!block.includes('wx:if="{{percentile}}"'), '人数不足时也占位（—），不能缩回三张');

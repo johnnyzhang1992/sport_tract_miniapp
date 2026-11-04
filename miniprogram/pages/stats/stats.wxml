@@ -62,12 +62,12 @@
         <view class="streak-label">最长连续</view>
       </view>
       <view class="streak-item">
-        <view class="streak-num">{{percentile ? percentile.percentile + '%' : '—'}}</view>
-        <view class="streak-label">超越迹路者</view>
-      </view>
-      <view class="streak-item">
         <view class="streak-num">{{overview.total.activeDays}}</view>
         <view class="streak-label">活跃天数</view>
+      </view>
+      <view class="streak-item">
+        <view class="streak-num">{{percentile ? percentile.percentile + '%' : '—'}}</view>
+        <view class="streak-label">超越迹路者</view>
       </view>
     </view>
 
