@@ -1,4 +1,4 @@
-/* 足迹 tab 主页：整页即地图（全屏地图 + 浮层入口）。
+/* 足迹地图页（个人中心入口，2026-11-04 起不再是 tab 页）：整页即地图（全屏地图 + 浮层入口）。
    浮层配色对齐页面既有风格：白底 pill / 品牌蓝 #2b6cf6 / 圆角 16rpx / hover #eef4ff */
 .page {
   position: relative;
@@ -89,12 +89,12 @@
 }
 .tool-col-right {
   right: 24rpx;
-  bottom: 40rpx;
+  bottom: calc(40rpx + env(safe-area-inset-bottom));
 }
 /* 左下：标志（POI 标注）开关，与右列同一条底边基准 */
 .tool-col-left-bottom {
   left: 24rpx;
-  bottom: 40rpx;
+  bottom: calc(40rpx + env(safe-area-inset-bottom));
 }
 /* 搜索展开时左上整列淡出（输入框要占满这一行） */
 .tool-fade {
@@ -219,8 +219,8 @@
   box-sizing: border-box;
   background: #fff;
   border-radius: 24rpx 24rpx 0 0;
-  /* tab 页：弹层底边在 tabBar 上方，不需要再加屏幕底部安全区 */
-  padding: 0 32rpx 24rpx;
+  /* 普通页：弹层底边贴屏幕物理底边，要垫 Home 指示条安全区 */
+  padding: 0 32rpx calc(24rpx + env(safe-area-inset-bottom));
 }
 .sheet-head {
   display: flex;

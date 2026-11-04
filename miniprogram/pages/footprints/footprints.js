@@ -1,4 +1,4 @@
-// 足迹 tab 主页：全屏地图（本地网格聚合 + 自绘小圆气泡 marker）+ 详情/表单半屏；
+// 足迹地图页（个人中心入口，2026-11-04 起不再是 tab 页）：全屏地图（本地网格聚合 + 自绘小圆气泡 marker）+ 详情/表单半屏；
 // 浮层只留 筛选 / 搜索 / 图层 / 列表 / 新增 五个入口（统计页入口在列表页顶部栏），本页只负责地图与聚合。
 const api = require('../../services/api');
 const geo = require('../../utils/footprint-geo');
@@ -113,7 +113,7 @@ function buildPhotoCardIcon(record) {
   });
 }
 
-/** 地图可视区（CSS px）：整页即地图（全屏），tabBar 不占 windowHeight */
+/** 地图可视区（CSS px）：整页即地图（全屏），windowHeight 不含导航栏，就是地图可视高 */
 function mapViewport() {
   const info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
   const width = (info && info.windowWidth) || 375;
@@ -214,9 +214,9 @@ Page({
     this.syncData();
   },
 
-  /** tab 页可能在「我的」里登录/登出后切回来：登录态变了就整体重对齐；
+  /** 从列表页/登录闸门返回时补对齐登录态；
    *  没变时只在别的页（列表页）改过数据后补拉一次，且不动视野。
-   *  _loginSynced 由 syncData 维护，否则每次切 tab 都白跑一趟 /geo */
+   *  _loginSynced 由 syncData 维护，否则每次返回本页都白跑一趟 /geo */
   onShow() {
     const app = getApp();
     const dirty = !!app.globalData.fpDirty;

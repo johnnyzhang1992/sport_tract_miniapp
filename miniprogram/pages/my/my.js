@@ -93,10 +93,9 @@ Page({
     }
     try {
       this.setData({ loading: true });
-      // 刷新资料 + 概况（今日/本周/本月的运动距离）+ 签到状态（快捷签到条用）
-      const [user, overview, points] = await Promise.all([
+      // 刷新资料 + 签到状态（快捷签到条用）
+      const [user, points] = await Promise.all([
         api.get('/users/me'),
-        api.get('/stats/overview').catch(() => null),
         api.get('/points/summary').catch(() => null),
       ]);
 
@@ -123,18 +122,6 @@ Page({
         user: { ...user, avatarUrl, avatarText: initialOf(user.nickname, ''), joinDays },
         showBodyData,
         loggedIn: true,
-        // 数据统计卡（简洁三格）：本周距离 / 累计距离 / 运动天数——
-        // 旧版「今日/本周/本月」在多数日子两格是 0.0；换成累计口径后格格有值
-        stats: (() => {
-          const w = (overview && overview.week) || {};
-          const t = (overview && overview.total) || {};
-          const fmtKm = (m) => ((m || 0) / 1000).toFixed(1).replace(/\.0$/, '');
-          return {
-            weekKm: fmtKm(w.distance),
-            totalKm: fmtKm(t.distance),
-            activeDays: t.activeDays || 0,
-          };
-        })(),
         signin: {
           loaded: !!points,
           signedToday: !!(points && points.signin && points.signin.todaySigned),
@@ -262,17 +249,9 @@ Page({
     this._exporting = false;
   },
 
-  /** 统计卡：游客点它先登录（跳统计页也会被闸门拦住，等于一次死点） */
-  async onTapStats() {
-    if (!this.data.loggedIn) {
-      await ensureLogin('登录后查看运动统计。');
-      return;
-    }
-    this.goStats();
-  },
-
-  goStats() {
-    wx.navigateTo({ url: '/pages/stats/stats' });
+  /** 足迹地图（2026-11-04 从 tabBar 移到个人中心） */
+  goFootprints() {
+    wx.navigateTo({ url: '/pages/footprints/footprints' });
   },
 
   /** 我的积分（签到 / 任务 / 补签卡） */

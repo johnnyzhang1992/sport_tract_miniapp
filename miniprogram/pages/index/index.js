@@ -301,9 +301,9 @@ Page({
     });
   },
 
-  /** 点击累计数据卡片 → 数据统计页 */
+  /** 点击累计数据卡片 → 数据统计页（tab 页只能 switchTab） */
   goStats() {
-    wx.navigateTo({ url: '/pages/stats/stats' });
+    wx.switchTab({ url: '/pages/stats/stats' });
   },
 
   /**

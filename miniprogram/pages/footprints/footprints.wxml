@@ -100,11 +100,12 @@
     </view>
   </view>
 
-  <!-- 详情半屏（地图/列表页共用组件；「编辑」转表单、删除后刷新地图） -->
+  <!-- 详情半屏（地图/列表页共用组件；「编辑」转表单、删除后刷新地图）。
+       2026-11-04 起本页从 tabBar 移出，按普通页垫底部安全区 -->
   <footprint-detail
     visible="{{detailVisible}}"
     record="{{detailRecord}}"
-    safe-bottom="{{false}}"
+    safe-bottom="{{true}}"
     bind:close="closeDetail"
     bind:edit="onDetailEdit"
     bind:deleted="onDetailDeleted"
@@ -134,8 +135,8 @@
   <footprint-form
     visible="{{formVisible}}"
     record="{{formRecord}}"
-    safe-bottom="{{false}}"
-    on-tab="{{true}}"
+    safe-bottom="{{true}}"
+    on-tab="{{false}}"
     bind:saved="onFormSaved"
     bind:close="closeForm"
   />
@@ -145,7 +146,7 @@
     visible="{{filterVisible}}"
     value="{{filter}}"
     options="{{options}}"
-    safe-bottom="{{false}}"
+    safe-bottom="{{true}}"
     bind:close="closeFilter"
     bind:confirm="onFilterConfirm"
   />

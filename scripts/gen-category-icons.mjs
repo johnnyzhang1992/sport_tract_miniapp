@@ -49,7 +49,7 @@ const CATEGORIES = {
 };
 
 /** 地图页浮层按钮用的字形（黑色透明底，按钮白底由 CSS 给；search 覆盖掉早期的灰版资产） */
-const PLAIN = ['store', 'medal', 'sliders-horizontal', 'plus', 'search', 'layers', 'pencil', 'trash-2', 'map-pinned', 'building-2', 'bell', 'trending-up', 'trending-down', 'minus', 'clock', 'mountain', 'flame', 'pin', 'image', 'coins', 'gem'];
+const PLAIN = ['store', 'medal', 'sliders-horizontal', 'plus', 'search', 'layers', 'pencil', 'trash-2', 'map-pinned', 'building-2', 'bell', 'trending-up', 'trending-down', 'minus', 'clock', 'mountain', 'flame', 'pin', 'image', 'coins', 'gem', 'footprints'];
 /** 逐字形的额外内缩（CSS px，SIZE=96 口径）：lucide 各家字形在 24 网格里占位不同，
  *  统一 inset 0 会让「占格多的」在按钮里明显大一号。实测墨迹宽：sliders/justify 80px、plus 64px，
  *  layers 的菱形盘、pencil 的斜杆都跨 22 格 → 满幅出到 88px，故各内缩 4.5 拉回 80px 与同排一致
@@ -83,6 +83,9 @@ const ACTIVITY = [
 const TAB = [
   { out: 'tab-footprint-gray', icon: 'footprints', color: '#999999', inset: 0, size: 81 },
   { out: 'tab-footprint-blue', icon: 'footprints', color: '#2b6cf6', inset: 0, size: 81 },
+  // 数据统计：chart-column 的墨迹（轴 3→21 格）在 inset 0 时约 67px，正好落在同排 67~69px 的区间
+  { out: 'tab-stats-gray', icon: 'chart-column', color: '#999999', inset: 0, size: 81 },
+  { out: 'tab-stats-blue', icon: 'chart-column', color: '#2b6cf6', inset: 0, size: 81 },
 ];
 
 /** 取 <svg> 的内部标记：lucide 的文件是 width/height/viewBox 固定的 24 网格图标 */
@@ -151,9 +154,11 @@ if (!ONLY) {
   for (const a of ACTIVITY) {
     emit(a.out, await lucideInner(a.icon), a.inset, false, a.stroke, a.size, a.strokeWidth);
   }
-  for (const t of TAB) {
-    emit(t.out, await lucideInner(t.icon), t.inset, false, t.color, t.size, t.strokeWidth);
-  }
+}
+// tab 图标也要支持 --only（按产物名过滤），换 tab 档位时不必重跑整包、冲掉既有 pngquant 压缩
+for (const t of TAB) {
+  if (ONLY && t.out !== ONLY) continue;
+  emit(t.out, await lucideInner(t.icon), t.inset, false, t.color, t.size, t.strokeWidth);
 }
 console.log(`\n共 ${Object.keys(CATEGORIES).length * 2 + PLAIN.length} 张，尺寸 ${SIZE}px → ${OUT_DIR}`);
 console.log('注意：白圆底那组是给地图 marker 用的，字形留白比透明底那组大，视觉重量才和 24px 参考图一致。');

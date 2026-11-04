@@ -90,67 +90,6 @@
   padding: 4rpx 16rpx;
 }
 
-/* 数据统计卡片（简洁三格：数字带单位上标，紧凑） */
-.stats-card {
-  padding: 24rpx 24rpx 20rpx;
-}
-
-.stats-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.stats-title-row {
-  display: flex;
-  align-items: center;
-}
-
-.stats-icon {
-  width: 36rpx;
-  height: 36rpx;
-  margin-right: 14rpx;
-}
-
-.stats-title {
-  font-size: 30rpx;
-  font-weight: 600;
-  color: #1f2329;
-}
-
-.stats-grid {
-  display: flex;
-  margin-top: 20rpx;
-}
-
-.stats-cell {
-  flex: 1;
-  display: flex;
-  align-items: baseline;
-  justify-content: center;
-  gap: 8rpx;
-}
-
-.stats-num {
-  font-size: 38rpx;
-  font-weight: 700;
-  color: #1f2329;
-  line-height: 1.2;
-  font-variant-numeric: tabular-nums;
-}
-/* km 小单位：贴着数字右上方，不占格宽 */
-.stats-unit {
-  font-size: 20rpx;
-  font-weight: 400;
-  color: #8a93a6;
-  margin-left: 6rpx;
-}
-
-.stats-label {
-  font-size: 22rpx;
-  color: #8a93a6;
-}
-
 /* 菜单卡 */
 .menu-card {
   /* 横向与页面其它卡片一致（24rpx）：卡片自己出这 24rpx，cell 的内建边距归零，
@@ -310,13 +249,5 @@
 /* 会员入口右侧的状态副标题（未开通 / 到期日）：比正文淡一档，不与箭头抢注意力 */
 .member-hint {
   font-size: 24rpx;
-  color: #8a93a6;
-}
-
-/* 游客态统计卡：一句引导取代三格空格子（高度接近，避免整页跳动） */
-.stats-guide {
-  margin-top: 12rpx;
-  padding: 12rpx 0 4rpx;
-  font-size: 26rpx;
   color: #8a93a6;
 }

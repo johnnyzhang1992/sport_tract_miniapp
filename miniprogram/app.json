@@ -57,10 +57,10 @@
         "selectedIconPath": "assets/icons/tab-tracks-blue.png"
       },
       {
-        "pagePath": "pages/footprints/footprints",
-        "text": "足迹",
-        "iconPath": "assets/icons/tab-footprint-gray.png",
-        "selectedIconPath": "assets/icons/tab-footprint-blue.png"
+        "pagePath": "pages/stats/stats",
+        "text": "数据统计",
+        "iconPath": "assets/icons/tab-stats-gray.png",
+        "selectedIconPath": "assets/icons/tab-stats-blue.png"
       },
       {
         "pagePath": "pages/my/my",

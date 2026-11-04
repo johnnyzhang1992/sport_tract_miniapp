@@ -1,6 +1,6 @@
-/* 底部安全区：iPhone Home Indicator 遮挡防护 */
+/* 2026-11-04 起本页是 tabBar 页：原生 tabBar 已在 Home 指示条之上，根节点不再垫安全区（README 规则 1） */
 .container {
-  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
+  padding-bottom: 24rpx;
 }
 
 .section-title {
@@ -545,7 +545,8 @@
   box-sizing: border-box;
   background: #fff;
   border-radius: 24rpx 24rpx 0 0;
-  padding: 0 32rpx calc(24rpx + env(safe-area-inset-bottom));
+  /* tab 页：弹层底边在 tabBar 上方，不再垫屏幕安全区 */
+  padding: 0 32rpx 24rpx;
 }
 .sheet-head {
   display: flex;

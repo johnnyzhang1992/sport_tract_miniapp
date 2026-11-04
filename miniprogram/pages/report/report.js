@@ -592,9 +592,9 @@ Page({
     wx.switchTab({ url: '/pages/tracks/tracks' });
   },
 
-  /** 互跳：累计看板（数据统计） */
+  /** 互跳：累计看板（数据统计，tab 页只能 switchTab） */
   goStats() {
-    wx.navigateTo({ url: '/pages/stats/stats' });
+    wx.switchTab({ url: '/pages/stats/stats' });
   },
 
   /** 本期亮点：从本期轨迹里取四个「最」（轨迹元数据由 /overview 的 lean 模式下发） */
