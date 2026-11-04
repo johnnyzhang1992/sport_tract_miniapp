@@ -35,8 +35,22 @@ Page({
     this.syncData();
   },
 
-  async syncData() {
-    this.setData({ loading: true, failed: false });
+  /** 下拉刷新：静默重拉，保留屏上内容不闪加载态；游客直接收 spinner */
+  onPullDownRefresh() {
+    if (!this.data.loggedIn || this.data.loading || this._refreshing) {
+      wx.stopPullDownRefresh();
+      return;
+    }
+    this._refreshing = true;
+    return this.syncData({ silent: true }).finally(() => {
+      this._refreshing = false;
+      wx.stopPullDownRefresh();
+    });
+  },
+
+  async syncData(opts) {
+    const silent = !!(opts && opts.silent);
+    if (!silent) this.setData({ loading: true, failed: false });
     try {
       const d = await api.get('/member/products');
       let sys = {};
@@ -47,6 +61,7 @@ Page({
       }
       this.setData({
         loading: false,
+        failed: false,
         enabled: !!(d && d.enabled),
         notice: (d && d.notice) || '',
         statusText: (d && d.statusText) || '',
@@ -65,7 +80,13 @@ Page({
       });
       if (d && d.entitlements && d.entitlements.adFreeUntil) setAdFreeUntil(d.entitlements.adFreeUntil);
     } catch (e) {
-      this.setData({ loading: false, failed: true });
+      if (silent) {
+        // 下拉刷新失败：屏上内容仍然可用，别整页转错误态
+        this.setData({ loading: false });
+        wx.showToast({ title: (e && e.message) || '刷新失败', icon: 'none' });
+      } else {
+        this.setData({ loading: false, failed: true });
+      }
     }
   },
 

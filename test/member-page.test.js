@@ -5,7 +5,8 @@
  * 3) 文案全部来自 /member/products（价格/日均/权益行/状态行/关闭态说明），端上不拼句；
  * 4) 关闭态不渲染任何档位与按钮；iOS 不显示付费入口；
  * 5) 支付：delivered 才写免广告缓存并 toast「已开通」，cancelled 不提示，pending 用自己的话；
- * 6) 连点只下一单；加载失败显示重试，重试会再发请求。
+ * 6) 连点只下一单；加载失败显示重试，重试会再发请求；
+ * 7) 下拉刷新：游客不发请求；登录后静默重拉（不清屏），失败保留内容只 toast，spinner 必收。
  * 桩：wx / Page 就地 stub，services/api、services/storage、utils/member-pay、utils/ad-free、utils/login-gate 用 require.cache 注入。
  * 运行：node --test test/member-page.test.js；依赖：仅 node 内置模块。
  */
@@ -271,4 +272,48 @@ test('MP10 加载失败显示重试，重试会再发请求', async () => {
   await tick();
   assert.equal(p.data.failed, false);
   assert.equal(p.data.cards.length, 2);
+});
+
+test('MP11 会员中心开启下拉刷新', () => {
+  const cfg = JSON.parse(read('miniprogram/pages/member/member.json'));
+  assert.equal(cfg.enablePullDownRefresh, true);
+});
+
+test('MP12 游客下拉：不发请求，spinner 立即收起', async () => {
+  reset({ loggedOut: true });
+  const p = boot();
+  await tick();
+  let stops = 0;
+  wx.stopPullDownRefresh = () => { stops += 1; };
+  await p.onPullDownRefresh();
+  assert.deepEqual(apiCalls, []);
+  assert.equal(stops, 1);
+});
+
+test('MP13 登录后下拉：静默重拉不闪加载态；失败保留内容并 toast', async () => {
+  reset();
+  const p = boot();
+  await tick();
+  assert.equal(p.data.cards.length, 2);
+
+  let release = null;
+  productsRespond = () => new Promise((r) => { release = r; });
+  let stops = 0;
+  wx.stopPullDownRefresh = () => { stops += 1; };
+
+  const pending = p.onPullDownRefresh();
+  assert.equal(p.data.loading, false, '下拉刷新不能把页面切回加载态');
+  release(fixture({ statusText: '会员生效中 · 有效期至 2026年12月3日' }));
+  await pending;
+  await tick();
+  assert.equal(p.data.statusText, '会员生效中 · 有效期至 2026年12月3日');
+  assert.equal(stops, 1, '成功后要收 spinner');
+
+  productsRespond = () => Promise.reject(new Error(''));
+  await p.onPullDownRefresh();
+  await tick();
+  assert.equal(p.data.cards.length, 2, '刷新失败不清屏');
+  assert.equal(p.data.failed, false, '下拉失败不整页转错误态');
+  assert.ok(toasts.includes('刷新失败'), '失败要给一句反馈');
+  assert.equal(stops, 2, '失败也要收 spinner');
 });
