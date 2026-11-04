@@ -1,89 +1,140 @@
+/* 订单与退款：与会员中心同一套卡片语言（16rpx 圆角、#2b6cf6 主色、灰底表单） */
 .page {
   padding: 24rpx;
   min-height: 100vh;
   box-sizing: border-box;
+  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
   background: #f6f7fb;
 }
 
 .gate {
-  padding: 120rpx 40rpx;
+  padding: 56rpx 32rpx;
   text-align: center;
 }
+
 .gate-tip {
-  color: #8a93a6;
+  color: #5b6474;
   font-size: 28rpx;
-  margin-bottom: 32rpx;
+  margin-bottom: 28rpx;
 }
+
 .gate-btn {
   background: #2b6cf6;
   color: #fff;
+  font-size: 28rpx;
+  font-weight: 600;
+  border-radius: 999rpx;
 }
 
 .tip {
   text-align: center;
   color: #8a93a6;
-  font-size: 28rpx;
+  font-size: 26rpx;
   padding: 80rpx 0;
 }
+
+.tip.empty {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 64rpx 32rpx;
+}
+
 .tap {
   color: #2b6cf6;
 }
 
 .notice {
-  background: #fff7e6;
-  border: 1rpx solid #ffe7ba;
-  color: #ad6800;
-  font-size: 24rpx;
-  padding: 16rpx 20rpx;
+  background: #fff8e8;
   border-radius: 12rpx;
+  color: #8a5a00;
+  font-size: 23rpx;
+  line-height: 1.5;
+  padding: 16rpx 20rpx;
   margin-bottom: 20rpx;
 }
 
-.card.order {
-  background: #fff;
-  border-radius: 16rpx;
-  padding: 24rpx;
-  margin-bottom: 20rpx;
-}
-.row1 {
+/* 订单卡：名称/时间一列，状态胶囊靠右；价格单独一行做主视觉 */
+.order-head {
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
-  align-items: center;
+  gap: 16rpx;
 }
+
+.order-title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
 .name {
   font-size: 30rpx;
   font-weight: 600;
+  color: #1f2329;
 }
-.status {
-  font-size: 24rpx;
-}
-.s-created { color: #ff8a00; }
-.s-paid { color: #2b6cf6; }
-.s-delivered { color: #12b76a; }
-.s-refunding { color: #ff8a00; }
-.s-refunded { color: #8a93a6; }
-.s-closed { color: #b6bcc8; }
 
-.row2 {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 12rpx;
-}
-.price {
-  font-size: 32rpx;
-  font-weight: 600;
-}
 .time {
+  font-size: 22rpx;
   color: #8a93a6;
-  font-size: 24rpx;
 }
-.period, .refunded {
-  color: #5b6474;
-  font-size: 24rpx;
-  margin-top: 8rpx;
+
+.status-pill {
+  flex: none;
+  font-size: 22rpx;
+  line-height: 1;
+  padding: 8rpx 14rpx;
+  border-radius: 999rpx;
 }
+
+.s-created { color: #ad6800; background: #fff4e5; }
+.s-paid { color: #1a56d6; background: #eaf1ff; }
+.s-delivered { color: #0e9f5f; background: #e8f7ef; }
+.s-refunding { color: #ad6800; background: #fff4e5; }
+.s-refunded { color: #667080; background: #f2f3f5; }
+.s-closed { color: #8a93a6; background: #f2f3f5; }
+
+.price-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 16rpx;
+}
+
+.price {
+  font-size: 38rpx;
+  font-weight: 700;
+  color: #1f2329;
+  line-height: 1.2;
+}
+
+.price-unit {
+  font-size: 24rpx;
+  font-weight: 600;
+  margin-right: 2rpx;
+}
+
 .refunded {
+  font-size: 22rpx;
   color: #d54941;
+}
+
+.meta-row {
+  display: flex;
+  gap: 12rpx;
+  margin-top: 10rpx;
+  font-size: 23rpx;
+  line-height: 1.5;
+}
+
+.meta-label {
+  flex: none;
+  color: #8a93a6;
+}
+
+.meta-value {
+  color: #5b6474;
 }
 
 .actions {
@@ -92,41 +143,120 @@
   gap: 16rpx;
   margin-top: 20rpx;
 }
-.act {
+
+/* 去掉原生 size=mini 后要自己钉宽高；button.act 提权重压过框架默认宽度 */
+.order button.act {
   margin: 0;
+  width: auto;
+  height: 56rpx;
+  line-height: 56rpx;
+  padding: 0 24rpx;
+  border-radius: 999rpx;
+  font-size: 24rpx;
+  font-weight: 500;
+  background: #f2f3f5;
+  color: #1f2329;
 }
-.act.primary {
+
+.order button.act::after {
+  border: none;
+}
+
+.order button.act.ghost {
+  background: #f2f3f5;
+  color: #4e5969;
+}
+
+.order button.act.primary {
   background: #2b6cf6;
   color: #fff;
 }
-.act.warn {
+
+.order button.act.warn {
   background: #d54941;
   color: #fff;
 }
 
+.order button.act.full {
+  width: 100%;
+  margin-top: 16rpx;
+  height: 64rpx;
+  line-height: 64rpx;
+  font-size: 26rpx;
+}
+
+.order button.act[disabled] {
+  opacity: 0.5;
+}
+
+/* 退款面板：字段统一带可见描边与显式高度（输入框不再裸放在白底上） */
 .refund-panel {
   margin-top: 20rpx;
   padding-top: 20rpx;
-  border-top: 1rpx solid #eef0f5;
+  border-top: 2rpx solid #eef0f5;
 }
-.picker {
-  background: #f6f7fb;
-  border-radius: 12rpx;
-  padding: 16rpx 20rpx;
+
+.refund-title {
   font-size: 26rpx;
-  color: #333;
+  font-weight: 600;
+  color: #1f2329;
+  margin-bottom: 12rpx;
 }
+
+.field {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  height: 80rpx;
+  padding: 0 20rpx;
+  box-sizing: border-box;
+  background: #f7f8fa;
+  border: 2rpx solid #e5e8ef;
+  border-radius: 12rpx;
+}
+
+.field-label {
+  flex: none;
+  font-size: 24rpx;
+  color: #5b6474;
+}
+
+.field-value {
+  flex: 1;
+  min-width: 0;
+  font-size: 26rpx;
+  color: #1f2329;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.field-value.placeholder {
+  color: #8a93a6;
+}
+
+.field-arrow {
+  flex: none;
+  color: #8a93a6;
+  font-size: 28rpx;
+}
+
 .note {
-  background: #f6f7fb;
+  height: 80rpx;
+  padding: 0 20rpx;
+  margin-top: 16rpx;
+  box-sizing: border-box;
+  background: #f7f8fa;
+  border: 2rpx solid #e5e8ef;
   border-radius: 12rpx;
-  padding: 16rpx 20rpx;
   font-size: 26rpx;
-  margin: 16rpx 0;
+  color: #1f2329;
 }
 
 .back-link {
   text-align: center;
   color: #2b6cf6;
   font-size: 26rpx;
-  padding: 32rpx 0;
+  padding: 32rpx 0 8rpx;
 }

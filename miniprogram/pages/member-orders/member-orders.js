@@ -48,8 +48,22 @@ Page({
     this.load();
   },
 
-  async load() {
-    this.setData({ loading: true, failed: false });
+  /** 下拉刷新：静默重拉，保留列表与展开面板；游客直接收 spinner */
+  onPullDownRefresh() {
+    if (!this.data.loggedIn || this.data.loading || this._refreshing) {
+      wx.stopPullDownRefresh();
+      return;
+    }
+    this._refreshing = true;
+    return this.load({ silent: true }).finally(() => {
+      this._refreshing = false;
+      wx.stopPullDownRefresh();
+    });
+  },
+
+  async load(opts) {
+    const silent = !!(opts && opts.silent);
+    if (!silent) this.setData({ loading: true, failed: false });
     try {
       const d = await api.get('/member/orders');
       const items = ((d && d.items) || []).map((i) => ({
@@ -57,9 +71,15 @@ Page({
         priceText: fenToYuanText(i.priceFen),
         refundedText: i.refundedFen > 0 ? fenToYuanText(i.refundedFen) : '',
       }));
-      this.setData({ loading: false, items, notice: (d && d.notice) || '' });
+      this.setData({ loading: false, failed: false, items, notice: (d && d.notice) || '' });
     } catch (e) {
-      this.setData({ loading: false, failed: true });
+      if (silent) {
+        // 下拉刷新失败：列表仍可用，别整页转错误态
+        this.setData({ loading: false });
+        wx.showToast({ title: (e && e.message) || '刷新失败', icon: 'none' });
+      } else {
+        this.setData({ loading: false, failed: true });
+      }
     }
   },
 

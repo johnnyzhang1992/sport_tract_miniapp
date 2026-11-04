@@ -1,3 +1,5 @@
 {
-  "navigationBarTitleText": "订单与退款"
+  "navigationBarTitleText": "订单与退款",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark"
 }

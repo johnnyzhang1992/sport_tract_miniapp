@@ -1,5 +1,5 @@
 <view class="page">
-  <view wx:if="{{!loggedIn}}" class="gate">
+  <view wx:if="{{!loggedIn}}" class="gate card">
     <view class="gate-tip">登录后查看你的订单与退款</view>
     <button class="gate-btn" bindtap="onTapGate">微信登录</button>
   </view>
@@ -10,40 +10,52 @@
 
     <block wx:else>
       <view wx:if="{{notice}}" class="notice">{{notice}}</view>
-      <view wx:if="{{!items.length}}" class="tip">还没有订单，去会员中心开通吧</view>
+      <view wx:if="{{!items.length}}" class="tip empty">还没有订单，去会员中心开通吧</view>
 
       <view class="card order" wx:for="{{items}}" wx:key="outTradeNo">
-        <view class="row1">
-          <text class="name">{{item.name}}</text>
-          <text class="status s-{{item.status}}">{{item.statusText}}</text>
+        <view class="order-head">
+          <view class="order-title">
+            <text class="name">{{item.name}}</text>
+            <text class="time">{{item.createdAtText}}</text>
+          </view>
+          <text class="status-pill s-{{item.status}}">{{item.statusText}}</text>
         </view>
-        <view class="row2">
-          <text class="price">￥{{item.priceText}}</text>
-          <text class="time">{{item.createdAtText}}</text>
+
+        <view class="price-row">
+          <text class="price"><text class="price-unit">￥</text>{{item.priceText}}</text>
+          <text wx:if="{{item.refundedText}}" class="refunded">已退款 ￥{{item.refundedText}}</text>
         </view>
-        <view wx:if="{{item.periodText}}" class="period">有效期 {{item.periodText}}</view>
-        <view wx:if="{{item.refundedText}}" class="refunded">已退款 ￥{{item.refundedText}}</view>
+
+        <view wx:if="{{item.periodText}}" class="meta-row">
+          <text class="meta-label">有效期</text>
+          <text class="meta-value">{{item.periodText}}</text>
+        </view>
 
         <view class="actions" wx:if="{{item.canPay || item.canCancel || item.canRefund}}">
-          <button wx:if="{{item.canPay}}" class="act primary" size="mini"
-                  disabled="{{busy === 'pay:' + item.outTradeNo}}"
-                  bindtap="onPay" data-id="{{item.outTradeNo}}">继续支付</button>
-          <button wx:if="{{item.canCancel}}" class="act" size="mini"
+          <button wx:if="{{item.canCancel}}" class="act ghost"
                   disabled="{{busy === 'cancel:' + item.outTradeNo}}"
                   bindtap="onCancel" data-id="{{item.outTradeNo}}">取消订单</button>
-          <button wx:if="{{item.canRefund}}" class="act" size="mini"
+          <button wx:if="{{item.canRefund}}" class="act ghost"
                   bindtap="toggleRefund" data-id="{{item.outTradeNo}}">
             {{expanded === item.outTradeNo ? '收起退款' : '申请退款'}}
           </button>
+          <button wx:if="{{item.canPay}}" class="act primary"
+                  disabled="{{busy === 'pay:' + item.outTradeNo}}"
+                  bindtap="onPay" data-id="{{item.outTradeNo}}">继续支付</button>
         </view>
 
         <view wx:if="{{expanded === item.outTradeNo}}" class="refund-panel">
+          <view class="refund-title">申请退款</view>
           <picker range="{{reasonLabels}}" bindchange="onReason">
-            <view class="picker">退款原因：{{reasonIndex >= 0 ? reasonLabels[reasonIndex] : '请选择（必选）'}}</view>
+            <view class="field">
+              <text class="field-label">退款原因</text>
+              <text class="field-value {{reasonIndex >= 0 ? '' : 'placeholder'}}">{{reasonIndex >= 0 ? reasonLabels[reasonIndex] : '请选择（必选）'}}</text>
+              <text class="field-arrow">›</text>
+            </view>
           </picker>
           <input class="note" placeholder="补充说明（选填，100 字内）"
                  value="{{note}}" bindinput="onNote" maxlength="100"/>
-          <button class="act warn" size="mini"
+          <button class="act warn full"
                   disabled="{{busy === 'refund:' + item.outTradeNo}}"
                   bindtap="onSubmitRefund" data-id="{{item.outTradeNo}}">提交退款申请</button>
         </view>

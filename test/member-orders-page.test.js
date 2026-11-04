@@ -31,6 +31,7 @@ let modalRespond = null;
 let modals = [];
 let toasts = [];
 let loginCalls = 0;
+let pullStops = 0;
 let token = { accessToken: 't' };
 const sysInfo = { platform: 'android', SDKVersion: '3.0.0', version: '8.0.50' };
 
@@ -65,6 +66,7 @@ global.wx = {
   getSystemInfoSync: () => sysInfo,
   showToast: (o) => toasts.push(o && o.title),
   showModal: (o) => { modals.push(o && o.title); if (modalRespond) modalRespond(o); },
+  stopPullDownRefresh: () => { pullStops += 1; },
 };
 
 let pageDef = null;
@@ -87,7 +89,7 @@ const ordersFixture = (over) => ({
 });
 
 function reset(over) {
-  apiGets = []; apiPosts = []; modals = []; toasts = []; loginCalls = 0;
+  apiGets = []; apiPosts = []; modals = []; toasts = []; loginCalls = 0; pullStops = 0;
   token = over && over.loggedOut ? null : { accessToken: 't' };
   ordersRespond = () => Promise.resolve(ordersFixture(over));
   postRespond = () => Promise.resolve({ status: 'refunding', refundOrderId: 'R1', refundFeeFen: 199, refundedFen: 199 });
@@ -146,4 +148,56 @@ test('MO4 取消订单走确认弹窗并打 cancel 端点', async () => {
   const cancel = apiPosts.find((c) => c.p === '/member/order/OTN1/cancel');
   assert.ok(cancel, '要打取消端点');
   assert.ok(modals.some((t) => t === '取消订单'), '取消要有确认弹窗');
+});
+
+test('MO5 订单页开启下拉刷新，按钮不再使用原生 size=mini', () => {
+  const cfg = JSON.parse(read('miniprogram/pages/member-orders/member-orders.json'));
+  assert.equal(cfg.enablePullDownRefresh, true);
+  assert.ok(!read('miniprogram/pages/member-orders/member-orders.wxml').includes('size="mini"'));
+});
+
+test('MO6 游客下拉：不发请求，spinner 立即收起', async () => {
+  reset({ loggedOut: true });
+  pageDef.onShow();
+  await tick();
+  await pageDef.onPullDownRefresh();
+  assert.deepEqual(apiGets, []);
+  assert.equal(pullStops, 1);
+});
+
+test('MO7 登录后下拉：静默重拉不闪加载态；失败保留列表并 toast', async () => {
+  reset();
+  pageDef.onShow();
+  await tick();
+  assert.equal(pageDef.data.items.length, 2);
+
+  let release = null;
+  ordersRespond = () => new Promise((r) => { release = r; });
+  const pending = pageDef.onPullDownRefresh();
+  assert.equal(pageDef.data.loading, false, '下拉刷新不能把页面切回加载态');
+  release(ordersFixture({ notice: '刷新后的提示' }));
+  await pending;
+  await tick();
+  assert.equal(pageDef.data.notice, '刷新后的提示');
+  assert.equal(pullStops, 1);
+
+  ordersRespond = () => Promise.reject(new Error(''));
+  await pageDef.onPullDownRefresh();
+  await tick();
+  assert.equal(pageDef.data.items.length, 2, '刷新失败不清空列表');
+  assert.equal(pageDef.data.failed, false, '下拉失败不整页转错误态');
+  assert.ok(toasts.includes('刷新失败'));
+  assert.equal(pullStops, 2);
+});
+
+test('MO8 订单卡结构：状态胶囊、价格主行、退款字段带可见描边', () => {
+  const w = read('miniprogram/pages/member-orders/member-orders.wxml');
+  assert.ok(w.includes('class="status-pill s-{{item.status}}"'));
+  assert.ok(w.includes('class="price-row"'));
+  assert.ok(w.includes('class="meta-row"'));
+  assert.ok(w.includes('class="field"'), '退款原因要有可见字段框');
+  const css = read('miniprogram/pages/member-orders/member-orders.wxss');
+  assert.match(css, /\.field\s*\{[^}]*border:\s*2rpx solid/, '下拉框要有可见边框');
+  assert.match(css, /\.note\s*\{[^}]*border:\s*2rpx solid/, '备注输入框要有可见边框');
+  assert.match(css, /\.order button\.act\s*\{[^}]*width:\s*auto/, '按钮宽度要自己钉，别落回原生 184px');
 });
