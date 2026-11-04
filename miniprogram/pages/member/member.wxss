@@ -23,12 +23,6 @@
   font-size: 26rpx;
 }
 
-.status-line {
-  font-size: 24rpx;
-  color: #5b6474;
-  margin: 4rpx 4rpx 20rpx;
-}
-
 .closed-block {
   padding: 80rpx 0;
   text-align: center;
@@ -36,83 +30,162 @@
   font-size: 26rpx;
 }
 
-/* 会员卡：卡面插画做卡头横幅（铺满卡宽、被卡片圆角裁切），文字区在横幅下方另起一块 */
-.plan-card {
-  padding: 0 0 24rpx;
+/* 页头会员卡：卡面插画做底，状态与权益行叠在上面（文字都来自接口） */
+.member-hero {
+  position: relative;
+  height: 300rpx;
+  border-radius: 20rpx;
   overflow: hidden;
+  margin-bottom: 24rpx;
+  background: #2563eb;
+  box-shadow: 0 18rpx 36rpx -22rpx rgba(26, 86, 214, 0.75);
 }
 
-.plan-banner {
-  width: 100%;
-  /* 横幅固定高度，卡面图按比例居中（widthFix 会把卡面撑到 230px 高，太大） */
-  height: 280rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.plan-banner-img {
+.member-hero-img {
   display: block;
   width: 100%;
   height: 100%;
 }
 
-.plan-body {
-  padding: 20rpx 24rpx 0;
-}
-
-.plan-head {
+.member-hero-body {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  padding: 24rpx 28rpx;
   display: flex;
-  align-items: baseline;
+  flex-direction: column;
   justify-content: space-between;
 }
 
-.plan-name {
+.hero-badge {
+  align-self: flex-start;
+  background: #fff;
+  color: #1a56d6;
+  font-size: 22rpx;
+  font-weight: 600;
+  line-height: 1;
+  padding: 8rpx 16rpx;
+  border-radius: 999rpx;
+}
+
+.hero-bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.hero-title {
+  color: #fff;
   font-size: 32rpx;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.hero-status {
+  color: #fff;
+  font-size: 24rpx;
+  line-height: 1.4;
+}
+
+.hero-perks {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.hero-perk {
+  width: 50%;
+  color: #fff;
+  font-size: 20rpx;
+  line-height: 1.8;
+}
+
+/* 套餐选择行：整行可点，选中项决定底部开通按钮 */
+.plan-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  margin-bottom: 24rpx;
+}
+
+.plan-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  background: #fff;
+  border: 2rpx solid transparent;
+  border-radius: 16rpx;
+  padding: 22rpx 24rpx;
+}
+
+.plan-row-hover {
+  background: #f7f9fc;
+}
+
+.plan-row-on {
+  border-color: #2b6cf6;
+  background: #f6f9ff;
+}
+
+.plan-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 12rpx;
+}
+
+.plan-row-name {
+  font-size: 30rpx;
   font-weight: 600;
   color: #1f2329;
 }
 
-.plan-duration {
-  font-size: 24rpx;
+.plan-row-duration {
+  font-size: 22rpx;
   color: #8a93a6;
 }
 
-.plan-price-row {
+.plan-row-price {
+  flex: none;
   display: flex;
-  align-items: baseline;
-  margin-top: 8rpx;
+  flex-direction: column;
+  align-items: flex-end;
 }
 
-.plan-price {
-  font-size: 44rpx;
+.plan-row-price-main {
+  font-size: 32rpx;
   font-weight: 700;
   color: #1f2329;
   line-height: 1.2;
 }
 
-.plan-perday {
-  margin-left: 12rpx;
-  font-size: 24rpx;
+.plan-row-perday {
+  margin-top: 4rpx;
+  font-size: 20rpx;
   color: #8a93a6;
 }
 
-.perk-list {
-  margin-top: 16rpx;
+.plan-row-tick {
+  flex: none;
+  width: 36rpx;
+  height: 36rpx;
+  border-radius: 50%;
+  border: 2rpx solid #cfd6e2;
+  color: transparent;
+  font-size: 20rpx;
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
 }
 
-.perk-item {
-  width: 50%;
-  font-size: 24rpx;
-  color: #5b6474;
-  line-height: 1.9;
+.plan-row-on .plan-row-tick {
+  background: #2b6cf6;
+  border-color: #2b6cf6;
+  color: #fff;
 }
 
-/* 与积分页任务按钮同形态：2rpx 描边、999rpx 胶囊（描边不用 1rpx，真机会淡掉） */
+/* 与积分页任务按钮同形态：999rpx 胶囊，选中套餐的统一开通入口 */
 .plan-btn {
-  margin-top: 20rpx;
   height: 76rpx;
   line-height: 76rpx;
   text-align: center;

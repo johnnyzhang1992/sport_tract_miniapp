@@ -19,6 +19,9 @@ Page({
     notice: '',
     statusText: '',
     cards: [],
+    selectedKey: '', // 当前选中的套餐（底部开通按它下单）
+    heroPerks: [], // 页头卡面上的权益行：跟随选中套餐的服务端 perkLines
+    heroTitle: '', // 页头标题：有状态行用状态行，否则用选中套餐名（都来自服务端）
     entitlements: null,
     showPay: false,
     paying: false,
@@ -59,13 +62,20 @@ Page({
       } catch (e) {
         sys = {};
       }
+      const cards = buildPlanCards(d && d.items);
+      // 刷新时保留原选择（档位还在就继续选它），首次进页默认选第一档
+      const selected = cards.find((c) => c.key === this.data.selectedKey) || cards[0] || null;
+      const statusText = (d && d.statusText) || '';
       this.setData({
         loading: false,
         failed: false,
         enabled: !!(d && d.enabled),
         notice: (d && d.notice) || '',
-        statusText: (d && d.statusText) || '',
-        cards: buildPlanCards(d && d.items),
+        statusText,
+        cards,
+        selectedKey: selected ? selected.key : '',
+        heroPerks: selected ? selected.perkLines : [],
+        heroTitle: statusText || (selected ? selected.name : ''),
         entitlements: (d && d.entitlements) || null,
         // iOS IAP 已在 MP 后台开通（2026-11-03）：客户端 ≥ 8.0.68（MIN_IOS_CLIENT，spec §2.1）
         // 才显示付费入口；不达标的老微信仍整块隐藏（问询/退款链路服务端已就绪）
@@ -90,9 +100,23 @@ Page({
     }
   },
 
+  /** 套餐行点击：切换选中档位，页头权益行跟着换（无付费入口时只作展示） */
+  onSelectPlan(e) {
+    if (!this.data.showPay) return;
+    const key = e.currentTarget.dataset.key;
+    if (!key || key === this.data.selectedKey) return;
+    const plan = (this.data.cards || []).find((c) => c.key === key);
+    if (!plan) return;
+    this.setData({
+      selectedKey: key,
+      heroPerks: plan.perkLines,
+      heroTitle: this.data.statusText || plan.name,
+    });
+  },
+
   async onBuy(e) {
     if (this.data.paying) return; // 同一次点击不放两个单
-    const key = e.currentTarget.dataset.key;
+    const key = e.currentTarget.dataset.key || this.data.selectedKey;
     if (!key) return;
     let sys = {};
     try {

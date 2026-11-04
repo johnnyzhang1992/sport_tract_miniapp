@@ -18,32 +18,49 @@
   </block>
 
   <block wx:else>
-    <view class="status-line" wx:if="{{statusText}}">{{statusText}}</view>
-
     <view class="closed-block" wx:if="{{!enabled}}">{{notice}}</view>
 
-    <view class="plan-card card" wx:for="{{cards}}" wx:key="key" wx:for-item="plan">
-      <view class="plan-banner">
-        <image class="plan-banner-img" src="/assets/icons/member-card.png" mode="aspectFit" />
-      </view>
-      <view class="plan-body">
-        <view class="plan-head">
-          <text class="plan-name">{{plan.name}}</text>
-          <text class="plan-duration">{{plan.durationText}}</text>
-        </view>
-        <view class="plan-price-row">
-          <text class="plan-price">{{plan.priceText}}</text>
-          <text class="plan-perday">{{plan.perDayText}}</text>
-        </view>
-        <view class="perk-list">
-          <view class="perk-item" wx:for="{{plan.perkLines}}" wx:key="*this" wx:for-item="line">{{line}}</view>
-        </view>
-        <view class="plan-btn {{paying ? 'plan-btn-busy' : ''}}"
-              wx:if="{{showPay}}" data-key="{{plan.key}}" bindtap="onBuy">
-          {{entitlements.memberActive ? '续费' : '立即开通'}}
+    <block wx:if="{{enabled}}">
+      <!-- 页头会员卡：卡面插画做底，状态与权益行都由接口下发 -->
+      <view class="member-hero">
+        <image class="member-hero-img" src="/assets/icons/member-hero.png" mode="aspectFill" />
+        <view class="member-hero-body">
+          <view class="hero-badge">迹路者会员</view>
+          <view class="hero-title" wx:if="{{heroTitle}}">{{heroTitle}}</view>
+          <view class="hero-bottom">
+            <view class="hero-status" wx:if="{{statusText}}">{{statusText}}</view>
+            <view class="hero-perks">
+              <text class="hero-perk" wx:for="{{heroPerks}}" wx:key="*this">{{item}}</text>
+            </view>
+          </view>
         </view>
       </view>
-    </view>
+
+      <!-- 套餐选择：选中档位决定底部开通按钮买哪一单 -->
+      <view class="plan-list">
+        <view
+          class="plan-row {{showPay && selectedKey === plan.key ? 'plan-row-on' : ''}}"
+          hover-class="{{showPay ? 'plan-row-hover' : ''}}"
+          wx:for="{{cards}}" wx:key="key" wx:for-item="plan"
+          data-key="{{plan.key}}" bindtap="onSelectPlan"
+        >
+          <view class="plan-row-main">
+            <text class="plan-row-name">{{plan.name}}</text>
+            <text class="plan-row-duration">{{plan.durationText}}</text>
+          </view>
+          <view class="plan-row-price">
+            <text class="plan-row-price-main">{{plan.priceText}}</text>
+            <text class="plan-row-perday">{{plan.perDayText}}</text>
+          </view>
+          <view class="plan-row-tick" wx:if="{{showPay}}">✓</view>
+        </view>
+      </view>
+
+      <view class="plan-btn {{paying ? 'plan-btn-busy' : ''}}"
+            wx:if="{{showPay}}" data-key="{{selectedKey}}" bindtap="onBuy">
+        {{entitlements.memberActive ? '续费' : '立即开通'}}
+      </view>
+    </block>
 
     <view class="orders-link" bindtap="goOrders">订单与退款 ›</view>
   </block>

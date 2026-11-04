@@ -33,7 +33,7 @@ test('MP2 页面文案位全部绑变量，不写死价格/日均/权益句', ()
   assert.ok(!wxml.includes('元/天'), '日均价必须来自接口');
   assert.ok(!wxml.includes('免广告'), '权益行必须来自接口 perkLines');
   assert.ok(wxml.includes('{{plan.priceText}}') && wxml.includes('{{plan.perDayText}}'));
-  assert.ok(wxml.includes('{{line}}'));
+  assert.ok(wxml.includes('{{item}}'), '页头权益行逐个渲染服务端 perkLines');
 });
 
 /* --------------------------------- 环境桩 --------------------------------- */
@@ -172,6 +172,7 @@ test('MP4 登录后渲染服务端文案：价格、日均、权益四行、状�
   await tick();
   assert.equal(p.data.loading, false);
   assert.equal(p.data.statusText, '会员生效中 · 有效期至 2026年12月3日');
+  assert.equal(p.data.heroTitle, '会员生效中 · 有效期至 2026年12月3日', '有状态行时页头标题优先用状态行');
   assert.equal(p.data.cards[0].priceText, '1.99 元');
   assert.equal(p.data.cards[1].perDayText, '约 0.05 元/天');
   assert.deepEqual(p.data.cards[0].perkLines, ['免广告', '多条轨迹打包导出 GPX', '照片额度 300 张', '订阅消息提醒']);
@@ -274,39 +275,58 @@ test('MP10 加载失败显示重试，重试会再发请求', async () => {
   assert.equal(p.data.cards.length, 2);
 });
 
-test('MP14 套餐卡使用「会员卡」图标做卡头横幅，且图标在计划卡内部', () => {
+test('MP14 页头会员卡使用独立底图，图标文件已入包', () => {
   const w = read('miniprogram/pages/member/member.wxml');
-  const start = w.indexOf('class="plan-card');
-  const end = w.indexOf('class="plan-body"', start);
-  assert.ok(start > 0 && end > start, '应有套餐卡结构');
+  assert.ok(w.includes('class="member-hero"'), '应有页头会员卡');
+  assert.ok(w.includes('src="/assets/icons/member-hero.png"'), '页头卡使用会员卡插画底图');
   assert.ok(
-    w.slice(start, end).includes('class="plan-banner"') &&
-      w.slice(start, end).includes('src="/assets/icons/member-card.png"'),
-    '会员卡图标放在计划卡卡头横幅',
-  );
-  assert.ok(
-    fs.existsSync(path.join(root, 'miniprogram/assets/icons/member-card.png')),
-    '图标文件要入包',
+    fs.existsSync(path.join(root, 'miniprogram/assets/icons/member-hero.png')),
+    '底图文件要入包',
   );
 });
 
-test('MP15 套餐卡布局：横幅铺满卡头，名称与价格在横幅下方', () => {
+test('MP15 页面结构：页头卡 → 套餐行 → 统一开通按钮', () => {
   const w = read('miniprogram/pages/member/member.wxml');
-  const start = w.indexOf('class="plan-card');
-  const end = w.indexOf('class="perk-list"', start);
-  const block = w.slice(start, end);
-  const posBanner = block.indexOf('class="plan-banner"');
-  const posImg = block.indexOf('member-card.png');
-  const posBody = block.indexOf('class="plan-body"');
-  const posName = block.indexOf('class="plan-head"', posBody);
-  const posPrice = block.indexOf('class="plan-price-row"', posName);
-  assert.ok(posBanner >= 0 && posImg > posBanner, '横幅内含卡面图');
-  assert.ok(posBody > posImg && posName > posBody, '文字区在横幅之后');
-  assert.ok(posPrice > posName, '价格行在名称行之后');
-  const css = read('miniprogram/pages/member/member.wxss');
-  assert.match(css, /\.plan-banner-img\s*\{[^}]*width:\s*100%/, '卡面图铺满卡宽');
-  assert.match(css, /\.plan-banner\s*\{[^}]*height:\s*\d+rpx/, '横幅高度要收住（widthFix 会把卡面撑得过大）');
-  assert.match(block, /mode="aspectFit"/, '固定横幅内按比例完整显示卡面，不裁切');
+  const posHero = w.indexOf('class="member-hero"');
+  const posList = w.indexOf('class="plan-list"');
+  const posRow = w.indexOf('class="plan-row');
+  const posCta = w.indexOf('data-key="{{selectedKey}}"');
+  assert.ok(posHero > 0 && posList > posHero, '页头卡在前，套餐列表在后');
+  assert.ok(posRow > posList && posCta > posRow, '套餐行之后才是统一开通按钮');
+  assert.match(w, /bindtap="onSelectPlan"/, '套餐行可切换选中');
+  assert.equal((w.match(/bindtap="onBuy"/g) || []).length, 1, '每档不再各带一个开通按钮');
+});
+
+test('MP16 选中档位：默认第一档，切换后页头权益与下单 key 一起变', async () => {
+  reset({ fixture: { items: [
+    { key: 'month_card', name: '会员月卡', priceFen: 199, priceText: '1.99 元', perDayText: '约 0.07 元/天', durationText: '30 天', perkLines: ['月卡权益'] },
+    { key: 'year_card', name: '会员年卡', priceFen: 1699, priceText: '16.99 元', perDayText: '约 0.05 元/天', durationText: '365 天', perkLines: ['年卡权益'] },
+  ] } });
+  const p = boot();
+  await tick();
+  assert.equal(p.data.selectedKey, 'month_card', '首次进页默认选第一档');
+  assert.deepEqual(p.data.heroPerks, ['月卡权益']);
+  assert.equal(p.data.heroTitle, '会员月卡', '无状态行时页头标题用选中套餐名');
+
+  p.onSelectPlan({ currentTarget: { dataset: { key: 'year_card' } } });
+  assert.equal(p.data.selectedKey, 'year_card');
+  assert.deepEqual(p.data.heroPerks, ['年卡权益'], '页头权益跟随选中档位');
+  assert.equal(p.data.heroTitle, '会员年卡', '页头标题跟随选中档位');
+
+  p.onSelectPlan({ currentTarget: { dataset: { key: 'nope' } } });
+  assert.equal(p.data.selectedKey, 'year_card', '未知 key 不改变选择');
+
+  await p.onBuy({ currentTarget: { dataset: {} } });
+  assert.deepEqual(payCalls.map((c) => c.key), ['year_card'], '统一按钮用当前选中档位下单');
+});
+
+test('MP17 刷新后保留已选档位', async () => {
+  reset();
+  const p = boot();
+  await tick();
+  p.onSelectPlan({ currentTarget: { dataset: { key: 'year_card' } } });
+  await p.syncData({ silent: true });
+  assert.equal(p.data.selectedKey, 'year_card', '刷新不能把选择重置回第一档');
 });
 
 test('MP11 会员中心开启下拉刷新', () => {
