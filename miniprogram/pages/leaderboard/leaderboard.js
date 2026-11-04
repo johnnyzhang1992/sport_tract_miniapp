@@ -130,7 +130,7 @@ Page({
     loggedIn: false,
     loading: true,
     // 点击榜单用户 → 公开资料半屏（白名单字段 + 累计八项）
-    userSheet: { visible: false, loading: true, error: false, uid: 0, name: '', avatarSrc: '', avatarLargeUrl: '', avatarText: '', member: false, joinDays: 0, stats: null },
+    userSheet: { visible: false, loading: true, error: false, uid: 0, name: '', avatarSrc: '', avatarLargeUrl: '', avatarText: '', member: false, joinDays: 0, stats: null, statsHidden: false },
     // 头像大图预览（全屏黑底，点任意处关闭）
     avatarViewer: { visible: false, src: '' },
     // 点亮地图
@@ -725,7 +725,7 @@ Page({
     this.setData({
       userSheet: {
         visible: true, loading: true, error: false, uid,
-        name: '', avatarSrc: '', avatarLargeUrl: '', avatarText: '', member: false, joinDays: 0, stats: null,
+        name: '', avatarSrc: '', avatarLargeUrl: '', avatarText: '', member: false, joinDays: 0, stats: null, statsHidden: false,
       },
     });
     return this.fetchUserSheet(uid);
@@ -740,6 +740,7 @@ Page({
       const fp = (d && d.footprint) || {};
       const dur = formatDurationStat(t.duration || 0);
       const name = (d && d.nickname) || '运动用户';
+      const statsHidden = !!(d && d.showSportData === false);
       this.setData({
         userSheet: {
           visible: true, loading: false, error: false,
@@ -750,7 +751,8 @@ Page({
           avatarText: initialOf(name, '迹'),
           member: !!(d && d.memberActive),
           joinDays: Number(d && d.joinDays) || 0,
-          stats: {
+          statsHidden,
+          stats: statsHidden ? null : {
             trackCount: t.count || 0,
             distanceText: formatCompactCn((t.distance || 0) / 1000),
             provinceCount: fp.provinceCount || 0,

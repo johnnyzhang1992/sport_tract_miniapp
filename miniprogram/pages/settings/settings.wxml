@@ -34,6 +34,15 @@
     <t-switch value="{{settings.showBodyData}}" bind:change="onShowBodyDataChange" />
   </view>
 
+  <!-- 展示运动数据 -->
+  <view class="card switch-row">
+    <view class="switch-info">
+      <view class="switch-title">展示运动数据</view>
+      <view class="text-muted">允许他人查看你的累计运动数据</view>
+    </view>
+    <t-switch value="{{settings.showSportData}}" bind:change="onShowSportDataChange" />
+  </view>
+
   <!-- 整公里播报 -->
   <view class="card switch-row">
     <view class="switch-info">
@@ -64,4 +73,13 @@
     loading="{{saving}}"
     bind:tap="save"
   >保存</t-button>
+
+  <!-- 关闭展示运动数据的提示半屏 -->
+  <view class="sport-mask" wx:if="{{sportSheetVisible}}" bindtap="closeSportSheet">
+    <view class="sport-sheet" catchtap="noop">
+      <view class="sport-title">已关闭展示运动数据</view>
+      <view class="sport-body">保存设置后生效。运动榜仍保留你的名次和距离，但他人点开资料卡时不再看到累计运动数据；你自己的统计不受影响。</view>
+      <view class="sport-btn" bindtap="closeSportSheet">知道了</view>
+    </view>
+  </view>
 </view>

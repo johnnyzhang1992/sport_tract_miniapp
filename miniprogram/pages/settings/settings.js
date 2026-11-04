@@ -14,11 +14,13 @@ Page({
       defaultType: 'walking',
       highAccuracy: true,
       showBodyData: true,
+      showSportData: true,
       kmAnnounce: true,
     },
     activityTypes: config.ACTIVITY_TYPES,
     saving: false,
     loggedIn: false, // 登录态（决定是否展示退出登录入口）
+    sportSheetVisible: false, // 关闭「展示运动数据」后的提示半屏
   },
 
   onLoad() {
@@ -60,7 +62,7 @@ Page({
       this.setData({
         loggedIn: true, // 能拉到资料即已登录（游客态接口 401）
         settings: Object.assign(
-          { unit: 'metric', defaultType: 'walking', highAccuracy: true, showBodyData: true, kmAnnounce: true },
+          { unit: 'metric', defaultType: 'walking', highAccuracy: true, showBodyData: true, showSportData: true, kmAnnounce: true },
           user.settings,
         ),
       });
@@ -85,6 +87,21 @@ Page({
   onKmAnnounceChange(e) {
     this.setData({ 'settings.kmAnnounce': e.detail.value });
   },
+
+  /** 关闭「展示运动数据」：弹半屏解释影响范围；重新打开则收起 */
+  onShowSportDataChange(e) {
+    const value = !!e.detail.value;
+    this.setData({
+      'settings.showSportData': value,
+      sportSheetVisible: value ? false : true,
+    });
+  },
+
+  closeSportSheet() {
+    this.setData({ sportSheetVisible: false });
+  },
+
+  noop() {},
 
   /** 打开隐私政策 */
   openPrivacy() {

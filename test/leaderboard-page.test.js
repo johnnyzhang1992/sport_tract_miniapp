@@ -295,3 +295,17 @@ test('LB-UP2 资料加载失败可重试；八项顺序与统计页累计卡一�
   const labels = [...w.matchAll(/class="u-label">([^<]+)</g)].map((m) => m[1]);
   assert.deepEqual(labels, ['轨迹', '公里', '点亮省份', '点亮城市', '时长', '爬升 m', '千卡', '运动类型']);
 });
+
+test('LB-UP3 对方关闭展示：资料卡八项置为占位文案，不渲染数字', async () => {
+  profileRespond = () => Promise.resolve({
+    uid: 1004, nickname: '会员甲', avatarUrl: '', avatarLargeUrl: '', avatarPreset: '',
+    joinDays: 85, memberActive: false, showSportData: false, total: null, footprint: null,
+  });
+  const p = makePage();
+  await p.openUserSheet({ currentTarget: { dataset: { uid: 1004 } } });
+  assert.equal(p.data.userSheet.statsHidden, true);
+  assert.equal(p.data.userSheet.stats, null);
+  const w = read('miniprogram/pages/leaderboard/leaderboard.wxml');
+  assert.ok(w.includes('已关闭运动数据展示'));
+  assert.match(w, /wx:if="\{\{userSheet\.statsHidden\}\}" class="u-stats-hidden">已关闭运动数据展示/);
+});
