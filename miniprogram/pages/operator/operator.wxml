@@ -37,5 +37,5 @@
         <view class="back-link" bindtap="goBack">返回</view>
       </block>
     </block>
-  </view>
+  </block>
 </view>
