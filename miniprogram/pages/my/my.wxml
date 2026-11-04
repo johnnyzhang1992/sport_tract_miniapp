@@ -38,6 +38,35 @@
     </view>
   </view>
 
+  <!-- 快捷入口：消息 / 积分 / 会员 / 设置（四等分） -->
+  <view class="card quick-card">
+    <view class="quick-item" hover-class="quick-item-hover" hover-stay-time="80" bindtap="goNotifications">
+      <view class="quick-icon-wrap">
+        <image class="quick-icon" src="/assets/icons/lucide-bell.png" mode="aspectFit" />
+        <view class="quick-badge" wx:if="{{unreadCount > 0}}">{{unreadCount > 99 ? '99+' : unreadCount}}</view>
+      </view>
+      <view class="quick-label">消息</view>
+    </view>
+    <view class="quick-item" hover-class="quick-item-hover" hover-stay-time="80" bindtap="goPoints">
+      <view class="quick-icon-wrap">
+        <image class="quick-icon" src="/assets/icons/lucide-coins.png" mode="aspectFit" />
+      </view>
+      <view class="quick-label">积分</view>
+    </view>
+    <view class="quick-item" hover-class="quick-item-hover" hover-stay-time="80" bindtap="goMember">
+      <view class="quick-icon-wrap">
+        <image class="quick-icon" src="/assets/icons/lucide-gem.png" mode="aspectFit" />
+      </view>
+      <view class="quick-label">会员</view>
+    </view>
+    <view class="quick-item" hover-class="quick-item-hover" hover-stay-time="80" bindtap="goSettings">
+      <view class="quick-icon-wrap">
+        <image class="quick-icon" src="/assets/icons/lucide-settings.png" mode="aspectFit" />
+      </view>
+      <view class="quick-label">设置</view>
+    </view>
+  </view>
+
   <!-- 运动报告入口（汇总 + 亮点 + 环比 + 分类型/日期明细 + 海报；个人最佳与轨迹记录已迁走） -->
   <view class="card link-row" hover-class="card-hover" hover-stay-time="100" bindtap="goReport">
     <view class="switch-info">
@@ -56,7 +85,7 @@
     <view class="link-arrow">›</view>
   </view>
 
-  <!-- 菜单（用户卡资产行之外的常驻积分入口）
+  <!-- 菜单：轨迹合集 / 足迹 / 数据导入 / 数据导出
        箭头统一用 .link-arrow（与上面三张卡同字形同色同右距），不再用组件的 arrow 图标 -->
   <t-cell-group class="card menu-card">
     <t-cell title="轨迹合集" t-class-left="cell-left" t-class-title="cell-title" bind:click="goOverview">
@@ -68,15 +97,6 @@
       <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-footprints.png" mode="aspectFit" />
       <view slot="right-icon" class="link-arrow">›</view>
     </t-cell>
-    <t-cell title="我的积分" t-class-left="cell-left" t-class-title="cell-title" bind:click="goPoints">
-      <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-coins.png" mode="aspectFit" />
-      <view slot="right-icon" class="link-arrow">›</view>
-    </t-cell>
-    <t-cell title="会员中心" t-class-left="cell-left" t-class-title="cell-title" bind:click="goMember">
-      <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-gem.png" mode="aspectFit" />
-      <view slot="note" wx:if="{{memberHint}}" class="member-hint">{{memberHint}}</view>
-      <view slot="right-icon" class="link-arrow">›</view>
-    </t-cell>
     <t-cell title="数据导入" t-class-left="cell-left" t-class-title="cell-title" bind:click="goImport">
       <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-download.png" mode="aspectFit" />
       <view slot="right-icon" class="link-arrow">›</view>
@@ -84,15 +104,6 @@
     <t-cell title="数据导出" t-class-left="cell-left" t-class-title="cell-title" bind:click="goExport">
       <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-share.png" mode="aspectFit" />
       <view slot="right-icon" class="link-arrow">›</view>
-    </t-cell>
-    <t-cell title="设置" t-class-left="cell-left" t-class-title="cell-title" bind:click="goSettings">
-      <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-settings.png" mode="aspectFit" />
-      <view slot="right-icon" class="link-arrow">›</view>
-    </t-cell>
-    <t-cell title="消息中心" t-class-left="cell-left" t-class-title="cell-title" bind:click="goNotifications">
-      <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-bell.png" mode="aspectFit" />
-      <view slot="right-icon" class="link-arrow">›</view>
-      <view slot="note" wx:if="{{unreadCount > 0}}" class="unread-badge">{{unreadCount > 99 ? '99+' : unreadCount}}</view>
     </t-cell>
   </t-cell-group>
 

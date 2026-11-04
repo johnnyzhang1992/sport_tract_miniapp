@@ -23,7 +23,8 @@ const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
 test('MP1 app.json 注册会员页，「我的」页有入口且指向它', () => {
   const app = JSON.parse(read('miniprogram/app.json'));
   assert.ok(app.pages.includes('pages/member/member'));
-  assert.ok(read('miniprogram/pages/my/my.wxml').includes('会员中心'));
+  assert.ok(read('miniprogram/pages/my/my.wxml').includes('quick-card'));
+  assert.ok(read('miniprogram/pages/my/my.wxml').includes('>会员<'));
   assert.ok(read('miniprogram/pages/my/my.js').includes("'/pages/member/member'"));
 });
 

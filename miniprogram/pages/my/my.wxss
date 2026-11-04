@@ -90,7 +90,62 @@
   padding: 4rpx 16rpx;
 }
 
-/* 菜单卡 */
+/* 快捷入口：消息/积分/会员/设置 四等分 */
+.quick-card {
+  display: flex;
+  padding: 18rpx 0;
+}
+
+.quick-item {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+  padding: 12rpx 0;
+  border-radius: 12rpx;
+}
+
+.quick-item-hover {
+  background: #f5f7fa;
+}
+
+.quick-icon-wrap {
+  position: relative;
+  width: 48rpx;
+  height: 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.quick-icon {
+  width: 44rpx;
+  height: 44rpx;
+}
+
+.quick-badge {
+  position: absolute;
+  top: -8rpx;
+  right: -14rpx;
+  min-width: 28rpx;
+  height: 28rpx;
+  padding: 0 6rpx;
+  box-sizing: border-box;
+  border-radius: 14rpx;
+  background: #c02a30;
+  color: #fff;
+  font-size: 18rpx;
+  line-height: 28rpx;
+  text-align: center;
+}
+
+.quick-label {
+  font-size: 24rpx;
+  color: #1f2329;
+}
+
 .menu-card {
   /* 横向与页面其它卡片一致（24rpx）：卡片自己出这 24rpx，cell 的内建边距归零，
      否则 12rpx + 32rpx = 44rpx 会比上面的卡片缩进去一圈。
@@ -146,20 +201,6 @@
   margin-left: 12rpx;
   flex-shrink: 0;
   line-height: 1;
-}
-
-/* 消息中心未读角标 */
-.unread-badge {
-  min-width: 32rpx;
-  height: 32rpx;
-  padding: 0 8rpx;
-  border-radius: 16rpx;
-  background: #c02a30;
-  color: #ffffff;
-  font-size: 20rpx;
-  line-height: 32rpx;
-  text-align: center;
-  margin-right: 8rpx;
 }
 
 .row-hover {
@@ -246,8 +287,3 @@
   color: #8a93a6;
 }
 
-/* 会员入口右侧的状态副标题（未开通 / 到期日）：比正文淡一档，不与箭头抢注意力 */
-.member-hint {
-  font-size: 24rpx;
-  color: #8a93a6;
-}

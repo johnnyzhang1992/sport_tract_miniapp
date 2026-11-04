@@ -27,7 +27,8 @@ const { bjDate, bjDateTime } = require('../miniprogram/utils/bj-date');
 test('PP1 app.json 注册积分页面，我的页有入口', () => {
   const app = JSON.parse(read('miniprogram/app.json'));
   assert.ok(app.pages.includes('pages/points/points'));
-  assert.ok(read('miniprogram/pages/my/my.wxml').includes('我的积分'));
+  assert.ok(read('miniprogram/pages/my/my.wxml').includes('quick-card'));
+  assert.ok(read('miniprogram/pages/my/my.wxml').includes('>积分<'));
   assert.ok(read('miniprogram/pages/my/my.js').includes('/pages/points/points'));
 });
 

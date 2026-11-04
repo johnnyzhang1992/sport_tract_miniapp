@@ -1,5 +1,4 @@
 const api = require('../../services/api');
-const storage = require('../../services/storage');
 const loading = require('../../utils/loading');
 const { initialOf } = require('../../utils/format.js');
 const config = require('../../config/index');
@@ -18,7 +17,6 @@ Page({
     loggedIn: false,
     loading: false,
     unreadCount: 0, // 未读通知数（0=不显示角标）
-    memberHint: '', // 会员入口右侧：未开通 / 到期日（服务端下发整句）
     // 签到条（登录后显示）：未签点击直接签到，已签点击进积分页
     signin: { loaded: false, signedToday: false, streakDay: 0, nextReward: 0, balance: null },
     // 数据导出半屏弹层：范围 + 类型 → 汇总 CSV（多条 GPX 打包在轨迹页多选；该入口 2026-10-30 起临时关闭）
@@ -36,25 +34,6 @@ Page({
     this.setData({ showYearReport: new Date().getMonth() === 11 });
     this.refreshUser();
     this.loadUnread();
-    this.loadMemberHint();
-  },
-
-  /**
-   * 会员入口右侧那行（未开通 / 到期日）：日期格式由服务端统一，端上不拼。
-   * 失败静默——入口本身照常可点，别因为一次辅助请求把「我的」页弄出错误态。
-   */
-  async loadMemberHint() {
-    const token = storage.getToken();
-    if (!(token && token.accessToken)) {
-      this.setData({ memberHint: '' });
-      return;
-    }
-    try {
-      const e = await api.get('/member/entitlements');
-      this.setData({ memberHint: (e && e.entryHint) || '' });
-    } catch (err) {
-      this.setData({ memberHint: '' });
-    }
   },
 
   onPullDownRefresh() {
