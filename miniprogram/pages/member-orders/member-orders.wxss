@@ -266,3 +266,24 @@
   font-size: 24rpx;
   margin-top: 8rpx;
 }
+
+.refund-hint .guide-toggle {
+  color: #2b6cf6;
+  margin-left: 8rpx;
+}
+
+.refund-guide {
+  margin-top: 12rpx;
+  background: #f6f7fb;
+  border-radius: 12rpx;
+  padding: 16rpx 20rpx;
+}
+.guide-item {
+  color: #5b6474;
+  font-size: 24rpx;
+  line-height: 1.6;
+  margin-bottom: 8rpx;
+}
+.guide-item:last-child {
+  margin-bottom: 0;
+}

@@ -17,7 +17,9 @@ const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
 
 test('MO1b iOS 行下发退款指引且不渲染退款按钮（wxml 结构断言）', () => {
   const wxml = read('miniprogram/pages/member-orders/member-orders.wxml');
-  assert.ok(wxml.includes('{{item.refundHint}}'), '指引走服务端下发的 refundHint');
+  assert.ok(wxml.includes('{{item.refundHint}}'), '短句指引走服务端下发的 refundHint');
+  assert.ok(wxml.includes('{{item.refundGuide}}'), '详细流程走服务端下发的 refundGuide');
+  assert.ok(wxml.includes('toggleGuide'), '点击切换展开');
   const js = read('miniprogram/pages/member-orders/member-orders.js');
   assert.ok(!js.includes('App Store'), '端上不得自己拼 iOS 退款文案');
 });
@@ -90,7 +92,7 @@ const ordersFixture = (over) => ({
   items: [
     { outTradeNo: 'OTN1', status: 'created', statusText: '待支付', name: '会员月卡', priceFen: 199, refundedFen: 0, periodText: '', createdAtText: '2026-11-04 00:01', canPay: true, canCancel: true, canRefund: false },
     { outTradeNo: 'OTN2', status: 'delivered', statusText: '已生效', name: '会员月卡', priceFen: 199, refundedFen: 0, periodText: '2026年11月4日 ~ 2026年12月3日', createdAtText: '2026-11-03 23:59', canPay: false, canCancel: false, canRefund: true },
-    { outTradeNo: 'OTN3', status: 'delivered', statusText: '已生效', name: '会员月卡', priceFen: 199, refundedFen: 0, periodText: '', createdAtText: '2026-11-04 00:05', canPay: false, canCancel: false, canRefund: false, refundHint: 'iOS 退款请在 App Store 申请，通过后自动同步到这里' },
+    { outTradeNo: 'OTN3', status: 'delivered', statusText: '已生效', name: '会员月卡', priceFen: 199, refundedFen: 0, periodText: '', createdAtText: '2026-11-04 00:05', canPay: false, canCancel: false, canRefund: false, refundHint: 'iOS 退款请在 App Store 申请，通过后自动同步到这里', refundGuide: ['步骤1 App Store 提交', '步骤2 Apple 问询', '步骤3 Apple 决定', '步骤4 状态自动更新'] },
     ...((over && over.extra) || []),
   ],
   ...over,
@@ -121,6 +123,8 @@ test('MO2 游客进页不发请求；登录后拉一次列表并做元换算', a
   await tick();
   assert.deepEqual(apiGets, ['/member/orders']);
   assert.equal(pageDef.data.items[0].priceText, '1.99');
+  const iosRow = pageDef.data.items.find((i) => i.outTradeNo === 'OTN3');
+  assert.equal(iosRow.refundGuide.length, 4, '服务端下发的流程指引原样透传');
   assert.match(pageDef.data.notice, /剩余天数/);
 });
 

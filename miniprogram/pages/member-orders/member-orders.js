@@ -32,6 +32,7 @@ Page({
     notice: '',
     reasonLabels: REASONS.map((r) => r.label),
     expanded: '', // 当前展开退款面板的 outTradeNo
+    guideExpanded: '', // 当前展开 iOS 退款流程指引的 outTradeNo
     reasonIndex: -1,
     note: '',
     busy: '',
@@ -134,6 +135,11 @@ Page({
         }
       },
     });
+  },
+
+  toggleGuide(e) {
+    const id = e.currentTarget.dataset.id;
+    this.setData({ guideExpanded: this.data.guideExpanded === id ? '' : id });
   },
 
   toggleRefund(e) {
