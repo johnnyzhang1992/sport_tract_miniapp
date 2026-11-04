@@ -77,9 +77,6 @@
   text-align: center;
   padding: 12rpx 0;
 }
-.ov-item-sub .ov-num {
-  font-size: 30rpx;
-}
 .ov-num {
   font-size: 32rpx;
   font-weight: 700;

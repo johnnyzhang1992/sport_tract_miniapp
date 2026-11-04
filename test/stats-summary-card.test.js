@@ -1,7 +1,8 @@
 /**
  * 统计页「累计数据」卡 + 首页累计区撤除（2026-11-04 用户指定）：
  * - 统计页首行与首页累计数据同四项同顺序（轨迹 / 公里 / 点亮省份 / 点亮城市）；
- * - 其余指标（时长 / 爬升 / 千卡 / 活跃天数 / 运动类型）排在下一行；
+ * - 其余指标（时长 / 爬升 / 千卡 / 运动类型）排在下一行；活跃天数已移到运动日历的四张卡；
+ * - 运动日历上方固定四张卡（当前连续 / 最长连续 / 超越迹路者 / 活跃天数）；
  * - 公里格式化与首页同一口径（formatCompactCn），两页数字不许差一分钱；
  * - 首页累计数据整块删除（日历卡保留，仍可重试）。
  * 运行：node --test test/stats-summary-card.test.js
@@ -55,7 +56,7 @@ function summaryBlock() {
   return w.slice(start, end);
 }
 
-test('SS1 首行与首页同四项同顺序，其余五项排下一行，不再重复「次数」', () => {
+test('SS1 首行与首页同四项同顺序，其余四项排下一行，不再重复「次数」「活跃天数」', () => {
   const block = summaryBlock();
   const labels = [];
   const re = />([^<>{}]+)</g;
@@ -64,10 +65,32 @@ test('SS1 首行与首页同四项同顺序，其余五项排下一行，不再�
     const t = m[1].trim();
     if (t) labels.push(t);
   }
-  const expected = ['累计数据', '轨迹', '公里', '点亮省份', '点亮城市', '时长', '爬升 m', '千卡', '活跃天数', '运动类型'];
+  const expected = ['累计数据', '轨迹', '公里', '点亮省份', '点亮城市', '时长', '爬升 m', '千卡', '运动类型'];
   assert.deepEqual(labels, expected, '首行四项与首页一致，其余按原相对顺序排下一行');
-  assert.equal((block.match(/class="ov-item"/g) || []).length, 4, '首行 4 格');
-  assert.equal((block.match(/class="ov-item ov-item-sub"/g) || []).length, 5, '次行 5 格');
+  assert.equal((block.match(/class="ov-item"/g) || []).length, 8, '首行 4 格 + 次行 4 格');
+  assert.ok(!block.includes('活跃天数'), '活跃天数已移到运动日历上方的四张卡');
+});
+
+test('SS5 运动日历上方固定四张卡：文案简写，活跃天数并入', () => {
+  const w = read('miniprogram/pages/stats/stats.wxml');
+  const start = w.indexOf('<view class="streak-row">');
+  assert.ok(start > 0, '应有 streak-row');
+  const end = w.indexOf('<!-- 运动日历', start);
+  assert.ok(end > start);
+  const block = w.slice(start, end);
+
+  const labels = [];
+  const re = />([^<>{}]+)</g;
+  let m;
+  while ((m = re.exec(block))) {
+    const t = m[1].trim();
+    if (t) labels.push(t);
+  }
+  assert.deepEqual(labels, ['当前连续', '最长连续', '超越迹路者', '活跃天数'], '三张旧卡简写 + 活跃天数');
+  assert.equal((block.match(/class="streak-item"/g) || []).length, 4, '固定四张卡');
+  assert.ok(block.includes('overview.total.activeDays'), '活跃天数取累计概览同字段');
+  assert.ok(!block.includes('wx:if="{{percentile}}"'), '人数不足时也占位（—），不能缩回三张');
+  assert.ok(block.includes("percentile ? percentile.percentile + '%' : '—'"), '分位缺失时显示 —');
 });
 
 test('SS2 省市两数都由点亮地图组件回传（同一次 /stats/footprint，不重复请求）', () => {

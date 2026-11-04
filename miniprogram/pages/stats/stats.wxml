@@ -29,23 +29,19 @@
         </view>
       </view>
       <view class="ov-row ov-row-sub">
-        <view class="ov-item ov-item-sub">
+        <view class="ov-item">
           <view class="ov-num">{{overview.total.durationText}}</view>
           <view class="ov-label">时长</view>
         </view>
-        <view class="ov-item ov-item-sub">
+        <view class="ov-item">
           <view class="ov-num">{{overview.total.elevationGainText}}</view>
           <view class="ov-label">爬升 m</view>
         </view>
-        <view class="ov-item ov-item-sub">
+        <view class="ov-item">
           <view class="ov-num">{{overview.total.caloriesText}}</view>
           <view class="ov-label">千卡</view>
         </view>
-        <view class="ov-item ov-item-sub">
-          <view class="ov-num">{{overview.total.activeDays}}</view>
-          <view class="ov-label">活跃天数</view>
-        </view>
-        <view class="ov-item ov-item-sub">
+        <view class="ov-item">
           <view class="ov-num">{{typeCount}}</view>
           <view class="ov-label">运动类型</view>
         </view>
@@ -59,15 +55,19 @@
     <view class="streak-row">
       <view class="streak-item">
         <view class="streak-num">{{overview.total.streakCurrent}}</view>
-        <view class="streak-label">当前连续天数</view>
+        <view class="streak-label">当前连续</view>
       </view>
       <view class="streak-item">
         <view class="streak-num">{{overview.total.streakLongest}}</view>
-        <view class="streak-label">最长连续天数</view>
+        <view class="streak-label">最长连续</view>
       </view>
-      <view class="streak-item" wx:if="{{percentile}}">
-        <view class="streak-num">{{percentile.percentile}}%</view>
-        <view class="streak-label">累计距离超越迹路者</view>
+      <view class="streak-item">
+        <view class="streak-num">{{percentile ? percentile.percentile + '%' : '—'}}</view>
+        <view class="streak-label">超越迹路者</view>
+      </view>
+      <view class="streak-item">
+        <view class="streak-num">{{overview.total.activeDays}}</view>
+        <view class="streak-label">活跃天数</view>
       </view>
     </view>
 
