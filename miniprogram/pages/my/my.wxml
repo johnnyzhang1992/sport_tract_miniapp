@@ -2,13 +2,21 @@
   <!-- 用户卡片（未登录点开登录弹窗，已登录进资料编辑）：头部加积分资产行（原骨架 + 渐进创意） -->
   <view class="card user-card">
     <view class="user-head" hover-class="card-hover" hover-stay-time="100" bindtap="onUserCardTap">
-      <t-avatar
-        class="user-avatar"
-        image="{{user.avatarUrl || '/assets/icons/lucide-user.png'}}"
-        size="96rpx"
-      >
-        {{user.avatarText}}
-      </t-avatar>
+      <view class="user-avatar-wrap">
+        <t-avatar
+          class="user-avatar"
+          image="{{user.avatarUrl || '/assets/icons/lucide-user.png'}}"
+          size="96rpx"
+        >
+          {{user.avatarText}}
+        </t-avatar>
+        <image
+          wx:if="{{loggedIn && isMember}}"
+          class="avatar-member-badge"
+          src="/assets/icons/member-badge.png"
+          mode="aspectFit"
+        />
+      </view>
       <view class="user-info">
         <view class="user-name">{{loggedIn ? (user.nickname || '微信用户') : '未登录'}}</view>
         <view class="text-muted">{{loggedIn ? (user.uid ? '迹路者' + user.uid + ' · 已加入 ' + user.joinDays + ' 天' : '点击编辑资料') : '点击登录，同步运动数据'}}</view>

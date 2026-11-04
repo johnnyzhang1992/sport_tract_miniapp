@@ -341,11 +341,16 @@
   width: 44rpx;
   height: 44rpx;
 }
+.rank-avatar-wrap {
+  position: relative;
+  flex: none;
+  margin: 0 14rpx 0 6rpx;
+}
 .rank-avatar {
   width: 56rpx;
   height: 56rpx;
   border-radius: 50%;
-  margin: 0 14rpx 0 6rpx;
+  margin: 0;
   flex-shrink: 0;
   background: #f2f3f5;
 }
@@ -482,6 +487,10 @@
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
 }
+.me-avatar-wrap {
+  position: relative;
+  flex: none;
+}
 .me-avatar {
   width: 72rpx;
   height: 72rpx;
@@ -498,6 +507,23 @@
   color: #fff;
   background: rgba(255, 255, 255, 0.28);
 }
+/* 头像右下角会员徽标（TOP10 / 我的排名；本榜最佳头像只有 32rpx，不挂徽标） */
+.avatar-member-badge {
+  position: absolute;
+  right: -2rpx;
+  bottom: -2rpx;
+  width: 24rpx;
+  height: 24rpx;
+}
+.rank-badge {
+  width: 24rpx;
+  height: 24rpx;
+}
+.me-badge {
+  width: 28rpx;
+  height: 28rpx;
+}
+
 .me-body {
   flex: 1;
   min-width: 0;

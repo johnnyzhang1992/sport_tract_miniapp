@@ -17,6 +17,7 @@ Page({
     loggedIn: false,
     loading: false,
     unreadCount: 0, // 未读通知数（0=不显示角标）
+    isMember: false, // 头像右下角会员徽标（付费会员订单口径，不含免广告卡）
     // 签到条（登录后显示）：未签点击直接签到，已签点击进积分页
     signin: { loaded: false, signedToday: false, streakDay: 0, nextReward: 0, balance: null },
     // 数据导出半屏弹层：范围 + 类型 → 汇总 CSV（多条 GPX 打包在轨迹页多选；该入口 2026-10-30 起临时关闭）
@@ -67,7 +68,7 @@ Page({
     }
     // 游客态：展示登录引导（登录由用户点击触发）
     if (!app.globalData.loggedIn) {
-      this.setData({ loggedIn: false, user: null, loading: false });
+      this.setData({ loggedIn: false, user: null, loading: false, isMember: false });
       return;
     }
     try {
@@ -110,10 +111,21 @@ Page({
           balance: points ? points.balance : null,
         },
       });
+      this.loadMembership();
     } catch (e) {
       console.error('加载用户信息失败', e);
     } finally {
       this.setData({ loading: false });
+    }
+  },
+
+  /** 头像会员徽标：只认付费会员（/member/entitlements 的 memberActive） */
+  async loadMembership() {
+    try {
+      const e = await api.get('/member/entitlements');
+      this.setData({ isMember: !!(e && e.memberActive) });
+    } catch (err) {
+      this.setData({ isMember: false });
     }
   },
 

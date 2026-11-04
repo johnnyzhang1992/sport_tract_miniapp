@@ -59,9 +59,13 @@ test('QG3 下方菜单移除四入口，只留轨迹合集/足迹/数据导入/�
   }
 });
 
-test('QG4 会员状态副标题随入口撤除，不再白拉 /member/entitlements', () => {
+test('QG4 会员状态副标题随入口撤除；权益接口只服务头像徽标', () => {
   assert.ok(!wxml.includes('memberHint'));
   assert.ok(!wxml.includes('member-hint'));
   assert.ok(!js.includes('memberHint'));
-  assert.ok(!js.includes("'/member/entitlements'"), '「我的」页不再为副标题拉权益接口');
+  assert.match(
+    js,
+    /api\.get\('\/member\/entitlements'\)/,
+    '头像会员徽标仍需读 memberActive，但只保存布尔，不再拼副标题',
+  );
 });

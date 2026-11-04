@@ -91,6 +91,7 @@ function avatarOf(r) {
   return {
     avatarSrc: r.avatarUrl || (r.avatarPreset ? `/assets/avatars/${r.avatarPreset}.png` : ''),
     avatarText: initialOf(r.name, '迹'),
+    member: !!r.memberActive,
   };
 }
 

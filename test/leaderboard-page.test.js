@@ -193,3 +193,25 @@ test('LB7 占位圆首字按码点取：emoji 开头的昵称不出乱码方块'
   assert.equal(p.data.board.top[0].avatarText, '🏃', '码元下标会留下半个代理对');
   assert.equal(p.data.board.top[1].avatarText, '迹', '空昵称走缺省字');
 });
+
+const read = (rel) => require('node:fs').readFileSync(require('node:path').join(__dirname, '..', rel), 'utf8');
+
+test('LB-MB 会员徽标：top / me / best 行按 memberActive 挂 member 标记', async () => {
+  const row = (over) => Object.assign({
+    rank: 1, name: '会员甲', gender: 1, avatarUrl: '', avatarPreset: '',
+    distanceKm: 1, count: 1, durationSec: 60, paceSecPerKm: 60, memberActive: false,
+  }, over);
+  boardRespond = () => Promise.resolve({
+    top: [row({ memberActive: true })],
+    me: row({ memberActive: false }),
+    best: [best('farthest', 1000, { memberActive: true })],
+  });
+  const p = makePage();
+  await p.fetchBoard();
+  assert.equal(p.data.board.top[0].member, true);
+  assert.equal(p.data.board.me.member, false);
+  assert.equal(p.data.board.best[0].member, true);
+  const wxml = read('miniprogram/pages/leaderboard/leaderboard.wxml');
+  assert.match(wxml, /class="rank-avatar-wrap"[\s\S]*member-badge\.png/, 'TOP10 头像挂徽标');
+  assert.match(wxml, /class="me-avatar-wrap"[\s\S]*member-badge\.png/, '我的排名头像挂徽标');
+});
