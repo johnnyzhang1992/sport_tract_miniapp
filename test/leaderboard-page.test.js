@@ -15,6 +15,7 @@ const apiCalls = [];
 let boardRespond = () => Promise.resolve({ top: [], me: null, best: [] });
 let countsRespond = () => Promise.resolve({ types: [] });
 let regionsRespond = () => Promise.resolve({ provinces: [], cities: [], totalUsers: 0 });
+let profileRespond = () => Promise.resolve({ uid: 1004, nickname: '会员甲', avatarUrl: '', avatarPreset: '', joinDays: 85, memberActive: true, total: { count: 82, distance: 399145, duration: 279000, elevationGain: 4860, calories: 26223, typeCount: 3 }, footprint: { provinceCount: 2, cityCount: 3 } });
 const fakeApi = {
   get(p) {
     apiCalls.push(p);
@@ -22,6 +23,7 @@ const fakeApi = {
     if (p.startsWith('/stats/leaderboard-type-counts')) return countsRespond(p);
     if (p.startsWith('/stats/leaderboard-regions')) return regionsRespond(p);
     if (p.startsWith('/geo/china-map')) return Promise.resolve({ type: 'FeatureCollection', features: [] });
+    if (p.startsWith('/stats/profile/')) return profileRespond(p);
     return boardRespond(p);
   },
   // 页面改为走 api.getChinaMap（进程内缓存），测试桩保持同一路径计数
@@ -214,4 +216,69 @@ test('LB-MB 会员徽标：top / me / best 行按 memberActive 挂 member 标记
   const wxml = read('miniprogram/pages/leaderboard/leaderboard.wxml');
   assert.match(wxml, /class="rank-avatar-wrap"[\s\S]*member-badge\.png/, 'TOP10 头像挂徽标');
   assert.match(wxml, /class="me-avatar-wrap"[\s\S]*member-badge\.png/, '我的排名头像挂徽标');
+});
+
+
+test('LB-UP 点榜单用户：拉公开资料并格式化累计八项', async () => {
+  const row = {
+    rank: 1, uid: 1004, name: '会员甲', gender: 1, avatarUrl: '', avatarPreset: 'p1',
+    distanceKm: 75.15, count: 19, durationSec: 3600, paceSecPerKm: 300, memberActive: true,
+  };
+  boardRespond = () => Promise.resolve({ top: [row], me: null, best: [] });
+  profileRespond = () => Promise.resolve({
+    uid: 1004, nickname: '会员甲', avatarUrl: '', avatarPreset: 'p1', joinDays: 85, memberActive: true,
+    total: { count: 82, distance: 399145, duration: 279000, elevationGain: 4860, calories: 26223, typeCount: 3 },
+    footprint: { provinceCount: 2, cityCount: 3 },
+  });
+  const p = makePage();
+  await p.fetchBoard();
+  assert.equal(p.data.board.top[0].uid, 1004, '榜单行要带公开 uid');
+  const wxml = read('miniprogram/pages/leaderboard/leaderboard.wxml');
+  assert.match(wxml, /class="rank-row"[\s\S]{0,200}data-uid="\{\{item\.uid\}\}"[\s\S]{0,80}bindtap="openUserSheet"/, '榜单行点击要带 uid');
+
+  apiCalls.length = 0;
+  await p.openUserSheet({ currentTarget: { dataset: { uid: 1004 } } });
+  assert.deepEqual(apiCalls, ['/stats/profile/1004']);
+  const s = p.data.userSheet;
+  assert.equal(s.visible, true);
+  assert.equal(s.loading, false);
+  assert.equal(s.name, '会员甲');
+  assert.equal(s.uid, 1004);
+  assert.equal(s.joinDays, 85);
+  assert.equal(s.member, true);
+  assert.equal(s.avatarSrc, '/assets/avatars/p1.png');
+  assert.deepEqual(s.stats, {
+    trackCount: 82,
+    distanceText: '399.15',
+    provinceCount: 2,
+    cityCount: 3,
+    durationText: '77.5小时',
+    elevationText: '4,860',
+    caloriesText: '26,223',
+    typeCount: 3,
+  });
+
+  p.closeUserSheet();
+  assert.equal(p.data.userSheet.visible, false);
+});
+
+test('LB-UP2 资料加载失败可重试；八项顺序与统计页累计卡一致', async () => {
+  profileRespond = () => Promise.reject(new Error('down'));
+  const p = makePage();
+  await p.openUserSheet({ currentTarget: { dataset: { uid: 1004 } } });
+  assert.equal(p.data.userSheet.error, true);
+  assert.equal(p.data.userSheet.loading, false);
+
+  profileRespond = () => Promise.resolve({
+    uid: 1004, nickname: '会员甲', avatarUrl: '', avatarPreset: '', joinDays: 1, memberActive: false,
+    total: { count: 1, distance: 1000, duration: 60, elevationGain: 0, calories: 0, typeCount: 1 },
+    footprint: { provinceCount: 1, cityCount: 1 },
+  });
+  await p.retryUserSheet();
+  assert.equal(p.data.userSheet.error, false);
+  assert.equal(p.data.userSheet.visible, true);
+
+  const w = read('miniprogram/pages/leaderboard/leaderboard.wxml');
+  const labels = [...w.matchAll(/class="u-label">([^<]+)</g)].map((m) => m[1]);
+  assert.deepEqual(labels, ['轨迹', '公里', '点亮省份', '点亮城市', '时长', '爬升 m', '千卡', '运动类型']);
 });

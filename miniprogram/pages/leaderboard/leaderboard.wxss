@@ -713,3 +713,125 @@
   font-size: 28rpx;
   width: 320rpx;
 }
+
+/* 榜单行可点开资料：轻灰反馈 */
+.rank-row-hover {
+  background: #fafbfc;
+}
+
+/* 榜单用户资料半屏 */
+.u-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: flex-end;
+}
+.u-sheet {
+  width: 100%;
+  box-sizing: border-box;
+  background: #fff;
+  border-radius: 24rpx 24rpx 0 0;
+  padding: 28rpx 28rpx calc(28rpx + env(safe-area-inset-bottom));
+  animation: u-sheet-up 0.2s ease;
+}
+@keyframes u-sheet-up {
+  from { transform: translateY(24rpx); opacity: 0.6; }
+  to { transform: none; opacity: 1; }
+}
+.u-tip {
+  text-align: center;
+  padding: 80rpx 0;
+  color: #8a93a6;
+  font-size: 26rpx;
+}
+.u-tip-tap {
+  color: #2b6cf6;
+}
+.u-head {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+}
+.u-avatar-wrap {
+  position: relative;
+  flex: none;
+  width: 96rpx;
+  height: 96rpx;
+}
+.u-avatar {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 50%;
+  background: #f2f3f5;
+}
+.u-avatar-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: #64748f;
+  font-size: 36rpx;
+  font-weight: 600;
+}
+.u-badge {
+  width: 32rpx;
+  height: 32rpx;
+  bottom: 8rpx;
+}
+.u-info {
+  flex: 1;
+  min-width: 0;
+}
+.u-name {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #1f2329;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.u-sub {
+  margin-top: 6rpx;
+  font-size: 23rpx;
+  color: #8a93a6;
+}
+.u-close {
+  flex: none;
+  width: 56rpx;
+  height: 56rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8a93a6;
+  font-size: 30rpx;
+}
+.u-section-title {
+  margin: 28rpx 0 14rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+.u-stats {
+  display: flex;
+  flex-wrap: wrap;
+  background: #f7f8fa;
+  border-radius: 16rpx;
+  padding: 12rpx 0;
+}
+.u-stat {
+  width: 25%;
+  text-align: center;
+  padding: 12rpx 0;
+}
+.u-num {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #2b6cf6;
+}
+.u-label {
+  margin-top: 4rpx;
+  font-size: 22rpx;
+  color: #667080;
+}

@@ -2,7 +2,7 @@
  * 运动榜（新 tab）：全平台点亮地图 + 按运动类型/省份排行
  * - 地图：canvas 2d 直绘 GeoJSON（utils/map-draw），点亮省按轨迹数上色，点击省份弹窗下钻城市
  *   支持单指拖拽平移、双指捏合缩放（主图与省份弹窗地图均可），缩放后出现"重置地图"
- * - 排行：类型 chips + 省份选择，TOP10 昵称模糊（服务端处理，不可点击），底部当前用户真实排名
+ * - 排行：类型 chips + 省份选择，TOP10 可点开公开资料半屏，底部当前用户真实排名
  *   chips 顺序按 /stats/leaderboard-type-counts 的上榜轨迹数降序（同数保持 config 顺序），
  *   仅首次进入拉取：重拉会让用户选到一半的 chips 跳位；拉取失败则退回 config 顺序
  *   默认选中排第一的那个类型；用户点过之后（_typeTouched）重排才保住他选的那一个
@@ -10,7 +10,7 @@
 const drawGeoMap = require('../../utils/map-draw');
 const loading = require('../../utils/loading');
 const { applyTypeCounts } = require('../../utils/leaderboard-types.js');
-const { formatDuration, initialOf } = require('../../utils/format.js');
+const { formatDuration, formatDurationStat, formatCompactCn, formatThousands, initialOf } = require('../../utils/format.js');
 
 const ACTIVITY_TYPES = require('../../config/index').ACTIVITY_TYPES;
 
@@ -129,6 +129,8 @@ Page({
   data: {
     loggedIn: false,
     loading: true,
+    // 点击榜单用户 → 公开资料半屏（白名单字段 + 累计八项）
+    userSheet: { visible: false, loading: true, error: false, uid: 0, name: '', avatarSrc: '', avatarText: '', member: false, joinDays: 0, stats: null },
     // 点亮地图
     provinceCount: 0,
     cityCount: 0,
@@ -711,6 +713,68 @@ Page({
 
   onPullDownRefresh() {
     this.refresh().finally(() => wx.stopPullDownRefresh());
+  },
+
+  /** 榜单用户资料半屏：点行打开，拉公开资料（只含白名单字段 + 累计八项） */
+  openUserSheet(e) {
+    const uid = Number(e.currentTarget.dataset.uid);
+    if (!uid) return;
+    this._sheetSeq = (this._sheetSeq || 0) + 1;
+    this.setData({
+      userSheet: {
+        visible: true, loading: true, error: false, uid,
+        name: '', avatarSrc: '', avatarText: '', member: false, joinDays: 0, stats: null,
+      },
+    });
+    return this.fetchUserSheet(uid);
+  },
+
+  async fetchUserSheet(uid) {
+    const seq = this._sheetSeq;
+    try {
+      const d = await getApp().globalData.api.get(`/stats/profile/${uid}`);
+      if (seq !== this._sheetSeq) return;
+      const t = (d && d.total) || {};
+      const fp = (d && d.footprint) || {};
+      const dur = formatDurationStat(t.duration || 0);
+      const name = (d && d.nickname) || '运动用户';
+      this.setData({
+        userSheet: {
+          visible: true, loading: false, error: false,
+          uid: Number(d && d.uid) || uid,
+          name,
+          avatarSrc: (d && d.avatarUrl) || (d && d.avatarPreset ? `/assets/avatars/${d.avatarPreset}.png` : ''),
+          avatarText: initialOf(name, '迹'),
+          member: !!(d && d.memberActive),
+          joinDays: Number(d && d.joinDays) || 0,
+          stats: {
+            trackCount: t.count || 0,
+            distanceText: formatCompactCn((t.distance || 0) / 1000),
+            provinceCount: fp.provinceCount || 0,
+            cityCount: fp.cityCount || 0,
+            durationText: `${dur.num}${dur.unit}`,
+            elevationText: formatThousands(t.elevationGain || 0),
+            caloriesText: formatThousands(t.calories || 0),
+            typeCount: t.typeCount || 0,
+          },
+        },
+      });
+    } catch (err) {
+      if (seq !== this._sheetSeq) return;
+      this.setData({ 'userSheet.loading': false, 'userSheet.error': true });
+    }
+  },
+
+  retryUserSheet() {
+    const uid = this.data.userSheet.uid;
+    if (!uid) return;
+    this.setData({ 'userSheet.loading': true, 'userSheet.error': false });
+    return this.fetchUserSheet(uid);
+  },
+
+  closeUserSheet() {
+    this._sheetSeq = (this._sheetSeq || 0) + 1;
+    this.setData({ 'userSheet.visible': false });
   },
 
   onShareAppMessage() {
