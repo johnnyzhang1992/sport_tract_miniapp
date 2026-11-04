@@ -226,7 +226,7 @@ test('LB-UP 点榜单用户：拉公开资料并格式化累计八项', async ()
   };
   boardRespond = () => Promise.resolve({ top: [row], me: null, best: [] });
   profileRespond = () => Promise.resolve({
-    uid: 1004, nickname: '会员甲', avatarUrl: '', avatarPreset: 'p1', joinDays: 85, memberActive: true,
+    uid: 1004, nickname: '会员甲', avatarUrl: '', avatarLargeUrl: 'https://oss.example.com/u/a-large.jpg', avatarPreset: 'p1', joinDays: 85, memberActive: true,
     total: { count: 82, distance: 399145, duration: 279000, elevationGain: 4860, calories: 26223, typeCount: 3 },
     footprint: { provinceCount: 2, cityCount: 3 },
   });
@@ -247,6 +247,7 @@ test('LB-UP 点榜单用户：拉公开资料并格式化累计八项', async ()
   assert.equal(s.joinDays, 85);
   assert.equal(s.member, true);
   assert.equal(s.avatarSrc, '/assets/avatars/p1.png');
+  assert.equal(s.avatarLargeUrl, 'https://oss.example.com/u/a-large.jpg');
   assert.deepEqual(s.stats, {
     trackCount: 82,
     distanceText: '399.15',
@@ -258,8 +259,20 @@ test('LB-UP 点榜单用户：拉公开资料并格式化累计八项', async ()
     typeCount: 3,
   });
 
+  p.previewSheetAvatar();
+  assert.equal(p.data.avatarViewer.visible, true);
+  assert.equal(p.data.avatarViewer.src, 'https://oss.example.com/u/a-large.jpg');
+  p.closeAvatarViewer();
+  assert.equal(p.data.avatarViewer.visible, false);
+
+  p.previewSheetAvatar();
   p.closeUserSheet();
   assert.equal(p.data.userSheet.visible, false);
+  assert.equal(p.data.avatarViewer.visible, false, '关资料卡也要收起大图');
+
+  const w = read('miniprogram/pages/leaderboard/leaderboard.wxml');
+  assert.match(w, /class="u-avatar-wrap"[^>]*bindtap="previewSheetAvatar"/, '点资料卡头像开大图');
+  assert.match(w, /class="avatar-viewer" wx:if="\{\{avatarViewer\.visible\}\}"/, '全屏预览层存在');
 });
 
 test('LB-UP2 资料加载失败可重试；八项顺序与统计页累计卡一致', async () => {

@@ -157,7 +157,7 @@
       <view wx:elif="{{userSheet.error}}" class="u-tip u-tip-tap" bindtap="retryUserSheet">加载失败，点击重试</view>
       <block wx:else>
         <view class="u-head">
-          <view class="u-avatar-wrap">
+          <view class="u-avatar-wrap" hover-class="u-avatar-hover" bindtap="previewSheetAvatar">
             <image wx:if="{{userSheet.avatarSrc}}" class="u-avatar" src="{{userSheet.avatarSrc}}" mode="aspectFill" />
             <view wx:else class="u-avatar u-avatar-text">{{userSheet.avatarText}}</view>
             <image wx:if="{{userSheet.member}}" class="avatar-member-badge u-badge" src="/assets/icons/member-badge.png" mode="aspectFit" />
@@ -182,6 +182,11 @@
         </view>
       </block>
     </view>
+  </view>
+
+  <!-- 头像大图预览：全屏黑底，点任意处关闭 -->
+  <view class="avatar-viewer" wx:if="{{avatarViewer.visible}}" bindtap="closeAvatarViewer" catchtouchmove="noop">
+    <image class="avatar-viewer-img" src="{{avatarViewer.src}}" mode="aspectFit" />
   </view>
 
   <!-- 地图全屏查看（置于省份弹窗之前：省份弹窗可叠加在其上） -->

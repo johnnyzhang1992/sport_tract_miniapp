@@ -130,7 +130,9 @@ Page({
     loggedIn: false,
     loading: true,
     // 点击榜单用户 → 公开资料半屏（白名单字段 + 累计八项）
-    userSheet: { visible: false, loading: true, error: false, uid: 0, name: '', avatarSrc: '', avatarText: '', member: false, joinDays: 0, stats: null },
+    userSheet: { visible: false, loading: true, error: false, uid: 0, name: '', avatarSrc: '', avatarLargeUrl: '', avatarText: '', member: false, joinDays: 0, stats: null },
+    // 头像大图预览（全屏黑底，点任意处关闭）
+    avatarViewer: { visible: false, src: '' },
     // 点亮地图
     provinceCount: 0,
     cityCount: 0,
@@ -723,7 +725,7 @@ Page({
     this.setData({
       userSheet: {
         visible: true, loading: true, error: false, uid,
-        name: '', avatarSrc: '', avatarText: '', member: false, joinDays: 0, stats: null,
+        name: '', avatarSrc: '', avatarLargeUrl: '', avatarText: '', member: false, joinDays: 0, stats: null,
       },
     });
     return this.fetchUserSheet(uid);
@@ -744,6 +746,7 @@ Page({
           uid: Number(d && d.uid) || uid,
           name,
           avatarSrc: (d && d.avatarUrl) || (d && d.avatarPreset ? `/assets/avatars/${d.avatarPreset}.png` : ''),
+          avatarLargeUrl: (d && d.avatarLargeUrl) || '',
           avatarText: initialOf(name, '迹'),
           member: !!(d && d.memberActive),
           joinDays: Number(d && d.joinDays) || 0,
@@ -774,7 +777,19 @@ Page({
 
   closeUserSheet() {
     this._sheetSeq = (this._sheetSeq || 0) + 1;
-    this.setData({ 'userSheet.visible': false });
+    this.setData({ 'userSheet.visible': false, 'avatarViewer.visible': false });
+  },
+
+  /** 点头像看大图：优先 800px 档，没有则用当前头像（预设头像/第三方头像） */
+  previewSheetAvatar() {
+    const s = this.data.userSheet;
+    const src = s.avatarLargeUrl || s.avatarSrc;
+    if (!src) return;
+    this.setData({ avatarViewer: { visible: true, src } });
+  },
+
+  closeAvatarViewer() {
+    this.setData({ 'avatarViewer.visible': false });
   },
 
   onShareAppMessage() {
