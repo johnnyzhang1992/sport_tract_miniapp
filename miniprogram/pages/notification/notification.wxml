@@ -7,7 +7,10 @@
   </view>
   <view wx:else class="card notice-card">
     <view class="notice-title">{{notice.title}}</view>
-    <view class="notice-date">{{notice.dateText}}</view>
+    <view class="notice-meta">
+      <text class="notice-tag">{{notice.categoryText}}</text>
+      <text class="notice-date">{{notice.dateText}}</text>
+    </view>
     <view class="notice-content">{{notice.content}}</view>
   </view>
 </view>

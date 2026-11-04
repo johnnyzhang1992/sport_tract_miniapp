@@ -19,10 +19,11 @@ const fakeApi = {
 const apiPath = require.resolve('../miniprogram/services/api.js');
 require.cache[apiPath] = { id: apiPath, filename: apiPath, loaded: true, exports: fakeApi, children: [], paths: [] };
 
+const navTitles = [];
 global.wx = {
   showLoading: () => {},
   hideLoading: () => {},
-  setNavigationBarTitle: () => {},
+  setNavigationBarTitle: (o) => navTitles.push(o && o.title),
 };
 
 let session = true;
@@ -48,6 +49,7 @@ function makePage() {
 
 function resetEnv() {
   apiCalls.length = 0;
+  navTitles.length = 0;
   session = true;
   appStub.globalData.notificationDirty = false;
   respond = () => Promise.resolve({});
@@ -57,13 +59,22 @@ test('ND1 登录：加载详情后上报已读并置 notificationDirty', async (
   resetEnv();
   respond = (p) =>
     p === '/notifications/n1'
-      ? Promise.resolve({ id: 'n1', title: '停机维护', content: '第一行\n第二行', publishedAt: Date.now() })
+      ? Promise.resolve({
+        id: 'n1',
+        title: '停机维护',
+        content: '第一行\n第二行',
+        category: 'member',
+        categoryText: '会员服务',
+        publishedAt: Date.now(),
+      })
       : Promise.resolve({ unreadCount: 0 });
   const page = makePage();
   page.onLoad({ id: 'n1' });
   await flush();
 
   assert.equal(page.data.notice.content, '第一行\n第二行', '换行原样保留');
+  assert.equal(page.data.notice.categoryText, '会员服务', '详情保留分类文案');
+  assert.deepEqual(navTitles, ['会员服务'], '导航标题跟着分类走');
   assert.ok(apiCalls.some((c) => c.method === 'POST' && c.path === '/notifications/n1/read'));
   assert.equal(appStub.globalData.notificationDirty, true, '读完通知要让首页补拉');
 });

@@ -3,7 +3,6 @@ const loading = require('../../utils/loading');
 const { initialOf } = require('../../utils/format.js');
 const config = require('../../config/index');
 const { ensureLogin } = require('../../utils/login-gate');
-const { SUMMARY_RANGES, buildSummaryQuery, downloadExport, shareExportFile, fileStamp } = require('../../utils/export-file');
 
 /** 头像签名 URL 缓存（OSS 签名 URL 每次生成都不同，导致 image 无法缓存、每次进入重复下载）
  * 基础 URL（去签名参数）没变 → 复用缓存签名 URL（微信 image 缓存命中，不重复请求 CDN） */
@@ -21,13 +20,6 @@ Page({
     // 签到条（登录后显示）：未签点击直接签到，已签点击进积分页
     signin: { loaded: false, signedToday: false, streakDay: 0, nextReward: 0, balance: null },
     // 数据导出半屏弹层：范围 + 类型 → 汇总 CSV（多条 GPX 打包在轨迹页多选；该入口 2026-10-30 起临时关闭）
-    exportVisible: false,
-    exportRange: 'all',
-    exportType: '',
-    exportRanges: SUMMARY_RANGES,
-    exportTypes: [{ type: '', label: '全部类型' }].concat(
-      config.ACTIVITY_TYPES.map((t) => ({ type: t.type, label: t.label })),
-    ),
   },
 
   onShow() {
@@ -192,53 +184,11 @@ Page({
   /** 导出弹层内容区吞掉点击（防误触遮罩关闭） */
   noop() {},
 
-  /** 数据导出：游客先登录（没数据可导），已登录开范围弹层 */
-  async goExport() {
-    if (!this.data.loggedIn) {
-      await ensureLogin('登录后才能导出你的运动记录。');
-      return;
-    }
-    this.setData({ exportVisible: true, exportRange: 'all', exportType: '' });
+  /** 数据导出：跳独立导出页（范围/类型/进度都在导出页内完成） */
+  goExport() {
+    wx.navigateTo({ url: '/pages/export/export' });
   },
 
-  closeExport() {
-    this.setData({ exportVisible: false });
-  },
-
-  onExportRange(e) {
-    this.setData({ exportRange: e.currentTarget.dataset.key });
-  },
-
-  onExportType(e) {
-    this.setData({ exportType: e.currentTarget.dataset.type });
-  },
-
-  /** 导出确认：下载（loading 中）→ 收 loading → 拉起分享。失败文案来自后端（超限/频控）原样透出 */
-  async onExportConfirm() {
-    if (this._exporting) return;
-    this._exporting = true;
-    const fileName = `运动记录_${fileStamp()}.csv`;
-    let filePath = '';
-    try {
-      loading.show('生成中…');
-      const query = buildSummaryQuery(this.data.exportRange, this.data.exportType);
-      filePath = await downloadExport(`/activities/export/summary${query}`, fileName);
-    } catch (e) {
-      loading.hide();
-      wx.showToast({ title: (e && e.message) || '导出失败', icon: 'none' });
-      this._exporting = false;
-      return;
-    }
-    loading.hide();
-    this.setData({ exportVisible: false });
-    try {
-      await shareExportFile(filePath, fileName);
-      wx.showToast({ title: '已导出', icon: 'success' });
-    } catch (e) {
-      wx.showToast({ title: (e && e.message) || '分享未完成', icon: 'none' });
-    }
-    this._exporting = false;
-  },
 
   /** 足迹地图（2026-11-04 从 tabBar 移到个人中心） */
   goFootprints() {

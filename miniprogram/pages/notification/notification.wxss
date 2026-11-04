@@ -17,7 +17,15 @@
 }
 .notice-card { padding: 32rpx 28rpx; }
 .notice-title { font-size: 32rpx; font-weight: 600; color: #1f2329; line-height: 1.4; }
-.notice-date { margin-top: 12rpx; font-size: 24rpx; color: #667080; }
+.notice-meta { display: flex; align-items: center; gap: 12rpx; margin-top: 12rpx; }
+.notice-tag {
+  padding: 2rpx 10rpx;
+  border-radius: 6rpx;
+  background: #f2f4f7;
+  color: #5b6475;
+  font-size: 20rpx;
+}
+.notice-date { font-size: 24rpx; color: #667080; }
 .notice-content {
   margin-top: 28rpx;
   font-size: 28rpx;

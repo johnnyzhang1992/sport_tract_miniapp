@@ -1,0 +1,35 @@
+<view wx:if="{{visible}}" class="ms-mask" catchtap="onClose" catchtouchmove="noop"></view>
+<view wx:if="{{visible}}" class="ms-sheet" catchtap="noop">
+  <view class="ms-head">
+    <text class="ms-title">消息订阅</text>
+    <view class="ms-close" hover-class="ms-hover" hover-stay-time="80" bindtap="onClose">×</view>
+  </view>
+
+  <view wx:if="{{loading}}" class="ms-state">加载中…</view>
+  <view wx:elif="{{failed}}" class="ms-state">
+    <view class="ms-state-text">订阅信息加载失败</view>
+    <view class="ms-retry" hover-class="ms-hover" hover-stay-time="80" bindtap="onRetry">重试</view>
+  </view>
+  <view wx:elif="{{items.length === 0}}" class="ms-state">暂无可订阅的消息</view>
+  <view wx:else class="ms-list">
+    <view wx:for="{{items}}" wx:key="key" class="ms-row">
+      <view class="ms-main">
+        <view class="ms-label">{{item.label}}</view>
+        <view class="ms-desc">{{item.description}}</view>
+      </view>
+      <view
+        wx:if="{{item.subscribed}}"
+        class="ms-action on"
+      >已订阅</view>
+      <view
+        wx:else
+        class="ms-action {{busy === item.key ? 'off' : ''}}"
+        hover-class="ms-hover"
+        hover-stay-time="80"
+        data-key="{{item.key}}"
+        data-template="{{item.templateId}}"
+        bindtap="onSubscribeTap"
+      >{{busy === item.key ? '处理中…' : '订阅'}}</view>
+    </view>
+  </view>
+</view>

@@ -1,4 +1,4 @@
-<view class="container {{selectMode ? 'container-select' : ''}}">
+<view class="container">
   <!-- 类型筛选（t-tabs） -->
   <t-tabs
     class="filter-tabs"
@@ -51,11 +51,6 @@
       bindtap="onToggleMode"
     >
       <image class="mode-icon" src="/assets/icons/lucide-layout-grid{{viewMode === 'grid' ? '-blue' : ''}}.png" mode="aspectFit" />
-    </view>
-    <!-- 多选入口（批量导出 GPX）：2026-11-03 按会员权益恢复（spec §8）。
-         判据是服务端下发的 canExportBundle；非会员点它是引导弹窗，不是静默无反应 -->
-    <view class="mode-btn select-toggle {{selectMode ? 'select-toggle-on' : ''}}" hover-class="mode-btn-hover" bindtap="onToggleSelect">
-      <text>{{selectMode ? '取消' : '多选'}}</text>
     </view>
     </view>
   </view>
@@ -141,7 +136,6 @@
             bindtap="onTapItem"
           >
             <view class="list-row">
-              <view class="sel-dot {{item.checked ? 'sel-dot-on' : ''}}" wx:if="{{selectMode}}">✓</view>
               <view class="list-icon-wrap">
                 <image class="list-icon" src="{{item.iconImg}}" mode="aspectFit" />
               </view>
@@ -184,7 +178,6 @@
           bindtap="onTapItem"
         >
           <view class="map-wrap">
-            <view class="sel-dot map-sel-dot {{item.checked ? 'sel-dot-on' : ''}}" wx:if="{{selectMode}}">✓</view>
             <track-thumb
               wx:if="{{item.previewPoints.length >= 2}}"
               class="track-thumb"
@@ -239,14 +232,5 @@
 
   <view wx:if="{{loading && items.length > 0}}" class="text-muted loading-tip">加载中…</view>
   <view wx:if="{{!hasMore && items.length > 0}}" class="text-muted loading-tip">没有更多了</view>
-
-  <!-- 多选底部操作栏：固定底 + 安全区留白；列表底部让位见 .container-select -->
-  <view class="select-bar" wx:if="{{selectMode}}">
-    <text class="select-bar-count">已选 {{selectedCount}} 条</text>
-    <view class="select-bar-btns">
-      <view class="select-cancel" hover-class="select-btn-hover" bindtap="onToggleSelect">取消</view>
-      <view class="select-export {{selectedCount ? '' : 'select-export-off'}}" hover-class="select-btn-hover" bindtap="onExportSelected">导出 GPX</view>
-    </view>
-  </view>
 
 </view>

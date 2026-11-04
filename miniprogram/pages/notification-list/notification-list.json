@@ -1,4 +1,7 @@
 {
   "navigationBarTitleText": "消息中心",
-  "enablePullDownRefresh": true
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "message-subscribe": "/components/message-subscribe/message-subscribe"
+  }
 }

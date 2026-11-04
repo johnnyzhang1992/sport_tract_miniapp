@@ -1,21 +1,84 @@
 <view class="container">
-  <view wx:if="{{loading && items.length === 0}}" class="state">加载中…</view>
-  <view wx:elif="{{failed && items.length === 0}}" class="state">
-    <view class="state-text">消息加载失败</view>
-    <button class="retry-btn" bindtap="onRetry">重试</button>
+  <!-- 搜索 -->
+  <view class="topbar">
+    <view class="search-box">
+      <image class="search-icon" src="/assets/icons/lucide-search.png" mode="aspectFit" />
+      <input
+        class="search-input"
+        value="{{keyword}}"
+        placeholder="搜索消息"
+        placeholder-class="search-placeholder"
+        confirm-type="search"
+        maxlength="50"
+        bindinput="onKeywordInput"
+        bindconfirm="onSearch"
+      />
+      <view wx:if="{{keyword}}" class="search-clear" bindtap="onClearKeyword">×</view>
+    </view>
   </view>
-  <view wx:elif="{{items.length === 0}}" class="state">暂无消息</view>
-  <view wx:else class="card msg-list">
-    <!-- 一键全读（2026-10-29）：有未读才出现；左侧未读数贴边站，右侧按钮 -->
-    <view class="readall-row" wx:if="{{hasUnread}}">
-      <text class="readall-count">{{unreadText}}</text>
+
+  <!-- 消息分类（只列有数据的分类，由服务端下发） -->
+  <scroll-view class="cat-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+    <view class="cat-row">
       <view
+        class="cat-chip {{category === '' ? 'on' : ''}}"
+        data-key=""
+        bindtap="onCategoryTap"
+      >全部</view>
+      <view
+        wx:for="{{categories}}"
+        wx:key="key"
+        class="cat-chip {{category === item.key ? 'on' : ''}}"
+        data-key="{{item.key}}"
+        bindtap="onCategoryTap"
+      >
+        <text>{{item.label}}</text>
+        <view wx:if="{{item.unreadCount > 0}}" class="cat-dot"></view>
+      </view>
+    </view>
+  </scroll-view>
+
+  <!-- 消息通知列工具行：只看未读 / 未读数 / 全部已读 / 消息订阅 -->
+  <view class="toolbar">
+    <view
+      wx:if="{{loggedIn}}"
+      class="unread-toggle {{unreadOnly ? 'on' : ''}}"
+      hover-class="link-hover"
+      hover-stay-time="80"
+      bindtap="onToggleUnread"
+    >
+      <view class="toggle-check">{{unreadOnly ? '✓' : ''}}</view>
+      <text>只看未读</text>
+    </view>
+    <view class="toolbar-right">
+      <text wx:if="{{loggedIn}}" class="readall-count">{{unreadText}}</text>
+      <view
+        wx:if="{{loggedIn && hasUnread}}"
         class="readall-btn {{readingAll ? 'off' : ''}}"
         hover-class="readall-hover"
         hover-stay-time="80"
         bindtap="onReadAll"
       >{{readingAll ? '处理中…' : '全部已读'}}</view>
+      <view class="subscribe-link" hover-class="link-hover" hover-stay-time="80" bindtap="openSubscribe">消息订阅</view>
     </view>
+  </view>
+
+  <view wx:if="{{loading && items.length === 0}}" class="state">加载中…</view>
+  <view wx:elif="{{failed && items.length === 0}}" class="state">
+    <view class="state-text">消息加载失败</view>
+    <button class="retry-btn" bindtap="onRetry">重试</button>
+  </view>
+  <view wx:elif="{{items.length === 0}}" class="state">
+    <view class="state-text">{{emptyText}}</view>
+    <view
+      wx:if="{{q || category || unreadOnly}}"
+      class="clear-filter"
+      hover-class="link-hover"
+      hover-stay-time="80"
+      bindtap="onClearFilters"
+    >清除筛选</view>
+  </view>
+  <view wx:else class="card msg-list">
     <view
       wx:for="{{items}}"
       wx:key="id"
@@ -30,9 +93,23 @@
           <view wx:if="{{item.unread}}" class="msg-dot"></view>
           <view class="msg-title">{{item.title}}</view>
         </view>
-        <view class="msg-date">{{item.dateText}}</view>
+        <view class="msg-meta">
+          <text class="msg-tag">{{item.categoryText}}</text>
+          <text class="msg-date">{{item.dateText}}</text>
+        </view>
       </view>
       <view class="msg-arrow">›</view>
     </view>
   </view>
+
+  <message-subscribe
+    visible="{{subscribe.visible}}"
+    items="{{subscribe.items}}"
+    loading="{{subscribe.loading}}"
+    failed="{{subscribe.failed}}"
+    busy="{{subscribe.busy}}"
+    bind:close="closeSubscribe"
+    bind:subscribe="onSubscribeTap"
+    bind:retry="loadSubscriptions"
+  />
 </view>

@@ -13,35 +13,52 @@ const { getToken } = require('../services/storage');
 /** 单次批量 GPX 上限（与后端 EXPORT_GPX_MAX_ITEMS 一致，超限前端先拦，不发无效请求） */
 const GPX_MAX_ITEMS = 100;
 
-/** 导出范围选项（我的页弹层）：days 缺省 = 全部 */
-const SUMMARY_RANGES = [
+/** 导出范围（两张卡共用）：自定义需要同时给开始/结束日期 */
+const EXPORT_RANGES = [
   { key: 'all', label: '全部记录' },
-  { key: '30d', label: '最近 30 天', days: 30 },
-  { key: '90d', label: '最近 90 天', days: 90 },
+  { key: '30d', label: '近 30 天', days: 30 },
+  { key: '90d', label: '近 90 天', days: 90 },
+  { key: 'custom', label: '自定义' },
 ];
 
-/**
- * 纯函数：范围 key + 类型 → summary 接口 query 串（test 覆盖）。
- * 全部且不限类型给空串（URL 不带多余参数）。
- */
-function buildSummaryQuery(rangeKey, type, now = Date.now()) {
-  const range = SUMMARY_RANGES.find((r) => r.key === rangeKey);
-  const params = [];
-  if (range && range.days) params.push(`from=${now - range.days * 86400000}`);
-  if (type) params.push(`type=${encodeURIComponent(type)}`);
-  return params.length ? `?${params.join('&')}` : '';
+/** 'YYYY-MM-DD' → 东八区当天 00:00:00.000 / 23:59:59.999 的 ms；非法日期返回 null */
+function parseExportDate(text, endOfDay) {
+  const m = String(text || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return null;
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const d = Number(m[3]);
+  const start = Date.UTC(y, mo - 1, d) - 8 * 3600000;
+  const check = new Date(start + 8 * 3600000);
+  if (check.getUTCFullYear() !== y || check.getUTCMonth() + 1 !== mo || check.getUTCDate() !== d) return null;
+  return endOfDay ? start + 86400000 - 1 : start;
 }
 
 /**
- * 纯函数：勾选轨迹 id → gpx 接口 query 串。去重、超上限截断并标记 overflow
- * （调用方据此 toast，不静默丢数据）。
+ * 纯函数：范围档 + 自定义日期 → {from,to}（ms）。
+ * 固定档沿用 CSV 原来的「滚动窗口」口径；自定义按东八区自然日、结束日含当天。
+ * 非法输入抛带中文提示的 Error，调用方直接 toast。
  */
-function buildGpxQuery(ids) {
-  const uniq = [...new Set((ids || []).map((s) => String(s || '').trim()).filter(Boolean))];
-  if (!uniq.length) return { query: '', overflow: false };
-  const overflow = uniq.length > GPX_MAX_ITEMS;
-  const picked = overflow ? uniq.slice(0, GPX_MAX_ITEMS) : uniq;
-  return { query: `?ids=${picked.join(',')}`, overflow };
+function rangeParams(rangeKey, startDate, endDate, now = Date.now()) {
+  const range = EXPORT_RANGES.find((r) => r.key === rangeKey);
+  if (!range || range.key === 'all') return { from: null, to: null };
+  if (range.days) return { from: now - range.days * 86400000, to: null };
+  const from = parseExportDate(startDate, false);
+  const to = parseExportDate(endDate, true);
+  if (from == null || to == null) throw new Error('请选择开始和结束日期');
+  if (from > to) throw new Error('开始日期不能晚于结束日期');
+  return { from, to };
+}
+
+/** 纯函数：范围 + 类型 → 导出 query 串（CSV/GPX 共用）；全部且不限类型给空串 */
+function buildExportQuery(opts, now = Date.now()) {
+  const o = opts || {};
+  const { from, to } = rangeParams(o.rangeKey, o.startDate, o.endDate, now);
+  const params = [];
+  if (from != null) params.push(`from=${from}`);
+  if (to != null) params.push(`to=${to}`);
+  if (o.type) params.push(`type=${encodeURIComponent(o.type)}`);
+  return params.length ? `?${params.join('&')}` : '';
 }
 
 /**
@@ -140,34 +157,34 @@ async function downloadAndShare(apiPath, fileName) {
   return filePath;
 }
 
-/** 汇总 CSV 导出（我的页弹层入口） */
-function exportSummaryCsv(rangeKey, type) {
+/** 运动记录 CSV 导出（时间档/自定义 + 类型） */
+function exportRecordsCsv(opts) {
   return downloadAndShare(
-    `/activities/export/summary${buildSummaryQuery(rangeKey, type)}`,
+    `/activities/export/summary${buildExportQuery(opts)}`,
     `运动记录_${fileStamp()}.csv`,
   );
 }
 
-/** 多条轨迹 GPX 打包导出（轨迹页多选入口）；返回 { promise, overflow } 让调用方先提示截断 */
-function exportGpxZip(ids) {
-  const { query, overflow } = buildGpxQuery(ids);
-  return {
-    overflow,
-    promise: downloadAndShare(`/activities/export/gpx${query}`, `轨迹导出_${fileStamp()}.zip`),
-  };
+/** 轨迹记录 GPX 打包导出（时间档/自定义 + 类型，单次最多 100 条由后端兜底） */
+function exportTracksZip(opts) {
+  return downloadAndShare(
+    `/activities/export/gpx${buildExportQuery(opts)}`,
+    `轨迹导出_${fileStamp()}.zip`,
+  );
 }
 
 module.exports = {
   GPX_MAX_ITEMS,
-  SUMMARY_RANGES,
-  buildSummaryQuery,
-  buildGpxQuery,
+  EXPORT_RANGES,
+  parseExportDate,
+  rangeParams,
+  buildExportQuery,
   decodeErrorMessage,
   fileStamp,
   utf8Decode,
   downloadExport,
   shareExportFile,
   downloadAndShare,
-  exportSummaryCsv,
-  exportGpxZip,
+  exportRecordsCsv,
+  exportTracksZip,
 };

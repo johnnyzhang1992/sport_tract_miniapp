@@ -24,17 +24,20 @@ Page({
     loading.show('加载中…');
     try {
       const data = await api.get(`/notifications/${this._id}`);
+      const categoryText = data.categoryText || '系统通知';
       this.setData({
         notice: {
           id: data.id,
           title: data.title,
           content: data.content,
+          categoryText,
           dateText: this.fmtDate(data.publishedAt),
         },
         loading: false,
         failed: false,
         notFound: false,
       });
+      wx.setNavigationBarTitle({ title: categoryText });
       this.markRead();
     } catch (e) {
       this.setData({ loading: false, failed: true, notFound: e && e.statusCode === 404 });

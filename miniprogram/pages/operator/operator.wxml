@@ -1,0 +1,41 @@
+<view class="page">
+  <view wx:if="{{!loggedIn}}" class="gate">
+    <view class="gate-tip">登录后使用运营中心</view>
+    <button class="gate-btn" bindtap="onTapGate">微信登录</button>
+  </view>
+
+  <block wx:else>
+    <view wx:if="{{loading}}" class="tip">加载中…</view>
+    <view wx:elif="{{failed}}" class="tip tap" bindtap="onRetry">加载失败，点击重试</view>
+
+    <block wx:else>
+      <view wx:if="{{!authorized}}" class="tip">仅运营者可用此页面</view>
+
+      <block wx:else>
+        <!-- 数据概览：今日（实时）+ 昨日（完整自然日） -->
+        <view class="card stats-card" wx:if="{{summary}}">
+          <view class="stat-block">
+            <view class="stat-title">今日（实时）</view>
+            <view class="stat-grid">
+              <view class="stat"><view class="n">{{summary.today.uv}}</view><view class="l">UV</view></view>
+              <view class="stat"><view class="n">{{summary.today.pv}}</view><view class="l">PV</view></view>
+              <view class="stat"><view class="n">{{summary.today.newUsers}}</view><view class="l">新增用户</view></view>
+              <view class="stat"><view class="n">{{summary.today.tracksCreated}}</view><view class="l">新增轨迹</view></view>
+            </view>
+          </view>
+          <view class="stat-block">
+            <view class="stat-title">昨日（{{summary.yesterday.dateLabel}}）</view>
+            <view class="stat-grid">
+              <view class="stat"><view class="n">{{summary.yesterday.uv}}</view><view class="l">UV</view></view>
+              <view class="stat"><view class="n">{{summary.yesterday.pv}}</view><view class="l">PV</view></view>
+              <view class="stat"><view class="n">{{summary.yesterday.newUsers}}</view><view class="l">新增用户</view></view>
+              <view class="stat"><view class="n">{{summary.yesterday.tracksCreated}}</view><view class="l">新增轨迹</view></view>
+            </view>
+          </view>
+        </view>
+
+        <view class="back-link" bindtap="goBack">返回</view>
+      </block>
+    </block>
+  </view>
+</view>

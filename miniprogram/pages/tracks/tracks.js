@@ -6,7 +6,6 @@ const config = require('../../config/index');
 const { markHomeDirty } = require('../../utils/home-refresh');
 const { ensureLogin } = require('../../utils/login-gate');
 const loading = require('../../utils/loading');
-const { GPX_MAX_ITEMS, buildGpxQuery, downloadExport, shareExportFile, fileStamp } = require('../../utils/export-file');
 
 const PAGE_SIZE = 20;
 const VIEW_MODE_KEY = 'tracksViewMode';
@@ -59,9 +58,6 @@ Page({
     initialized: false,
     loadError: false, // 首屏加载失败（与「还没有运动记录」区分，展示重试入口）
     notLoggedIn: false, // 游客态：展示登录引导卡（2026-10-26 补缺省态）
-    selectMode: false, // 多选模式：点条目勾选/取消，底部栏批量导出 GPX
-    selectedCount: 0,
-    canExportBundle: false, // 多条轨迹打包＝会员权益（服务端下发，端上不自算）
   },
 
   onLoad() {
@@ -85,97 +81,6 @@ Page({
     try {
       wx.setStorageSync(VIEW_MODE_KEY, mode);
     } catch (err) {}
-  },
-
-  /** 进入/退出多选：进出都清勾选（refresh/筛选切换同样先退出，避免计数与勾选串味） */
-  onToggleSelect() {
-    // 打包导出是会员权益：非会员点「多选」走引导，不是静默无反应
-    if (!this.data.canExportBundle) {
-      this.openExportGuide();
-      return;
-    }
-    if (this.data.selectMode) {
-      this.exitSelectMode();
-      return;
-    }
-    const items = this.data.items.map((it) => ({ ...it, checked: false }));
-    this.setData({ selectMode: true, selectedCount: 0, items, groups: this.buildGroups(items) });
-  },
-
-  /** 非会员引导（文案 2026-11-03 批准稿 MC-13） */
-  openExportGuide() {
-    wx.showModal({
-      title: '打包导出',
-      content: '开通会员后可一次导出多条轨迹',
-      confirmText: '去开通',
-      cancelText: '取消',
-      success: (r) => {
-        if (r.confirm) wx.navigateTo({ url: '/pages/member/member' });
-      },
-    });
-  },
-
-  exitSelectMode() {
-    const items = this.data.items.map((it) => ({ ...it, checked: false }));
-    this.setData({ selectMode: false, selectedCount: 0, items, groups: this.buildGroups(items) });
-  },
-
-  /** 勾选/取消一条：items 与 groups 共享对象引用，重建两组保持同步 */
-  onToggleItem(e) {
-    const id = e.currentTarget.dataset.id;
-    if (!id) return;
-    const items = this.data.items.map((it) => (it.id === id ? { ...it, checked: !it.checked } : it));
-    this.setData({
-      items,
-      groups: this.buildGroups(items),
-      selectedCount: items.filter((it) => it.checked).length,
-    });
-  },
-
-  /** 批量导出勾选轨迹：上限截断提示 → 位置隐私确认 → 打包下载 → 分享 */
-  async onExportSelected() {
-    if (this._exporting) return;
-    const ids = this.data.items.filter((it) => it.checked).map((it) => it.id);
-    if (!ids.length) {
-      wx.showToast({ title: '先勾选要导出的轨迹', icon: 'none' });
-      return;
-    }
-    const { query, overflow } = buildGpxQuery(ids);
-    if (overflow) {
-      wx.showToast({ title: `一次最多 ${GPX_MAX_ITEMS} 条，已按勾选顺序截取`, icon: 'none', duration: 2500 });
-    }
-    const count = Math.min(ids.length, GPX_MAX_ITEMS);
-    const confirmed = await new Promise((resolve) => {
-      wx.showModal({
-        title: '导出轨迹 GPX',
-        content: `将导出 ${count} 条轨迹的坐标明细并打包为 zip（含位置信息），通过文件传输助手可传到电脑，是否继续？`,
-        confirmText: '导出',
-        success: (r) => resolve(r.confirm),
-        fail: () => resolve(false),
-      });
-    });
-    if (!confirmed) return;
-    this._exporting = true;
-    const fileName = `轨迹导出_${fileStamp()}.zip`;
-    let filePath = '';
-    try {
-      loading.show('打包中…');
-      filePath = await downloadExport(`/activities/export/gpx${query}`, fileName);
-    } catch (e) {
-      loading.hide();
-      wx.showToast({ title: (e && e.message) || '导出失败', icon: 'none' });
-      this._exporting = false;
-      return;
-    }
-    loading.hide();
-    this._exporting = false;
-    try {
-      await shareExportFile(filePath, fileName);
-      wx.showToast({ title: '已导出', icon: 'success' });
-      this.exitSelectMode();
-    } catch (e) {
-      wx.showToast({ title: (e && e.message) || '分享未完成', icon: 'none' });
-    }
   },
 
   onShow() {
@@ -246,7 +151,6 @@ Page({
     }
   },
 
-  /** 切换类型筛选（t-tabs） */
   onTabChange(e) {
     const type = e.detail.value;
     if (type === this.data.activeFilter) return;
@@ -255,8 +159,6 @@ Page({
   },
 
   async refresh() {
-    // 筛选/下拉刷新会重建 items：多选先退出，避免勾选计数与已加载条目错位
-    if (this.data.selectMode) this.exitSelectMode();
     const app = getApp();
     // 已注册用户（本地有 token）静默恢复登录；游客不自动登录
     if (app.hasSession() && !app.globalData.loggedIn) {
@@ -276,13 +178,10 @@ Page({
       this._monthlyStats = {}; // 重置聚合缓存，防上一次筛选的数据串味（只在 JS 用，不进 data）
       this.setData({ loading: true, page: 1 });
       // 个人最佳与列表并行拉取：每次刷新都取实时值（缓存不失效，新纪录要立刻在卡片亮出）
-      // 权益与列表并行：打包入口的判据走服务端；权益拉不到就按非会员（宁可少给，不可错给）
-      const [data, best, ent] = await Promise.all([
+      const [data, best] = await Promise.all([
         api.get('/activities', this.buildParams(1)),
         this.loadBest(),
-        api.get('/member/entitlements').catch(() => null),
       ]);
-      if (ent) this.setData({ canExportBundle: !!ent.canExportBundle });
       this._best = best;
       const items = this.markAdAfter(data.items.map((it) => this.decorate(it, best)));
       const monthly = mergeMonthly({}, data.monthlyStats);
@@ -459,14 +358,10 @@ Page({
     return out;
   },
 
-  /** 进入轨迹详情：地图与卡片共用，短时锁防止连点重复导航；多选模式下点击=勾选 */
+  /** 进入轨迹详情：地图与卡片共用，短时锁防止连点重复导航 */
   onTapItem(e) {
     const id = e.currentTarget.dataset.id;
     if (!id) return;
-    if (this.data.selectMode) {
-      this.onToggleItem(e);
-      return;
-    }
     if (this._navLock) return;
     this._navLock = true;
     wx.navigateTo({
@@ -503,8 +398,6 @@ Page({
         items,
         totalCount: Math.max(0, this.data.totalCount - 1),
         groups: this.buildGroups(items),
-        // 多选中删掉勾选项会改变计数：索性退出多选，回到普通浏览
-        ...(this.data.selectMode ? { selectMode: false, selectedCount: 0 } : {}),
       });
       this.syncMonthlyStats(); // 删除影响整月累计，重新拉取聚合
       markHomeDirty(); // 首页累计数据 / 榜名次 / 日历都会变

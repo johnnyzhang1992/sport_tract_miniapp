@@ -1,0 +1,59 @@
+<view class="page">
+  <!-- 游客：登录后才能取到本人数据，点一下走登录闸门 -->
+  <view class="state-block" wx:if="{{!loggedIn}}" bindtap="guestLogin">
+    <view class="state-text">登录后导出你的运动数据</view>
+    <view class="state-link">点这里登录</view>
+  </view>
+
+  <block wx:else>
+    <!-- 两种导出共用同一套范围条件 -->
+    <view class="card">
+      <view class="sec-title">导出范围</view>
+      <view class="sec-desc">时间与运动类型同时作用于运动记录和轨迹记录。</view>
+
+      <export-filter
+        ranges="{{ranges}}"
+        types="{{types}}"
+        range="{{filter.range}}"
+        type="{{filter.type}}"
+        start="{{filter.start}}"
+        end="{{filter.end}}"
+        today="{{today}}"
+        bind:rangechange="onRangeTap"
+        bind:typechange="onTypeTap"
+        bind:startchange="onStartDate"
+        bind:endchange="onEndDate"
+      />
+    </view>
+
+    <!-- 运动记录 CSV：所有登录用户可导 -->
+    <view class="card">
+      <view class="sec-title">运动记录</view>
+      <view class="sec-desc">含昵称、运动类型、起止时间、各类时长、距离与点数；首列为轨迹ID，可与轨迹导出关联。不含轨迹明细和照片。</view>
+      <view class="export-btn {{busy ? 'export-btn-busy' : ''}}" hover-class="export-btn-hover" bindtap="onExportCsv">导出 CSV</view>
+    </view>
+
+    <!-- 轨迹记录 GPX：会员权益；按条件打包，不再逐条勾选 -->
+    <view class="card">
+      <view class="sec-title-row">
+        <view class="sec-title">轨迹记录</view>
+        <view class="member-tag">会员</view>
+      </view>
+      <view class="sec-desc">每条轨迹单独一个 GPX 文件，打包成 zip；文件名含完整轨迹ID，与运动记录 CSV 的「轨迹ID」列一致。单次最多 100 条。</view>
+
+      <view
+        wx:if="{{memberLoaded && canExportBundle}}"
+        class="export-btn {{busy ? 'export-btn-busy' : ''}}"
+        hover-class="export-btn-hover"
+        bindtap="onExportGpx"
+      >导出 GPX</view>
+
+      <view class="member-lock" wx:elif="{{memberLoaded}}">
+        <view class="lock-text">会员专属 · 开通后可打包导出轨迹</view>
+        <view class="lock-btn" hover-class="lock-btn-hover" bindtap="goMember">开通会员</view>
+      </view>
+
+      <view class="member-loading" wx:else>会员权益加载中…</view>
+    </view>
+  </block>
+</view>

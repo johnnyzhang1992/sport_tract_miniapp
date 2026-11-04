@@ -20,6 +20,7 @@ Page({
     statusText: '',
     cards: [],
     selectedKey: '', // 当前选中的套餐（底部开通按它下单）
+    operator: false, // 站内运营者（role=admin）：显示运营中心入口
     selectedPriceText: '', // 底部按钮上的实付价：跟随选中套餐的服务端 priceText
     heroPerks: [], // 页头权益文案：跟随选中套餐的服务端 perkLines
     heroPerksView: [], // 权益 + 图标（图标由本地按关键词映射）
@@ -29,6 +30,8 @@ Page({
     entitlements: null,
     showPay: false,
     paying: false,
+    reminder: { enabled: false, templateId: '', daysBefore: 3, subscribed: false },
+    reminderBusy: false,
   },
 
   onShow() {
@@ -98,6 +101,12 @@ Page({
         }),
       });
       if (d && d.entitlements && d.entitlements.adFreeUntil) setAdFreeUntil(d.entitlements.adFreeUntil);
+      try {
+        const rem = await api.get('/member/reminder');
+        if (rem) this.setData({ reminder: rem });
+      } catch (err) {
+        // 提醒是附加能力：拉不到就不展示入口，不影响会员主流程
+      }
     } catch (e) {
       if (silent) {
         // 下拉刷新失败：屏上内容仍然可用，别整页转错误态
@@ -146,6 +155,7 @@ Page({
       if (r.entitlements) setAdFreeUntil(r.entitlements.adFreeUntil);
       wx.showToast({ title: '已开通', icon: 'success' });
       await this.syncData();
+      this.maybeOfferReminder();
       return;
     }
     if (r.status === 'pending') {
@@ -153,6 +163,60 @@ Page({
       return;
     }
     wx.showToast({ title: r.message, icon: 'none', duration: 2500 });
+  },
+
+  /** 支付成功后顺手问一次到期提醒（订阅必须由用户点允许；拒绝不反复打扰） */
+  maybeOfferReminder() {
+    const r = this.data.reminder || {};
+    if (!r.enabled || !r.templateId || r.subscribed) return;
+    wx.showModal({
+      title: '开启到期提醒',
+      content: `到期前 ${r.daysBefore} 天通过服务通知提醒你续费，是否开启？`,
+      confirmText: '开启',
+      cancelText: '暂不',
+      success: (res) => {
+        if (res.confirm) this.onEnableReminder();
+      },
+    });
+  },
+
+  /** 点「开启」：微信弹订阅授权；accept 才上报额度，拒绝/失败不动数据 */
+  onEnableReminder() {
+    const r = this.data.reminder || {};
+    if (this.data.reminderBusy) return;
+    if (!r.enabled || !r.templateId) {
+      wx.showToast({ title: '到期提醒暂未开放', icon: 'none' });
+      return;
+    }
+    if (typeof wx.requestSubscribeMessage !== 'function') {
+      wx.showToast({ title: '当前微信版本不支持订阅消息', icon: 'none' });
+      return;
+    }
+    this.setData({ reminderBusy: true });
+    wx.requestSubscribeMessage({
+      tmplIds: [r.templateId],
+      success: async (res) => {
+        const status = res && res[r.templateId];
+        if (status !== 'accept') {
+          this.setData({ reminderBusy: false });
+          wx.showToast({ title: '未开启，可稍后再试', icon: 'none' });
+          return;
+        }
+        try {
+          await api.post('/member/reminder/grant', { scene: 'member_center' });
+          this.setData({ 'reminder.subscribed': true });
+          wx.showToast({ title: '已开启到期提醒', icon: 'success' });
+        } catch (err) {
+          wx.showToast({ title: (err && err.message) || '开启失败，请重试', icon: 'none' });
+        } finally {
+          this.setData({ reminderBusy: false });
+        }
+      },
+      fail: () => {
+        this.setData({ reminderBusy: false });
+        wx.showToast({ title: '微信订阅未完成', icon: 'none' });
+      },
+    });
   },
 
   /** 游客态：触点级登录闸门（与积分页同一套） */
@@ -163,6 +227,10 @@ Page({
 
   onRetry() {
     this.syncData();
+  },
+
+  goOperator() {
+    wx.navigateTo({ url: '/pages/operator/operator' });
   },
 
   goOrders() {

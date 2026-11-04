@@ -13,6 +13,7 @@
     "pages/privacy/privacy",
     "pages/overview/overview",
     "pages/import/import",
+    "pages/export/export",
     "pages/weight-trend/weight-trend",
     "pages/report/report",
     "pages/topic/topic",
@@ -30,7 +31,8 @@
     "pages/points-item/points-item",
     "pages/points-exchanges/points-exchanges",
     "pages/member/member",
-    "pages/member-orders/member-orders"
+    "pages/member-orders/member-orders",
+    "pages/operator/operator"
   ],
   "window": {
     "navigationBarBackgroundColor": "#ffffff",

@@ -61,8 +61,19 @@
             wx:if="{{showPay}}" data-key="{{selectedKey}}" bindtap="onBuy">
         立即支付 <text class="plan-btn-price">{{selectedPriceText}}</text>
       </view>
+
+      <!-- 到期提醒：一次性订阅，用户点允许才有一条额度 -->
+      <view class="reminder-row" wx:if="{{entitlements.memberActive && reminder.enabled}}">
+        <view class="reminder-main">
+          <view class="reminder-title">到期提醒</view>
+          <view class="reminder-sub">{{reminder.subscribed ? '已开启 · 到期前 ' + reminder.daysBefore + ' 天提醒' : '到期前 ' + reminder.daysBefore + ' 天通过服务通知提醒你续费'}}</view>
+        </view>
+        <view wx:if="{{reminder.subscribed}}" class="reminder-state">已开启</view>
+        <view wx:else class="reminder-btn {{reminderBusy ? 'reminder-btn-busy' : ''}}" hover-class="reminder-btn-hover" bindtap="onEnableReminder">开启</view>
+      </view>
     </block>
 
     <view class="orders-link" bindtap="goOrders">订单与退款 ›</view>
+    <view wx:if="{{operator}}" class="orders-link operator-link" bindtap="goOperator">数据概览 ›</view>
   </block>
 </view>

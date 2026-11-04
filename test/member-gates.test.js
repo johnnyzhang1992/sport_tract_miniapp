@@ -18,20 +18,21 @@ const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
 
 /* ------------------------------- 结构断言 ------------------------------- */
 
-test('G-1 多选入口已从注释还原，判据是 canExportBundle', () => {
-  const w = read('miniprogram/pages/tracks/tracks.wxml');
-  assert.match(w, /class="mode-btn select-toggle/, '多选按钮没还原');
-  assert.ok(w.includes('bindtap="onToggleSelect"'));
-  assert.ok(!/<!--\s*<view class="mode-btn select-toggle/.test(w), '还在注释里');
-  const js = read('miniprogram/pages/tracks/tracks.js');
-  assert.ok(js.includes('canExportBundle'), '页面要有服务端下发的权益标记');
-  assert.ok(js.includes("api.get('/member/entitlements')"), '权益只能从接口取');
-  assert.ok(js.includes('canExportBundle: !!ent.canExportBundle'), '拿到响应必须落进 data，否则判据永远是 false');
+test('G-1 导出入口收口：轨迹页不再有多选导出，我的页改为跳独立导出页', () => {
+  const tracks = read('miniprogram/pages/tracks/tracks.wxml');
+  assert.ok(!tracks.includes('select-toggle'), '轨迹页多选按钮已移除');
+  assert.ok(!tracks.includes('select-bar'), '轨迹页批量操作栏已移除');
+  const tracksJs = read('miniprogram/pages/tracks/tracks.js');
+  assert.ok(!tracksJs.includes('selectMode'), '轨迹页多选状态已移除');
+  assert.ok(!tracksJs.includes("utils/export-file"), '轨迹页不再引用导出工具');
+  const my = read('miniprogram/pages/my/my.js');
+  assert.match(my, /\/pages\/export\/export/, '我的页入口跳到独立导出页');
+  assert.ok(!my.includes('exportVisible'), '我的页旧导出半屏已删除');
 });
 
 test('G-3 导出失败原样展示服务端整句，端上不写死会员文案', () => {
-  const js = read('miniprogram/pages/tracks/tracks.js');
-  assert.match(js, /e\.message/);
+  const js = read('miniprogram/pages/export/export.js');
+  assert.match(js, /err\.message/);
   assert.ok(!js.includes('多条轨迹打包导出需要开通会员'), '这句由服务端 403 下发，端上不许复制一份');
 });
 
@@ -45,49 +46,4 @@ test('G-5 广告组件数据源仍是 ad-free 缓存（没有新增第二份算�
   const js = read('miniprogram/components/ad-template/ad-template.js');
   assert.match(js, /isAdFree\(/);
   assert.ok(!js.includes('memberUntil'), '组件不该自己去算会员到期');
-});
-
-/* --------------------------------- 行为桩 --------------------------------- */
-
-let modals = [];
-let pageDef = null;
-global.wx = {
-  showModal: (o) => modals.push(o),
-  showToast: () => {},
-  getStorageSync: () => '',
-  setStorageSync: () => {},
-  navigateTo: () => {},
-};
-global.Page = (d) => { pageDef = d; };
-global.getApp = () => ({ globalData: {}, hasSession: () => false });
-
-const fakeApi = { get: () => Promise.resolve(null), post: () => Promise.resolve(null) };
-const apiPath = require.resolve('../miniprogram/services/api.js');
-require.cache[apiPath] = { id: apiPath, filename: apiPath, loaded: true, exports: fakeApi, children: [], paths: [] };
-
-require('../miniprogram/pages/tracks/tracks.js');
-assert.ok(pageDef, 'tracks.js 应通过 Page() 交出页面对象');
-
-function pageWith(data) {
-  const p = Object.assign({}, pageDef);
-  p.data = Object.assign({}, pageDef.data, data);
-  p.setData = (patch) => Object.assign(p.data, patch || {});
-  return p;
-}
-
-test('G-2 非会员点「多选」：弹引导、不进多选；会员进多选', () => {
-  modals = [];
-  const p = pageWith({ canExportBundle: false, selectMode: false, items: [] });
-  p.onToggleSelect();
-  assert.equal(modals.length, 1, '非会员要看到引导，不能静默无反应');
-  assert.equal(modals[0].title, '打包导出');
-  assert.equal(modals[0].content, '开通会员后可一次导出多条轨迹');
-  assert.equal(modals[0].confirmText, '去开通');
-  assert.equal(p.data.selectMode, false, '不许进入多选');
-
-  modals = [];
-  const q = pageWith({ canExportBundle: true, selectMode: false, items: [] });
-  q.onToggleSelect();
-  assert.equal(modals.length, 0);
-  assert.equal(q.data.selectMode, true);
 });

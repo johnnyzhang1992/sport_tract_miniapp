@@ -1,0 +1,33 @@
+<view class="ef">
+  <view class="ef-label">时间范围</view>
+  <view class="ef-chips">
+    <view
+      wx:for="{{ranges}}"
+      wx:key="key"
+      class="ef-chip {{range === item.key ? 'ef-chip-on' : ''}}"
+      data-key="{{item.key}}"
+      bindtap="onRangeTap"
+    >{{item.label}}</view>
+  </view>
+
+  <view class="ef-dates" wx:if="{{range === 'custom'}}">
+    <picker mode="date" value="{{start}}" end="{{end || today}}" bindchange="onStartChange">
+      <view class="ef-date">{{start || '开始日期'}}</view>
+    </picker>
+    <text class="ef-sep">至</text>
+    <picker mode="date" value="{{end}}" start="{{start}}" end="{{today}}" bindchange="onEndChange">
+      <view class="ef-date">{{end || '结束日期'}}</view>
+    </picker>
+  </view>
+
+  <view class="ef-label">运动类型</view>
+  <view class="ef-chips">
+    <view
+      wx:for="{{types}}"
+      wx:key="type"
+      class="ef-chip {{type === item.type ? 'ef-chip-on' : ''}}"
+      data-type="{{item.type}}"
+      bindtap="onTypeTap"
+    >{{item.label}}</view>
+  </view>
+</view>

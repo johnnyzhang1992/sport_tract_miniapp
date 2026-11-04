@@ -119,31 +119,4 @@
 
   <!-- 数据导出半屏：选范围/类型 → 生成 CSV 拉起分享。
        多条轨迹打包（GPX）走轨迹合集页的「多选」——该入口 2026-10-30 起临时关闭，恢复前这里只能导汇总 CSV -->
-  <view class="export-mask" wx:if="{{exportVisible}}" bindtap="closeExport">
-    <view class="export-sheet" catchtap="noop">
-      <view class="export-title">导出运动记录（CSV）</view>
-      <view class="export-group-label">时间范围</view>
-      <view class="export-opts">
-        <view
-          wx:for="{{exportRanges}}"
-          wx:key="key"
-          class="export-opt {{exportRange === item.key ? 'on' : ''}}"
-          data-key="{{item.key}}"
-          bindtap="onExportRange"
-        >{{item.label}}</view>
-      </view>
-      <view class="export-group-label">运动类型</view>
-      <view class="export-opts">
-        <view
-          wx:for="{{exportTypes}}"
-          wx:key="type"
-          class="export-opt {{exportType === item.type ? 'on' : ''}}"
-          data-type="{{item.type}}"
-          bindtap="onExportType"
-        >{{item.label}}</view>
-      </view>
-      <view class="export-btn" hover-class="export-btn-hover" bindtap="onExportConfirm">导出 CSV</view>
-      <view class="export-note">含昵称/时间/时长/距离/点数汇总，不含轨迹明细与照片</view>
-    </view>
-  </view>
 </view>

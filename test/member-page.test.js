@@ -40,7 +40,11 @@ test('MP2 页面文案位全部绑变量，不写死价格/日均/权益句', ()
 /* --------------------------------- 环境桩 --------------------------------- */
 
 let apiCalls = [];
+let grantCalls = [];
+let modals = [];
 let productsRespond = null;
+let reminderRespond = null;
+let subscribeRespond = null;
 let payRespond = null;
 let payCalls = [];
 let adFreeWrites = [];
@@ -52,7 +56,12 @@ let sysInfo = { platform: 'android', SDKVersion: '3.0.0', version: '8.0.50' };
 const fakeApi = {
   get(p) {
     apiCalls.push(p);
+    if (p === '/member/reminder') return reminderRespond(p);
     return productsRespond(p);
+  },
+  post(p, body) {
+    grantCalls.push({ path: p, body });
+    return Promise.resolve({ subscribed: true });
   },
 };
 const apiPath = require.resolve('../miniprogram/services/api.js');
@@ -99,6 +108,8 @@ require.cache[loginGatePath] = {
 global.wx = {
   getSystemInfoSync: () => sysInfo,
   showToast: (o) => toasts.push(o && o.title),
+  showModal: (o) => modals.push(o),
+  requestSubscribeMessage: (o) => subscribeRespond(o),
 };
 
 let pageDef = null;
@@ -132,6 +143,8 @@ const fixture = (over) => ({
 
 function reset(over) {
   apiCalls = [];
+  grantCalls = [];
+  modals = [];
   payCalls = [];
   adFreeWrites = [];
   toasts = [];
@@ -139,13 +152,24 @@ function reset(over) {
   token = over && over.loggedOut ? null : { accessToken: 't' };
   sysInfo = (over && over.sysInfo) || { platform: 'android', SDKVersion: '3.0.0', version: '8.0.50' };
   productsRespond = () => Promise.resolve(fixture((over && over.fixture) || {}));
+  reminderRespond = () => Promise.resolve({ enabled: true, templateId: 'TPL_TEST', daysBefore: 3, subscribed: false });
+  subscribeRespond = (o) => o.success({ TPL_TEST: 'accept' });
   payRespond = () => Promise.resolve({ status: 'delivered', entitlements: { adFreeUntil: 123 } });
 }
 
 function boot() {
   const p = Object.assign({}, pageDef);
   p.data = JSON.parse(JSON.stringify(pageDef.data));
-  p.setData = (patch) => Object.assign(p.data, patch || {});
+  p.setData = (patch) => {
+    Object.entries(patch || {}).forEach(([k, v]) => {
+      if (k.includes('.')) {
+        const [sec, field] = k.split('.');
+        p.data[sec] = Object.assign({}, p.data[sec], { [field]: v });
+      } else {
+        p.data[k] = v;
+      }
+    });
+  };
   p.onShow();
   return p;
 }
@@ -163,7 +187,7 @@ test('MP3 游客进页：不发请求；点引导才登录并拉数据', async (
   await p.onTapGate();
   await tick();
   assert.equal(loginCalls, 1);
-  assert.deepEqual(apiCalls, ['/member/products']);
+  assert.deepEqual(apiCalls, ['/member/products', '/member/reminder']);
   assert.equal(p.data.cards.length, 2);
 });
 
@@ -391,4 +415,61 @@ test('MP18 页头状态句只出现一次：heroTitle 已承担，不再重复�
   assert.equal((w.match(/\{\{statusText\}\}/g) || []).length, 0, 'statusText 不进模板，只通过 heroTitle 输出');
   assert.ok(!w.includes('class="hero-status"'), '旧的状态行已删除，避免与标题重复');
   assert.ok(w.includes('class="hero-title"') && w.includes('{{heroTitle}}'), '标题位仍在');
+});
+
+
+test('MP19 到期提醒：读取服务端开关/模板/状态，会员才展示', async () => {
+  reset({ fixture: { entitlements: { memberActive: true, memberUntil: Date.now() + 86400000, adFreeUntil: 0 } } });
+  const p = boot();
+  await tick();
+  assert.equal(p.data.reminder.enabled, true);
+  assert.equal(p.data.reminder.templateId, 'TPL_TEST');
+  assert.equal(p.data.reminder.subscribed, false);
+  const w = read('miniprogram/pages/member/member.wxml');
+  assert.match(w, /entitlements.memberActive && reminder.enabled/);
+});
+
+test('MP20 开启提醒：accept 才上报 grant，成功后状态变已开启', async () => {
+  reset({ fixture: { entitlements: { memberActive: true, memberUntil: Date.now() + 86400000, adFreeUntil: 0 } } });
+  const p = boot();
+  await tick();
+  subscribeRespond = (o) => o.success({ TPL_TEST: 'accept' });
+  p.onEnableReminder();
+  await tick();
+  assert.equal(grantCalls.length, 1);
+  assert.equal(grantCalls[0].path, '/member/reminder/grant');
+  assert.equal(grantCalls[0].body.scene, 'member_center');
+  assert.equal(p.data.reminder.subscribed, true);
+  assert.ok(toasts.includes('已开启到期提醒'));
+});
+
+test('MP21 拒绝/失败：不上报 grant、状态不变', async () => {
+  reset({ fixture: { entitlements: { memberActive: true, memberUntil: Date.now() + 86400000, adFreeUntil: 0 } } });
+  const p = boot();
+  await tick();
+  subscribeRespond = (o) => o.success({ TPL_TEST: 'reject' });
+  p.onEnableReminder();
+  await tick();
+  assert.equal(grantCalls.length, 0);
+  assert.equal(p.data.reminder.subscribed, false);
+
+  subscribeRespond = (o) => o.fail();
+  p.onEnableReminder();
+  await tick();
+  assert.equal(grantCalls.length, 0);
+  assert.ok(toasts.includes('微信订阅未完成'));
+});
+
+test('MP22 支付成功：弹开启提醒；点开启走订阅并上报', async () => {
+  reset({ fixture: { entitlements: { memberActive: true, memberUntil: Date.now() + 86400000, adFreeUntil: 0 } } });
+  const p = boot();
+  await tick();
+  await p.onBuy({ currentTarget: { dataset: { key: 'month_card' } } });
+  await tick();
+  assert.equal(modals.length, 1);
+  assert.match(modals[0].content, /到期前 3 天/);
+  modals[0].success({ confirm: true });
+  await tick();
+  assert.equal(grantCalls.length, 1);
+  assert.equal(p.data.reminder.subscribed, true);
 });
