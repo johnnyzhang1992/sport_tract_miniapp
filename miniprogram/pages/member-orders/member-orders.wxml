@@ -24,13 +24,14 @@
         <view class="price-row">
           <text class="price"><text class="price-unit">￥</text>{{item.priceText}}</text>
           <text wx:if="{{item.refundedText}}" class="refunded">已退款 ￥{{item.refundedText}}</text>
-          <view wx:if="{{item.refundHint}}" class="refund-hint" bindtap="toggleGuide" data-id="{{item.outTradeNo}}">
-            <text>{{item.refundHint}}</text>
-            <text class="guide-toggle">{{guideExpanded === item.outTradeNo ? '收起流程' : '查看退款流程 ›'}}</text>
-          </view>
-          <view wx:if="{{guideExpanded === item.outTradeNo && item.refundGuide.length}}" class="refund-guide">
-            <view class="guide-item" wx:for="{{item.refundGuide}}" wx:for-item="step" wx:key="*this">{{step}}</view>
-          </view>
+        </view>
+
+        <view wx:if="{{item.refundHint}}" class="refund-hint" bindtap="toggleGuide" data-id="{{item.outTradeNo}}">
+          <text class="refund-hint-text">{{item.refundHint}}</text>
+          <text class="guide-toggle">{{guideExpanded === item.outTradeNo ? '收起流程' : '查看退款流程 ›'}}</text>
+        </view>
+        <view wx:if="{{guideExpanded === item.outTradeNo && item.refundGuide.length}}" class="refund-guide">
+          <view class="guide-item" wx:for="{{item.refundGuide}}" wx:for-item="step" wx:key="*this">{{step}}</view>
         </view>
 
         <view wx:if="{{item.periodText}}" class="meta-row">

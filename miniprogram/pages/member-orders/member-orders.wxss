@@ -262,9 +262,27 @@
 }
 
 .refund-hint {
-  color: #8a93a6;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12rpx;
+  background: #f6f7fb;
+  border-radius: 12rpx;
+  padding: 14rpx 20rpx;
+  margin: 16rpx 0 8rpx;
+}
+.refund-hint-text {
+  color: #5b6474;
   font-size: 24rpx;
-  margin-top: 8rpx;
+  flex: 1;
+}
+.refund-hint .guide-toggle {
+  color: #2b6cf6;
+  font-size: 24rpx;
+  flex-shrink: 0;
+}
+.refund-guide {
+  margin: 0 0 16rpx;
 }
 
 .refund-hint .guide-toggle {
