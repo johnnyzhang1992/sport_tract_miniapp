@@ -54,7 +54,7 @@ let modalConfirm = true;
 global.wx = {
   showToast: (o) => toasts.push(o && o.title),
   showModal: (o) => { modals.push({ title: o && o.title, content: o && o.content }); if (o && o.success) o.success({ confirm: modalConfirm }); },
-  previewImage: (o) => navs.push(['preview', o && o.current]),
+  previewImage: (o) => { navs.push(['preview', o && o.current]); global.__lastPreview = o || {}; },
   navigateTo: (o) => navs.push(['nav', o && o.url]),
   stopPullDownRefresh: () => {},
 };
@@ -144,6 +144,24 @@ test('PH4 取消确认：不提交删除', async () => {
   apiPosts.length = 0;
   await p.onDelete();
   assert.equal(apiPosts.length, 0, '取消后不发请求');
+});
+
+test('PH5b 预览只在当前分组内翻页（不传全量原图）', async () => {
+  const p = reset();
+  p.onShow();
+  await tick();
+  navs.length = 0;
+  // 点轨迹组里的 u2
+  p.onPreview({ currentTarget: { dataset: { url: 'u2', kind: 'activity', id: 'a1' } } });
+  const call = navs.find((n) => n[0] === 'preview');
+  assert.ok(call, '要调 previewImage');
+  assert.equal(call[1], 'u2', 'current 是被点的那张');
+  const { urls } = global.__lastPreview;
+  assert.deepEqual(urls, ['u1', 'u2'], '只含同组照片（足迹那张 u3 不进来）');
+
+  // 足迹组：只有自己那一张
+  p.onPreview({ currentTarget: { dataset: { url: 'u3', kind: 'footprint', id: 'f1' } } });
+  assert.deepEqual(global.__lastPreview.urls, ['u3']);
 });
 
 test('PH5 全选/取消全选', async () => {

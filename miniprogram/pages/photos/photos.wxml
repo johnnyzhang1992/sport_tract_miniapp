@@ -57,7 +57,8 @@
           data-kind="{{g.kind}}" data-id="{{g.id}}" data-url="{{p.url}}"
           bindtap="onTogglePhoto"
         >
-          <image class="thumb" src="{{p.thumb}}" mode="aspectFill" data-url="{{p.url}}" catchtap="onPreview" />
+          <image class="thumb" src="{{p.thumb}}" mode="aspectFill"
+                 data-url="{{p.url}}" data-kind="{{g.kind}}" data-id="{{g.id}}" catchtap="onPreview" />
           <view class="tick">{{selected[g.kind + ':' + g.id + '|' + p.url] ? '✓' : ''}}</view>
         </view>
       </view>

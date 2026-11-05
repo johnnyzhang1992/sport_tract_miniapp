@@ -87,10 +87,16 @@ Page({
     this.setData({ selected: everySelected ? {} : all, selectedCount: everySelected ? 0 : Object.keys(all).length });
   },
 
+  /**
+   * 预览：只在**当前分组内**翻页（同一批轨迹/足迹的照片）。
+   * 早先传的是全量原图 URL：一两百张时微信会预加载相邻几张原图，等待明显，而且
+   * 翻到不相关记录的照片也不符合预期。
+   */
   onPreview(e) {
-    const { url } = e.currentTarget.dataset;
-    const all = this.data.groups.flatMap((g) => g.photos.map((p) => p.url));
-    wx.previewImage({ current: url, urls: all });
+    const { url, kind, id } = e.currentTarget.dataset;
+    const group = this.data.groups.find((g) => g.kind === kind && g.id === id);
+    const urls = (group ? group.photos : []).map((p) => p.url);
+    wx.previewImage({ current: url, urls: urls.length ? urls : [url] });
   },
 
   async onDelete() {
