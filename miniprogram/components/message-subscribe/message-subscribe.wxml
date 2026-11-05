@@ -14,7 +14,7 @@
   <view wx:else class="ms-list">
     <view wx:for="{{items}}" wx:key="key" class="ms-row">
       <view class="ms-main">
-        <view class="ms-label">{{item.label}}</view>
+        <view class="ms-label">{{item.label}}<text class="ms-type">{{item.subscribeType}}</text></view>
         <view class="ms-desc">{{item.description}}</view>
       </view>
       <view

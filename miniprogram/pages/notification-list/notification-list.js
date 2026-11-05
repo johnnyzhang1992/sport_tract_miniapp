@@ -26,6 +26,7 @@ Page({
   onShow() {
     this.setData({ loggedIn: getApp().hasSession() });
     this.fetch();
+    if (this.data.loggedIn) this.refreshSilentIds();
   },
 
   onUnload() {
@@ -162,13 +163,76 @@ Page({
 
   /* ---------------- 消息订阅 ---------------- */
 
-  async openSubscribe() {
+  /**
+   * 拉取用户勾选「总是保持以上选择」且已接受的模板 id（wx.getSetting withSubscriptions）。
+   * 结果缓存在 this._silentIds，供静默补额度在点击手势内同步使用。
+   */
+  refreshSilentIds() {
+    if (typeof wx.getSetting !== 'function') {
+      this._silentIds = [];
+      return Promise.resolve([]);
+    }
+    return new Promise((resolve) => {
+      wx.getSetting({
+        withSubscriptions: true,
+        success: (res) => {
+          const ss = (res && res.subscriptionsSetting) || {};
+          const itemSettings = ss.itemSettings || [];
+          this._silentIds = itemSettings.filter((x) => x && x.type === 'accept').map((x) => x.id);
+          resolve(this._silentIds);
+        },
+        fail: () => {
+          this._silentIds = [];
+          resolve([]);
+        },
+      });
+    });
+  },
+
+  /**
+   * 静默补额度（一次性订阅的续额度策略）：
+   * 对勾选「总是保持以上选择」的模板，在用户点击手势内同步调用 requestSubscribeMessage——
+   * 微信不再弹窗、静默 +1 条额度（额度可累积）。未勾选的用户不在调用范围，不弹窗不骚扰。
+   */
+  silentAccumulate() {
+    const ids = (this._silentIds || []).slice(0, 3);
+    if (!ids.length || typeof wx.requestSubscribeMessage !== 'function') return;
+    wx.requestSubscribeMessage({
+      tmplIds: ids,
+      success: async (res) => {
+        const catalog = this.data.subscribe.items;
+        const items = catalog.map((it) => {
+          if (res[it.templateId] === 'accept' && it.subscribed !== true) {
+            api.post('/notifications/subscriptions/grant', { key: it.key, scene: 'silent_accumulate' }).catch(() => {});
+            return { ...it, subscribed: true };
+          }
+          return it;
+        });
+        if (catalog.length) this.setData({ subscribe: { ...this.data.subscribe, items } });
+        this.refreshSilentIds(); // 授权状态可能已变化，刷新缓存
+      },
+      fail: () => {},
+    });
+  },
+
+  openSubscribe() {
+    return this.doOpenSubscribe();
+  },
+
+  async doOpenSubscribe() {
     if (!(await ensureLogin('登录后才能订阅消息。'))) return;
+    // 打开面板：置 visible 并重置面板状态（原 openSubscribe 的打开态 setData，重构时勿丢）
     this.setData({
       loggedIn: true,
       subscribe: { ...this.data.subscribe, visible: true, loading: true, failed: false, items: [], busy: '' },
     });
     await this.loadSubscriptions();
+    // 静默补额度：对勾选「总是保持以上选择」的模板静默 +1 额度（可累积，不弹窗）；
+    // 未勾选的用户不在调用范围（避免无意义弹窗）。放在 load 之后：grant 需按 catalog 映射 key。
+    // （注：调用在点击链路的异步延续里，微信的交互校验按会话判定，实践可用；若平台收紧，
+    //  回退方案＝入口处用 _silentIds 缓存同步调用。）
+    this.silentAccumulate();
+    this.refreshSilentIds();
   },
 
   async loadSubscriptions() {
@@ -215,6 +279,7 @@ Page({
             it.key === key ? { ...it, subscribed: true } : it);
           this.setData({ subscribe: { ...this.data.subscribe, items, busy: '' } });
           wx.showToast({ title: '已订阅', icon: 'success' });
+          this.refreshSilentIds(); // 用户可能在弹窗里勾了「总是保持」，刷新静默缓存
         } catch (err) {
           this.setData({ subscribe: { ...this.data.subscribe, busy: '' } });
           wx.showToast({ title: (err && err.message) || '开启失败，请重试', icon: 'none' });

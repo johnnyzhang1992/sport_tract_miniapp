@@ -122,3 +122,14 @@
 .ms-action.off {
   opacity: 0.6;
 }
+
+.ms-type {
+  display: inline-block;
+  margin-left: 10rpx;
+  padding: 2rpx 10rpx;
+  border: 1rpx solid #d0d3dc;
+  border-radius: 8rpx;
+  color: #8a93a6;
+  font-size: 20rpx;
+  vertical-align: middle;
+}

@@ -30,8 +30,17 @@ let modalCalls = 0;
 let subscribeResult = { TPL: 'accept' };
 let subscribeCalls = 0;
 
+let settingItemSettings = null; // [{id, type}]；null＝用户从未勾过「总是保持」
+let silentCalls = []; // 静默补额度的 tmplIds 记录
+let subscribeTmplIds = []; // 每次 requestSubscribeMessage 的 tmplIds
+
 global.wx = {
   navigateTo: (o) => navs.push(o && o.url),
+  getSetting: (o) => {
+    if (o && o.success) {
+      o.success({ subscriptionsSetting: { mainSwitch: true, itemSettings: settingItemSettings || [] } });
+    }
+  },
   stopPullDownRefresh: () => {},
   getStorageSync: () => '',
   setStorageSync: () => {},
@@ -42,6 +51,7 @@ global.wx = {
   },
   requestSubscribeMessage: (o) => {
     subscribeCalls += 1;
+    subscribeTmplIds.push(o && o.tmplIds);
     if (o && o.success) o.success(subscribeResult);
   },
 };
@@ -85,6 +95,9 @@ function resetEnv() {
   modalCalls = 0;
   subscribeResult = { TPL: 'accept' };
   subscribeCalls = 0;
+  silentCalls.length = 0;
+  subscribeTmplIds.length = 0;
+  settingItemSettings = null;
   respond = () => Promise.resolve({});
 }
 
@@ -277,6 +290,7 @@ test('NL10 消息订阅：打开拉取列表；允许后上报授权并置已订
   };
   const page = makePage(listDef);
   await page.openSubscribe();
+  console.log('[NL10-diag] openSubscribe 后 visible=', page.data.subscribe.visible);
   assert.equal(page.data.subscribe.visible, true);
   assert.equal(page.data.subscribe.items.length, 1);
   assert.ok(apiCalls.some((c) => c.method === 'GET' && c.path === '/notifications/subscriptions'));
@@ -284,7 +298,7 @@ test('NL10 消息订阅：打开拉取列表；允许后上报授权并置已订
   apiCalls.length = 0;
   page.onSubscribeTap({ detail: { key: 'memberExpiry', templateId: 'TPL' } });
   await flush();
-  assert.equal(subscribeCalls, 1, '要唤起微信订阅授权');
+  assert.equal(subscribeCalls, 1, '面板打开时静默补额度会调用一次（未勾总是保持→额度+0不弹窗）');
   assert.deepEqual(apiCalls, [{
     method: 'POST',
     path: '/notifications/subscriptions/grant',
@@ -400,4 +414,43 @@ test('NM2 游客个人中心：入口仍在，角标为 0', async () => {
   const page = makePage(myDef);
   await page.loadUnread();
   assert.equal(page.data.unreadCount, 0);
+});
+
+test('NL13 静默补额度：勾了「总是保持」的模板，开面板即在点击手势内静默 +1 额度并上报', async () => {
+  resetEnv();
+  settingItemSettings = [{ id: 'TPL', type: 'accept' }]; // 用户勾过「总是保持」
+  respond = (p) =>
+    p === '/notifications/subscriptions'
+      ? Promise.resolve({ items: [{ key: 'memberExpiry', label: '会员到期提醒', templateId: 'TPL', subscribed: false, subscribeType: '一次性订阅' }] })
+      : Promise.resolve(listPayload());
+  const page = makePage(listDef);
+  page.onShow(); // 预热静默缓存
+  await flush();
+  assert.deepEqual(page._silentIds, ['TPL']);
+  apiCalls.length = 0;
+  page.openSubscribe();
+  await flush();
+  assert.equal(subscribeCalls, 1, '面板就绪后静默调用一次（勾了总是保持→无弹窗 +1 额度）');
+  assert.deepEqual(subscribeTmplIds[subscribeTmplIds.length - 1], ['TPL']);
+  const grant = apiCalls.find((c) => c.method === 'POST' && c.path === '/notifications/subscriptions/grant');
+  assert.ok(grant, '静默接受后要上报额度');
+  assert.deepEqual(grant.body, { key: 'memberExpiry', scene: 'silent_accumulate' });
+  assert.equal(page.data.subscribe.items[0].subscribed, true);
+});
+
+test('NL14 未勾「总是保持」：开面板不静默调用（不弹窗骚扰）', async () => {
+  resetEnv();
+  settingItemSettings = null;
+  respond = (p) =>
+    p === '/notifications/subscriptions'
+      ? Promise.resolve({ items: [{ key: 'memberExpiry', label: '会员到期提醒', templateId: 'TPL', subscribed: false, subscribeType: '一次性订阅' }] })
+      : Promise.resolve(listPayload());
+  const page = makePage(listDef);
+  page.onShow();
+  await flush();
+  apiCalls.length = 0;
+  page.openSubscribe();
+  await flush();
+  assert.equal(subscribeCalls, 0, '未勾「总是保持」：静默补额度不调用，也不主动弹窗（点单条订阅才弹）');
+  assert.equal(silentCalls.filter((ids) => ids && ids.length).length, 0, '未勾「总是保持」不静默调用');
 });
