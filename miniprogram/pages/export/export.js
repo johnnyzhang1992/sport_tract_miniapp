@@ -7,6 +7,23 @@ const {
   EXPORT_RANGES, buildExportQuery, fileStamp, downloadExport, shareExportFile,
 } = require('../../utils/export-file');
 
+/** 「单次上限」类错误的固定标志：这类消息必须整句读完才能照做，不能用 toast（会被截断） */
+const LIMIT_ERROR_RE = /上限|超出|共 \d+ 条/;
+
+function showExportError(message) {
+  const text = String(message || '导出失败');
+  if (LIMIT_ERROR_RE.test(text)) {
+    wx.showModal({
+      title: '超出单次导出上限',
+      content: text,
+      showCancel: false,
+      confirmText: '知道了',
+    });
+    return;
+  }
+  wx.showToast({ title: text, icon: 'none' });
+}
+
 const TYPE_OPTIONS = [{ type: '', label: '全部类型' }].concat(
   config.ACTIVITY_TYPES.map((t) => ({ type: t.type, label: t.label })),
 );
@@ -130,7 +147,7 @@ Page({
     } catch (err) {
       loading.hide();
       this.setData({ busy: '' });
-      wx.showToast({ title: (err && err.message) || '导出失败', icon: 'none' });
+      showExportError(err && err.message);
       return;
     }
     loading.hide();

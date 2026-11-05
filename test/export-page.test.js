@@ -97,8 +97,10 @@ require.cache[exportPath] = {
   children: [], paths: [],
 };
 
+const modals = [];
 global.wx = {
   showToast: (o) => toasts.push((o && o.title) || ''),
+  showModal: (o) => modals.push({ title: (o && o.title) || '', content: (o && o.content) || '' }),
   navigateTo() {},
 };
 let pageDef = null;
@@ -128,6 +130,8 @@ function reset() {
   token = { accessToken: 't' };
   loginOk = true;
   downloads = [];
+  toasts.length = 0;
+  modals.length = 0;
   shares = [];
   downloadError = null;
   toasts = [];
@@ -249,9 +253,12 @@ test('EP-8 导出失败：原样展示后端文案并复位 busy；导出中不�
   const p = boot();
   p.onShow();
   await tick();
-  downloadError = new Error('共 101 条，超出单次导出上限 100 条，请缩小范围');
+  downloadError = new Error('共 101 条，超出单次导出上限 100 条，请缩小时间范围，或按运动类型分批导出');
   await p.onExportGpx();
-  assert.ok(toasts.includes('共 101 条，超出单次导出上限 100 条，请缩小范围'));
+  // 超限类文案必须整句可读：走 modal（toast 会被截断成半句，用户看不到「怎么缩小」）
+  assert.equal(modals.length, 1, '应弹 modal 而不是 toast');
+  assert.match(modals[0].title, /上限/);
+  assert.equal(modals[0].content, '共 101 条，超出单次导出上限 100 条，请缩小时间范围，或按运动类型分批导出');
   assert.equal(p.data.busy, '');
   assert.equal(loadingHides, 1);
 
