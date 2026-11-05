@@ -66,6 +66,23 @@ App({
     this.checkPendingSummary();
   },
 
+  /**
+   * 页面不存在兜底（小程序没有 404 页，默认是微信的空白/错误提示）。
+   * 触发场景：旧版本分享卡片/小程序码指向已改名或未发布的页面、扫码带错路径等。
+   * 策略：重定向到首页并轻提示，不弹窗打断；用 reLaunch 保证能从任何栈深度回到干净首页。
+   */
+  onPageNotFound(res) {
+    console.warn('[app] 页面不存在，重定向首页：', res && res.path);
+    wx.reLaunch({
+      url: '/pages/index/index',
+      fail: () => {
+        // 极端情况（首页也被改坏）：退化成切换 tabBar 首页
+        wx.switchTab({ url: '/pages/index/index' });
+      },
+    });
+    wx.showToast({ title: '页面不存在，已返回首页', icon: 'none', duration: 2000 });
+  },
+
   /** 有未保存运动 → 提示跳 summary 继续保存；「忽略」= 作废该次运动并清现场，不再重复弹 */
   checkPendingSummary() {
     const pending = wx.getStorageSync('pending_summary');
