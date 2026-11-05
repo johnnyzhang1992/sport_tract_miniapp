@@ -1,0 +1,66 @@
+<view class="page">
+  <block wx:if="{{!loggedIn}}">
+    <view class="state" bindtap="onTapGate">
+      <view class="state-text">登录后管理你的照片</view>
+      <view class="state-link">点这里登录</view>
+    </view>
+  </block>
+
+  <block wx:elif="{{loading}}">
+    <view class="state">加载中…</view>
+  </block>
+
+  <block wx:elif="{{failed}}">
+    <view class="state" bindtap="onRetry">
+      <view class="state-text">加载失败</view>
+      <view class="state-link">重试</view>
+    </view>
+  </block>
+
+  <block wx:else>
+    <!-- 额度总览：超额（会员到期回落）时高亮说明 -->
+    <view class="card quota" wx:if="{{quota}}">
+      <view class="quota-top">
+        <view class="quota-title">照片额度</view>
+        <view class="quota-num">
+          <text class="used">{{quota.used}}</text>
+          <text class="limit">/ {{quota.limit}} 张</text>
+        </view>
+      </view>
+      <view class="bar">
+        <view class="bar-fill {{quota.over > 0 ? 'over' : ''}}" style="width: {{quota.percent}}%"></view>
+      </view>
+      <view class="quota-foot {{quota.over > 0 ? 'warn' : ''}}">
+        <block wx:if="{{quota.over > 0}}">会员权益已到期，额度回落到 {{quota.limit}} 张；当前超出 {{quota.over}} 张，删除 {{quota.over}} 张以上或续费会员才能继续上传（已有照片不会被自动删除）</block>
+        <block wx:else>剩余 {{quota.remaining}} 张{{quota.isMember ? '（会员额度）' : ''}}</block>
+      </view>
+    </view>
+
+    <view class="toolbar" wx:if="{{groups.length > 0}}">
+      <view class="tool-left" bindtap="onSelectAll">{{selectedCount > 0 ? '取消全选' : '全选'}}</view>
+      <view class="tool-right {{selectedCount > 0 ? '' : 'off'}}" bindtap="onDelete">
+        {{deleting ? '删除中…' : (selectedCount > 0 ? '删除选中 ' + selectedCount + ' 张' : '未选择')}}
+      </view>
+    </view>
+
+    <view wx:if="{{groups.length === 0}}" class="state">还没有上传过照片</view>
+
+    <view class="card group" wx:for="{{groups}}" wx:key="id" wx:for-item="g">
+      <view class="group-head">
+        <text class="group-title">{{g.title}}</text>
+        <text class="group-date">{{g.dateText}} · {{g.photos.length}} 张</text>
+      </view>
+      <view class="grid">
+        <view
+          class="cell {{selected[g.kind + ':' + g.id + '|' + p.url] ? 'on' : ''}}"
+          wx:for="{{g.photos}}" wx:key="url" wx:for-item="p"
+          data-kind="{{g.kind}}" data-id="{{g.id}}" data-url="{{p.url}}"
+          bindtap="onTogglePhoto"
+        >
+          <image class="thumb" src="{{p.thumb}}" mode="aspectFill" data-url="{{p.url}}" catchtap="onPreview" />
+          <view class="tick">{{selected[g.kind + ':' + g.id + '|' + p.url] ? '✓' : ''}}</view>
+        </view>
+      </view>
+    </view>
+  </block>
+</view>

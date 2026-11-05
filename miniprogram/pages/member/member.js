@@ -21,6 +21,7 @@ Page({
     cards: [],
     selectedKey: '', // 当前选中的套餐（底部开通按它下单）
     operator: false, // 站内运营者（role=admin）：显示运营中心入口
+    photoQuota: null, // 照片额度用量（used/limit/remaining），来自 /member/products 的权益读数
     selectedPriceText: '', // 底部按钮上的实付价：跟随选中套餐的服务端 priceText
     heroPerks: [], // 页头权益文案：跟随选中套餐的服务端 perkLines
     heroPerksView: [], // 权益 + 图标（图标由本地按关键词映射）
@@ -90,6 +91,7 @@ Page({
         heroSub: status.sub,
         bestValueKey: bestValueKey(cards),
         entitlements: (d && d.entitlements) || null,
+        photoQuota: (d && d.photoQuota) || null, // 与会员权益同一个请求下发（服务端单一读数）
         // iOS IAP 已在 MP 后台开通（2026-11-03）：客户端 ≥ 8.0.68（MIN_IOS_CLIENT，spec §2.1）
         // 才显示付费入口；不达标的老微信仍整块隐藏（问询/退款链路服务端已就绪）
         showPay: payVisible({
@@ -228,6 +230,10 @@ Page({
 
   onRetry() {
     this.syncData();
+  },
+
+  goPhotos() {
+    wx.navigateTo({ url: '/pages/photos/photos' });
   },
 
   goOperator() {

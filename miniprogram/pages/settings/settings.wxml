@@ -52,6 +52,28 @@
     <t-switch value="{{settings.kmAnnounce}}" bind:change="onKmAnnounceChange" />
   </view>
 
+  <!-- 照片额度（2026-11-05）：用户查「我还能传多少张」的自然位置；
+       读数来自 /member/entitlements 的 photoQuota，与会员页同一份数据 -->
+  <view class="card quota-row" wx:if="{{loggedIn && photoQuota}}" bindtap="goPhotos">
+    <view class="quota-head">
+      <view class="switch-info">
+        <view class="switch-title">照片额度</view>
+        <view class="text-muted">{{photoQuota.isMember ? '会员额度' : '基础额度'}} · 每次上传按张数计</view>
+      </view>
+      <view class="quota-num">
+        <text class="quota-used">{{photoQuota.used}}</text>
+        <text class="quota-limit">/ {{photoQuota.limit}} 张</text>
+      </view>
+    </view>
+    <view class="quota-bar">
+      <view class="quota-fill {{photoQuota.remaining === 0 ? 'full' : ''}}" style="width: {{photoQuota.percent}}%"></view>
+    </view>
+    <view class="quota-foot {{photoQuota.remaining === 0 ? 'warn' : ''}}">
+      {{photoQuota.remaining === 0 ? '额度已用尽，点这里删除旧照片或升级会员' : '剩余 ' + photoQuota.remaining + ' 张'}}
+      <text class="quota-more">管理 ›</text>
+    </view>
+  </view>
+
   <!-- 隐私政策 -->
   <view class="card link-row" bindtap="openPrivacy">
     <view class="switch-info">

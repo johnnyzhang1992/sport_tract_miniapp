@@ -130,3 +130,53 @@
   font-size: 28rpx;
   font-weight: 600;
 }
+
+/* 照片额度：用量 + 进度条 + 剩余句 */
+.quota-row {
+  display: block;
+}
+.quota-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.quota-num {
+  flex-shrink: 0;
+  margin-left: 16rpx;
+}
+.quota-used {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+.quota-limit {
+  font-size: 24rpx;
+  color: #8a93a6;
+}
+.quota-bar {
+  height: 10rpx;
+  border-radius: 6rpx;
+  background: #eef0f5;
+  overflow: hidden;
+  margin: 16rpx 0 10rpx;
+}
+.quota-fill {
+  height: 100%;
+  border-radius: 6rpx;
+  background: #2b6cf6;
+}
+.quota-fill.full {
+  background: #e34d59;
+}
+.quota-foot {
+  font-size: 24rpx;
+  color: #8a93a6;
+}
+.quota-foot.warn {
+  color: #e34d59;
+}
+
+.quota-more {
+  float: right;
+  color: #2b6cf6;
+}

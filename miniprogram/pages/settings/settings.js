@@ -21,6 +21,7 @@ Page({
     saving: false,
     loggedIn: false, // 登录态（决定是否展示退出登录入口）
     sportSheetVisible: false, // 关闭「展示运动数据」后的提示半屏
+    photoQuota: null, // 照片额度用量（used/limit/remaining/percent/isMember），来自 /member/entitlements
   },
 
   onLoad() {
@@ -37,7 +38,23 @@ Page({
     if (!(token && token.accessToken)) return;
     api.get('/member/entitlements').then((e) => {
       if (e && e.adFreeUntil) setAdFreeUntil(e.adFreeUntil);
+      if (e && e.photoQuota) {
+        const { used, limit, remaining } = e.photoQuota;
+        this.setData({
+          photoQuota: {
+            used, limit, remaining,
+            // 百分比只用于进度条宽度：端上不产出「额度文案」，文案仍由这里按读数拼展示句
+            percent: limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0,
+            isMember: !!e.memberActive,
+          },
+        });
+      }
     }).catch(() => {});
+  },
+
+  /** 照片管理：额度用量 + 删除旧照片（删完额度即时回补） */
+  goPhotos() {
+    wx.navigateTo({ url: '/pages/photos/photos' });
   },
 
   /** 退出登录：清本地令牌回游客态（云端数据保留，重新登录可同步） */

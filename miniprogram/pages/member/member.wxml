@@ -39,6 +39,14 @@
         </view>
       </view>
 
+      <!-- 照片额度用量（2026-11-05）：权益区下面给一行实时读数，用户看权益时顺带知道还剩多少 -->
+      <view class="quota-line" wx:if="{{photoQuota}}" bindtap="goPhotos">
+        <text class="quota-line-label">照片额度</text>
+        <text class="quota-line-value {{photoQuota.remaining === 0 ? 'warn' : ''}}">{{photoQuota.used}} / {{photoQuota.limit}} 张{{photoQuota.remaining === 0 ? '（已用尽）' : ''}}</text>
+        <text class="quota-line-rest" wx:if="{{photoQuota.remaining > 0}}">剩余 {{photoQuota.remaining}} 张</text>
+        <text class="quota-line-more">管理 ›</text>
+      </view>
+
       <!-- 套餐选择：横排三档，选中描边；日均最低一档挂角标（金额文案仍来自接口） -->
       <view class="plan-cards">
         <view

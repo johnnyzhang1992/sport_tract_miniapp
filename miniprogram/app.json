@@ -32,7 +32,8 @@
     "pages/points-exchanges/points-exchanges",
     "pages/member/member",
     "pages/member-orders/member-orders",
-    "pages/operator/operator"
+    "pages/operator/operator",
+    "pages/photos/photos"
   ],
   "window": {
     "navigationBarBackgroundColor": "#ffffff",
