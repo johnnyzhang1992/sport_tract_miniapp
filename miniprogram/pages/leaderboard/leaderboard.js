@@ -140,6 +140,11 @@ Page({
     // 排行
     periods: PERIODS,
     periodIndex: 0, // 默认周榜
+    // 当前展示的期（服务端下发；all 为 null）与翻页键。历史周期入口见 onPrevPeriod/onNextPeriod
+    periodWindow: null,
+    prevPeriodKey: null,
+    nextPeriodKey: null,
+    periodKey: '', // 空＝当前期；翻页时写入
     types: ACTIVITY_TYPES,
     typeIndex: 0, // 计数没回来前的兜底：config 首位（散步）；回来后会挪到排第一的类型
     provinceOptions: ['全国'],
@@ -209,9 +214,10 @@ Page({
       // 顺序和默认类型先定下来再发榜单：并发发会让榜面停在重排前的兜底默认值（散步）上
       const [regions, boardRaw] = await Promise.all([
         api.get('/stats/leaderboard-regions'),
-        api.get(`/stats/leaderboard?type=${this.curType()}&province=${encodeURIComponent(this.curProvince())}&period=${this.curPeriod()}`),
+        api.get(this.boardQuery()),
       ]);
       const board = decorateRows(boardRaw);
+      this.applyWindow(boardRaw);
       this._regions = regions;
       const provinceOptions = ['全国', ...regions.provinces.map((p) => p.name)];
       this.setData({
@@ -669,10 +675,43 @@ Page({
     wx.pageScrollTo({ selector: '.rank-card', duration: 300 });
   },
 
+  /** 榜单请求 URL：periodKey 非空时看历史周期（2026-11-05） */
+  boardQuery() {
+    const key = this.data.periodKey ? `&periodKey=${encodeURIComponent(this.data.periodKey)}` : '';
+    return `/stats/leaderboard?type=${this.curType()}&province=${encodeURIComponent(this.curProvince())}`
+      + `&period=${this.curPeriod()}${key}`;
+  },
+
+  /** 把服务端下发的期信息落到页面状态（翻页按钮的可用性由 prev/nextPeriodKey 决定） */
+  applyWindow(board) {
+    const w = (board && board.window) || null;
+    const next = (board && board.nextPeriodKey) || null;
+    this.setData({
+      periodWindow: w,
+      prevPeriodKey: (board && board.prevPeriodKey) || null,
+      nextPeriodKey: next,
+      // 已经在最新一期：清空 periodKey，下次进页跟随 now（否则跨期后会停在旧的「当前期」）
+      ...(w && next === null ? { periodKey: '' } : {}),
+    });
+  },
+
+  onPrevPeriod() {
+    if (!this.data.prevPeriodKey) return;
+    this.setData({ periodKey: this.data.prevPeriodKey });
+    this.fetchBoard();
+  },
+
+  onNextPeriod() {
+    if (!this.data.nextPeriodKey) return;
+    this.setData({ periodKey: this.data.nextPeriodKey });
+    this.fetchBoard();
+  },
+
   onPeriodTap(e) {
     const index = Number(e.currentTarget.dataset.index);
     if (index === this.data.periodIndex) return;
-    this.setData({ periodIndex: index });
+    // 换周期必须清掉 periodKey：周键 YYYY-MM-DD 拿去当月榜键会被 400 拒掉
+    this.setData({ periodIndex: index, periodKey: '', periodWindow: null, prevPeriodKey: null, nextPeriodKey: null });
     this.fetchBoard();
   },
 
@@ -693,10 +732,11 @@ Page({
     try {
       const board = decorateRows(
         await getApp().globalData.api.get(
-          `/stats/leaderboard?type=${this.curType()}&province=${encodeURIComponent(this.curProvince())}&period=${this.curPeriod()}`,
+          this.boardQuery(),
         ),
       );
       this.setData({ board });
+      this.applyWindow(board);
     } catch (e) {
       console.error('[leaderboard] 排行加载失败', e);
       wx.showToast({ title: '排行加载失败', icon: 'none' });

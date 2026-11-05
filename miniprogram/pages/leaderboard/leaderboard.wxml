@@ -32,6 +32,13 @@
         >{{item.label}}</view>
       </view>
 
+      <!-- 期导航（2026-11-05）：周/月/年榜可翻看历史周期；总榜没有期的概念，不渲染 -->
+      <view class="period-nav" wx:if="{{periodWindow}}">
+        <view class="nav-btn {{prevPeriodKey ? '' : 'off'}}" bindtap="onPrevPeriod">‹ 上一期</view>
+        <view class="nav-text">{{periodWindow.text}}</view>
+        <view class="nav-btn {{nextPeriodKey ? '' : 'off'}}" bindtap="onNextPeriod">下一期 ›</view>
+      </view>
+
       <!-- 运动类型 chips（与首页同款图标） -->
       <scroll-view class="type-scroll" scroll-x enable-flex="{{false}}">
         <view class="type-row">
@@ -81,7 +88,7 @@
           <view class="rank-dist">{{item.distanceKm}} km</view>
         </view>
         <view class="rank-empty" wx:if="{{board.top.length === 0}}">
-          <text>{{periods[periodIndex].label}}{{provinceIndex > 0 ? ' · ' + provinceOptions[provinceIndex] : ''}}还没有{{types[typeIndex].label}}轨迹，快来抢占第一名的位置！</text>
+          <text>{{periods[periodIndex].label}}{{periodWindow ? ' · ' + periodWindow.text : ''}}{{provinceIndex > 0 ? ' · ' + provinceOptions[provinceIndex] : ''}}还没有{{types[typeIndex].label}}轨迹{{nextPeriodKey === null && prevPeriodKey ? '，快来抢占第一名的位置！' : '。'}}</text>
         </view>
       </view>
     </view>
