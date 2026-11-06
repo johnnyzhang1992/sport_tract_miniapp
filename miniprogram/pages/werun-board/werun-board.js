@@ -80,6 +80,11 @@ Page({
    */
   async checkWeRunAuth() {
     const app = getApp();
+    // 冷启动直达本页时 onLaunch 的静默登录还在飞：先等它（与 refresh 同一套判断），
+    // 否则 loggedIn 还是 false 就直接返回，授权检查永远不生效（首屏竞态）。
+    if (!app.globalData.loggedIn && app.hasSession && app.hasSession()) {
+      try { await app.login(); } catch (e) { console.warn('[werun-board] 静默登录失败', e); }
+    }
     if (!app.globalData.loggedIn) {
       this.setData({ weRunAuth: '' });
       return;
