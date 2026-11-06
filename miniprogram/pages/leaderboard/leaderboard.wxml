@@ -10,15 +10,19 @@
     <view class="card rank-card">
       <view class="card-head">
         <view class="card-title">运动排行</view>
-        <picker
-          class="province-picker"
-          mode="selector"
-          range="{{provinceOptions}}"
-          value="{{provinceIndex}}"
-          bindchange="onProvinceChange"
-        >
-          <view class="picker-value">{{provinceOptions[provinceIndex] || '全国'}} ▾</view>
-        </picker>
+        <view class="head-actions">
+          <!-- 微信步数榜入口：另一套榜（步数聚合），页面形态与本页一致 -->
+          <view class="werun-board-entry" hover-class="werun-board-entry-hover" hover-stay-time="80" bindtap="goWerunBoard">步数榜 ›</view>
+          <picker
+            class="province-picker"
+            mode="selector"
+            range="{{provinceOptions}}"
+            value="{{provinceIndex}}"
+            bindchange="onProvinceChange"
+          >
+            <view class="picker-value">{{provinceOptions[provinceIndex] || '全国'}} ▾</view>
+          </picker>
+        </view>
       </view>
 
       <!-- 榜单周期：周榜/月榜/年榜/总榜 -->

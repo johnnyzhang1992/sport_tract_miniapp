@@ -743,6 +743,11 @@ Page({
     }
   },
 
+  /** 微信步数榜：另一套榜（步数聚合），页面形态与本页一致 */
+  goWerunBoard() {
+    wx.navigateTo({ url: '/pages/werun-board/werun-board' });
+  },
+
   /** 游客登录（页面内引导） */
   async guestLogin() {
     try {

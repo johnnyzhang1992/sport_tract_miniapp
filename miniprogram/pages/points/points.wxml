@@ -106,12 +106,13 @@
   </block>
   <view wx:else class="empty" bindtap="onLoginTap">登录后查看积分</view>
 
-  <!-- 签到月历半屏：数据与请求都在本页，组件只渲染与发事件 -->
+  <!-- 签到月历半屏：数据与请求都在本页，组件只渲染与发事件。
+       streak 首帧是 undefined（signin 初始为空对象），喂给 Number 属性会触发类型告警，绑定处兜底成 0 -->
   <signin-calendar
     visible="{{calVisible}}"
     month="{{calMonth}}"
     days="{{calDays}}"
-    streak="{{signin.streakDay}}"
+    streak="{{signin.streakDay || 0}}"
     percent="{{streakPercent}}"
     cards="{{cards}}"
     loading="{{calLoading}}"

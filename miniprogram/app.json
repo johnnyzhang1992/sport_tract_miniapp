@@ -3,6 +3,7 @@
     "pages/index/index",
     "pages/tracks/tracks",
     "pages/leaderboard/leaderboard",
+    "pages/werun-board/werun-board",
     "pages/my/my",
     "pages/record/record",
     "pages/summary/summary",

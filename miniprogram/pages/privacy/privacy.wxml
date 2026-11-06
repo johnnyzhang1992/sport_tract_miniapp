@@ -1,6 +1,6 @@
 <view class="privacy-page">
   <view class="privacy-title">小迹一下 · 用户隐私保护政策</view>
-  <view class="privacy-updated">更新日期：2026-09-27 · 生效日期：2026-09-27</view>
+  <view class="privacy-updated">更新日期：2026-11-06 · 生效日期：2026-11-06</view>
 
   <view class="privacy-section">
     <view class="privacy-h">一、我们收集的信息</view>
@@ -11,6 +11,7 @@
     <view class="privacy-p">5. <text class="strong">昵称与头像</text>：由您主动填写昵称、从相册选择头像图片，仅用于展示个人资料（不通过微信接口自动获取）。</view>
     <view class="privacy-p">6. <text class="strong">运动数据</text>：轨迹点、距离、时长、配速、消耗、海拔等，用于生成运动记录与统计图表。</view>
     <view class="privacy-p">7. <text class="strong">位置选择</text>：在记录足迹时，您可主动点击"选点"打开地图选择界面，选定地点后我们读取您所选的位置名称、地址与经纬度，仅用于保存并展示该条足迹的地点信息。位置选择仅在您主动触发时执行一次，不会持续定位，也不后台采集。</view>
+    <view class="privacy-p">8. <text class="strong">微信运动信息</text>：在您授权（scope.werun）并同意本政策后，读取您微信运动最近 31 天的每日步数，仅用于向您展示步数统计、参与相关活动（如步数任务与步数排行榜）。步数排行榜会在榜单中展示参与者的昵称、头像与省份及对应周期的步数合计。该数据通过微信加密接口获取、在我们的服务器解密后按天存储；您未授权或关闭微信运动时不收集，也不影响其他功能使用。您可以随时在微信「设置 → 隐私 → 授权管理」中取消授权，取消后将不再参与排行榜。</view>
   </view>
 
   <view class="privacy-section">

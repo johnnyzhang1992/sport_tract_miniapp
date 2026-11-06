@@ -1,0 +1,89 @@
+<view class="page">
+  <!-- 游客轻提示：榜单可看，登录后才有「我的排名」（与运动榜同口径） -->
+  <view class="guest-tip" wx:if="{{!loggedIn && !loading}}" hover-class="guest-tip-hover" hover-stay-time="80" bindtap="guestLogin">
+    <view class="guest-tip-text">登录后可在榜单看到你的排名</view>
+    <view class="guest-tip-btn">去登录 ›</view>
+  </view>
+
+  <!-- 微信运动授权提示条（2026-11-05）：未授权/曾拒绝时常驻，点了按状态走对应引导 -->
+  <view class="auth-tip" wx:if="{{loggedIn && weRunAuth && weRunAuth !== 'granted'}}" hover-class="auth-tip-hover" hover-stay-time="80" bindtap="onTapAuthBanner">
+    <view class="auth-tip-text">
+      {{weRunAuth === 'denied' ? '微信运动授权已关闭，步数不会同步' : (weRunAuth === 'privacy' ? '需同意隐私协议后才能同步步数' : '还没开启微信运动，步数不会同步')}}
+    </view>
+    <view class="auth-tip-btn">{{syncing ? '同步中…' : (weRunAuth === 'denied' ? '去设置 ›' : '去开启 ›')}}</view>
+  </view>
+
+  <view class="card rank-card">
+    <view class="card-head">
+      <view class="card-title">微信步数排行</view>
+      <picker class="province-picker" mode="selector" range="{{provinceOptions}}" value="{{provinceIndex}}" bindchange="onProvinceChange">
+        <view class="picker-value">{{provinceOptions[provinceIndex] || '全国'}} ▾</view>
+      </picker>
+    </view>
+
+    <!-- 周期分段：日/周/月/年 -->
+    <view class="period-row">
+      <view
+        wx:for="{{periods}}"
+        wx:key="key"
+        class="period-seg {{index === periodIndex ? 'active' : ''}}"
+        data-index="{{index}}"
+        bindtap="onPeriodTap"
+      >{{item.label}}</view>
+    </view>
+
+    <!-- 历史周期翻页：上一期恒有，下一期在未来时为 null -->
+    <view class="period-nav" wx:if="{{periodWindow}}">
+      <view class="nav-btn {{prevPeriodKey ? '' : 'off'}}" bindtap="onPrevPeriod">‹ 上一期</view>
+      <view class="nav-text">{{periodWindow.text}}</view>
+      <view class="nav-btn {{nextPeriodKey ? '' : 'off'}}" bindtap="onNextPeriod">下一期 ›</view>
+    </view>
+
+    <!-- TOP50：榜单数据与请求都在本页持有，行内不接资料半屏 -->
+    <view class="rank-list" wx:if="{{board}}">
+      <view class="rank-row" wx:for="{{board.top}}" wx:key="rank">
+        <view class="rank-no">
+          <image wx:if="{{item.medalIcon}}" class="medal-img" src="{{item.medalIcon}}" mode="aspectFit" />
+          <text wx:else>{{item.rank}}</text>
+        </view>
+        <view class="rank-avatar-wrap">
+          <image wx:if="{{item.avatarSrc}}" class="rank-avatar" src="{{item.avatarSrc}}" mode="aspectFill" lazy-load />
+          <view wx:else class="rank-avatar rank-avatar-text">{{item.avatarText}}</view>
+          <image wx:if="{{item.member}}" class="avatar-member-badge rank-badge" src="/assets/icons/member-badge.png" mode="aspectFit" />
+        </view>
+        <view class="rank-name-wrap">
+          <text class="rank-name">{{item.name}}</text>
+          <image class="gender-img" src="{{item.genderIcon}}" mode="aspectFit" />
+        </view>
+        <view class="rank-dist">{{item.stepText}} 步</view>
+      </view>
+      <view class="rank-empty" wx:if="{{board.top.length === 0}}">
+        <text>{{periods[periodIndex].label}}{{periodWindow ? ' · ' + periodWindow.text : ''}}{{provinceIndex > 0 ? ' · ' + provinceOptions[provinceIndex] : ''}}还没有步数数据。在小程序内授权微信运动后，步数会自动同步进来。</text>
+      </view>
+    </view>
+
+    <view class="players-line" wx:if="{{board}}">{{board.players}} 人参与</view>
+  </view>
+
+  <!-- 我的排名：贴底通栏（入榜也展示；TOP3 显示奖牌图标）；游客无排名不渲染 -->
+  <view class="me-card" wx:if="{{board && board.me}}">
+    <image wx:if="{{board.me.medalIcon}}" class="me-medal" src="{{board.me.medalIcon}}" mode="aspectFit" />
+    <view wx:else class="me-rank-no">{{board.me.rank}}</view>
+    <view class="me-avatar-wrap">
+      <image wx:if="{{board.me.avatarSrc}}" class="me-avatar" src="{{board.me.avatarSrc}}" mode="aspectFill" />
+      <view wx:else class="me-avatar me-avatar-text">{{board.me.avatarText}}</view>
+      <image wx:if="{{board.me.member}}" class="me-badge" src="/assets/icons/member-badge.png" mode="aspectFit" />
+    </view>
+    <view class="me-body">
+      <view class="me-name-wrap">
+        <text class="me-name">{{board.me.name}}</text>
+        <image class="gender-img" src="{{board.me.genderIcon}}" mode="aspectFit" />
+      </view>
+      <view class="me-sub">{{periods[periodIndex].label}}{{periodWindow ? ' · ' + periodWindow.text : ''}} · 第 {{board.me.rank}} 名</view>
+    </view>
+    <view class="me-stats">
+      <view class="me-dist">{{board.me.stepText}}</view>
+      <view class="me-count">步</view>
+    </view>
+  </view>
+</view>

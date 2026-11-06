@@ -315,6 +315,25 @@
   padding: 8rpx 16rpx;
 }
 
+/* 头部右侧动作区：步数榜入口 + 省份 picker 横排 */
+.head-actions {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  flex-shrink: 0;
+}
+.werun-board-entry {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #2b6cf6;
+  background: #ecf2ff;
+  border-radius: 10rpx;
+  padding: 8rpx 16rpx;
+}
+.werun-board-entry-hover {
+  opacity: 0.7;
+}
+
 .rank-row,
 .me-row {
   display: flex;
