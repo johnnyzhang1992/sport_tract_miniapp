@@ -197,6 +197,28 @@
 .day-step-empty {
   color: #aab0bb;
 }
+/* 步数PK：没有距离/状态列，日期与周几并成一行，步数右对齐 */
+.day-row-steps .day-date {
+  width: auto;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 10rpx;
+}
+.day-row-steps .day-date-week {
+  margin-top: 0;
+}
+.day-row-steps .day-metrics {
+  text-align: right;
+}
+.day-row-steps .day-step {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+.day-row-steps .day-step-empty {
+  font-weight: 400;
+  color: #aab0bb;
+}
 .day-status {
   flex: none;
   margin-left: 12rpx;

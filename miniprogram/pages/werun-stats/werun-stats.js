@@ -1,6 +1,7 @@
 /**
- * 微信步数统计页：数据概况 + 每日趋势（7/30 按日、180 按周、365 按月）+ 每日明细分页。
- * 数据来自 /werun/stats 与 /werun/days；个人数据，需登录。
+ * 微信步数统计页：全量数据概况 + 每日趋势（7/30 按日、180 按周、365 按月）+ 全量每日明细分页。
+ * 时间档只驱动柱状图；概况走 /werun/report，明细走 /werun/days?range=all。
+ * 个人数据，需登录。
  */
 const api = require('../../services/api');
 const { waitSession, ensureLogin } = require('../../utils/login-gate');
@@ -56,9 +57,10 @@ Page({
     // 设置页开关开启时：进页补一次最新步数（5 分钟节流；关闭/未授权时自己短路）
     await syncDailySteps().catch(() => {});
     if (seq !== this._seq) return;
-    // 变化卡固定近 30 天 vs 前 30 天，与当前时间档无关；跟着整页刷新一起重拉
+    // 概况/明细全量，时间档只驱动柱状图；变化卡固定近 30 天 vs 前 30 天
     return Promise.all([
-      this.fetchRange(this.data.range, seq, silent),
+      this.fetchOverviewAndDays(seq, silent),
+      this.fetchChart(this.data.range),
       this.fetchCompare(seq),
     ]);
   },
@@ -76,18 +78,18 @@ Page({
     }
   },
 
-  async fetchRange(range, seq, silent = false) {
+  /** 概况与明细都取全量，不跟时间档走 */
+  async fetchOverviewAndDays(seq, silent = false) {
     try {
-      const [stats, days] = await Promise.all([
-        api.get(`/werun/stats?range=${range}`),
-        api.get(`/werun/days?range=${range}&page=1&pageSize=${PAGE_SIZE}`),
+      const [report, days] = await Promise.all([
+        api.get('/werun/report'),
+        api.get(`/werun/days?range=all&page=1&pageSize=${PAGE_SIZE}`),
       ]);
       if (seq !== this._seq) return;
       this.setData({
         loading: false,
         error: '',
-        overview: buildOverview(stats.overview, stats.startDate, stats.endDate),
-        trend: buildTrend(stats.trend, stats.bucket),
+        overview: buildOverview(report.overview, report.startDate, report.endDate),
         days: buildDayItems(days.items),
         dayTotal: days.total || 0,
         dayPage: days.page || 1,
@@ -105,35 +107,36 @@ Page({
     }
   },
 
-  /** 切换时间档：先清掉旧档内容，避免旧数据挂在新档位下 */
+  /** 柱状图：时间档只影响这里；切档时保留旧图直到新数据到达 */
+  async fetchChart(range) {
+    const seq = (this._chartSeq = (this._chartSeq || 0) + 1);
+    try {
+      const stats = await api.get(`/werun/stats?range=${range}`);
+      if (seq !== this._chartSeq) return;
+      this.setData({ trend: buildTrend(stats.trend, stats.bucket) });
+    } catch (e) {
+      if (seq !== this._chartSeq) return;
+      console.warn('[werun-stats] 趋势加载失败', e);
+      if (!this.data.trend) wx.showToast({ title: '趋势加载失败', icon: 'none' });
+    }
+  },
+
+  /** 切换时间档：只重拉柱状图，概况与明细不动 */
   onRangeTap(e) {
     const range = Number(e.currentTarget.dataset.range);
     if (!range || range === this.data.range) return;
-    const seq = (this._seq = (this._seq || 0) + 1);
-    this.setData({
-      range,
-      loading: true,
-      error: '',
-      overview: null,
-      trend: null,
-      days: [],
-      dayTotal: 0,
-      dayPage: 1,
-      dayHasMore: false,
-      dayLoadingMore: false,
-      dayLoadError: false,
-    });
-    return this.fetchRange(range, seq);
+    this.setData({ range });
+    return this.fetchChart(range);
   },
 
-  /** 每日明细「加载更多」 */
+  /** 每日明细「加载更多」：全量记录，与时间档无关 */
   async loadMoreDays() {
-    const { dayLoadingMore, dayHasMore, dayPage, range } = this.data;
+    const { dayLoadingMore, dayHasMore, dayPage } = this.data;
     if (dayLoadingMore || !dayHasMore) return;
     const seq = this._seq;
     this.setData({ dayLoadingMore: true });
     try {
-      const d = await api.get(`/werun/days?range=${range}&page=${dayPage + 1}&pageSize=${PAGE_SIZE}`);
+      const d = await api.get(`/werun/days?range=all&page=${dayPage + 1}&pageSize=${PAGE_SIZE}`);
       if (seq !== this._seq) return;
       this.setData({
         days: this.data.days.concat(buildDayItems(d.items)),

@@ -22,6 +22,10 @@ test('WSP-2 结构：四个时间档 + 概况 + 柱状趋势 + 每日明细分�
   }
   const wxml = read('miniprogram/pages/werun-stats/werun-stats.wxml');
   assert.match(wxml, /wx:for="\{\{ranges\}\}"/, '时间档分段');
+  const chartIdx = wxml.indexOf('步数趋势');
+  const rangeIdx = wxml.indexOf('wx:for="{{ranges}}"');
+  const statIdx = wxml.indexOf('<stat-chart');
+  assert.ok(chartIdx >= 0 && rangeIdx > chartIdx && rangeIdx < statIdx, '时间档放在趋势卡内、图表之前');
   assert.match(wxml, /总步数[\s\S]*日均步数[\s\S]*最高单日[\s\S]*同步天数/, '概况四项');
   assert.match(wxml, /<stat-chart[\s\S]*type="bar"[\s\S]*unit="step"/, '趋势要用柱状图且单位是步');
   assert.match(wxml, /wx:for="\{\{days\}\}"/, '每日明细列表');
@@ -32,13 +36,22 @@ test('WSP-2 结构：四个时间档 + 概况 + 柱状趋势 + 每日明细分�
   assert.match(wxml, /已显示 \{\{days\.length\}\} \/ \{\{dayTotal\}\}/, '分页进度');
 });
 
-test('WSP-3 请求与时间档：stats/days 都带 range，明细按页追加', () => {
+test('WSP-3 请求与时间档：只有图表带 range，概况/明细走全量', () => {
   const js = read('miniprogram/pages/werun-stats/werun-stats.js');
-  assert.match(js, /\/werun\/stats\?range=\$\{range\}/);
-  assert.match(js, /\/werun\/days\?range=\$\{range\}&page=1&pageSize=/);
-  assert.match(js, /page=\$\{dayPage \+ 1\}/, '加载更多要取下一页');
+  assert.match(js, /\/werun\/stats\?range=\$\{range\}/, '时间档只驱动图表');
+  assert.match(js, /\/werun\/report'/, '概况走全量步数报告');
+  assert.match(js, /\/werun\/days\?range=all&page=1&pageSize=/, '明细第一页取全量');
+  assert.match(js, /\/werun\/days\?range=all&page=\$\{dayPage \+ 1\}/, '加载更多同样全量');
   assert.match(js, /dayPage: d\.page \|\| dayPage \+ 1/, '页码以服务端为准');
   assert.match(js, /dayHasMore: !!d\.hasMore/);
+
+  // 切档只重拉图表：不清空概况与明细
+  const tapStart = js.indexOf('onRangeTap(e)');
+  const tapEnd = js.indexOf('loadMoreDays()');
+  const tapBody = js.slice(tapStart, tapEnd);
+  assert.match(tapBody, /fetchChart\(range\)/, '切档调用图表接口');
+  assert.ok(!/overview\s*:\s*null/.test(tapBody), '切档不清空概况');
+  assert.ok(!/days\s*:\s*\[\]/.test(tapBody), '切档不清空明细');
 });
 
 test('WSP-4 统计 tab 小卡片：近 7 天概况 + 跳转步数统计页', () => {
@@ -63,6 +76,6 @@ test('WSP-5 步数统计页趋势变化卡：30 天对比 + 与统计页同款�
 test('WSP-6 加载更多失败：保留已加载内容、置错误态（底部可重试），成功一次后清除', () => {
   const js = read('miniprogram/pages/werun-stats/werun-stats.js');
   assert.match(js, /dayLoadError: true/, '失败要置错误态');
-  assert.match(js, /dayLoadError: false/, '成功/切档要清除错误态');
+  assert.match(js, /dayLoadError: false/, '加载成功后要清除错误态');
   assert.ok(!/加载更多失败[\s\S]{0,80}wx\.showToast/.test(js), '失败不再只靠 toast（一瞬即逝，用户没有第二次机会）');
 });

@@ -7,17 +7,6 @@
   </view>
 
   <block wx:if="{{loggedIn}}">
-    <!-- 时间档：7 日 / 30 日 / 半年 / 一年 -->
-    <view class="range-row">
-      <view
-        wx:for="{{ranges}}"
-        wx:key="key"
-        class="range-seg {{range === item.key ? 'range-seg-active' : ''}}"
-        data-range="{{item.key}}"
-        bindtap="onRangeTap"
-      >{{item.label}}</view>
-    </view>
-
     <view class="card state-card" wx:if="{{loading && !overview}}">
       <view class="state-text">加载中…</view>
     </view>
@@ -41,8 +30,10 @@
           </view>
           <view class="ov-cell">
             <view class="ov-label">最高单日</view>
-            <view class="ov-value">{{overview.bestText}}</view>
-            <view class="ov-sub" wx:if="{{overview.bestDateText}}">{{overview.bestDateText}}</view>
+            <view class="ov-value ov-value-inline">
+              <text>{{overview.bestText}}</text>
+              <text class="ov-date" wx:if="{{overview.bestDateText}}">{{overview.bestDateText}}</text>
+            </view>
           </view>
           <view class="ov-cell">
             <view class="ov-label">同步天数</view>
@@ -75,11 +66,20 @@
         </view>
       </view>
 
-      <!-- 每日变化趋势：柱状图；7/30 按日、半年按周、一年按月 -->
+      <!-- 每日变化趋势：时间档只作用于这张图；7/30 按日、半年按周、一年按月 -->
       <view class="card">
         <view class="card-head">
           <view class="card-title">步数趋势</view>
           <view class="card-sub">{{trend.subText}}</view>
+        </view>
+        <view class="range-row chart-range">
+          <view
+            wx:for="{{ranges}}"
+            wx:key="key"
+            class="range-seg {{range === item.key ? 'range-seg-active' : ''}}"
+            data-range="{{item.key}}"
+            bindtap="onRangeTap"
+          >{{item.label}}</view>
         </view>
         <stat-chart
           type="bar"
@@ -104,7 +104,7 @@
           </view>
           <view class="day-step">{{item.stepText}}<text class="day-unit"> 步</text></view>
         </view>
-        <view class="day-empty" wx:if="{{days.length === 0}}">该时间范围内还没有步数记录</view>
+        <view class="day-empty" wx:if="{{days.length === 0}}">还没有步数记录</view>
         <view
           class="day-more day-more-error"
           wx:if="{{dayHasMore && dayLoadError && !dayLoadingMore}}"

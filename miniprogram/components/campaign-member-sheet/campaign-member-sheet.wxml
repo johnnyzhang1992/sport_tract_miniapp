@@ -111,7 +111,7 @@
       <block wx:else>
         <view class="detail-error" wx:if="{{steps.error}}">按天数据加载失败，请稍后重试</view>
         <scroll-view scroll-y class="detail-list" wx:if="{{steps.items.length > 0}}">
-          <view class="day-row" wx:for="{{steps.items}}" wx:key="date">
+          <view class="day-row {{stepMode === 'steps' ? 'day-row-steps' : ''}}" wx:for="{{steps.items}}" wx:key="date">
             <view class="day-date">
               <text class="day-date-num">{{item.dateText}}</text>
               <text class="day-date-week">{{item.weekText}}</text>

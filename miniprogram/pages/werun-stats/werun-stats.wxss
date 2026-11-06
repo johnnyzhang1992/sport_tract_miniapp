@@ -11,6 +11,10 @@
   padding: 6rpx;
   margin-bottom: 20rpx;
 }
+/* 时间档收进步数趋势卡：只作用于图表，留给图的顶部间距小一点 */
+.chart-range {
+  margin: 0 0 12rpx;
+}
 .range-seg {
   flex: 1;
   text-align: center;
@@ -100,9 +104,16 @@
   font-weight: 400;
   color: #667080;
 }
-.ov-sub {
-  margin-top: 2rpx;
-  font-size: 20rpx;
+/* 最高单日：日期跟数值同一行，避免单独一行把三格撑得不齐 */
+.ov-value-inline {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6rpx;
+}
+.ov-date {
+  font-size: 22rpx;
+  font-weight: 400;
   color: #8a93a6;
 }
 
