@@ -31,6 +31,7 @@ Page({
     dayPage: 1,
     dayHasMore: false,
     dayLoadingMore: false,
+    dayLoadError: false, // 「加载更多」失败：底部给重试入口，不只是一闪而过的 toast
   },
 
   onLoad() {
@@ -92,6 +93,7 @@ Page({
         dayPage: days.page || 1,
         dayHasMore: !!days.hasMore,
         dayLoadingMore: false,
+        dayLoadError: false,
       });
       this._loaded = true;
     } catch (e) {
@@ -119,6 +121,7 @@ Page({
       dayPage: 1,
       dayHasMore: false,
       dayLoadingMore: false,
+      dayLoadError: false,
     });
     return this.fetchRange(range, seq);
   },
@@ -137,11 +140,13 @@ Page({
         dayPage: d.page || dayPage + 1,
         dayHasMore: !!d.hasMore,
         dayLoadingMore: false,
+        dayLoadError: false,
       });
     } catch (e) {
       if (seq !== this._seq) return;
-      this.setData({ dayLoadingMore: false });
-      wx.showToast({ title: (e && e.message) || '加载失败', icon: 'none' });
+      // 分页失败保留已加载内容，底部给可点的重试入口（toast 一瞬就没了，用户没有第二次机会）
+      this.setData({ dayLoadingMore: false, dayLoadError: true });
+      console.warn('[werun-stats] 加载更多失败', e);
     }
   },
 

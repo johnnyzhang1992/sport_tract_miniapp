@@ -106,8 +106,15 @@
         </view>
         <view class="day-empty" wx:if="{{days.length === 0}}">该时间范围内还没有步数记录</view>
         <view
+          class="day-more day-more-error"
+          wx:if="{{dayHasMore && dayLoadError && !dayLoadingMore}}"
+          hover-class="day-more-hover"
+          hover-stay-time="80"
+          bindtap="loadMoreDays"
+        >加载失败，点击重试（已显示 {{days.length}} / {{dayTotal}}）</view>
+        <view
           class="day-more"
-          wx:if="{{dayHasMore}}"
+          wx:elif="{{dayHasMore}}"
           hover-class="day-more-hover"
           hover-stay-time="80"
           bindtap="loadMoreDays"

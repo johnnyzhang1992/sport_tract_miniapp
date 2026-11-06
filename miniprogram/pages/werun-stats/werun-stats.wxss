@@ -267,3 +267,8 @@
 .metric-diff-flat {
   color: #8a93a6;
 }
+
+/* 「加载更多」失败态：与普通加载更多同一位置，红色可点重试 */
+.day-more-error {
+  color: #e34d59;
+}
