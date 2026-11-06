@@ -4,6 +4,10 @@
  */
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+
+const read = (p) => fs.readFileSync(path.join(__dirname, '..', 'miniprogram', p), 'utf8');
 
 const apiPath = require.resolve('../miniprogram/services/api.js');
 require.cache[apiPath] = {
@@ -42,6 +46,48 @@ test('最佳记录卡带保持天数：今天达成 / 已保持 N 天', () => {
   });
   assert.equal(best.bestCards.find((c) => c.label === '最远距离').heldText, '今天达成');
   assert.equal(best.bestCards.find((c) => c.label === '5 公里 PB').heldText, '已保持 80 天');
+});
+
+test('最佳记录末尾追加两条步数纪录：最多步数日 / 步数最多月份', () => {
+  const report = {
+    overview: {
+      totalStep: 23000, avgStep: 4600, bestDate: '2026-02-10', bestStep: 12000, syncedDays: 5, days: 62,
+    },
+    months: [],
+    bestMonth: { month: '2026-02', step: 15000 },
+  };
+  const best = pageDef.decorateBest({
+    maxDistanceByType: [{ type: 'running', distance: 5000, id: 'a', startTime: Date.now() }],
+  }, report);
+  const stepCards = best.bestCards.slice(-2);
+  assert.deepEqual(stepCards.map((c) => c.label), ['最多步数日', '步数最多月份']);
+  assert.equal(stepCards[0].value, '1.2万 步');
+  assert.equal(stepCards[0].typeLabel, '微信步数');
+  assert.equal(stepCards[0].heldText, '2026/02/10');
+  assert.equal(stepCards[0].id, '', '没有轨迹可跳');
+  assert.equal(stepCards[0].icon, '/assets/icons/lucide-footprints.png');
+  assert.equal(stepCards[1].heldText, '2026年2月');
+  assert.equal(stepCards[1].icon, '/assets/icons/lucide-calendar-blue.png');
+});
+
+test('没有运动 PB 但有步数：最佳记录仍返回步数卡；两者都没有则整块隐藏', () => {
+  const report = {
+    overview: { bestStep: 9000, bestDate: '2026-03-02', syncedDays: 1 },
+    bestMonth: { month: '2026-03', step: 9000 },
+  };
+  const onlyStep = pageDef.decorateBest(null, report);
+  assert.equal(onlyStep.bestCards.length, 2);
+
+  assert.equal(pageDef.decorateBest(null, null), null);
+  assert.equal(pageDef.decorateBest(null, { overview: { syncedDays: 0 } }), null);
+});
+
+test('半屏打开时藏掉点亮地图画布，底部卡片不被 canvas 压住', () => {
+  assert.match(read('pages/stats/stats.wxml'), /<lit-map[^>]*blank="\{\{sheetVisible\}\}"/);
+  assert.match(
+    read('packageFootprint/components/lit-map/lit-map.wxml'),
+    /provinceModal \|\| blank \? 'map-hidden'/,
+  );
 });
 
 test('累计概览：时长转小时/天，爬升与千卡加千分位', () => {

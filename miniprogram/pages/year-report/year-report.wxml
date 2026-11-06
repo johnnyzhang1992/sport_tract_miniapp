@@ -37,10 +37,35 @@
       </view>
     </view>
 
+    <!-- 微信步数汇总 -->
+    <view class="card" wx:if="{{step && step.hasData}}">
+      <view class="section-title">微信步数</view>
+      <view class="step-row">
+        <view class="step-item">
+          <view class="step-num">{{step.totalText}}</view>
+          <view class="step-label">总步数</view>
+        </view>
+        <view class="step-item">
+          <view class="step-num">{{step.avgText}}</view>
+          <view class="step-label">日均步数</view>
+        </view>
+        <view class="step-item">
+          <view class="step-num">{{step.syncedDays}}</view>
+          <view class="step-label">同步天数</view>
+        </view>
+      </view>
+    </view>
+
     <!-- 月度分解 -->
     <view class="card">
       <view class="section-title">月度运动距离（公里）</view>
       <stat-chart data="{{chartData}}" type="bar" unit="km" color="#2b6cf6" height="{{200}}" empty-text="" />
+    </view>
+
+    <!-- 月度步数（1–12 月零填充） -->
+    <view class="card" wx:if="{{step && step.hasData}}">
+      <view class="section-title">月度步数</view>
+      <stat-chart data="{{stepChartData}}" type="bar" unit="step" color="#2b6cf6" height="{{200}}" empty-text="" />
     </view>
 
     <!-- 分类型汇总（各类型总距离/总时长/次数） -->
@@ -70,7 +95,7 @@
       <view class="section-title">最佳记录</view>
       <view
         class="hl-row"
-        hover-class="hl-row-hover"
+        hover-class="{{item.id ? 'hl-row-hover' : 'none'}}"
         wx:for="{{highlights}}"
         wx:key="key"
         data-id="{{item.id}}"
@@ -80,7 +105,7 @@
           <view class="hl-value">{{item.value}}</view>
           <view class="hl-label">{{item.label}}</view>
         </view>
-        <view class="hl-sub">{{item.sub}} ›</view>
+        <view class="hl-sub">{{item.sub}}<text wx:if="{{item.id}}"> ›</text></view>
       </view>
     </view>
 

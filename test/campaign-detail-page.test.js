@@ -1276,7 +1276,7 @@ test('CDP43 成员半屏不重复显示 TA 的三项：有对照时只留对照�
   );
   // 有对照时 TA 的次数/距离/时长就在对照行里，再叠一张汇总卡＝同一组数字显示两遍、白占半屏高度
   assert.ok(!/class="stat-row"/.test(compWxml), '对照行里已经有 TA 的三项，不能再叠一张汇总卡');
-  assert.match(compWxml, /class="stat-line"[^>]*wx:if="\{\{!compare\}\}"/, '没有对照（点自己）时要有一行紧凑汇总顶上');
+  assert.match(compWxml, /class="stat-line"[^>]*wx:if="\{\{!compare[^"]*\}\}"/, '没有对照（点自己）时要有一行紧凑汇总顶上');
 });
 
 test('CDP44 成员半屏标题行就是头像+昵称，不再写死「成员明细」', () => {
@@ -1458,13 +1458,56 @@ test('CDP52 贴底「我的运动」条：22rpx 次要文字对蓝底对比度 �
   assert.ok(rankLum < barMinLum, `徽标字色 ${rankHex}（亮度 ${rankLum.toFixed(3)}）要比蓝条最深端（${barMinLum.toFixed(3)}）还深`);
 });
 
+test('CDP55 步数PK：汇总 / 排行 / 趋势 / 底部条全走步数口径', async () => {
+  resetEnv();
+  const detail = member({
+    kind: 'steps',
+    stepAuxEnabled: false,
+    allowedTypes: [],
+    totals: { count: 10, distance: 0, duration: 0, step: 30000 },
+    myPanel: { count: 4, streak: 2, distance: 0, duration: 0, step: 12000, rank: 2, members: 2, gapToPrev: 6000 },
+  });
+  const board = {
+    rows: [
+      { userId: 'u1', name: '阿迹', avatarUrl: '', avatarPreset: 'face', step: 18000, value: 18000, count: 6, distance: 0, duration: 0, rank: 1 },
+      { userId: 'u2', name: '小迹', avatarUrl: '', avatarPreset: 'face', step: 12000, value: 12000, count: 4, distance: 0, duration: 0, rank: 2 },
+    ],
+    total: 2, page: 1, pageSize: 20, metric: 'step', type: '',
+    my: { rank: 2, value: 12000, total: 2, leaderValue: 18000, gapToLeader: 6000 },
+  };
+  const trend = {
+    metric: 'step', bucket: 'day', labels: ['11/03', '11/04'],
+    series: [
+      { userId: 'u1', name: '阿迹', isMe: false, values: [8000, 18000] },
+      { userId: 'u2', name: '小迹', isMe: true, values: [5000, 12000] },
+    ],
+  };
+  mockDetail(detail, board, trend);
+  const page = makePage();
+  await page.onLoad({ id: 'c1' });
+  await flush();
+
+  assert.equal(page.data.isSteps, true);
+  assert.equal(page.data.head.kindTag, '步数PK');
+  assert.equal(page.data.stepSummary.totalText, '30,000', '全队步数走千分位');
+  assert.equal(page.data.stepSummary.people, 2, '参与人数是加入人数，不是人均天数');
+  assert.equal(page.data.stepSummary.myText, '12,000');
+  assert.equal(page.data.panel.stepText, '12,000');
+  assert.equal(page.data.panel.gapText, '距上一名 6,000 步');
+  assert.equal(page.data.members[0].valueText, '18,000 步', '排行主指标＝步数');
+  assert.equal(page.data.members[0].metaText, '同步 6 天');
+  assert.equal(page.data.trend.isSteps, true);
+  assert.equal(page.data.trend.unit, 'step', '图表单位切到步数（Y 轴走「万」压缩）');
+});
+
 test('CDP53 趋势卡文案改名：运动趋势 / 成员 / 类型（不再叫「累计趋势」「按人」「按类型」）', () => {
   const fs = require('fs');
   const path = require('path');
   const wxml = fs
     .readFileSync(path.join(__dirname, '../miniprogram/pages/campaign-detail/campaign-detail.wxml'), 'utf8')
     .replace(/<!--[\s\S]*?-->/g, '');
-  assert.ok(wxml.indexOf('<view class="card-title">运动趋势</view>') >= 0, '卡标题＝运动趋势');
+  assert.ok(wxml.indexOf("{{isSteps ? '累计步数' : '运动趋势'}}") >= 0, '普通活动卡标题＝运动趋势，步数PK＝累计步数');
+  assert.ok(wxml.indexOf('<view class="card-title">运动趋势</view>') < 0, '标题不再是写死的单一口径');
   assert.ok(!/累计趋势/.test(wxml), '「累计趋势」不再出现在界面上');
   assert.match(wxml, /data-by="person"[^>]*>[\s\S]*?成员<\/view>/, 'person 档的 chip 文案是「成员」');
   assert.match(wxml, /data-by="type"[^>]*>[\s\S]*?类型<\/view>/, 'type 档的 chip 文案是「类型」');

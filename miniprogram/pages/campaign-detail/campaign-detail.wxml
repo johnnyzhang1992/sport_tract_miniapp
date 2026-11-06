@@ -24,6 +24,7 @@
     <view class="card">
       <view class="head-row">
         <text class="head-title">{{head.title}}</text>
+        <text wx:if="{{head.kindTag}}" class="head-kind">{{head.kindTag}}</text>
         <text class="campaign-tag {{head.statusTag}}">{{head.statusText}}</text>
       </view>
       <!-- 时间居左、进度文案居右共用一行（进度文案原来单独占一行，白吃一段高度） -->
@@ -41,6 +42,13 @@
         <text class="head-meta-item">{{head.visibilityText}}</text>
         <text class="head-meta-item">{{head.limitText}}</text>
         <text class="head-meta-item">{{head.typesText}}</text>
+        <text class="head-meta-item head-meta-aux" wx:if="{{head.auxOn}}">步数辅助已开启</text>
+      </view>
+
+      <!-- 微信步数授权提示（仅进行中 + 已加入 + 用到步数的活动；未开始/已结束不检查） -->
+      <view class="we-run-tip" wx:if="{{isMember && weRunBanner}}" hover-class="we-run-tip-hover" hover-stay-time="80" bindtap="onTapWeRunBanner">
+        <text class="we-run-tip-text">{{weRunBanner === 'denied' ? '微信运动授权已关闭，步数不会计入' : (weRunBanner === 'privacy' ? '需同意隐私协议后才能同步步数' : '微信运动还没开启，你的步数不会计入')}}</text>
+        <text class="we-run-tip-btn">{{weRunBanner === 'denied' ? '去设置 ›' : '去开启 ›'}}</text>
       </view>
 
       <!-- 发起人专属区 / 邀请 / 退出（Task 11 + 终审 M2）：发起人＝待审批徽标 + 解散；成员＝邀请好友；
@@ -93,13 +101,27 @@
       <view class="join-tip">{{ctaHint}}</view>
     </view>
 
-    <!-- 成员：全队汇总三格 -->
+    <!-- 成员：全队汇总三格（步数PK 换成步数口径） -->
     <view class="card" wx:if="{{isMember}}">
       <view class="card-head">
-        <view class="card-title">全队汇总</view>
+        <view class="card-title">{{isSteps ? '步数汇总' : '全队汇总'}}</view>
         <view class="card-sub">活动期间全队累计</view>
       </view>
-      <view class="sum-row">
+      <view class="sum-row" wx:if="{{isSteps && stepSummary}}">
+        <view class="sum-cell">
+          <view class="sum-label">全队步数</view>
+          <view class="sum-value">{{stepSummary.totalText}}</view>
+        </view>
+        <view class="sum-cell">
+          <view class="sum-label">参与人数</view>
+          <view class="sum-value">{{stepSummary.people}} 人</view>
+        </view>
+        <view class="sum-cell">
+          <view class="sum-label">我的步数</view>
+          <view class="sum-value">{{stepSummary.myText}}</view>
+        </view>
+      </view>
+      <view class="sum-row" wx:else>
         <view class="sum-cell">
           <view class="sum-label">运动次数</view>
           <view class="sum-value">{{totals.countText}}</view>
@@ -119,19 +141,21 @@
          档位 chip 在卡头右侧，副标题只报桶粒度（按日 / 按周），页面不长高 -->
     <view class="card" wx:if="{{isMember && trend}}">
       <view class="card-head card-head-trend">
-        <view class="card-title">运动趋势</view>
+        <view class="card-title">{{isSteps ? '累计步数' : '运动趋势'}}</view>
         <view class="trend-tools">
           <text class="card-sub">{{trend.subText}}</text>
-          <view
-            class="filter-chip filter-chip-sm {{trendBy === 'person' ? 'filter-chip-on' : ''}}"
-            data-by="person"
-            bindtap="onTrendByTap"
-          >成员</view>
-          <view
-            class="filter-chip filter-chip-sm {{trendBy === 'type' ? 'filter-chip-on' : ''}}"
-            data-by="type"
-            bindtap="onTrendByTap"
-          >类型</view>
+          <block wx:if="{{!trend.isSteps}}">
+            <view
+              class="filter-chip filter-chip-sm {{trendBy === 'person' ? 'filter-chip-on' : ''}}"
+              data-by="person"
+              bindtap="onTrendByTap"
+            >成员</view>
+            <view
+              class="filter-chip filter-chip-sm {{trendBy === 'type' ? 'filter-chip-on' : ''}}"
+              data-by="type"
+              bindtap="onTrendByTap"
+            >类型</view>
+          </block>
         </view>
       </view>
       <view class="trend-legend">
@@ -148,7 +172,7 @@
         type="multi-line"
         series="{{trend.series}}"
         labels="{{trend.labels}}"
-        unit="km"
+        unit="{{trend.unit}}"
         height="{{190}}"
       />
     </view>
@@ -160,10 +184,10 @@
     <view class="card" wx:if="{{isMember}}">
       <view class="card-head">
         <view class="card-title">成员排行</view>
-        <view class="card-sub">点成员看明细与对比</view>
+        <view class="card-sub">{{isSteps ? '按活动周期内步数' : '点成员看明细与对比'}}</view>
       </view>
-      <!-- 指标：服务端按所选指标重排（端上不重排）；类型 chip 只在白名单 ≥2 类时出现 -->
-      <view class="filter-row">
+      <!-- 指标：服务端按所选指标重排（端上不重排）；步数PK 固定按步数，不显示指标/类型 chips -->
+      <view class="filter-row" wx:if="{{!isSteps}}">
         <view
           class="filter-chip {{metric === item.key ? 'filter-chip-on' : ''}}"
           wx:for="{{metricOptions}}"
@@ -235,15 +259,19 @@
   <view class="me-card" wx:if="{{!notFound && !error && isMember && panel}}">
     <view class="me-body">
       <view class="me-name-wrap">
-        <text class="me-name">我的运动</text>
+        <text class="me-name">{{isSteps ? '我的步数' : '我的运动'}}</text>
         <text class="me-rank" wx:if="{{panel.rankText}}">{{panel.rankText}}</text>
       </view>
       <view class="me-sub" wx:if="{{panel.gapText}}">{{panel.gapText}}</view>
       <view class="me-sub" wx:else>{{head.rangeText}} · 本活动内</view>
     </view>
-    <view class="me-stats">
+    <view class="me-stats" wx:if="{{!isSteps}}">
       <view class="me-dist">{{panel.distanceText}} km</view>
       <view class="me-count">{{panel.countText}} 次 · 连续 {{panel.streakText}} 天 · {{panel.durationText}}</view>
+    </view>
+    <view class="me-stats" wx:else>
+      <view class="me-dist">{{panel.stepText}} 步</view>
+      <view class="me-count">同步 {{panel.countText}} 天 · 连续 {{panel.streakText}} 天</view>
     </view>
     <view class="me-excluded" wx:if="{{panel.excludedText}}">{{panel.excludedText}}</view>
   </view>
@@ -256,10 +284,14 @@
     wx:if="{{!notFound && !error}}"
     visible="{{sheetVisible}}"
     member="{{sheetMember}}"
+    step-mode="{{sheetStepMode}}"
     detail="{{sheetDetail}}"
+    steps="{{sheetSteps}}"
     compare="{{sheetCompare}}"
     bind:close="closeMemberSheet"
     bind:loadmore="onSheetLoadMore"
+    bind:loadsteps="onSheetLoadSteps"
+    bind:stepsloadmore="onSheetStepsLoadMore"
   />
 
   <!-- 审核抽屉（仅发起人；内联 .mask/.sheet，照 footprints.wxml:112-130 的成员列表半屏形态） -->

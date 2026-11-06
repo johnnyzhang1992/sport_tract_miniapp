@@ -16,6 +16,7 @@ Page({
       showBodyData: true,
       showSportData: true,
       kmAnnounce: true,
+      dailyStepSync: true,
     },
     activityTypes: config.ACTIVITY_TYPES,
     saving: false,
@@ -79,7 +80,7 @@ Page({
       this.setData({
         loggedIn: true, // 能拉到资料即已登录（游客态接口 401）
         settings: Object.assign(
-          { unit: 'metric', defaultType: 'walking', highAccuracy: true, showBodyData: true, showSportData: true, kmAnnounce: true },
+          { unit: 'metric', defaultType: 'walking', highAccuracy: true, showBodyData: true, showSportData: true, kmAnnounce: true, dailyStepSync: true },
           user.settings,
         ),
       });
@@ -103,6 +104,10 @@ Page({
 
   onKmAnnounceChange(e) {
     this.setData({ 'settings.kmAnnounce': e.detail.value });
+  },
+
+  onDailyStepSyncChange(e) {
+    this.setData({ 'settings.dailyStepSync': e.detail.value });
   },
 
   /** 关闭「展示运动数据」：弹半屏解释影响范围；重新打开则收起 */

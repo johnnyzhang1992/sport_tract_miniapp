@@ -30,6 +30,12 @@ const VISIBILITY_OPTIONS = [
   { key: 'private', label: '隐私' },
 ];
 
+/** PK 类型：活动创建后不可改（服务端 UpdateCampaignSchema 不收 kind） */
+const KIND_OPTIONS = [
+  { key: 'activity', label: '运动PK' },
+  { key: 'steps', label: '步数PK' },
+];
+
 /** 本地当天 YYYY-MM-DD，仅作 picker 默认值（纯字符串，不做任何时区换算） */
 function localToday() {
   const d = new Date();
@@ -68,6 +74,11 @@ Page({
     description: '',
     visibility: 'public',
     visibilityOptions: VISIBILITY_OPTIONS,
+    // PK 类型：activity=运动PK（按轨迹） / steps=步数PK（只按活动周期内微信步数）
+    kind: 'activity',
+    kindOptions: KIND_OPTIONS,
+    // 普通运动PK 是否开启微信步数辅助（成员半屏按天对比；不影响排名）
+    stepAuxEnabled: false,
     // chips 视图态：数据源 config.ACTIVITY_TYPES（与后端白名单同一集合），active 跟 allowedTypes 同步
     types: config.ACTIVITY_TYPES.map((t) => ({ type: t.type, label: t.label, iconImg: t.iconImg, active: false })),
     allowedTypes: [], // 选中的类型；空数组 = 不限制
@@ -144,11 +155,14 @@ Page({
   async loadForEdit(id) {
     try {
       const d = await api.get(`/campaigns/${id}`);
+      const kind = d.kind === 'steps' ? 'steps' : 'activity';
       const allowed = d.allowedTypes || [];
       this.setData({
         title: d.title || '',
         description: d.description || '',
         visibility: d.visibility,
+        kind,
+        stepAuxEnabled: kind === 'activity' && d.stepAuxEnabled === true,
         allowedTypes: allowed,
         types: this.data.types.map((t) => Object.assign({}, t, { active: allowed.indexOf(t.type) >= 0 })),
         memberLimit: d.memberLimit == null ? '' : String(d.memberLimit),
@@ -177,6 +191,27 @@ Page({
   onVisibility(e) {
     const value = e.currentTarget.dataset.value;
     if (value) this.setData({ visibility: value });
+  },
+
+  /** PK 类型：编辑态不可改（服务端不收 kind）；切到步数PK时清空类型与辅助开关 */
+  onKind(e) {
+    const kind = e.currentTarget.dataset.value;
+    if (!kind || kind === this.data.kind) return;
+    if (this.data.isEdit) return;
+    if (kind === 'steps') {
+      this.setData({
+        kind,
+        stepAuxEnabled: false,
+        allowedTypes: [],
+        types: this.data.types.map((t) => Object.assign({}, t, { active: false })),
+      });
+      return;
+    }
+    this.setData({ kind });
+  },
+
+  onStepAuxChange(e) {
+    this.setData({ stepAuxEnabled: !!e.detail.value });
   },
 
   /** 运动类型多选：再点已选中的即取消（空选＝不限制） */
@@ -226,7 +261,8 @@ Page({
 
     const title = String(this.data.title || '').trim();
     const description = String(this.data.description || '').trim();
-    const { visibility, allowedTypes, startDate, endDate } = this.data;
+    const { visibility, allowedTypes, startDate, endDate, kind } = this.data;
+    const isSteps = kind === 'steps';
     const memberRaw = String(this.data.memberLimit || '').trim();
 
     // 前端镜像服务端上限：违反时给「对象 + 实际值 + 上限」的提示，一个请求都不发
@@ -275,15 +311,14 @@ Page({
 
     try {
       if (this.data.isEdit) {
-        // 不带 startDate：服务端 .strict()，多传字段＝整请求 400
-        await api.put(`/campaigns/${this.data.editId}`, {
-          title,
-          description,
-          visibility,
-          allowedTypes,
-          memberLimit,
-          endDate,
-        });
+        // 不带 startDate / kind：服务端 .strict()，多传字段＝整请求 400。
+        // 步数PK 不收 allowedTypes / stepAuxEnabled（服务端会拒绝），只提交通用字段。
+        const editBody = { title, description, visibility, memberLimit, endDate };
+        if (!isSteps) {
+          editBody.allowedTypes = allowedTypes;
+          editBody.stepAuxEnabled = this.data.stepAuxEnabled === true;
+        }
+        await api.put(`/campaigns/${this.data.editId}`, editBody);
         this.setData({ submitting: false });
         markHomeDirty();
         wx.showToast({ title: '已保存', icon: 'success' });
@@ -296,7 +331,10 @@ Page({
         title,
         description,
         visibility,
-        allowedTypes,
+        kind,
+        // 步数PK 不区分运动类型；辅助开关只对普通运动PK 有意义
+        allowedTypes: isSteps ? [] : allowedTypes,
+        stepAuxEnabled: isSteps ? false : this.data.stepAuxEnabled === true,
         memberLimit,
         startDate,
         endDate,

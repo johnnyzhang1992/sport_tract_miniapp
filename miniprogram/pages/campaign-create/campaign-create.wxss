@@ -129,6 +129,14 @@
   font-weight: 700;
   box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
 }
+/* 编辑态的 PK 类型只读：置灰提示不可改（点击在 JS 里直接短路） */
+.vis-row-off {
+  opacity: 0.55;
+}
+/* 步数辅助开关：行式布局，控件靠右 */
+.aux-switch {
+  margin-left: auto;
+}
 
 /* 运动类型多选 chips：形态复用 footprint-form 的 .cat-*（选中＝品牌蓝底白字） */
 .cat-grid {
@@ -160,8 +168,9 @@
   color: #fff;
 }
 
-/* 提交按钮 */
-.submit-btn {
+/* 提交按钮。微信预置的 button:not([size]) 会把宽度钉在 184px，单类名压不住；
+   这里用 button.submit-btn 提权重，主按钮必须占满整行。 */
+button.submit-btn {
   width: 100%;
   height: 88rpx;
   display: flex;

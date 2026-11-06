@@ -1,0 +1,269 @@
+/* 微信步数统计页：沿用全站卡片 / 蓝色主色 #2b6cf6 */
+.page {
+  padding: 24rpx 24rpx calc(40rpx + env(safe-area-inset-bottom));
+}
+
+/* 时间档：4 段（与步数榜的周期分段同一形态） */
+.range-row {
+  display: flex;
+  background: #f2f3f5;
+  border-radius: 14rpx;
+  padding: 6rpx;
+  margin-bottom: 20rpx;
+}
+.range-seg {
+  flex: 1;
+  text-align: center;
+  padding: 14rpx 0;
+  border-radius: 10rpx;
+  font-size: 26rpx;
+  color: #4e5969;
+}
+.range-seg-active {
+  background: #fff;
+  color: #2b6cf6;
+  font-weight: 700;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
+}
+
+.card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+}
+.card-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #1f2329;
+}
+.card-sub {
+  font-size: 22rpx;
+  color: #667080;
+}
+
+/* 概况：总步数主视觉 + 三格指标 */
+.overview-hero {
+  padding-bottom: 22rpx;
+  border-bottom: 1rpx solid #f2f3f5;
+}
+.hero-label {
+  font-size: 24rpx;
+  color: #667080;
+}
+.hero-value {
+  margin-top: 6rpx;
+  font-size: 64rpx;
+  line-height: 1.15;
+  font-weight: 700;
+  color: #2b6cf6;
+  font-variant-numeric: tabular-nums;
+}
+.hero-unit {
+  margin-left: 8rpx;
+  font-size: 26rpx;
+  font-weight: 400;
+  color: #667080;
+}
+.hero-range {
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: #8a93a6;
+}
+.overview-grid {
+  display: flex;
+  padding-top: 20rpx;
+}
+.ov-cell {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  border-right: 1rpx solid #f2f3f5;
+}
+.ov-cell:last-child {
+  border-right: none;
+}
+.ov-label {
+  font-size: 22rpx;
+  color: #667080;
+}
+.ov-value {
+  margin-top: 8rpx;
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #1f2329;
+  font-variant-numeric: tabular-nums;
+}
+.ov-unit {
+  margin-left: 4rpx;
+  font-size: 22rpx;
+  font-weight: 400;
+  color: #667080;
+}
+.ov-sub {
+  margin-top: 2rpx;
+  font-size: 20rpx;
+  color: #8a93a6;
+}
+
+/* 每日明细 */
+.day-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #f2f3f5;
+}
+.day-row:last-of-type {
+  border-bottom: none;
+}
+.day-date {
+  display: flex;
+  align-items: baseline;
+  gap: 12rpx;
+}
+.day-date-num {
+  font-size: 28rpx;
+  color: #1f2329;
+  font-variant-numeric: tabular-nums;
+}
+.day-weekday {
+  font-size: 22rpx;
+  color: #8a93a6;
+}
+.day-step {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1f2329;
+  font-variant-numeric: tabular-nums;
+}
+.day-unit {
+  font-size: 22rpx;
+  font-weight: 400;
+  color: #667080;
+}
+.day-empty {
+  padding: 48rpx 0;
+  text-align: center;
+  font-size: 24rpx;
+  color: #8a93a6;
+}
+.day-more {
+  margin-top: 20rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+  text-align: center;
+  font-size: 26rpx;
+  color: #2b6cf6;
+  background: #eaf1ff;
+  border-radius: 999rpx;
+}
+.day-more-hover {
+  opacity: 0.85;
+}
+
+/* 首屏加载 / 失败 */
+.state-card {
+  padding: 80rpx 24rpx;
+  text-align: center;
+}
+.state-text {
+  font-size: 26rpx;
+  color: #667080;
+}
+.state-btn {
+  display: inline-block;
+  margin-top: 24rpx;
+  padding: 12rpx 40rpx;
+  border-radius: 999rpx;
+  background: #eaf1ff;
+  font-size: 26rpx;
+  color: #2b6cf6;
+}
+.state-btn-hover {
+  opacity: 0.85;
+}
+
+/* 趋势变化小卡：与统计页运动趋势卡同一形态（两列、圆圈图标 + 两行） */
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16rpx;
+  margin-top: 16rpx;
+}
+.metric-card {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 16rpx 18rpx;
+  background: #f7f8fa;
+  border-radius: 16rpx;
+  box-sizing: border-box;
+}
+.metric-badge {
+  width: 64rpx;
+  height: 64rpx;
+  flex: none;
+  border-radius: 50%;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.metric-badge-icon {
+  width: 34rpx;
+  height: 34rpx;
+}
+.metric-body {
+  flex: 1;
+  min-width: 0;
+}
+.metric-main {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-start;
+  gap: 10rpx;
+}
+.metric-label {
+  flex: none;
+  font-size: 22rpx;
+  color: #4e5969;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.metric-value-line {
+  display: flex;
+  align-items: baseline;
+  flex: none;
+  gap: 4rpx;
+}
+.metric-value {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #1f2329;
+  font-variant-numeric: tabular-nums;
+}
+.metric-unit {
+  font-size: 18rpx;
+  font-weight: 400;
+  color: #8a93a6;
+}
+.metric-foot {
+  margin-top: 4rpx;
+  font-size: 20rpx;
+  color: #8a93a6;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.metric-diff-up {
+  color: #15804f;
+}
+.metric-diff-down {
+  color: #c02a30;
+}
+.metric-diff-flat {
+  color: #8a93a6;
+}

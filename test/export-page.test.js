@@ -17,10 +17,12 @@ const realExport = require('../miniprogram/utils/export-file.js');
 
 /* ------------------------------- 结构断言 ------------------------------- */
 
-test('EP-1 结构：两张卡共用 export-filter，轨迹卡会员锁与自定义日期都在', () => {
+test('EP-1 结构：三张卡共用 export-filter，轨迹卡会员锁与自定义日期都在', () => {
   const w = read('miniprogram/pages/export/export.wxml');
   assert.match(w, /class="sec-title">运动记录/);
+  assert.match(w, /class="sec-title">微信步数/);
   assert.match(w, /class="sec-title">轨迹记录/);
+  assert.match(w, /bindtap="onExportStepsCsv"/);
   assert.match(w, /会员专属 · 开通后可打包导出轨迹/);
   assert.match(w, /bindtap="goMember"/);
   assert.equal((w.match(/<export-filter/g) || []).length, 1, '两种导出共用顶部一套筛选器');
@@ -229,6 +231,26 @@ test('EP-6 轨迹 GPX：非会员只提示不发请求；会员按范围+类型�
   const from = Number(downloads[0].path.match(/from=(\d+)/)[1]);
   assert.ok(Math.abs(from - (now - 30 * 86400000)) < 5000, '近 30 天 = now 回退 30 天');
   assert.match(downloads[0].name, /^轨迹导出_\d{8}-\d{6}\.zip$/);
+});
+
+test('EP-9 微信步数 CSV：只按时间范围（自然日）、不带类型，文件名 .csv', async () => {
+  reset();
+  const p = boot();
+  p.onShow();
+  await tick();
+  p.setData({ 'filter.range': '30d', 'filter.type': 'walking' });
+  const now = Date.now();
+  await p.onExportStepsCsv();
+  assert.equal(downloads.length, 1);
+  assert.ok(downloads[0].path.startsWith('/werun/export/csv?from='), downloads[0].path);
+  assert.ok(!downloads[0].path.includes('type='), '步数导出不带运动类型');
+  const from = Number(downloads[0].path.match(/from=(\d+)/)[1]);
+  const dayStart = Math.floor((now + 8 * 3600000) / 86400000) * 86400000 - 8 * 3600000;
+  assert.ok(Math.abs(from - (dayStart - 29 * 86400000)) < 5000, '近 30 天 = 含今天共 30 个自然日');
+  assert.match(downloads[0].name, /^微信步数_\d{8}-\d{6}\.csv$/);
+  assert.equal(shares.length, 1);
+  assert.ok(toasts.includes('已导出'));
+  assert.equal(p.data.busy, '');
 });
 
 test('EP-7 自定义缺日期 / 起止颠倒：toast 拦截，不发请求', async () => {

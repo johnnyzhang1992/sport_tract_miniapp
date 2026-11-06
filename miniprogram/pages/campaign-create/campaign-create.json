@@ -1,3 +1,6 @@
 {
-  "navigationBarTitleText": "发起活动"
+  "navigationBarTitleText": "发起活动",
+  "usingComponents": {
+    "t-switch": "tdesign-miniprogram/switch/switch"
+  }
 }

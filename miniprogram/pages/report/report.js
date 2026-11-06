@@ -9,6 +9,10 @@ const config = require('../../config/index');
 const { formatDuration, formatDurationStat, formatPaceParts, formatThousands, formatCompactCn } = require('../../utils/format');
 const { calcDiff } = require('../../utils/diff');
 const { posterViewHeight } = require('../../utils/poster-layout');
+const { buildStepSummary, buildStepMonths } = require('../../utils/step-report-view');
+const { bjMid, bjParts, bjWeekStart } = require('../../utils/bj-date');
+
+const DAY_MS = 86400000;
 
 /** 最快 1 公里的物理可信下限（秒/公里）：与后端 MIN_PLAUSIBLE_PACE_SEC_PER_KM 同口径 */
 const MIN_FASTEST_KM_SEC = 130;
@@ -52,35 +56,38 @@ const PICKER_COUNT = { week: 24, month: 12, year: 5 };
 
 /** 周/月/年周期区间 [from, to)（自然周周一起算/自然月/自然年），offset 为往前的周期数（0=当前周期） */
 function periodRange(range, offset) {
-  const now = new Date();
+  // 一律用东八区边界：new Date(y,m,d) 走设备本地时区，非 +8 设备会把自然日/周/月算偏，
+  // 而服务端按东八区自然日换算周期（2026-11-06 修正）。
+  const nowMs = Date.now();
   if (range === 'week') {
-    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7));
-    start.setDate(start.getDate() - offset * 7);
-    const end = new Date(start);
-    end.setDate(end.getDate() + 7);
-    return { from: start.getTime(), to: end.getTime() };
+    const startMs = bjWeekStart(nowMs) - offset * 7 * DAY_MS;
+    return { from: startMs, to: startMs + 7 * DAY_MS };
   }
   if (range === 'month') {
-    const start = new Date(now.getFullYear(), now.getMonth() - offset, 1);
-    const end = new Date(now.getFullYear(), now.getMonth() - offset + 1, 1);
-    return { from: start.getTime(), to: end.getTime() };
+    const p = bjParts(nowMs);
+    return { from: bjMid(p.y, p.m - offset, 1), to: bjMid(p.y, p.m - offset + 1, 1) };
   }
-  const start = new Date(now.getFullYear() - offset, 0, 1);
-  const end = new Date(now.getFullYear() - offset + 1, 0, 1);
-  return { from: start.getTime(), to: end.getTime() };
+  const p = bjParts(nowMs);
+  const start = bjMid(p.y - offset, 1, 1);
+  const end = bjMid(p.y - offset + 1, 1, 1);
+  return { from: start, to: end };
 }
 
 /** 周期文案：周 → "0907至0913"（跨年 20251231至20260106），月 → "2026年8月"，年 → "2025年" */
 function periodLabel(range, p) {
-  const md = (d) => `${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+  // 东八区分量取日期：文案必须与周期边界同一时区口径（非 +8 设备上用本地分量会错一天）
+  const md = (ms) => {
+    const b = bjParts(ms);
+    return `${String(b.m).padStart(2, '0')}${String(b.d).padStart(2, '0')}`;
+  };
   if (range === 'week') {
-    const start = new Date(p.from);
-    const last = new Date(p.to - 1);
-    const yd = (d) => `${d.getFullYear()}${md(d)}`;
-    return start.getFullYear() === last.getFullYear() ? `${md(start)}至${md(last)}` : `${yd(start)}至${yd(last)}`;
+    const start = bjParts(p.from);
+    const last = bjParts(p.to - 1);
+    const yd = (b) => `${b.y}${String(b.m).padStart(2, '0')}${String(b.d).padStart(2, '0')}`;
+    return start.y === last.y ? `${md(p.from)}至${md(p.to - 1)}` : `${yd(start)}至${yd(last)}`;
   }
-  const start = new Date(p.from);
-  return range === 'month' ? `${start.getFullYear()}年${start.getMonth() + 1}月` : `${start.getFullYear()}年`;
+  const start = bjParts(p.from);
+  return range === 'month' ? `${start.y}年${start.m}月` : `${start.y}年`;
 }
 
 Page({
@@ -98,6 +105,10 @@ Page({
     dateBucketLabel: '', // 桶列头：日期/星期/月份/半年
     dateView: 'table', // 日期汇总形态：table 表 / chart 柱状图
     dateChartData: [], // 日期汇总柱状图数据（距离 km）
+    step: null, // 微信步数概况（总/日均/最多步数日/同步天数）
+    stepChartData: [], // 月度步数柱状图数据
+    stepChartSlot: 28, // 月标签留位（跨年用完整 YYYY/MM）
+    showStepChart: false, // 周/月周期只有 1 根柱，不画趋势
     compare: [], // 周期对比（当前周期 vs 上一周期）
     loading: true,
     notLoggedIn: false, // 游客态：登录引导卡（2026-10-26 补缺省态）
@@ -211,6 +222,12 @@ Page({
   buildOverviewQuery() {
     if (this.data.activeRange === 'all' || !this._period) return 'range=all&lean=1&dateSummary=1';
     return `range=${this.data.activeRange}&from=${this._period.from}&to=${this._period.to}&lean=1&dateSummary=1`;
+  },
+
+  /** 步数报告：与 /overview 同一周期区间；全部时间不带参数 */
+  buildStepQuery() {
+    if (this.data.activeRange === 'all' || !this._period) return '';
+    return `?from=${this._period.from}&to=${this._period.to}`;
   },
 
   // ==================== 周期海报（周/月/年，canvas 自绘） ====================
@@ -463,15 +480,21 @@ Page({
     this.setData({ loading: true });
     try {
       const prevQuery = this.buildPrevQuery();
-      const reqs = [api.get(`/overview?${this.buildOverviewQuery()}`)];
-      // 上一周期数据（"全部"无对比）
-      if (prevQuery) reqs.push(api.get(`/overview?${prevQuery}`).catch(() => null));
-      const [overview, prevOverview] = await Promise.all(reqs);
+      // 上一周期数据（"全部"无对比）；步数失败不影响运动报告
+      const prevReq = prevQuery ? api.get(`/overview?${prevQuery}`).catch(() => null) : Promise.resolve(null);
+      const stepReq = api.get(`/werun/report${this.buildStepQuery()}`).catch(() => null);
+      const [overview, prevOverview, stepReport] = await Promise.all([
+        api.get(`/overview?${this.buildOverviewQuery()}`),
+        prevReq,
+        stepReq,
+      ]);
       if (seq !== this._fetchSeq) return;
       // 日期汇总改由后端按东八区分桶下发（避免前端日期运算出错）
       const ds = overview.dateSummary || { title: '', label: '', rows: [] };
       // 无运动的桶不展示：否则整张表/图全是 0，反而看不出哪几天真正有数据
       const dsRows = (ds.rows || []).filter((r) => (r.count || 0) > 0);
+      // 「全部」跨年，月标签带年份；年/月/周落在同一年内用短标签
+      const stepMonths = buildStepMonths(stepReport && stepReport.months, this.data.activeRange === 'all' ? 'full' : 'short');
       this.setData({
         summary: this.buildSummary(overview),
         typeSummary: this.buildTypeSummary(overview.tracks || []),
@@ -491,6 +514,10 @@ Page({
         })),
         dateSummaryTitle: ds.title,
         dateBucketLabel: ds.label,
+        step: buildStepSummary(stepReport && stepReport.overview),
+        stepChartData: stepMonths.data,
+        stepChartSlot: stepMonths.labelSlot,
+        showStepChart: this.data.activeRange === 'year' || this.data.activeRange === 'all',
         highlights: this.buildHighlights(overview.tracks || []),
         compare: this.buildCompare(overview, prevOverview || null),
       });

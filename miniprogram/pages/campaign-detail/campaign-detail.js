@@ -31,7 +31,8 @@ const config = require('../../config/index');
 const { ensureLogin } = require('../../utils/login-gate');
 const { markHomeDirty } = require('../../utils/home-refresh');
 const { statusLabel, visibilityLabel, statusTagClass, fmtRange, joinCta, fmtPanel } = require('../../utils/campaign.js');
-const { initialOf } = require('../../utils/format.js');
+const { initialOf, formatThousands } = require('../../utils/format.js');
+const { getWeRunAuthState, openWeRunSetting, syncWeRunSteps } = require('../../utils/werun');
 
 /** 成员昵称展示上限（字）；超出截断补「...」——排行行里昵称后面还跟「移出」按钮与距离，不能任其撑满 */
 const NAME_MAX = 5;
@@ -88,6 +89,7 @@ const STATE_NOTE = {
 
 /** 顶部信息（时间/状态/可见性/上限/类型白名单都在 JS 侧算好，WXML 不做格式化） */
 function toHead(d) {
+  const isSteps = d.kind === 'steps';
   return {
     title: d.title,
     rangeText: fmtRange(d.startAt, d.endAt),
@@ -95,9 +97,13 @@ function toHead(d) {
     statusTag: statusTagClass(d.status),
     visibilityText: visibilityLabel(d.visibility),
     limitText: d.memberLimit == null ? '不限人数' : `上限 ${d.memberLimit} 人`,
-    typesText: (d.allowedTypes || []).length
-      ? d.allowedTypes.map((t) => TYPE_LABEL[t] || t).join(' / ')
-      : '不限运动类型',
+    kindTag: isSteps ? '步数PK' : '',
+    auxOn: !isSteps && d.stepAuxEnabled === true,
+    typesText: isSteps
+      ? '只统计微信步数'
+      : (d.allowedTypes || []).length
+        ? d.allowedTypes.map((t) => TYPE_LABEL[t] || t).join(' / ')
+        : '不限运动类型',
   };
 }
 
@@ -161,14 +167,22 @@ function metricOf(r, metric) {
 }
 
 /** 排行榜行 → 成员列表行（名次 / 头像 / 昵称 / 主指标 / 副行）；头像三级兜底同运动榜。
- *  canKick：仅发起人视角、且不是自己 —— 决定昵称后的「移出」是否渲染（非发起人恒 false）。 */
-function toMemberRow(r, canKick, metric, isMe) {
+ *  canKick：仅发起人视角、且不是自己 —— 决定昵称后的「移出」是否渲染（非发起人恒 false）。
+ *  isSteps：步数PK 行主指标＝步数、副行＝同步天数（服务端 value 已按步数下发）。 */
+function toMemberRow(r, canKick, metric, isMe, isSteps) {
   const p = fmtPanel({ count: r.count, distance: r.distance, duration: r.duration });
+  const step = Number(isSteps ? (r.step != null ? r.step : r.value) : r.step) || 0;
   const value = r.value != null ? Number(r.value) || 0 : metricOf(r, metric);
-  const valueText =
-    metric === 'count' ? `${value} 次` : metric === 'duration' ? fmtDuration(value) : `${fmtKm(value)} km`;
-  const metaText =
-    metric === 'count'
+  const valueText = isSteps
+    ? `${formatThousands(step)} 步`
+    : metric === 'count'
+      ? `${value} 次`
+      : metric === 'duration'
+        ? fmtDuration(value)
+        : `${fmtKm(value)} km`;
+  const metaText = isSteps
+    ? `同步 ${Number(r.count) || 0} 天`
+    : metric === 'count'
       ? `${p.distanceText} km · ${p.durationText}`
       : metric === 'duration'
         ? `${p.distanceText} km · ${p.countText} 次`
@@ -183,6 +197,8 @@ function toMemberRow(r, canKick, metric, isMe) {
     distance: Number(r.distance) || 0,
     count: Number(r.count) || 0,
     duration: Number(r.duration) || 0,
+    step,
+    stepText: formatThousands(step),
     // 三项固定文案：成员半屏在明细未到前用它们兜底（与 valueText 的「当前指标」并存）
     distanceText: p.distanceText,
     countText: p.countText,
@@ -195,15 +211,21 @@ function toMemberRow(r, canKick, metric, isMe) {
 }
 
 /** 我的面板 → 底部悬浮条：名次只报「第几名」，差距按上一名（追上谁就能升一名，比距榜首更够得着） */
-function toPanel(p) {
+function toPanel(p, isSteps) {
   const base = fmtPanel(p || {});
   const ranked = typeof p.rank === 'number' && typeof p.members === 'number' && p.members > 0;
   // 被门禁排除的轨迹条数（定位异常，不计入活动统计）——不说明用户会困惑
   // 「我明明跑了 21 公里，活动里怎么只算 12」（服务端 excludedCount 下发）
-  const excluded = typeof p.excludedCount === 'number' && p.excludedCount > 0;
+  const excluded = !isSteps && typeof p.excludedCount === 'number' && p.excludedCount > 0;
+  const step = Number(p.step) || 0;
   return Object.assign(base, {
+    stepText: formatThousands(step),
     rankText: ranked ? `第 ${p.rank} 名` : '',
-    gapText: ranked ? (p.rank <= 1 ? '领跑全队' : `距上一名 ${fmtKm(p.gapToPrev)} km`) : '',
+    gapText: ranked
+      ? p.rank <= 1
+        ? '领跑全队'
+        : `距上一名 ${isSteps ? `${formatThousands(p.gapToPrev || 0)} 步` : `${fmtKm(p.gapToPrev)} km`}`
+      : '',
     excludedText: excluded ? `另有 ${p.excludedCount} 条轨迹未计入（定位异常）` : '',
   });
 }
@@ -219,7 +241,7 @@ function trendName(name) {
  *  按人＝前三名 + 我（本人固定主色并排到系列最前）；按类型＝全队每类一条线
  *  （名字与颜色取自运动类型在册配色，服务端已按累计距离降序，端上不再重排）。
  *  无成绩（未开赛 / 全 0）返回 null，卡片整张收起。 */
-function toTrendView(t) {
+function toTrendView(t, isSteps) {
   if (!t || !Array.isArray(t.labels) || t.labels.length === 0 || !Array.isArray(t.series) || t.series.length === 0) {
     return null;
   }
@@ -236,7 +258,8 @@ function toTrendView(t) {
       color: isMe
         ? TREND_ME_COLOR
         : (byType ? TYPE_COLOR[s.type] : null) || TREND_COLORS[colorIdx++ % TREND_COLORS.length],
-      values: (s.values || []).map((v) => Math.round((Number(v) || 0) / 10) / 100),
+      // 步数保留整数；距离走 m→km 两位小数（与原口径一致）
+      values: (s.values || []).map((v) => (isSteps ? Math.round(Number(v) || 0) : Math.round((Number(v) || 0) / 10) / 100)),
     };
   });
   if (!series.some((s) => s.values.some((v) => v > 0))) return null;
@@ -251,6 +274,8 @@ function toTrendView(t) {
   }));
   return {
     by: byType ? 'type' : 'person',
+    isSteps: !!isSteps,
+    unit: isSteps ? 'step' : 'km',
     labels: t.labels.map(String),
     series: ordered,
     legend,
@@ -294,13 +319,58 @@ function compareRow(label, myVal, taVal, fmt) {
   };
 }
 
-/** 我 vs TA：只对比距离（页面算好给进来）。点自己或没有我的汇总时返回 null。
+/** 我 vs TA：普通活动比距离；步数PK 比步数。点自己或没有我的汇总时返回 null。
  *  次数＝明细条数（「共 N 条」）、时长＝明细各行累计，都不再单占一行对照。 */
-function toCompare(member, my) {
+function toCompare(member, my, isSteps) {
   if (!member || !my) return null;
   if (String(member.userId) === myUserId()) return null;
+  if (isSteps) {
+    return {
+      rows: [compareRow('步数', Number(my.step) || 0, member.step || 0, (v) => `${formatThousands(v)} 步`)],
+    };
+  }
   return {
     rows: [compareRow('距离', Number(my.distance) || 0, member.distance || 0, (v) => `${fmtKm(v)} km`)],
+  };
+}
+
+const DAY_STATUS_CLASS = {
+  match: 'day-pill-match',
+  low: 'day-pill-low',
+};
+
+/** 成员按天接口的一行 → 视图（接口给 "MM/DD 周X" 的 dateText，拆成日期与星期两行） */
+function toStepDayItem(x) {
+  const parts = String(x.dateText || '').split(' ');
+  return {
+    date: x.date,
+    dateText: parts[0] || '',
+    weekText: parts[1] || '',
+    distance: Number(x.distance) || 0,
+    distanceText: fmtKm(x.distance),
+    hasStep: x.step != null,
+    stepText: x.step == null ? '未同步' : `${formatThousands(x.step)} 步`,
+    statusText: x.statusText || '',
+    statusClass: DAY_STATUS_CLASS[x.status] || 'day-pill-neutral',
+  };
+}
+
+/** 按天接口响应 → 组件 props（summary + 分页 items） */
+function toStepsView(data) {
+  const s = data.summary || {};
+  return {
+    loading: false,
+    error: false,
+    summary: {
+      distanceText: fmtKm(s.distance),
+      stepText: formatThousands(s.step),
+      days: Number(s.days) || 0,
+    },
+    items: (data.items || []).map(toStepDayItem),
+    total: data.total || 0,
+    page: data.page || 1,
+    hasMore: (data.items || []).length < (data.total || 0),
+    loadingMore: false,
   };
 }
 
@@ -316,6 +386,11 @@ function viewerCleanPatch() {
     canInvite: false,
     canDissolve: false,
     totals: null,
+    stepSummary: null,
+    kind: 'activity',
+    isSteps: false,
+    stepAuxEnabled: false,
+    weRunBanner: '',
     members: [],
     memberTotal: 0, // 成员总数（joined 人数），驱动「加载更多」；老服务端不下发时按已显示数兜底
     memberLoadingMore: false,
@@ -329,6 +404,8 @@ function viewerCleanPatch() {
     sheetMember: null,
     sheetDetail: null,
     sheetCompare: null,
+    sheetStepMode: 'none',
+    sheetSteps: null,
     isCreator: false,
     pendingRows: [],
     pendingCount: 0,
@@ -354,6 +431,11 @@ Page({
     ctaHint: '', // 按钮下方的显式提示（可点 / 不可点）
     stateNote: '', // 身份说明行
     totals: null, // 全队汇总（仅成员）
+    stepSummary: null, // 步数PK 专用汇总：全队步数 / 参与人数 / 我的步数
+    kind: 'activity', // activity | steps
+    isSteps: false,
+    stepAuxEnabled: false, // 普通活动是否开启微信步数辅助（成员半屏按天对比）
+    weRunBanner: '', // 未开启微信运动时的提示态：unasked | denied | privacy
     members: [], // 成员列表＝排行榜行（仅成员，随「加载更多」追加）
     memberTotal: 0, // joined 总数，驱动「加载更多」；老服务端不下发 total 时按已显示数兜底
     memberLoadingMore: false,
@@ -369,6 +451,8 @@ Page({
     sheetMember: null,
     sheetDetail: null,
     sheetCompare: null, // 「我 vs TA」三项对照（点自己时为 null）
+    sheetStepMode: 'none', // none | aux | steps（决定半屏是否出现「按天」页）
+    sheetSteps: null, // 成员按天对比数据（页面拉，组件渲染）
     // 发起人专属（Task 11）：待审批徽标 / 审核抽屉 / 解散
     isCreator: false,
     pendingCount: 0,
@@ -504,6 +588,71 @@ Page({
 
     this.applyDetail(detail, board, pending, trend, { metric, type });
     this._loaded = true;
+    // 微信步数授权：只在「进行中 + 已加入 + 用到步数（步数PK / 步数辅助）」时检查；
+    // 未开始 / 已结束 / 非成员 / 游客都不检查（发起人在创建时可选开关）。
+    this.checkWeRunForCampaign(detail);
+  },
+
+  /**
+   * 进行中的步数相关活动：已授权就静默补一趟（60s 节流），未授权在头部给提示条。
+   * 设置页关掉「每日同步」不影响这里——活动期间按需同步是独立入口。
+   */
+  async checkWeRunForCampaign(detail) {
+    const isSteps = detail.kind === 'steps';
+    const used = isSteps || detail.stepAuxEnabled === true;
+    if (!used || detail.myState !== 'joined' || detail.status !== 'active') {
+      if (this.data.weRunBanner) this.setData({ weRunBanner: '' });
+      return;
+    }
+    const state = await getWeRunAuthState();
+    if (state !== 'granted') {
+      this.setData({ weRunBanner: state });
+      return;
+    }
+    this.setData({ weRunBanner: '' });
+    if (this._werunSyncAt && Date.now() - this._werunSyncAt < 60_000) return;
+    this._werunSyncAt = Date.now();
+    const r = await syncWeRunSteps();
+    if (r.ok && r.syncedDays > 0) await this.refresh(true);
+  },
+
+  /** 头部提示条：未授权 → 授权/去设置；已授权但缺数据 → 再同步一趟 */
+  async onTapWeRunBanner() {
+    if (this._werunPrompting) return;
+    this._werunPrompting = true;
+    try {
+      let r;
+      if (this.data.weRunBanner === 'denied') {
+        const granted = await openWeRunSetting();
+        if (!granted) {
+          wx.showToast({ title: '未开启微信运动授权', icon: 'none' });
+          return;
+        }
+        r = await syncWeRunSteps();
+      } else {
+        r = await syncWeRunSteps({ requestAuth: true });
+      }
+      if (r.ok) {
+        this.setData({ weRunBanner: '' });
+        this._werunSyncAt = Date.now();
+        wx.showToast({ title: `已同步 ${r.syncedDays} 天步数`, icon: 'none' });
+        await this.refresh(true);
+        return;
+      }
+      if (r.reason === 'denied') this.setData({ weRunBanner: 'denied' });
+      else if (r.reason === 'privacy-denied') wx.showToast({ title: '需同意隐私协议才能同步', icon: 'none' });
+      else if (r.reason === 'disabled') {
+        wx.showModal({
+          title: '微信运动未开启',
+          content: '需要先在微信里开启「微信运动」功能（微信 → 我 → 设置 → 通用 → 辅助功能），开启后回来再点一次。',
+          showCancel: false,
+        });
+      } else if (r.reason !== 'busy') {
+        wx.showToast({ title: r.message || '同步失败，请稍后再试', icon: 'none' });
+      }
+    } finally {
+      this._werunPrompting = false;
+    }
   },
 
   /** 详情（+ 排行榜 + 待审批 + 趋势）→ 视图：一处分流，避免 WXML 里散落身份判断 */
@@ -511,6 +660,8 @@ Page({
     const isMember = detail.myState === 'joined';
     const isCreator = isCreatorOf(detail) && isMember;
     const me = myUserId();
+    const isSteps = detail.kind === 'steps';
+    const stepAuxEnabled = !isSteps && detail.stepAuxEnabled === true;
     const metric = filters.metric || this.data.metric || 'distance';
     const allowed = Array.isArray(detail.allowedTypes) ? detail.allowedTypes : [];
     const rawType = filters.type !== undefined ? filters.type : this.data.type;
@@ -551,17 +702,25 @@ Page({
       cta,
       ctaHint: cta ? (cta.disabled ? '当前不可加入' : `点击「${cta.text}」`) : '',
       stateNote: STATE_NOTE[detail.myState] || '',
+      kind: isSteps ? 'steps' : 'activity',
+      isSteps,
+      stepAuxEnabled,
       totals: isMember && detail.totals ? fmtPanel(detail.totals) : null,
+      stepSummary: isMember && isSteps ? {
+        totalText: formatThousands((detail.totals && detail.totals.step) || 0),
+        myText: formatThousands((detail.myPanel && detail.myPanel.step) || 0),
+        people: memberTotal || (Array.isArray(detail.members) ? detail.members.length : 0),
+      } : null,
       metric,
       type,
-      typeOptions: allowed.length > 1 ? [{ key: '', label: '全部' }].concat(
+      typeOptions: !isSteps && allowed.length > 1 ? [{ key: '', label: '全部' }].concat(
         allowed.map((t) => ({ key: t, label: TYPE_LABEL[t] || t })),
       ) : [],
-      trend: isMember ? toTrendView(trend) : null,
-      members: isMember ? rows.map((r) => toMemberRow(r, isCreator && String(r.userId) !== me, metric, String(r.userId) === me)) : [],
+      trend: isMember ? toTrendView(trend, isSteps) : null,
+      members: isMember ? rows.map((r) => toMemberRow(r, isCreator && String(r.userId) !== me, metric, String(r.userId) === me, isSteps)) : [],
       memberTotal: isMember ? memberTotal : 0,
       memberLoadingMore: false,
-      panel: isMember && detail.myPanel ? toPanel(detail.myPanel) : null,
+      panel: isMember && detail.myPanel ? toPanel(detail.myPanel, isSteps) : null,
       pendingRows,
       pendingCount: pendingRows.length,
       reviewVisible: this.data.reviewVisible && pendingRows.length > 0,
@@ -570,6 +729,8 @@ Page({
       sheetMember: null,
       sheetDetail: null,
       sheetCompare: null,
+      sheetStepMode: 'none',
+      sheetSteps: null,
     });
   },
 
@@ -630,7 +791,7 @@ Page({
       this.setData({
         members: members.concat(
           rows.map((r) =>
-            toMemberRow(r, isCreator && String(r.userId) !== me, this.data.metric, String(r.userId) === me),
+            toMemberRow(r, isCreator && String(r.userId) !== me, this.data.metric, String(r.userId) === me, this.data.isSteps),
           ),
         ),
         memberTotal: typeof board.total === 'number' ? board.total : members.length + rows.length,
@@ -645,22 +806,28 @@ Page({
   },
 
   /** 点成员行 → 成员信息半屏，并拉该成员的分页明细（明细对**活动内成员**开放，队友与本人同样可看）。
-   *  同时算好「我 vs TA」三项对照；点自己时对照为 null（没有「我 vs 我」）。 */
+   *  同时算好「我 vs TA」对照；点自己时对照为 null（没有「我 vs 我」）。
+   *  步数相关活动多一档「按天」：普通活动辅助档默认看轨迹、懒加载按天；步数PK 直接落在按天。 */
   openMember(e) {
     const idx = Number(e.currentTarget.dataset.idx);
     const member = this.data.members[idx];
     if (!member) return;
+    const isSteps = this.data.isSteps;
+    const stepMode = isSteps ? 'steps' : this.data.stepAuxEnabled ? 'aux' : 'none';
     this.setData({
       sheetVisible: true,
       sheetMember: member,
       sheetDetail: null,
-      sheetCompare: toCompare(member, this._myStats),
+      sheetCompare: toCompare(member, this._myStats, isSteps),
+      sheetStepMode: stepMode,
+      sheetSteps: null,
     });
-    this.loadMemberDetail(member.userId, 1);
+    if (stepMode === 'steps') this.loadMemberSteps(member.userId, 1);
+    else this.loadMemberDetail(member.userId, 1);
   },
 
   closeMemberSheet() {
-    this.setData({ sheetVisible: false, sheetDetail: null, sheetCompare: null });
+    this.setData({ sheetVisible: false, sheetDetail: null, sheetCompare: null, sheetSteps: null });
   },
 
   /** 切排行榜指标：服务端重排后整列换掉（端上不重排） */
@@ -711,7 +878,7 @@ Page({
     this._memberPage = 1;
     this.setData({
       members: rows.map((r) =>
-        toMemberRow(r, this.data.isCreator && String(r.userId) !== me, metric, String(r.userId) === me),
+        toMemberRow(r, this.data.isCreator && String(r.userId) !== me, metric, String(r.userId) === me, this.data.isSteps),
       ),
       memberTotal: typeof board.total === 'number' ? board.total : rows.length,
       memberLoadingMore: false,
@@ -724,7 +891,7 @@ Page({
     try {
       const t = await api.get(trendPath(this._id, this.data.type, this.data.trendBy));
       if (seq !== this._trendSeq) return;
-      this.setData({ trend: toTrendView(t) });
+      this.setData({ trend: toTrendView(t, this.data.isSteps) });
     } catch (e) {
       if (seq !== this._trendSeq) return;
       console.warn('[campaign-detail] 趋势加载失败', e);
@@ -776,6 +943,53 @@ Page({
     const member = this.data.sheetMember;
     if (!member || !d || d.loadingMore || !d.hasMore) return;
     this.loadMemberDetail(member.userId, (d.page || 1) + 1);
+  },
+
+  /** 半屏第一次切到「按天」：懒加载第 1 页（已加载过就不再打请求） */
+  onSheetLoadSteps() {
+    if (this.data.sheetSteps) return;
+    const member = this.data.sheetMember;
+    if (!member) return;
+    this.loadMemberSteps(member.userId, 1);
+  },
+
+  /** 按天「查看更早日期」 */
+  onSheetStepsLoadMore() {
+    const d = this.data.sheetSteps;
+    const member = this.data.sheetMember;
+    if (!member || !d || d.loadingMore || !d.hasMore) return;
+    this.loadMemberSteps(member.userId, (d.page || 1) + 1);
+  },
+
+  /**
+   * 拉某成员的按天对比（GET /:id/members/:uid/steps）：同成员明细的分页与防串人守卫。
+   * 接口在未开辅助的普通活动上回 400；端上只有 aux/steps 两档会调它。
+   */
+  async loadMemberSteps(uid, page) {
+    const seq = (this._sheetStepsSeq = (this._sheetStepsSeq || 0) + 1);
+    if (page === 1) {
+      this.setData({ sheetSteps: { loading: true, error: false, summary: null, items: [], total: 0, page: 0, hasMore: false, loadingMore: false } });
+    } else {
+      this.setData({ 'sheetSteps.loadingMore': true });
+    }
+    try {
+      const data = await api.get(`/campaigns/${this._id}/members/${uid}/steps?page=${page}&pageSize=${MEMBER_PAGE_SIZE}`);
+      if (seq !== this._sheetStepsSeq || !this.data.sheetVisible) return; // 已换人 / 已关抽屉：丢弃
+      const prev = page === 1 ? [] : ((this.data.sheetSteps && this.data.sheetSteps.items) || []);
+      const next = toStepsView(data || {});
+      const items = prev.concat(next.items);
+      this.setData({
+        sheetSteps: Object.assign(next, {
+          items,
+          hasMore: items.length < next.total,
+        }),
+      });
+    } catch (err) {
+      if (seq !== this._sheetStepsSeq) return;
+      console.warn('[campaign-detail] 成员按天数据加载失败', err);
+      const prev = this.data.sheetSteps || {};
+      this.setData({ sheetSteps: Object.assign({}, prev, { loading: false, loadingMore: false, error: true }) });
+    }
   },
 
   /** 审核抽屉开合（徽标点击；发起人且有待审批才有内容） */

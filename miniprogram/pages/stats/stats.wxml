@@ -100,6 +100,19 @@
     <view class="cal-caption">{{calCaption}}</view>
   </view>
 
+  <!-- 微信步数统计入口：近 7 天概况 + 跳转步数统计页 -->
+  <view class="card step-entry" hover-class="step-entry-hover" hover-stay-time="80" bindtap="goWerunStats">
+    <view class="step-entry-icon-wrap">
+      <image class="step-entry-icon" src="/assets/icons/lucide-footprints.png" mode="aspectFit" />
+    </view>
+    <view class="step-entry-main">
+      <view class="step-entry-title">步数统计</view>
+      <view class="step-entry-sub" wx:if="{{stepCard}}">近 7 天 {{stepCard.totalText}} 步 · 日均 {{stepCard.avgText}} 步</view>
+      <view class="step-entry-sub" wx:else>查看每日步数趋势与明细</view>
+    </view>
+    <view class="step-entry-arrow">›</view>
+  </view>
+
   <!-- 模板广告位（后台「广告管理」可开关；持免广告卡时不渲染） -->
   <ad-template adslot="stats" />
 
@@ -247,7 +260,8 @@
   </view>
 
   <!-- 点亮地图 + 点亮城市（分包组件，主包页面按异步化引用） -->
-  <lit-map id="litMap" bind:loaded="onLitMapLoaded" />
+  <!-- blank：半屏打开时藏掉地图画布，否则 canvas 会压住弹层底部的卡片 -->
+  <lit-map id="litMap" blank="{{sheetVisible}}" bind:loaded="onLitMapLoaded" />
 
   <!-- 互跳：轨迹热图（全年分布） -->
   <view class="card link-row" hover-class="card-hover" hover-stay-time="100" bindtap="goHeatmap">

@@ -6,6 +6,7 @@
 // - myStats 只有 { count, distance, duration }（没有 streak，连续天数只在详情 myPanel 里）。
 const api = require('../../services/api');
 const { statusLabel, statusTagClass, fmtRangeLabeled, avatarStack, fmtPanel } = require('../../utils/campaign.js');
+const { formatThousands } = require('../../utils/format.js');
 
 // 两个 Tab：key 与接口 role 参数一一对应（没有活动广场，只能看到自己相关的活动）
 // 「我参与」在前并作为默认档（多数人是参与者；进页首个请求即 role=joined）
@@ -16,14 +17,19 @@ const TABS = [
 
 /** 卡片展示字段在 JS 侧一次算好（WXML 不做格式化）：带标签的时间行 + 成员面 + 我的汇总 */
 function toCard(c) {
+  const isSteps = c.kind === 'steps';
   const p = fmtPanel(c.myStats || {});
   return Object.assign({}, c, {
+    isSteps,
+    kindText: isSteps ? '步数PK' : '',
     timeText: fmtRangeLabeled(c.startAt, c.endAt),
     statusText: statusLabel(c.status),
     statusTag: statusTagClass(c.status),
     memberText: `${c.memberCount || 0} 人已加入`,
-    avatarList: avatarStack(c.memberAvatars), // 头像为排行榜（距离）前三，签名 url 优先
-    statsText: `我的运动 ${p.countText} 次 · ${p.distanceText} km · ${p.durationText}`,
+    avatarList: avatarStack(c.memberAvatars), // 头像为排行榜（距离/步数）前三，签名 url 优先
+    statsText: isSteps
+      ? `我的步数 ${formatThousands((c.myStats && c.myStats.step) || 0)} 步 · 同步 ${p.countText} 天`
+      : `我的运动 ${p.countText} 次 · ${p.distanceText} km · ${p.durationText}`,
   });
 }
 

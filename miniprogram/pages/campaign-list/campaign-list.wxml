@@ -35,6 +35,7 @@
     >
       <view class="cp-card-head">
         <view class="cp-card-title">{{item.title}}</view>
+        <text wx:if="{{item.kindText}}" class="cp-card-kind">{{item.kindText}}</text>
         <text class="campaign-tag {{item.statusTag}}">{{item.statusText}}</text>
         <view class="cp-card-arrow">›</view>
       </view>

@@ -46,6 +46,8 @@ function requirePrivacy() {
 
 /** scope.werun 当前状态：true 已授权 / false 曾拒绝 / undefined 从未问过（authSetting 原生就是三态） */
 function getScopeState() {
+  // 极老基础库没有 getSetting：按「没问过」处理，由调用方决定要不要引导
+  if (!wx.getSetting) return Promise.resolve(undefined);
   return promisify(wx.getSetting).then((res) => (res.authSetting ? res.authSetting[SCOPE_WERUN] : undefined));
 }
 
@@ -137,4 +139,52 @@ function openWeRunSetting() {
   );
 }
 
-module.exports = { syncWeRunSteps, getWeRunAuthState, openWeRunSetting };
+/** 设置页「同步微信步数」：缺字段（老用户）按开启处理 */
+function isDailyStepSyncOn() {
+  const app = getApp();
+  const settings = app && app.globalData && app.globalData.userInfo && app.globalData.userInfo.settings;
+  return !settings || settings.dailyStepSync !== false;
+}
+
+/** 同一趟小程序会话回到前台会反复触发 onShow；5 分钟内不重复打同步接口 */
+const DAILY_SYNC_KEY = 'werun_daily_synced_at';
+const DAILY_SYNC_INTERVAL = 5 * 60 * 1000;
+
+function syncedRecently() {
+  try {
+    return Date.now() - Number(wx.getStorageSync(DAILY_SYNC_KEY) || 0) < DAILY_SYNC_INTERVAL;
+  } catch (e) {
+    return false;
+  }
+}
+
+function markSynced() {
+  try {
+    wx.setStorageSync(DAILY_SYNC_KEY, Date.now());
+  } catch (e) {
+    // 存不下只意味着可能多同步一次，不影响功能
+  }
+}
+
+/**
+ * 设置页开关开启时的「每日同步」：进小程序/回前台时静默跑一趟。
+ * 未登录、开关关闭、5 分钟内已同步过 → 直接返回，不打扰。
+ * 关闭后只有活动详情页（进行中且用到步数）会主动同步。
+ */
+async function syncDailySteps() {
+  const app = getApp();
+  if (!app || !app.globalData || !app.globalData.loggedIn) return { ok: false, reason: 'guest' };
+  if (!isDailyStepSyncOn()) return { ok: false, reason: 'off' };
+  if (syncedRecently()) return { ok: false, reason: 'throttled' };
+  const r = await syncWeRunSteps();
+  if (r.ok) markSynced();
+  return r;
+}
+
+module.exports = {
+  syncWeRunSteps,
+  getWeRunAuthState,
+  openWeRunSetting,
+  isDailyStepSyncOn,
+  syncDailySteps,
+};

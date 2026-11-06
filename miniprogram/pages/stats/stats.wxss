@@ -727,3 +727,46 @@
   font-size: 28rpx;
   width: 320rpx;
 }
+
+/* 微信步数统计入口卡：图标 + 近 7 天概况 + 箭头 */
+.step-entry {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+}
+.step-entry-hover {
+  background: #fafbfc;
+}
+.step-entry-icon-wrap {
+  flex: none;
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  background: #eaf1ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.step-entry-icon {
+  width: 38rpx;
+  height: 38rpx;
+}
+.step-entry-main {
+  flex: 1;
+  min-width: 0;
+}
+.step-entry-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+.step-entry-sub {
+  margin-top: 4rpx;
+  font-size: 22rpx;
+  color: #667080;
+}
+.step-entry-arrow {
+  flex: none;
+  font-size: 36rpx;
+  color: #8a93a6;
+}

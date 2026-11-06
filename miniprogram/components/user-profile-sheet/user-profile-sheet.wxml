@@ -1,0 +1,40 @@
+<!-- 榜单用户资料半屏（点击榜单行）：基本信息 + 累计八项；点头像看大图。
+     数据与重试都由页面负责，组件只渲染 + 抛 close / retry / preview / closeviewer 事件。 -->
+<view class="u-mask" wx:if="{{visible && state}}" bindtap="onClose" catchtouchmove="noop">
+  <view class="u-sheet" catchtap="noop">
+    <view wx:if="{{state.loading}}" class="u-tip">加载中…</view>
+    <view wx:elif="{{state.error}}" class="u-tip u-tip-tap" bindtap="onRetry">加载失败，点击重试</view>
+    <block wx:else>
+      <view class="u-head">
+        <view class="u-avatar-wrap" hover-class="u-avatar-hover" bindtap="onPreview">
+          <image wx:if="{{state.avatarSrc}}" class="u-avatar" src="{{state.avatarSrc}}" mode="aspectFill" />
+          <view wx:else class="u-avatar u-avatar-text">{{state.avatarText}}</view>
+          <image wx:if="{{state.member}}" class="u-badge" src="/assets/icons/member-badge.png" mode="aspectFit" />
+        </view>
+        <view class="u-info">
+          <view class="u-name">{{state.name}}</view>
+          <view class="u-sub">迹路者 {{state.uid}} · 已加入 {{state.joinDays}} 天</view>
+        </view>
+        <view class="u-close" catchtap="onClose">✕</view>
+      </view>
+
+      <view class="u-section-title">累计数据</view>
+      <view wx:if="{{state.statsHidden}}" class="u-stats-hidden">已关闭运动数据展示</view>
+      <view wx:else class="u-stats">
+        <view class="u-stat"><view class="u-num">{{state.stats.trackCount}}</view><view class="u-label">轨迹</view></view>
+        <view class="u-stat"><view class="u-num">{{state.stats.distanceText}}</view><view class="u-label">公里</view></view>
+        <view class="u-stat"><view class="u-num">{{state.stats.provinceCount}}</view><view class="u-label">点亮省份</view></view>
+        <view class="u-stat"><view class="u-num">{{state.stats.cityCount}}</view><view class="u-label">点亮城市</view></view>
+        <view class="u-stat"><view class="u-num">{{state.stats.durationText}}</view><view class="u-label">时长</view></view>
+        <view class="u-stat"><view class="u-num">{{state.stats.elevationText}}</view><view class="u-label">爬升 m</view></view>
+        <view class="u-stat"><view class="u-num">{{state.stats.caloriesText}}</view><view class="u-label">千卡</view></view>
+        <view class="u-stat"><view class="u-num">{{state.stats.typeCount}}</view><view class="u-label">运动类型</view></view>
+      </view>
+    </block>
+  </view>
+</view>
+
+<!-- 头像大图预览：全屏黑底，点任意处关闭 -->
+<view class="avatar-viewer" wx:if="{{viewer && viewer.visible}}" bindtap="onCloseViewer" catchtouchmove="noop">
+  <image class="avatar-viewer-img" src="{{viewer.src}}" mode="aspectFit" />
+</view>

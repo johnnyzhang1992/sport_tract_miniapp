@@ -4,7 +4,7 @@ const loading = require('../../utils/loading');
 const config = require('../../config/index');
 const { ensureLogin } = require('../../utils/login-gate');
 const {
-  EXPORT_RANGES, buildExportQuery, fileStamp, downloadExport, shareExportFile,
+  EXPORT_RANGES, buildExportQuery, buildStepExportQuery, fileStamp, downloadExport, shareExportFile,
 } = require('../../utils/export-file');
 
 /** 「单次上限」类错误的固定标志：这类消息必须整句读完才能照做，不能用 toast（会被截断） */
@@ -48,9 +48,9 @@ Page({
     ranges: EXPORT_RANGES,
     types: TYPE_OPTIONS,
     today: bjDate(Date.now()),
-    // 两种导出共用一套范围条件
+    // 三种导出共用一套范围条件（步数不用类型）
     filter: { range: 'all', type: '', start: '', end: '' },
-    busy: '', // 'csv' | 'gpx'：导出中锁住两个按钮
+    busy: '', // 'csv' | 'steps' | 'gpx'：导出中锁住全部按钮
   },
 
   onShow() {
@@ -111,6 +111,10 @@ Page({
     return this.doExport('csv');
   },
 
+  onExportStepsCsv() {
+    return this.doExport('steps');
+  },
+
   onExportGpx() {
     if (!this.data.canExportBundle) {
       wx.showToast({ title: '会员专属功能，开通后可导出轨迹', icon: 'none' });
@@ -125,20 +129,24 @@ Page({
     const cond = this.data.filter;
     let query = '';
     try {
-      query = buildExportQuery({
-        rangeKey: cond.range,
-        type: cond.type,
-        startDate: cond.start,
-        endDate: cond.end,
-      });
+      query = kind === 'steps'
+        ? buildStepExportQuery({ rangeKey: cond.range, startDate: cond.start, endDate: cond.end })
+        : buildExportQuery({
+          rangeKey: cond.range,
+          type: cond.type,
+          startDate: cond.start,
+          endDate: cond.end,
+        });
     } catch (err) {
       wx.showToast({ title: (err && err.message) || '筛选条件无效', icon: 'none' });
       return;
     }
-    const path = kind === 'csv' ? '/activities/export/summary' : '/activities/export/gpx';
+    const path = kind === 'csv'
+      ? '/activities/export/summary'
+      : kind === 'steps' ? '/werun/export/csv' : '/activities/export/gpx';
     const fileName = kind === 'csv'
       ? `运动记录_${fileStamp()}.csv`
-      : `轨迹导出_${fileStamp()}.zip`;
+      : kind === 'steps' ? `微信步数_${fileStamp()}.csv` : `轨迹导出_${fileStamp()}.zip`;
     this.setData({ busy: kind });
     loading.show('生成中…');
     let filePath = '';

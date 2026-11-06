@@ -80,6 +80,154 @@
 .stat-line-dot {
   color: #b0b4bb;
 }
+
+/* 步数总览：左「计入距离 / 累计步数」，右「微信步数 / 同步天数」 */
+.step-summary {
+  display: flex;
+  margin-top: 12rpx;
+  padding: 16rpx 20rpx;
+  background: #f7f8fa;
+  border-radius: 16rpx;
+}
+.step-cell {
+  flex: 1;
+  min-width: 0;
+}
+.step-cell-right {
+  text-align: right;
+}
+.step-cell-label {
+  font-size: 22rpx;
+  color: #667080;
+}
+.step-cell-value {
+  margin-top: 6rpx;
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #1f2329;
+  font-variant-numeric: tabular-nums;
+}
+.step-cell-unit {
+  margin-left: 4rpx;
+  font-size: 22rpx;
+  font-weight: 400;
+  color: #667080;
+}
+
+/* 轨迹 / 按天两档 */
+.tabs {
+  display: flex;
+  gap: 32rpx;
+  margin-top: 20rpx;
+  border-bottom: 1rpx solid #eef0f4;
+}
+.tab {
+  position: relative;
+  padding: 12rpx 0 16rpx;
+  font-size: 26rpx;
+  color: #667080;
+}
+.tab-on {
+  color: #1f2329;
+  font-weight: 600;
+}
+.tab-on::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 40rpx;
+  height: 4rpx;
+  margin-left: -20rpx;
+  border-radius: 2rpx;
+  background: #2b6cf6;
+}
+.tab-note {
+  padding: 12rpx 0 0;
+  font-size: 22rpx;
+  color: #667080;
+}
+
+/* 按天一行：日期 / 距离 · 步数 / 状态 */
+.day-row {
+  display: flex;
+  align-items: center;
+  padding: 18rpx 0;
+  border-bottom: 1rpx solid #f2f3f5;
+}
+.day-row:last-child {
+  border-bottom: none;
+}
+.day-date {
+  flex: none;
+  width: 120rpx;
+  display: flex;
+  flex-direction: column;
+}
+.day-date-num {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #1f2329;
+  font-variant-numeric: tabular-nums;
+}
+.day-date-week {
+  margin-top: 2rpx;
+  font-size: 20rpx;
+  color: #667080;
+}
+.day-metrics {
+  flex: 1;
+  min-width: 0;
+  font-size: 24rpx;
+  color: #4e5969;
+  font-variant-numeric: tabular-nums;
+}
+.day-dist {
+  font-weight: 600;
+  color: #1f2329;
+}
+.day-dist-zero {
+  font-weight: 400;
+  color: #aab0bb;
+}
+.day-sep {
+  margin: 0 8rpx;
+  color: #b0b4bb;
+}
+.day-step-empty {
+  color: #aab0bb;
+}
+.day-status {
+  flex: none;
+  margin-left: 12rpx;
+}
+.day-pill {
+  padding: 4rpx 12rpx;
+  border-radius: 999rpx;
+  font-size: 20rpx;
+  background: #f2f3f5;
+  color: #4e5969;
+}
+.day-pill-match {
+  background: #e8f8ee;
+  color: #1f9d55;
+}
+.day-pill-low {
+  background: #fff7e6;
+  color: #ad6800;
+}
+.day-pill-neutral {
+  background: #f2f3f5;
+  color: #4e5969;
+}
+
+/* 半屏底部说明（不影响排名的免责口径） */
+.sheet-footer {
+  padding: 16rpx 0 4rpx;
+  font-size: 22rpx;
+  line-height: 1.5;
+  color: #667080;
+}
 /* 「我 vs TA」对照：三项同口径，胜方高亮，差距写清楚 */
 .cmp {
   margin-top: 12rpx;

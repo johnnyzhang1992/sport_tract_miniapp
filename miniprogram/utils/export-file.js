@@ -61,6 +61,24 @@ function buildExportQuery(opts, now = Date.now()) {
   return params.length ? `?${params.join('&')}` : '';
 }
 
+/** 东八区某时刻所在自然日的 0 点 */
+function bjDayStart(ms) {
+  return Math.floor((ms + 8 * 3600000) / 86400000) * 86400000 - 8 * 3600000;
+}
+
+/**
+ * 纯函数：步数导出的 query。步数按自然日一条，固定档必须取「含今天共 N 个自然日」，
+ * 不能沿用活动导出的滚动 24h（那会把第 N+1 天也带上）。类型参数与步数无关，不带。
+ */
+function buildStepExportQuery(opts, now = Date.now()) {
+  const o = opts || {};
+  const range = EXPORT_RANGES.find((r) => r.key === o.rangeKey);
+  if (!range || range.key === 'all') return '';
+  if (range.days) return `?from=${bjDayStart(now) - (range.days - 1) * 86400000}`;
+  const { from, to } = rangeParams('custom', o.startDate, o.endDate, now);
+  return `?from=${from}&to=${to}`;
+}
+
 /**
  * 纯函数：非 2xx 响应体 → 提示文案。arraybuffer 响应的错误体按 UTF-8 解 JSON 取 message，
  * 解不出来给空串（调用方回落通用文案）。
@@ -179,6 +197,7 @@ module.exports = {
   parseExportDate,
   rangeParams,
   buildExportQuery,
+  buildStepExportQuery,
   decodeErrorMessage,
   fileStamp,
   utf8Decode,

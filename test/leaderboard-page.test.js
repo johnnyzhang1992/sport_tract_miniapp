@@ -235,6 +235,7 @@ test('LB-UP 点榜单用户：拉公开资料并格式化累计八项', async ()
   assert.equal(p.data.board.top[0].uid, 1004, '榜单行要带公开 uid');
   const wxml = read('miniprogram/pages/leaderboard/leaderboard.wxml');
   assert.match(wxml, /class="rank-row"[\s\S]{0,200}data-uid="\{\{item\.uid\}\}"[\s\S]{0,80}bindtap="openUserSheet"/, '榜单行点击要带 uid');
+  assert.match(wxml, /wx:if="\{\{userSheet\.visible\}\}" class="map-blank"/, '资料半屏打开时拆掉原生地图画布，避免压住弹窗');
 
   apiCalls.length = 0;
   await p.openUserSheet({ currentTarget: { dataset: { uid: 1004 } } });
@@ -270,9 +271,9 @@ test('LB-UP 点榜单用户：拉公开资料并格式化累计八项', async ()
   assert.equal(p.data.userSheet.visible, false);
   assert.equal(p.data.avatarViewer.visible, false, '关资料卡也要收起大图');
 
-  const w = read('miniprogram/pages/leaderboard/leaderboard.wxml');
-  assert.match(w, /class="u-avatar-wrap"[^>]*bindtap="previewSheetAvatar"/, '点资料卡头像开大图');
-  assert.match(w, /class="avatar-viewer" wx:if="\{\{avatarViewer\.visible\}\}"/, '全屏预览层存在');
+  const w = read('miniprogram/components/user-profile-sheet/user-profile-sheet.wxml');
+  assert.match(w, /class="u-avatar-wrap"[^>]*bindtap="onPreview"/, '点资料卡头像开大图');
+  assert.match(w, /class="avatar-viewer" wx:if="\{\{viewer && viewer\.visible\}\}"/, '全屏预览层存在');
 });
 
 test('LB-UP2 资料加载失败可重试；八项顺序与统计页累计卡一致', async () => {
@@ -291,7 +292,7 @@ test('LB-UP2 资料加载失败可重试；八项顺序与统计页累计卡一�
   assert.equal(p.data.userSheet.error, false);
   assert.equal(p.data.userSheet.visible, true);
 
-  const w = read('miniprogram/pages/leaderboard/leaderboard.wxml');
+  const w = read('miniprogram/components/user-profile-sheet/user-profile-sheet.wxml');
   const labels = [...w.matchAll(/class="u-label">([^<]+)</g)].map((m) => m[1]);
   assert.deepEqual(labels, ['轨迹', '公里', '点亮省份', '点亮城市', '时长', '爬升 m', '千卡', '运动类型']);
 });
@@ -305,7 +306,7 @@ test('LB-UP3 对方关闭展示：资料卡八项置为占位文案，不渲染�
   await p.openUserSheet({ currentTarget: { dataset: { uid: 1004 } } });
   assert.equal(p.data.userSheet.statsHidden, true);
   assert.equal(p.data.userSheet.stats, null);
-  const w = read('miniprogram/pages/leaderboard/leaderboard.wxml');
+  const w = read('miniprogram/components/user-profile-sheet/user-profile-sheet.wxml');
   assert.ok(w.includes('已关闭运动数据展示'));
-  assert.match(w, /wx:if="\{\{userSheet\.statsHidden\}\}" class="u-stats-hidden">已关闭运动数据展示/);
+  assert.match(w, /wx:if="\{\{state\.statsHidden\}\}" class="u-stats-hidden">已关闭运动数据展示/);
 });

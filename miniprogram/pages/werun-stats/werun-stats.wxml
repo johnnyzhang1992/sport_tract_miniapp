@@ -1,0 +1,118 @@
+<view class="page">
+  <!-- 游客：个人步数统计需登录 -->
+  <view class="login-hint" wx:if="{{!loggedIn && !loading}}">
+    <image class="login-hint-icon" src="/assets/icons/lucide-user.png" mode="aspectFit" />
+    <view class="login-hint-text">登录后查看你的微信步数统计</view>
+    <button class="login-hint-btn" bindtap="guestLogin">去登录</button>
+  </view>
+
+  <block wx:if="{{loggedIn}}">
+    <!-- 时间档：7 日 / 30 日 / 半年 / 一年 -->
+    <view class="range-row">
+      <view
+        wx:for="{{ranges}}"
+        wx:key="key"
+        class="range-seg {{range === item.key ? 'range-seg-active' : ''}}"
+        data-range="{{item.key}}"
+        bindtap="onRangeTap"
+      >{{item.label}}</view>
+    </view>
+
+    <view class="card state-card" wx:if="{{loading && !overview}}">
+      <view class="state-text">加载中…</view>
+    </view>
+    <view class="card state-card" wx:elif="{{error && !overview}}">
+      <view class="state-text">{{error}}</view>
+      <view class="state-btn" hover-class="state-btn-hover" bindtap="retry">重试</view>
+    </view>
+
+    <block wx:if="{{overview}}">
+      <!-- 数据概况 -->
+      <view class="card">
+        <view class="overview-hero">
+          <view class="hero-label">总步数</view>
+          <view class="hero-value">{{overview.totalText}}<text class="hero-unit">步</text></view>
+          <view class="hero-range">{{overview.rangeText}}</view>
+        </view>
+        <view class="overview-grid">
+          <view class="ov-cell">
+            <view class="ov-label">日均步数</view>
+            <view class="ov-value">{{overview.avgText}}</view>
+          </view>
+          <view class="ov-cell">
+            <view class="ov-label">最高单日</view>
+            <view class="ov-value">{{overview.bestText}}</view>
+            <view class="ov-sub" wx:if="{{overview.bestDateText}}">{{overview.bestDateText}}</view>
+          </view>
+          <view class="ov-cell">
+            <view class="ov-label">同步天数</view>
+            <view class="ov-value">{{overview.syncedDays}}<text class="ov-unit">天</text></view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 趋势变化：近 30 天 vs 前 30 天（与统计页同款小卡） -->
+      <view class="card" wx:if="{{stepMetricCards.length}}">
+        <view class="card-head">
+          <view class="card-title">趋势变化</view>
+          <view class="card-sub">近 30 天 vs 前 30 天</view>
+        </view>
+        <view class="metric-grid">
+          <view class="metric-card" wx:for="{{stepMetricCards}}" wx:key="key">
+            <view class="metric-badge">
+              <image wx:if="{{item.arrowIcon}}" class="metric-badge-icon" src="{{item.arrowIcon}}" mode="aspectFit" />
+            </view>
+            <view class="metric-body">
+              <view class="metric-main">
+                <text class="metric-label">{{item.label}}</text>
+                <view class="metric-value-line">
+                  <text class="metric-value">{{item.value}}</text><text class="metric-unit">{{item.unit}}</text>
+                </view>
+              </view>
+              <view class="metric-foot metric-diff-{{item.dir}}">{{item.diffText ? '较前 30 天 ' + item.diffText : '暂无对比'}}</view>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 每日变化趋势：柱状图；7/30 按日、半年按周、一年按月 -->
+      <view class="card">
+        <view class="card-head">
+          <view class="card-title">步数趋势</view>
+          <view class="card-sub">{{trend.subText}}</view>
+        </view>
+        <stat-chart
+          type="bar"
+          data="{{trend.data}}"
+          unit="step"
+          height="{{210}}"
+          label-slot="{{trend.labelSlot}}"
+          empty-text="暂无步数数据"
+        />
+      </view>
+
+      <!-- 每日明细：只列有同步记录的天，倒序分页 -->
+      <view class="card">
+        <view class="card-head">
+          <view class="card-title">每日明细</view>
+          <view class="card-sub">共 {{dayTotal}} 天</view>
+        </view>
+        <view class="day-row" wx:for="{{days}}" wx:key="date">
+          <view class="day-date">
+            <text class="day-date-num">{{item.dateText}}</text>
+            <text class="day-weekday">{{item.weekday}}</text>
+          </view>
+          <view class="day-step">{{item.stepText}}<text class="day-unit"> 步</text></view>
+        </view>
+        <view class="day-empty" wx:if="{{days.length === 0}}">该时间范围内还没有步数记录</view>
+        <view
+          class="day-more"
+          wx:if="{{dayHasMore}}"
+          hover-class="day-more-hover"
+          hover-stay-time="80"
+          bindtap="loadMoreDays"
+        >{{dayLoadingMore ? '加载中…' : '加载更多'}}（已显示 {{days.length}} / {{dayTotal}}）</view>
+      </view>
+    </block>
+  </block>
+</view>

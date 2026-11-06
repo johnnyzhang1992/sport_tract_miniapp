@@ -7,7 +7,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
 const api = require('../miniprogram/services/api');
-const { syncWeRunSteps } = require('../miniprogram/utils/werun.js');
+const { syncWeRunSteps, syncDailySteps, isDailyStepSyncOn } = require('../miniprogram/utils/werun.js');
 
 /* ---------------------------------- 环境桩 ---------------------------------- */
 
@@ -158,4 +158,49 @@ test('WR-F8 并发去重：in-flight 时第二趟 busy，释放后恢复', async
   api.post = async () => ({ syncedDays: 0, days: [] });
   const third = await syncWeRunSteps();
   assert.equal(third.ok, true, '释放后可再次同步');
+});
+
+/* ------------------------- 设置页「每日同步」闸门（DS） ------------------------- */
+
+test('WR-DS1 设置关闭：不取数、不弹授权（只有活动页会按需同步）', async () => {
+  scenario({ scopeState: true });
+  global.getApp = () => ({ globalData: { loggedIn: true, userInfo: { settings: { dailyStepSync: false } } } });
+  global.wx.getStorageSync = () => 0;
+  const r = await syncDailySteps();
+  assert.deepEqual(r, { ok: false, reason: 'off' });
+  assert.equal(current.calls.login, 0);
+  assert.equal(current.calls.getWeRunData, 0);
+  assert.equal(current.calls.post, 0);
+});
+
+test('WR-DS2 未登录：直接跳过', async () => {
+  scenario({ scopeState: true });
+  global.getApp = () => ({ globalData: { loggedIn: false, userInfo: null } });
+  const r = await syncDailySteps();
+  assert.deepEqual(r, { ok: false, reason: 'guest' });
+  assert.equal(current.calls.login, 0);
+});
+
+test('WR-DS3 开关开启：同步成功写节流标记，5 分钟内不重复', async () => {
+  scenario({ scopeState: true });
+  let stored = 0;
+  global.getApp = () => ({ globalData: { loggedIn: true, userInfo: { settings: {} } } }); // 老用户缺字段＝开
+  global.wx.getStorageSync = (k) => (k === 'werun_daily_synced_at' ? stored : '');
+  global.wx.setStorageSync = (k, v) => {
+    if (k === 'werun_daily_synced_at') stored = v;
+  };
+  api.post = async () => {
+    current.calls.post++;
+    return { syncedDays: 2, days: [] };
+  };
+
+  assert.equal(isDailyStepSyncOn(), true);
+  const first = await syncDailySteps();
+  assert.equal(first.ok, true);
+  assert.equal(current.calls.post, 1);
+  assert.ok(stored > 0, '成功后要写当天同步时间');
+
+  const second = await syncDailySteps();
+  assert.deepEqual(second, { ok: false, reason: 'throttled' });
+  assert.equal(current.calls.post, 1, '节流窗口内不再打上报');
 });

@@ -149,6 +149,11 @@ function getProvinceOption(mapName, provCities, features) {
 }
 
 Component({
+  properties: {
+    /** 外部弹层打开时藏掉主画布（canvas 同层合成会盖在弹层上）；外层容器高度保留 */
+    blank: { type: Boolean, value: false },
+  },
+
   data: {
     loading: false,
     provinceCount: 0,

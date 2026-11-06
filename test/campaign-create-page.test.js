@@ -151,7 +151,9 @@ test('CCP3 合法表单 → POST /campaigns 且请求体字段完整，成功后
     title: '周末一起去徒步',
     description: '走西湖群山',
     visibility: 'private',
+    kind: 'activity',
     allowedTypes: ['hiking', 'walking'],
+    stepAuxEnabled: false,
     memberLimit: 20, // 数字而非字符串：服务端 schema 是 z.number().int()
     startDate: '2026-10-01',
     endDate: '2026-10-07',
@@ -380,7 +382,7 @@ test('CCP17 带 id 进页＝编辑模式：拉详情预填六个字段，chips �
   assert.deepEqual(navTitles, ['编辑活动'], '编辑态要把导航标题改掉，否则用户不知道自己在改而不是在建');
 });
 
-test('CCP18 编辑提交走 PUT /campaigns/:id，请求体六字段齐、且绝不含 startDate', async () => {
+test('CCP18 编辑提交走 PUT /campaigns/:id，请求体七字段齐、且绝不含 startDate', async () => {
   resetEnv();
   respond = (p, body) => (body ? Promise.resolve(detailDto(body)) : Promise.resolve(detailDto()));
   const page = makePage();
@@ -399,10 +401,52 @@ test('CCP18 编辑提交走 PUT /campaigns/:id，请求体六字段齐、且绝�
     description: '原描述',
     visibility: 'private',
     allowedTypes: ['hiking'],
+    stepAuxEnabled: false,
     memberLimit: 20,
     endDate: '2026-10-09',
   });
   assert.ok(!('startDate' in apiCalls[0].body), '上送 startDate 会被服务端 .strict() 整请求 400');
+});
+
+test('CCP18b 步数PK 创建：kind=steps，类型清空、辅助恒 false', async () => {
+  resetEnv();
+  respond = () => Promise.resolve({ id: 'cmp-step' });
+  const page = makePage();
+  Object.assign(page.data, legal({ kind: 'steps', stepAuxEnabled: true, allowedTypes: ['running'] }));
+  await page.onSubmit();
+  assert.equal(apiCalls.length, 1);
+  assert.equal(apiCalls[0].body.kind, 'steps');
+  assert.deepEqual(apiCalls[0].body.allowedTypes, [], '步数PK 不区分运动类型');
+  assert.equal(apiCalls[0].body.stepAuxEnabled, false, '步数PK 不使用辅助开关');
+});
+
+test('CCP18c 切到步数PK 会清空已选类型与辅助开关', () => {
+  const page = makePage();
+  page.data.kind = 'activity';
+  page.data.stepAuxEnabled = true;
+  page.data.allowedTypes = ['running'];
+  page.onKind({ currentTarget: { dataset: { value: 'steps' } } });
+  assert.equal(page.data.kind, 'steps');
+  assert.deepEqual(page.data.allowedTypes, []);
+  assert.equal(page.data.stepAuxEnabled, false);
+  assert.equal(page.data.types.some((t) => t.active), false);
+});
+
+test('CCP18d 编辑步数PK：PUT 不提交 allowedTypes / stepAuxEnabled / kind', async () => {
+  resetEnv();
+  respond = (p, body) =>
+    Promise.resolve(p === '/campaigns/cmp-step' ? detailDto({ kind: 'steps', allowedTypes: [] }) : detailDto(body));
+  const page = makePage();
+  await page.onLoad({ id: 'cmp-step' });
+  assert.equal(page.data.kind, 'steps');
+  apiCalls.length = 0;
+  await page.onSubmit();
+  assert.equal(apiCalls[0].method, 'PUT');
+  const body = apiCalls[0].body;
+  assert.ok(!('allowedTypes' in body), '步数PK 改类型会被服务端拒绝，端上不发');
+  assert.ok(!('stepAuxEnabled' in body), '步数PK 不使用辅助开关');
+  assert.ok(!('kind' in body), 'kind 创建后不可改');
+  assert.ok(!('startDate' in body));
 });
 
 test('CCP19 编辑成功 → toast + navigateBack（回到详情页由它自己刷新），不再 navigateTo 详情', async () => {

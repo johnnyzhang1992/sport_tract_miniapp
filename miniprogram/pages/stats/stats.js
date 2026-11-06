@@ -10,6 +10,7 @@ const { buildTrophies } = require('../../utils/trophy');
 const { buildMetricCards, buildTrendChart, ARROW_ICON } = require('../../utils/stats-metrics');
 const { buildMonthGrid, shiftMonth, compareMonth, WEEKDAYS } = require('../../utils/activity-calendar');
 const { bjDate } = require('../../utils/bj-date');
+const { buildStepRecords } = require('../../utils/step-report-view');
 
 const DAY_MS = 86400000;
 
@@ -58,6 +59,7 @@ Page({
     typeSummary: [], // 分类型汇总（各类型总距离/总时长/次数）
     sheetVisible: false, // 半屏弹窗：全部纪录 / 奖杯详情
     sheetType: 'best', // best | trophy
+    stepCard: null, // 微信步数统计入口卡：近 7 天步数概况（无数据时为 null，只显示入口文案）
   },
 
   onShow() {
@@ -95,18 +97,28 @@ Page({
     this.setData({ notLoggedIn: false });
     try {
       this.setData({ loading: true });
-      const [overview, trend, best, percentile, daily] = await Promise.all([
+      const [overview, trend, best, percentile, daily, steps, stepReport] = await Promise.all([
         api.get('/stats/overview'),
         api.get(`/stats/trend${this.trendQuery()}`),
         api.get('/stats/best').catch(() => null),
         api.get('/stats/percentile').catch(() => null),
         // 五张卡固定「全部类型」：这个 365 天序列不带 activityType，半屏里的类型筛选不影响卡片
         api.get('/stats/trend?days=365').catch(() => null),
+        // 步数统计入口卡：只是近 7 天概况，失败不影响统计页
+        api.get('/werun/stats?range=7').catch(() => null),
+        // 最佳记录里的两条步数纪录：全量（不传 from/to）
+        api.get('/werun/report').catch(() => null),
       ]);
       this._dailyRows = daily && Array.isArray(daily.data) ? daily.data : [];
       const decorated = this.decorateOverview(overview);
       const typeSummary = this.decorateTypeSummary(overview.total && overview.total.byType);
       this._trendRows = trend.data;
+      const stepCard = steps && steps.overview && steps.overview.syncedDays > 0
+        ? {
+            totalText: formatCompactCn(steps.overview.totalStep),
+            avgText: formatCompactCn(steps.overview.avgStep),
+          }
+        : null;
       this.setData({
         overview: decorated,
         metricCards: daily ? buildMetricCards(daily.data) : [],
@@ -115,11 +127,12 @@ Page({
           week: this.decorateCompare(calcDiff(overview.week.distance || 0, overview.prevWeek ? overview.prevWeek.distance : 0), '上周'),
           month: this.decorateCompare(calcDiff(overview.month.distance || 0, overview.prevMonth ? overview.prevMonth.distance : 0), '上月'),
         },
-        best: this.decorateBest(best),
+        best: this.decorateBest(best, stepReport),
         trophies: this.decorateTrophies(best),
         percentile: this.decoratePercentile(percentile),
         typeCount: typeSummary.length,
         typeSummary,
+        stepCard,
         trendActivityTypes: [
           { value: '', label: '全部' },
           ...typeSummary.map((r) => ({ value: r.type, label: r.typeLabel })),
@@ -309,9 +322,19 @@ Page({
       });
   },
 
-  /** 个人最佳：横滑卡片（表现分/距离PB在前、其后按类型列 4 项指标），每张卡 = 一条纪录 */
-  decorateBest(b) {
-    if (!b) return null;
+  /** 个人最佳：横滑卡片（表现分/距离PB在前、其后按类型列 4 项指标），每张卡 = 一条纪录；
+   *  末尾追加两条步数纪录（最多步数日 / 步数最多月份），没有轨迹可跳。 */
+  decorateBest(b, stepReport) {
+    const stepCards = buildStepRecords(stepReport).map((r, i) => ({
+      key: `s${i}`,
+      id: '',
+      label: r.label,
+      value: r.value,
+      icon: r.icon,
+      typeLabel: '微信步数',
+      heldText: r.sub,
+    }));
+    if (!b) return stepCards.length ? { bestCards: stepCards } : null;
     const { formatDuration, formatPaceParts } = require('../../utils/format');
     const { perfLevel } = require('../../utils/perf-score');
     const TYPE_META = require('../../config/index').ACTIVITY_TYPES || [];
@@ -343,7 +366,7 @@ Page({
     Object.keys(byType)
       .sort()
       .forEach((t) => byType[t].forEach((c) => cards.push({ key: `m${cards.length}`, ...c, icon: iconOf(t) })));
-    return { bestCards: cards };
+    return { bestCards: cards.concat(stepCards) };
   },
 
   /** 趋势维度切换 */
@@ -376,6 +399,11 @@ Page({
   /** 轨迹热图：全年运动分布（轨迹合集页的聚合视图） */
   goHeatmap() {
     wx.navigateTo({ url: '/pages/overview/overview' });
+  },
+
+  /** 微信步数统计：个人概况 + 每日趋势 + 每日明细 */
+  goWerunStats() {
+    wx.navigateTo({ url: '/pages/werun-stats/werun-stats' });
   },
 
   /** 半屏弹窗：全部纪录 / 奖杯详情（宫格） */

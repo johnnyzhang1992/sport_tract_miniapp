@@ -95,6 +95,15 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* 步数PK 类型标记：品牌浅蓝，与状态标签区分 */
+.head-kind {
+  flex: none;
+  padding: 4rpx 12rpx;
+  border-radius: 999rpx;
+  background: #eaf1ff;
+  color: #2b6cf6;
+  font-size: 22rpx;
+}
 /* 时间 + 进度文案同一行：时间居左、进度文案居右（原来各占一行，卡片白多一行高） */
 .head-line {
   margin-top: 12rpx;
@@ -120,6 +129,38 @@
   background: #f2f3f5;
   border-radius: 6rpx;
   padding: 6rpx 12rpx;
+}
+/* 步数辅助标记：品牌浅蓝，避免和可见性/人数等中性 chip 混在一起 */
+.head-meta-aux {
+  color: #2b6cf6;
+  background: #eaf1ff;
+}
+/* 微信运动未开启：进行中且用到步数的活动才提示 */
+.we-run-tip {
+  margin-top: 12rpx;
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 12rpx 16rpx;
+  background: #fff7e6;
+  border: 1rpx solid #ffe7ba;
+  border-radius: 12rpx;
+}
+.we-run-tip-hover {
+  background: #fff1d6;
+}
+.we-run-tip-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 22rpx;
+  line-height: 1.4;
+  color: #ad6800;
+}
+.we-run-tip-btn {
+  flex: none;
+  font-size: 22rpx;
+  font-weight: 600;
+  color: #2b6cf6;
 }
 
 /* 赛程进度：一条细进度条 + 一句「还剩 N 天」（已结束不显示） */

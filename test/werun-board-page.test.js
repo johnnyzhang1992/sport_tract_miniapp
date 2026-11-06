@@ -60,3 +60,17 @@ test('WB-P6 隐私政策披露排行榜展示（昵称/头像/省份/步数）',
   assert.match(wxml, /步数排行榜/, '隐私政策提到步数排行榜');
   assert.match(wxml, /昵称、头像与省份/, '披露榜单展示的字段范围');
 });
+
+test('WB-P7 点榜单用户复用公开资料半屏，不附加步数数据', () => {
+  const wxml = read('miniprogram/pages/werun-board/werun-board.wxml');
+  const js = read('miniprogram/pages/werun-board/werun-board.js');
+  const json = JSON.parse(read('miniprogram/pages/werun-board/werun-board.json'));
+  assert.match(
+    wxml,
+    /class="rank-row"[\s\S]{0,220}data-uid="\{\{item\.uid\}\}"[\s\S]{0,80}bindtap="openUserSheet"/,
+    '榜单行要带 uid 并打开资料半屏',
+  );
+  assert.match(wxml, /<user-profile-sheet[\s\S]*state="\{\{userSheet\}\}"/, '复用运动榜资料半屏组件');
+  assert.equal(json.usingComponents['user-profile-sheet'], '/components/user-profile-sheet/user-profile-sheet');
+  assert.match(js, /\/stats\/profile\/\$\{uid\}/, '资料数据走公开资料接口');
+});

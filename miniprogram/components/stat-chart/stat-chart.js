@@ -6,10 +6,8 @@
  * - 布局：左侧 Y 轴刻度（min/mid/max）+ 网格线，底部 X 标签（左右留白不裁剪）
  * - 折线图圆滑曲线（中点二次贝塞尔，无数据点圆），最大值标注数值
  */
-/** 一个 X 标签的占位：10px 字号下「MM/DD」约 26px，再留 2px 呼吸 */
+/** 一个 X 标签的默认占位：10px 字号下「MM/DD」约 26px，再留 2px 呼吸 */
 const LABEL_SLOT_PX = 28;
-/** 相邻两格中心至少隔这么远：首格左对齐、末格右对齐，各比居中多吃半个占位，所以按最严的 1.5 倍统一留 */
-const LABEL_MIN_PX = LABEL_SLOT_PX * 1.5;
 /** 拿不到绘图区宽度时的兜底：最多画这么多个 */
 const LABEL_MAX = 8;
 
@@ -25,6 +23,8 @@ Component({
     height: { type: Number, value: 220 },
     color: { type: String, value: '#2B6CF6' },
     emptyText: { type: String, value: '暂无数据' },
+    /** 一个 X 标签的占位像素（默认按 MM/DD；YYYY/MM 这类长标签由调用方调大） */
+    labelSlot: { type: Number, value: 28 },
   },
 
   data: {
@@ -58,6 +58,10 @@ Component({
     axisLabels(values) {
       const maxV = Math.max(...values);
       const minV = Math.min(...values);
+      // 步数是可加量，Y 轴必须 0 基线；否则日均 8k 的柱看起来像每天只差几百
+      if (this.data && this.data.unit === 'step') {
+        return [maxV, (maxV * 3) / 4, maxV / 2, maxV / 4, 0].map((v) => Math.round(v));
+      }
       if (maxV === minV) {
         return [maxV, (maxV * 3) / 4, maxV / 2, maxV / 4, 0].map((v) => Math.round(v * 100) / 100);
       }
@@ -74,9 +78,10 @@ Component({
       const n = Number(count) || 0;
       if (n <= 1) return 1;
       const w = Number(chartW) || 0;
+      const slot = (this.data && Number(this.data.labelSlot)) || LABEL_SLOT_PX;
       if (w <= 0) return Math.max(1, Math.ceil(n / LABEL_MAX));
       const seg = w / (n - 1);
-      return Math.max(1, Math.ceil(LABEL_MIN_PX / seg));
+      return Math.max(1, Math.ceil((slot * 1.5) / seg));
     },
 
     /**
@@ -142,7 +147,7 @@ Component({
       ctx.font = '9px sans-serif';
       const labels = this.axisLabels(values);
       // Y 轴刻度区宽度按最大刻度文字动态计算（防 devtools/长数值溢出画面左缘）
-      const labelTexts = labels.map((v) => this.formatValue(v));
+      const labelTexts = labels.map((v) => this.formatValue(v, maxV));
       const maxLabelW = Math.max(...labelTexts.map((t) => ctx.measureText(t).width));
       const padLeft = Math.max(34, Math.ceil(maxLabelW) + 12);
       const chartW = width - padLeft - padRight;
@@ -163,7 +168,7 @@ Component({
         ctx.stroke();
         // 刻度文字：整数指标（次数）四等分会算出重复值，重复的不再画第二次
         ctx.fillStyle = '#667080';
-        const text = this.formatValue(v);
+        const text = this.formatValue(v, maxV);
         if (text !== prevText) {
           ctx.fillText(text, padLeft - 6, y);
           prevText = text;
@@ -224,7 +229,7 @@ Component({
       const barTop = H - axis.padBottom - norm[maxIdx] * axis.chartH;
       ctx.font = '10px sans-serif';
       ctx.textAlign = 'center';
-      const text = this.formatValue(maxV);
+      const text = this.formatValue(maxV, maxV);
       const tw = ctx.measureText(text).width;
       const bx = axis.padLeft + maxIdx * slotW + slotW / 2;
       const blockH = 14;
@@ -287,9 +292,18 @@ Component({
       });
     },
 
-    formatValue(v) {
+    formatValue(v, max) {
       if (this.data.unit === 'km') return `${Number(v).toFixed(1)}`;
       if (this.data.unit === 'min') return `${Math.round(v)}`;
+      // 步数轴：整轴统一单位。≥1 万用「万」（0.8万/1.2万），否则千分位；
+      // 避免同一根轴上出现「1.1万 / 9015」两种读法。
+      if (this.data.unit === 'step') {
+        const n = Number(v) || 0;
+        const top = Number(max) || n;
+        if (n === 0) return '0';
+        if (top >= 10000) return `${String(Math.round((n / 10000) * 10) / 10)}万`;
+        return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      }
       return `${Math.round(Number(v))}`;
     },
 

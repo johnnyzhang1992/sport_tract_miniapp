@@ -6,10 +6,10 @@
   </view>
 
   <block wx:else>
-    <!-- 两种导出共用同一套范围条件 -->
+    <!-- 三种导出共用同一套范围条件（步数不用类型） -->
     <view class="card">
       <view class="sec-title">导出范围</view>
-      <view class="sec-desc">时间与运动类型同时作用于运动记录和轨迹记录。</view>
+      <view class="sec-desc">时间与运动类型作用于运动记录和轨迹记录；微信步数只按时间导出。</view>
 
       <export-filter
         ranges="{{ranges}}"
@@ -31,6 +31,13 @@
       <view class="sec-title">运动记录</view>
       <view class="sec-desc">含昵称、运动类型、起止时间、各类时长、距离与点数；首列为轨迹ID，可与轨迹导出关联。不含轨迹明细和照片。</view>
       <view class="export-btn {{busy ? 'export-btn-busy' : ''}}" hover-class="export-btn-hover" bindtap="onExportCsv">导出 CSV</view>
+    </view>
+
+    <!-- 微信步数 CSV：只受时间范围影响，类型筛选不参与 -->
+    <view class="card">
+      <view class="sec-title">微信步数</view>
+      <view class="sec-desc">按天导出已同步的微信步数，含日期、星期与步数；只按时间范围筛选，未同步的日期不补零。</view>
+      <view class="export-btn {{busy ? 'export-btn-busy' : ''}}" hover-class="export-btn-hover" bindtap="onExportStepsCsv">导出 CSV</view>
     </view>
 
     <!-- 轨迹记录 GPX：会员权益；按条件打包，不再逐条勾选 -->

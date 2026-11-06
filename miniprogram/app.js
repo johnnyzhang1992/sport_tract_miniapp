@@ -3,6 +3,7 @@ const { request } = api;
 const { getToken, setToken, clearToken, getProfileGuideDone, setProfileGuideDone } = require('./services/storage');
 const { setAdFreeUntil } = require('./utils/ad-free');
 const { refreshAdSlots } = require('./utils/ad-slots');
+const { syncDailySteps } = require('./utils/werun');
 
 App({
   globalData: {
@@ -17,7 +18,10 @@ App({
   onLaunch() {
     // 已注册用户（本地有 token）自动静默登录恢复会话；游客（无 token）不自动登录
     if (this.hasSession()) {
-      this.login();
+      // 登录成功后按设置静默同步微信步数（开关关闭时 syncDailySteps 自己短路）
+      this.login()
+        .then(() => syncDailySteps())
+        .catch(() => {});
     }
     // 隐私合规（决策 M5）：检查隐私协议状态，未同意时引导（微信后台已配置《用户隐私保护指引》）
     this.checkPrivacy();
@@ -64,6 +68,8 @@ App({
   onShow() {
     // 检测未保存的运动（保存失败/中途退出时数据在 storage，提供恢复入口）
     this.checkPendingSummary();
+    // 回到前台再按 5 分钟节流补一趟步数（开关关闭 / 未登录 / 未授权都静默跳过）
+    syncDailySteps().catch(() => {});
   },
 
   /**

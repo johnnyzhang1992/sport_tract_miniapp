@@ -92,6 +92,16 @@
 .cp-card-head .campaign-tag {
   margin-left: 12rpx;
 }
+/* 步数PK：与状态标签区分开的类型标记（品牌浅蓝，不抢状态色） */
+.cp-card-kind {
+  flex: none;
+  margin-left: 12rpx;
+  padding: 4rpx 12rpx;
+  border-radius: 999rpx;
+  background: #eaf1ff;
+  color: #2b6cf6;
+  font-size: 22rpx;
+}
 .cp-card-arrow {
   flex: none;
   margin-left: 8rpx;

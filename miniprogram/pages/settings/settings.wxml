@@ -52,6 +52,15 @@
     <t-switch value="{{settings.kmAnnounce}}" bind:change="onKmAnnounceChange" />
   </view>
 
+  <!-- 同步微信步数（步数PK / 步数辅助）：关闭后只在进行中的活动页按需同步 -->
+  <view class="card switch-row">
+    <view class="switch-info">
+      <view class="switch-title">同步微信步数</view>
+      <view class="text-muted">开启后每天进入小程序自动同步</view>
+    </view>
+    <t-switch value="{{settings.dailyStepSync}}" bind:change="onDailyStepSyncChange" />
+  </view>
+
   <!-- 照片额度（2026-11-05）：用户查「我还能传多少张」的自然位置；
        读数来自 /member/entitlements 的 photoQuota，与会员页同一份数据 -->
   <view class="card quota-row" wx:if="{{loggedIn && photoQuota}}" bindtap="goPhotos">

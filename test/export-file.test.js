@@ -11,6 +11,7 @@ const {
   parseExportDate,
   rangeParams,
   buildExportQuery,
+  buildStepExportQuery,
   decodeErrorMessage,
   fileStamp,
 } = require('../miniprogram/utils/export-file.js');
@@ -66,6 +67,28 @@ test('EF4 buildExportQuery：全部为空串，固定档只带 from，自定义�
     buildExportQuery({ rangeKey: 'custom', startDate: '2026-10-01', endDate: '2026-10-31', type: 'walking' }, NOW),
     `?from=${from}&to=${to}&type=walking`,
   );
+});
+
+test('EF7 buildStepExportQuery：按自然日取窗口（含今天共 N 天）、不带宽类型、自定义原样', () => {
+  const todayStart = Date.UTC(2026, 10, 1) - BJ; // 2026-11-01 00:00 东八区
+  assert.equal(buildStepExportQuery({ rangeKey: 'all' }, NOW), '');
+  assert.equal(buildStepExportQuery({ rangeKey: 'all', type: 'running' }, NOW), '', '步数与运动类型无关');
+  assert.equal(
+    buildStepExportQuery({ rangeKey: '30d', type: 'running' }, NOW),
+    `?from=${todayStart - 29 * DAY}`,
+    '近 30 天 = 今天起往前 29 天（共 30 个自然日），不是滚动 30×24h',
+  );
+  assert.equal(
+    buildStepExportQuery({ rangeKey: '90d' }, NOW),
+    `?from=${todayStart - 89 * DAY}`,
+  );
+  const from = Date.UTC(2026, 9, 1) - BJ;
+  const to = Date.UTC(2026, 9, 31) - BJ + DAY - 1;
+  assert.equal(
+    buildStepExportQuery({ rangeKey: 'custom', startDate: '2026-10-01', endDate: '2026-10-31' }, NOW),
+    `?from=${from}&to=${to}`,
+  );
+  assert.throws(() => buildStepExportQuery({ rangeKey: 'custom', startDate: '', endDate: '' }, NOW), /请选择开始和结束日期/);
 });
 
 test('EF5 decodeErrorMessage：arraybuffer 里的 success 包装取 message，坏体给空串', () => {

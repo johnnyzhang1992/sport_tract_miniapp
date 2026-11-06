@@ -1,7 +1,6 @@
-<!-- 活动成员信息半屏：头像昵称 + 「我 vs TA」（仅距离）+ 该成员在本活动内计入的轨迹明细（分页）。
+<!-- 活动成员信息半屏：头像昵称 + 「我 vs TA」+ 该成员在本活动内计入的轨迹 / 按天步数（分页）。
      对活动内成员一律开放（队友与本人同样可看，服务端闸门＝viewer 当前是否 joined）；明细行不可点，
-     只到「类型 / 时间 / 距离 / 时长 / 爬升」这一级，不跳到轨迹详情。
-     明细数据（detail）与翻页都由页面负责，组件只渲染 + 抛 loadmore / close 事件（见 JS 头注释）。 -->
+     只到汇总级数据。数据与翻页都由页面负责，组件只渲染 + 抛 loadmore / stepsloadmore / loadsteps / close 事件。 -->
 <view wx:if="{{visible && member}}" class="mask" catchtouchmove="noop" bindtap="onClose">
   <view class="sheet" catchtap="noop">
     <!-- 标题行直接给头像+昵称（不再写死「成员明细」），下面就是这位成员的对照与轨迹明细 -->
@@ -12,9 +11,25 @@
       <view class="sheet-close" catchtap="onClose">✕</view>
     </view>
 
-    <!-- 「我 vs TA」：同一活动口径的距离对照（页面算好给进来；点自己时没有对照，compare 为 null）。
-         TA 的三个数字原本在这里和汇总卡各出现一次；现在只对比距离，次数＝「共 N 条」、时长＝明细累计，
-         有对照时不再重复一张汇总卡 —— 省下的高度全给明细列表。 -->
+    <!-- 步数总览：辅助模式＝计入距离 vs 微信步数；步数PK＝累计步数 vs 同步天数 -->
+    <view class="step-summary" wx:if="{{stepMode !== 'none'}}">
+      <view class="step-cell">
+        <view class="step-cell-label">{{stepMode === 'steps' ? '累计步数' : '本活动计入距离'}}</view>
+        <view class="step-cell-value">
+          {{stepMode === 'steps' ? (steps ? steps.summary.stepText : member.stepText) : (steps ? steps.summary.distanceText : member.distanceText)}}
+          <text class="step-cell-unit">{{stepMode === 'steps' ? '步' : 'km'}}</text>
+        </view>
+      </view>
+      <view class="step-cell step-cell-right">
+        <view class="step-cell-label">{{stepMode === 'steps' ? '同步天数' : '微信步数'}}</view>
+        <view class="step-cell-value">
+          {{stepMode === 'steps' ? (steps ? steps.summary.days : member.countText) : (steps ? steps.summary.stepText : '—')}}
+          <text class="step-cell-unit">{{stepMode === 'steps' ? '天' : '步'}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 「我 vs TA」：辅助模式比距离，步数PK 比步数（页面算好给进来；点自己时 compare 为 null）。 -->
     <view class="cmp" wx:if="{{compare}}">
       <view class="cmp-head">
         <view class="cmp-title">我 vs TA</view>
@@ -30,9 +45,9 @@
       </view>
     </view>
 
-    <!-- 点自己时没有对照（compare 为 null），用一行紧凑汇总顶上。
+    <!-- 点自己时没有对照（compare 为 null），用一行紧凑汇总顶上；开了步数时由上面的总览替代。
          数值以明细接口的 stats 为准（与排行榜同源）；未拿到前先用列表行的值。 -->
-    <view class="stat-line" wx:if="{{!compare}}">
+    <view class="stat-line" wx:if="{{!compare && stepMode === 'none'}}">
       <text class="stat-line-item">{{detail.stats ? detail.stats.countText : member.countText}} 次</text>
       <text class="stat-line-dot">·</text>
       <text class="stat-line-item">{{detail.stats ? detail.stats.distanceText : member.distanceText}} km</text>
@@ -40,8 +55,25 @@
       <text class="stat-line-item">{{detail.stats ? detail.stats.durationText : member.durationText}}</text>
     </view>
 
+    <!-- 两档：轨迹明细 / 按天对比（步数PK 只有按天） -->
+    <view class="tabs" wx:if="{{stepMode !== 'none'}}">
+      <view
+        wx:if="{{stepMode === 'aux'}}"
+        class="tab {{tab === 'track' ? 'tab-on' : ''}}"
+        data-tab="track"
+        bindtap="onTabTap"
+      >计入的轨迹</view>
+      <view class="tab {{tab === 'day' ? 'tab-on' : ''}}" data-tab="day" bindtap="onTabTap">
+        {{stepMode === 'steps' ? '按天步数' : '按天对比'}}
+      </view>
+    </view>
+    <view class="tab-note" wx:if="{{stepMode !== 'none' && tab === 'day' && stepMode === 'aux'}}">
+      按天对比「活动计入距离」与「当日微信步数」
+    </view>
+
     <!-- TA 在本活动内计入的轨迹（GET /:id/members/:uid，分页） -->
-    <block wx:if="{{detail}}">
+    <block wx:if="{{tab === 'track'}}">
+      <block wx:if="{{detail}}">
       <view class="detail-head">
         <text class="detail-title">计入的轨迹</text>
         <text class="detail-total" wx:if="{{detail.total}}">共 {{detail.total}} 条</text>
@@ -70,6 +102,44 @@
           catchtap="onLoadMore"
         >{{detail.loadingMore ? '加载中…' : '加载更多'}}</view>
       </block>
+      </block>
+    </block>
+
+    <!-- 按天对比（GET /:id/members/:uid/steps，分页） -->
+    <block wx:else>
+      <view class="detail-empty" wx:if="{{!steps || steps.loading}}">加载中…</view>
+      <block wx:else>
+        <view class="detail-error" wx:if="{{steps.error}}">按天数据加载失败，请稍后重试</view>
+        <scroll-view scroll-y class="detail-list" wx:if="{{steps.items.length > 0}}">
+          <view class="day-row" wx:for="{{steps.items}}" wx:key="date">
+            <view class="day-date">
+              <text class="day-date-num">{{item.dateText}}</text>
+              <text class="day-date-week">{{item.weekText}}</text>
+            </view>
+            <view class="day-metrics">
+              <block wx:if="{{stepMode !== 'steps'}}">
+                <text class="day-dist {{item.distance > 0 ? '' : 'day-dist-zero'}}">{{item.distanceText}} km</text>
+                <text class="day-sep">·</text>
+              </block>
+              <text class="day-step {{item.hasStep ? '' : 'day-step-empty'}}">{{item.stepText}}</text>
+            </view>
+            <view class="day-status" wx:if="{{stepMode === 'aux'}}">
+              <text class="day-pill {{item.statusClass}}">{{item.statusText}}</text>
+            </view>
+          </view>
+        </scroll-view>
+        <view class="detail-empty" wx:elif="{{!steps.error}}">活动期间还没有步数或轨迹</view>
+        <view
+          class="detail-more"
+          wx:if="{{steps.hasMore}}"
+          hover-class="detail-more-hover"
+          hover-stay-time="80"
+          catchtap="onStepsLoadMore"
+        >{{steps.loadingMore ? '加载中…' : '查看更早日期'}}</view>
+      </block>
+      <view class="sheet-footer">
+        {{stepMode === 'steps' ? '步数按活动周期内统计；当天结束前再进入活动页，数据才会更新。' : '步数只做参考，不影响活动排名；没带手机时步数偏低属正常情况。'}}
+      </view>
     </block>
   </view>
 </view>

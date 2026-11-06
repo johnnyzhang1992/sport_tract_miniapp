@@ -98,6 +98,34 @@ test('CL4 卡片字段：带标签时间行 + 头像堆叠（前 3）+ 人数', 
   assert.equal(card.statusTag, 'campaign-tag--active', '卡片也要带共享修饰类');
 });
 
+test('CL4b 步数PK 卡片：类型标记 + 我的步数 / 同步天数', async () => {
+  respond = () =>
+    Promise.resolve({
+      items: [
+        {
+          id: 'c2',
+          title: '周末步数PK',
+          kind: 'steps',
+          status: 'active',
+          startAt: Date.UTC(2026, 8, 30, 16, 0, 0),
+          endAt: Date.UTC(2026, 9, 7, 16, 0, 0),
+          myStats: { count: 4, distance: 0, duration: 0, step: 58659 },
+          memberCount: 3,
+          memberAvatars: [],
+        },
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 20,
+    });
+  const p = makePage();
+  await p.refresh();
+  const card = p.data.items[0];
+  assert.equal(card.isSteps, true);
+  assert.equal(card.kindText, '步数PK');
+  assert.equal(card.statsText, '我的步数 58,659 步 · 同步 4 天');
+});
+
 test('CL5 状态标签改用共享类，且不再按状态过滤（进行中也渲染，与详情页一致）', () => {
   const src = require('fs').readFileSync(
     require('path').join(__dirname, '../miniprogram/pages/campaign-list/campaign-list.wxml'),

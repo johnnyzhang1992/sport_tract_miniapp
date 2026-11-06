@@ -86,6 +86,34 @@
     </view>
   </view>
 
+  <!-- 微信步数：所选周期的步数概况；周/月只有 1 根月柱，不画趋势 -->
+  <view class="card" wx:if="{{step && step.hasData}}">
+    <view class="section-title">微信步数</view>
+    <view class="summary-grid step-grid">
+      <view class="sum-item">
+        <view class="sum-num">{{step.totalText}}</view>
+        <view class="sum-label">总步数</view>
+      </view>
+      <view class="sum-item">
+        <view class="sum-num">{{step.avgText}}</view>
+        <view class="sum-label">日均步数</view>
+      </view>
+      <view class="sum-item">
+        <view class="sum-num">{{step.bestText}}</view>
+        <view class="sum-label">最多步数日</view>
+        <view class="step-date">{{step.bestDateText}}</view>
+      </view>
+      <view class="sum-item">
+        <view class="sum-num">{{step.syncedDays}}</view>
+        <view class="sum-label">同步天数</view>
+      </view>
+    </view>
+    <block wx:if="{{showStepChart}}">
+      <view class="step-trend-title">月度步数</view>
+      <stat-chart data="{{stepChartData}}" type="bar" unit="step" height="{{200}}" label-slot="{{stepChartSlot}}" empty-text="该时段暂无步数记录" />
+    </block>
+  </view>
+
   <!-- 本期亮点：从本期轨迹里挑出四个「最」 -->
   <view class="card" wx:if="{{highlights.length > 0}}">
     <view class="section-title">本期亮点</view>

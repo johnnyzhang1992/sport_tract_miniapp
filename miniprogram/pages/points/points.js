@@ -6,8 +6,9 @@ const { createRewardedAd, isAdRewardEligible } = require('../../utils/rewarded-a
 const { currentMonth } = require('../../utils/footprint-calendar');
 // cells 的 dateKey 是东八区 YYYY-MM-DD，「今天」比对键必须同口径：用 bjDate，不再写一份时区偏移
 const { bjDate } = require('../../utils/bj-date');
-// 微信运动步数静默同步（docs/20-微信步数接口调研.md）：已授权才跑，未授权不弹窗
-const { syncWeRunSteps } = require('../../utils/werun');
+// 微信运动步数静默同步（docs/20-微信步数接口调研.md）：已授权才跑，未授权不弹窗；
+// 受设置页「同步微信步数」开关控制，关闭后只有活动页会按需同步
+const { syncDailySteps } = require('../../utils/werun');
 
 Page({
   data: {
@@ -62,9 +63,8 @@ Page({
       this.setData({ loading: false, loggedIn: false });
       return;
     }
-    // 微信运动步数静默同步：已登录进页就同步一次（未授权不弹窗，授权弹窗留给将来的步数任务触点）；
-    // 异步不阻塞页面数据，失败静默（结果只有服务端落库，页面上暂时没有消费它的 UI）
-    syncWeRunSteps().catch(() => {});
+    // 微信运动步数静默同步：受设置页开关控制（关闭后只有活动页会按需同步），未授权不弹窗
+    syncDailySteps().catch(() => {});
     try {
       const data = await api.get('/points/summary');
       // 免广告权益的第二个来源：兑换/激活/到期后回到本页就刷新端上缓存（广告组件读它）

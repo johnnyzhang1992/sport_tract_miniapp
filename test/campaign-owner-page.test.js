@@ -649,6 +649,43 @@ test('COP12 半屏组件：加载更多只在「还有下一页且不在加载�
   assert.deepEqual(events, ['loadmore']);
 });
 
+test('COP12b 半屏组件：步数PK 默认落在「按天」，普通活动/辅助默认「轨迹」', () => {
+  const observe = compDef.observers['visible, member, stepMode'];
+  assert.equal(typeof observe, 'function', '组件要观察 visible/member/stepMode');
+  const ctx = {
+    data: { tab: 'track' },
+    setData(patch) { Object.assign(this.data, patch); },
+  };
+  observe.call(ctx, true, { name: '小迹' }, 'steps');
+  assert.equal(ctx.data.tab, 'day', '步数PK 没有轨迹口径，默认按天');
+  observe.call(ctx, true, { name: '小迹' }, 'aux');
+  assert.equal(ctx.data.tab, 'track', '开了辅助的普通活动默认仍看轨迹');
+  observe.call(ctx, false, null, 'steps');
+  assert.equal(ctx.data.tab, 'track', '关掉弹窗复位');
+});
+
+test('COP12c 半屏组件：切到按天才懒加载；按天加载更多只在有下一页时抛事件', () => {
+  const c = Object.assign({}, compDef.methods);
+  c.data = { tab: 'track', steps: null };
+  c.setData = (patch) => Object.assign(c.data, patch);
+  const events = [];
+  c.triggerEvent = (name) => events.push(name);
+  c.onTabTap({ currentTarget: { dataset: { tab: 'day' } } });
+  assert.deepEqual(events, ['loadsteps'], '第一次切按天要请页面拉数据');
+  c.onTabTap({ currentTarget: { dataset: { tab: 'day' } } });
+  assert.deepEqual(events, ['loadsteps'], '已在按天不重复拉');
+
+  c.data.steps = { items: [], hasMore: false, loadingMore: false };
+  c.onStepsLoadMore();
+  assert.deepEqual(events, ['loadsteps'], '没有下一页不抛');
+  c.data.steps = { items: [], hasMore: true, loadingMore: true };
+  c.onStepsLoadMore();
+  assert.deepEqual(events, ['loadsteps'], '加载中不重复抛');
+  c.data.steps = { items: [], hasMore: true, loadingMore: false };
+  c.onStepsLoadMore();
+  assert.deepEqual(events, ['loadsteps', 'stepsloadmore']);
+});
+
 test('COP13 待审批拉取失败：静默（无 toast）、不崩、徽标保住旧值', async () => {
   resetEnv();
   await withSilencedConsole(async () => {

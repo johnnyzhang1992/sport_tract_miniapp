@@ -5,8 +5,8 @@
  * 指标只有步数；行内暂不接公开资料半屏（后续要挂时复用 /stats/profile/:uid）。
  * 省份口径 = 用户最近一次登录的归属地（服务端聚合，见 sport_track_api services/werun-board.ts）。
  */
-const { initialOf, formatThousands } = require('../../utils/format.js');
-const { syncWeRunSteps, getWeRunAuthState, openWeRunSetting } = require('../../utils/werun');
+const { initialOf, formatDurationStat, formatCompactCn, formatThousands } = require('../../utils/format.js');
+const { syncWeRunSteps, getWeRunAuthState, openWeRunSetting, isDailyStepSyncOn } = require('../../utils/werun');
 
 const GENDER_ICONS = {
   0: '/assets/icons/gender-secret.png',
@@ -57,7 +57,11 @@ Page({
     provinceIndex: 0,
     board: null, // { players, top, me, window, prevPeriodKey, nextPeriodKey }
     weRunAuth: '', // 'granted' | 'denied' | 'unasked' | 'privacy' | ''（未查）
+    dailySyncOff: false, // 设置页关闭了「同步微信步数」：本页不再自动同步，只展示已存数据
     syncing: false, // 同步中（顶栏按钮防重复点）
+    // 榜单用户资料半屏（与运动榜共用组件，数据由本页拉）
+    userSheet: { visible: false, loading: true, error: false, uid: 0, name: '', avatarSrc: '', avatarLargeUrl: '', avatarText: '', member: false, joinDays: 0, stats: null, statsHidden: false },
+    avatarViewer: { visible: false, src: '' },
   },
 
   onLoad() {
@@ -92,9 +96,14 @@ Page({
     const state = await getWeRunAuthState();
     this.setData({ weRunAuth: state });
     if (state === 'granted') {
-      this.silentSync();
+      // 设置页关闭「同步微信步数」后，本页不自动同步（榜单展示已落库的最近数据）；
+      // 活动详情页仍会在进行中的步数相关活动里按需同步。
+      const on = isDailyStepSyncOn();
+      this.setData({ dailySyncOff: !on });
+      if (on) this.silentSync();
       return;
     }
+    this.setData({ dailySyncOff: false });
     if (this.promptedToday()) return; // 每天最多打扰一次
     this.promptWeRunAuth(state);
   },
@@ -233,6 +242,93 @@ Page({
     if (this.data.syncing) return;
     if (this.data.weRunAuth === 'denied') this.openSettingAndSync();
     else this.grantAndSync();
+  },
+
+  /** 关闭了每日同步：去设置页重新打开 */
+  goSettings() {
+    wx.navigateTo({ url: '/pages/settings/settings' });
+  },
+
+  /** 步数统计页（个人概况 + 趋势 + 每日明细） */
+  goStats() {
+    wx.navigateTo({ url: '/pages/werun-stats/werun-stats' });
+  },
+
+  /** 榜单用户资料半屏：点行打开，拉公开资料（与运动榜同一份 /stats/profile/:uid） */
+  openUserSheet(e) {
+    const uid = Number(e.currentTarget.dataset.uid);
+    if (!uid) return;
+    this._sheetSeq = (this._sheetSeq || 0) + 1;
+    this.setData({
+      userSheet: {
+        visible: true, loading: true, error: false, uid,
+        name: '', avatarSrc: '', avatarLargeUrl: '', avatarText: '', member: false, joinDays: 0, stats: null, statsHidden: false,
+      },
+    });
+    return this.fetchUserSheet(uid);
+  },
+
+  async fetchUserSheet(uid) {
+    const seq = this._sheetSeq;
+    try {
+      const d = await getApp().globalData.api.get(`/stats/profile/${uid}`);
+      if (seq !== this._sheetSeq) return;
+      const t = (d && d.total) || {};
+      const fp = (d && d.footprint) || {};
+      const dur = formatDurationStat(t.duration || 0);
+      const name = (d && d.nickname) || '运动用户';
+      const statsHidden = !!(d && d.showSportData === false);
+      this.setData({
+        userSheet: {
+          visible: true, loading: false, error: false,
+          uid: Number(d && d.uid) || uid,
+          name,
+          avatarSrc: (d && d.avatarUrl) || (d && d.avatarPreset ? `/assets/avatars/${d.avatarPreset}.png` : ''),
+          avatarLargeUrl: (d && d.avatarLargeUrl) || '',
+          avatarText: initialOf(name, '迹'),
+          member: !!(d && d.memberActive),
+          joinDays: Number(d && d.joinDays) || 0,
+          statsHidden,
+          stats: statsHidden ? null : {
+            trackCount: t.count || 0,
+            distanceText: formatCompactCn((t.distance || 0) / 1000),
+            provinceCount: fp.provinceCount || 0,
+            cityCount: fp.cityCount || 0,
+            durationText: `${dur.num}${dur.unit}`,
+            elevationText: formatThousands(t.elevationGain || 0),
+            caloriesText: formatThousands(t.calories || 0),
+            typeCount: t.typeCount || 0,
+          },
+        },
+      });
+    } catch (err) {
+      if (seq !== this._sheetSeq) return;
+      this.setData({ 'userSheet.loading': false, 'userSheet.error': true });
+    }
+  },
+
+  retryUserSheet() {
+    const uid = this.data.userSheet.uid;
+    if (!uid) return;
+    this.setData({ 'userSheet.loading': true, 'userSheet.error': false });
+    return this.fetchUserSheet(uid);
+  },
+
+  closeUserSheet() {
+    this._sheetSeq = (this._sheetSeq || 0) + 1;
+    this.setData({ 'userSheet.visible': false, 'avatarViewer.visible': false });
+  },
+
+  /** 点头像看大图：优先 800px 档，没有则用当前头像 */
+  previewSheetAvatar() {
+    const s = this.data.userSheet;
+    const src = s.avatarLargeUrl || s.avatarSrc;
+    if (!src) return;
+    this.setData({ avatarViewer: { visible: true, src } });
+  },
+
+  closeAvatarViewer() {
+    this.setData({ 'avatarViewer.visible': false });
   },
 
   async refresh(silent = false) {

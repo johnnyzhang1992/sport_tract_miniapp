@@ -4,7 +4,7 @@
   <view class="card map-card">
     <view class="section-title">点亮地图</view>
     <view class="map-canvas">
-      <ec-canvas id="mapCanvas" canvas-id="mapCanvas" class="{{sharePreview || fullscreen || provinceModal ? 'map-hidden' : ''}}" ec="{{ ec }}"></ec-canvas>
+      <ec-canvas id="mapCanvas" canvas-id="mapCanvas" class="{{sharePreview || fullscreen || provinceModal || blank ? 'map-hidden' : ''}}" ec="{{ ec }}"></ec-canvas>
     </view>
     <view class="zoom-controls">
       <view class="zoom-btn" bindtap="zoomIn">+</view>

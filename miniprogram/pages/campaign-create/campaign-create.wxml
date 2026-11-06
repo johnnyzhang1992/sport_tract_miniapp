@@ -29,6 +29,21 @@
     </view>
     <view class="fnote">可选，最长 {{maxDesc}} 字，当前 {{description.length}} 字</view>
 
+    <!-- PK 类型：运动PK 按轨迹；步数PK 只统计活动周期内微信步数。创建后不可改 -->
+    <view class="frow">
+      <view class="flabel">PK 类型</view>
+      <view class="vis-row {{isEdit ? 'vis-row-off' : ''}}">
+        <view
+          wx:for="{{kindOptions}}"
+          wx:key="key"
+          class="vis-seg {{kind === item.key ? 'vis-seg-active' : ''}}"
+          data-value="{{item.key}}"
+          bindtap="onKind"
+        >{{item.label}}</view>
+      </view>
+    </view>
+    <view class="fnote">{{kind === 'steps' ? '步数PK是独立类型，整个活动只按步数排名，不区分运动类型' : '运动PK按活动周期内的轨迹统计距离'}}{{isEdit ? '；PK 类型创建后不能再改' : ''}}</view>
+
     <!-- 可见性：两选一（照列表页分段控件形态，不自造样式）；行式布局＝标签左、控件右，与相邻字段同一列 -->
     <view class="frow">
       <view class="flabel">可见性</view>
@@ -44,21 +59,33 @@
     </view>
     <view class="fnote">{{visibility === 'public' ? '公开：被邀请人自动加入' : '隐私：需发起人同意后才能加入'}}</view>
 
-    <!-- 运动类型：多选 chips（空选＝不限制，必须在 UI 上写明） -->
-    <view class="flabel-block">运动类型</view>
-    <view class="cat-grid">
-      <view
-        wx:for="{{types}}"
-        wx:key="type"
-        class="cat-chip {{item.active ? 'cat-chip-on' : ''}}"
-        data-type="{{item.type}}"
-        bindtap="onTypeToggle"
-      >
-        <image class="cat-icon {{item.active ? '' : 'cat-icon-gray'}}" src="{{item.iconImg}}" mode="aspectFit" />
-        <text>{{item.label}}</text>
+    <!-- 运动类型 / 步数辅助：仅普通运动PK 可见 -->
+    <block wx:if="{{kind === 'activity'}}">
+      <!-- 运动类型：多选 chips（空选＝不限制，必须在 UI 上写明） -->
+      <view class="flabel-block">运动类型</view>
+      <view class="cat-grid">
+        <view
+          wx:for="{{types}}"
+          wx:key="type"
+          class="cat-chip {{item.active ? 'cat-chip-on' : ''}}"
+          data-type="{{item.type}}"
+          bindtap="onTypeToggle"
+        >
+          <image class="cat-icon {{item.active ? '' : 'cat-icon-gray'}}" src="{{item.iconImg}}" mode="aspectFit" />
+          <text>{{item.label}}</text>
+        </view>
       </view>
-    </view>
-    <view class="fnote">不选＝全部类型都算；点已选中的可取消</view>
+      <view class="fnote">不选＝全部类型都算；点已选中的可取消</view>
+
+      <!-- 微信步数辅助：开启后在成员半屏按天对比轨迹距离与当日步数，不影响排名 -->
+      <view class="frow">
+        <view class="flabel">步数辅助</view>
+        <view class="aux-switch">
+          <t-switch value="{{stepAuxEnabled}}" bind:change="onStepAuxChange" />
+        </view>
+      </view>
+      <view class="fnote">开启后可在成员半屏按天对比轨迹距离与微信步数；只做展示，不影响排名与积分</view>
+    </block>
 
     <!-- 人数上限：可选，1–500，不填＝不限制。
          注意：不要在这里加 maxlength —— 实测 maxlength=3 会把 type="number" 的输入静默截断

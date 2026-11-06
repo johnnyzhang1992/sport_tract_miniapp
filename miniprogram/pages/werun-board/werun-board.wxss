@@ -77,6 +77,21 @@
 .province-picker {
   flex-shrink: 0;
 }
+/* 卡片头右侧：统计入口 + 省份选择 */
+.head-tools {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+.stats-entry {
+  flex-shrink: 0;
+  font-size: 24rpx;
+  color: #2b6cf6;
+  padding: 8rpx 4rpx;
+}
+.stats-entry-hover {
+  opacity: 0.7;
+}
 .picker-value {
   font-size: 24rpx;
   color: #2b6cf6;
@@ -97,6 +112,10 @@
 }
 .rank-row:last-of-type {
   border-bottom: none;
+}
+/* 榜单行可点开资料：轻灰反馈（与运动榜一致） */
+.rank-row-hover {
+  background: #fafbfc;
 }
 .rank-no {
   width: 56rpx;

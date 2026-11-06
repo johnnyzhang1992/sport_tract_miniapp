@@ -10,6 +10,8 @@ const loading = require('../../utils/loading');
 const { formatDuration } = require('../../utils/format');
 const { posterViewHeight, yearPosterHeight, YEAR_POSTER } = require('../../utils/poster-layout');
 const { hasNoPace } = require('../../utils/pace-types');
+const { buildStepSummary, buildStepMonths, buildStepRecords } = require('../../utils/step-report-view');
+const { bjMid } = require('../../utils/bj-date');
 
 /** 圆角矩形路径 */
 function roundRect(ctx, x, y, w, h, r) {
@@ -55,6 +57,8 @@ Page({
     hasData: false,
     summary: null, // { count, distanceKm, durationText, activeDays, elevationGain, calories }
     chartData: [], // 月度距离 [{label:'1月', value:km}]
+    step: null, // 微信步数概况（全年总/日均/同步天数）
+    stepChartData: [], // 月度步数 [{label:'1月', value:step}]
     typeSummary: [], // 分类型汇总（各类型总距离/总时长/次数）
     highlights: [], // 最佳记录 [{ key, label, value, sub, id }]
     milestones: [], // 今年新解锁 [{iconImg, text, date}]
@@ -83,11 +87,13 @@ Page({
   },
 
   /** 年份区间 [from, to)（本地时区自然年） */
+  /**
+   * 年度区间 [from, to)：**东八区**自然年。
+   * 原先用 new Date(year,0,1) 走设备本地时区，非 +8 设备上边界会偏几个小时，
+   * 服务端按东八区自然日换算后会把 1/1 或 12/31 算进相邻年份（2026-11-06 修正）。
+   */
   yearRange(year) {
-    return {
-      from: new Date(year, 0, 1).getTime(),
-      to: new Date(year + 1, 0, 1).getTime(),
-    };
+    return { from: bjMid(year, 1, 1), to: bjMid(year + 1, 1, 1) };
   },
 
   async fetch() {
@@ -103,12 +109,21 @@ Page({
     this.setData({ loading: true });
     try {
       const r = this.yearRange(this.data.year);
-      const [o, milestones] = await Promise.all([
+      const [o, milestones, stepReport] = await Promise.all([
         api.get(`/overview?from=${r.from}&to=${r.to}&lean=1`), // 年度报告只用元数据，走精简模式
         api.get(`/stats/year-milestones?year=${this.data.year}`).catch(() => null),
+        api.get(`/werun/report?from=${r.from}&to=${r.to}`).catch(() => null), // 步数失败不影响年度报告
       ]);
       const tracks = o.tracks || [];
-      this.setData(this.buildReport(tracks, o));
+      const patch = this.buildReport(tracks, o);
+      const stepMonths = buildStepMonths(stepReport && stepReport.months, 'short');
+      patch.step = buildStepSummary(stepReport && stepReport.overview);
+      patch.stepChartData = stepMonths.data;
+      // 步数纪录并入「最佳记录」：无轨迹可跳，id 留空
+      patch.highlights = (patch.highlights || []).concat(
+        buildStepRecords(stepReport).map((rec) => ({ ...rec, id: '' })),
+      );
+      this.setData(patch);
       this.setData({ milestones: this.buildMilestones(milestones) });
     } catch (e) {
       console.error('加载年度报告失败', e);

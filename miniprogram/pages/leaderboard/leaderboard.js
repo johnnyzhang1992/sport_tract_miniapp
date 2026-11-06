@@ -824,7 +824,11 @@ Page({
 
   closeUserSheet() {
     this._sheetSeq = (this._sheetSeq || 0) + 1;
-    this.setData({ 'userSheet.visible': false, 'avatarViewer.visible': false });
+    // 资料半屏打开期间 canvas 被拆掉（原生层会压住弹窗）：关掉后重绑并重绘地图
+    if (this._mapRts) this._mapRts.china = null;
+    this.setData({ 'userSheet.visible': false, 'avatarViewer.visible': false }, () => {
+      if (this._loaded) this.drawChinaMap();
+    });
   },
 
   /** 点头像看大图：优先 800px 档，没有则用当前头像（预设头像/第三方头像） */

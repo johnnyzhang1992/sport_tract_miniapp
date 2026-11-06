@@ -13,12 +13,21 @@
     <view class="auth-tip-btn">{{syncing ? '同步中…' : (weRunAuth === 'denied' ? '去设置 ›' : '去开启 ›')}}</view>
   </view>
 
+  <!-- 已授权但设置页关闭了每日同步：只展示已存数据，去设置重新打开 -->
+  <view class="guest-tip" wx:if="{{loggedIn && weRunAuth === 'granted' && dailySyncOff}}" hover-class="guest-tip-hover" hover-stay-time="80" bindtap="goSettings">
+    <view class="guest-tip-text">已关闭每日步数同步，这里显示最近一次同步的数据</view>
+    <view class="guest-tip-btn">去开启 ›</view>
+  </view>
+
   <view class="card rank-card">
     <view class="card-head">
       <view class="card-title">微信步数排行</view>
-      <picker class="province-picker" mode="selector" range="{{provinceOptions}}" value="{{provinceIndex}}" bindchange="onProvinceChange">
-        <view class="picker-value">{{provinceOptions[provinceIndex] || '全国'}} ▾</view>
-      </picker>
+      <view class="head-tools">
+        <view class="stats-entry" hover-class="stats-entry-hover" hover-stay-time="80" bindtap="goStats">统计 ›</view>
+        <picker class="province-picker" mode="selector" range="{{provinceOptions}}" value="{{provinceIndex}}" bindchange="onProvinceChange">
+          <view class="picker-value">{{provinceOptions[provinceIndex] || '全国'}} ▾</view>
+        </picker>
+      </view>
     </view>
 
     <!-- 周期分段：日/周/月/年 -->
@@ -39,9 +48,17 @@
       <view class="nav-btn {{nextPeriodKey ? '' : 'off'}}" bindtap="onNextPeriod">下一期 ›</view>
     </view>
 
-    <!-- TOP50：榜单数据与请求都在本页持有，行内不接资料半屏 -->
+    <!-- TOP50：榜单数据与请求都在本页持有；点行复用运动榜的用户资料半屏 -->
     <view class="rank-list" wx:if="{{board}}">
-      <view class="rank-row" wx:for="{{board.top}}" wx:key="rank">
+      <view
+        class="rank-row"
+        wx:for="{{board.top}}"
+        wx:key="rank"
+        hover-class="rank-row-hover"
+        hover-stay-time="80"
+        data-uid="{{item.uid}}"
+        bindtap="openUserSheet"
+      >
         <view class="rank-no">
           <image wx:if="{{item.medalIcon}}" class="medal-img" src="{{item.medalIcon}}" mode="aspectFit" />
           <text wx:else>{{item.rank}}</text>
@@ -86,4 +103,15 @@
       <view class="me-count">步</view>
     </view>
   </view>
+
+  <!-- 榜单用户资料半屏：与运动榜共用组件，不附加步数数据 -->
+  <user-profile-sheet
+    visible="{{userSheet.visible}}"
+    state="{{userSheet}}"
+    viewer="{{avatarViewer}}"
+    bind:close="closeUserSheet"
+    bind:retry="retryUserSheet"
+    bind:preview="previewSheetAvatar"
+    bind:closeviewer="closeAvatarViewer"
+  />
 </view>

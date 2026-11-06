@@ -111,3 +111,22 @@ test('SSP4 保存把 showSportData 一并提交', async () => {
   assert.equal(apiPuts[0].p, '/users/me');
   assert.equal(apiPuts[0].body.settings.showSportData, false);
 });
+
+test('SSP5 同步微信步数开关：默认开、老用户缺字段按开、保存一并提交', async () => {
+  const w = read('miniprogram/pages/settings/settings.wxml');
+  assert.match(w, /<t-switch value="\{\{settings\.dailyStepSync\}\}" bind:change="onDailyStepSyncChange"/);
+  assert.ok(w.includes('开启后每天进入小程序自动同步'));
+  assert.ok(!w.includes('关闭后只在活动期间同步'), '说明文案不再解释关闭后的行为');
+  assert.equal(pageDef.data.settings.dailyStepSync, true);
+
+  meSettings = { highAccuracy: true };
+  const p = boot();
+  await p.loadSettings();
+  assert.equal(p.data.settings.dailyStepSync, true, '老用户没有该字段按开启处理');
+
+  apiPuts = [];
+  p.onDailyStepSyncChange({ detail: { value: false } });
+  assert.equal(p.data.settings.dailyStepSync, false);
+  await p.save();
+  assert.equal(apiPuts[0].body.settings.dailyStepSync, false);
+});
