@@ -20,6 +20,19 @@ test('EF-P1 导出页有足迹 CSV 卡（免费）与照片打包卡（会员闸
   assert.match(wxml, /导出照片包[\s\S]*?member-lock[\s\S]*?开通后可打包导出照片/, '照片卡会员锁文案');
 });
 
+test('EF-P1b 卡片顺序：运动记录 → 轨迹记录 → 步数 → 足迹 → 照片（主力导出在前）', () => {
+  const wxml = read('miniprogram/pages/export/export.wxml');
+  const titles = ['运动记录', '轨迹记录', '微信步数', '足迹记录', '照片'].map((t) =>
+    wxml.indexOf(`class="sec-title">${t}<`),
+  );
+  assert.ok(titles.every((i) => i > 0), `五张卡齐全：${titles}`);
+  assert.deepEqual(
+    titles,
+    [...titles].sort((a, b) => a - b),
+    '卡面顺序必须与预期一致',
+  );
+});
+
 test('EF-P2 doExport 映射：footprints/photos 路径与文件名，均不带 type 参数', () => {
   const js = read('miniprogram/pages/export/export.js');
   assert.match(js, /'footprints' \? '\/footprint-records\/export\/csv'/, '足迹路径');

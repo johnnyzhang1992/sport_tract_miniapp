@@ -33,6 +33,29 @@
       <view class="export-btn {{busy ? 'export-btn-busy' : ''}}" hover-class="export-btn-hover" bindtap="onExportCsv">导出 CSV</view>
     </view>
 
+    <!-- 轨迹记录 GPX：会员权益；按条件打包，不再逐条勾选 -->
+    <view class="card">
+      <view class="sec-title-row">
+        <view class="sec-title">轨迹记录</view>
+        <view class="member-tag">会员</view>
+      </view>
+      <view class="sec-desc">每条轨迹单独一个 GPX 文件，打包成 zip；文件名含完整轨迹ID，与运动记录 CSV 的「轨迹ID」列一致。单次最多 100 条。</view>
+
+      <view
+        wx:if="{{memberLoaded && canExportBundle}}"
+        class="export-btn {{busy ? 'export-btn-busy' : ''}}"
+        hover-class="export-btn-hover"
+        bindtap="onExportGpx"
+      >导出 GPX</view>
+
+      <view class="member-lock" wx:elif="{{memberLoaded}}">
+        <view class="lock-text">会员专属 · 开通后可打包导出轨迹</view>
+        <view class="lock-btn" hover-class="lock-btn-hover" bindtap="goMember">开通会员</view>
+      </view>
+
+      <view class="member-loading" wx:else>会员权益加载中…</view>
+    </view>
+
     <!-- 微信步数 CSV：只受时间范围影响，类型筛选不参与 -->
     <view class="card">
       <view class="sec-title">微信步数</view>
@@ -64,29 +87,6 @@
 
       <view class="member-lock" wx:elif="{{memberLoaded}}">
         <view class="lock-text">会员专属 · 开通后可打包导出照片</view>
-        <view class="lock-btn" hover-class="lock-btn-hover" bindtap="goMember">开通会员</view>
-      </view>
-
-      <view class="member-loading" wx:else>会员权益加载中…</view>
-    </view>
-
-    <!-- 轨迹记录 GPX：会员权益；按条件打包，不再逐条勾选 -->
-    <view class="card">
-      <view class="sec-title-row">
-        <view class="sec-title">轨迹记录</view>
-        <view class="member-tag">会员</view>
-      </view>
-      <view class="sec-desc">每条轨迹单独一个 GPX 文件，打包成 zip；文件名含完整轨迹ID，与运动记录 CSV 的「轨迹ID」列一致。单次最多 100 条。</view>
-
-      <view
-        wx:if="{{memberLoaded && canExportBundle}}"
-        class="export-btn {{busy ? 'export-btn-busy' : ''}}"
-        hover-class="export-btn-hover"
-        bindtap="onExportGpx"
-      >导出 GPX</view>
-
-      <view class="member-lock" wx:elif="{{memberLoaded}}">
-        <view class="lock-text">会员专属 · 开通后可打包导出轨迹</view>
         <view class="lock-btn" hover-class="lock-btn-hover" bindtap="goMember">开通会员</view>
       </view>
 

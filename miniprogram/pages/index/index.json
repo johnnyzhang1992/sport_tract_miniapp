@@ -4,6 +4,7 @@
   "backgroundTextStyle": "dark",
   "usingComponents": {
     "t-button": "tdesign-miniprogram/button/button",
-    "calendar-heat": "/components/calendar-heat/calendar-heat"
+    "calendar-heat": "/components/calendar-heat/calendar-heat",
+    "ad-template": "/components/ad-template/ad-template"
   }
 }

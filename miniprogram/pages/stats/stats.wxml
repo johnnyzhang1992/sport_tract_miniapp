@@ -100,6 +100,9 @@
     <view class="cal-caption">{{calCaption}}</view>
   </view>
 
+  <!-- 模板广告位（后台「广告管理」可开关；持免广告卡时不渲染） -->
+  <ad-template adslot="stats" />
+
   <!-- 微信步数统计入口：近 7 天概况 + 跳转步数统计页 -->
   <view class="card step-entry" hover-class="step-entry-hover" hover-stay-time="80" bindtap="goWerunStats">
     <view class="step-entry-icon-wrap">
@@ -112,9 +115,6 @@
     </view>
     <view class="step-entry-arrow">›</view>
   </view>
-
-  <!-- 模板广告位（后台「广告管理」可开关；持免广告卡时不渲染） -->
-  <ad-template adslot="stats" />
 
   <!-- 运动趋势：五张变化卡（近 30 天 vs 前 30 天），点卡开半屏看柱状图 -->
   <view class="card" wx:if="{{metricCards.length}}">
