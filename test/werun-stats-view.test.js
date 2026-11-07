@@ -33,7 +33,7 @@ test('WSV-3 每日明细：完整年月日 + 星期 + 千分位步数', () => {
   assert.deepEqual(rows, [{ date: '2026-11-06', dateText: '2026/11/06', weekday: '周五', stepText: '12,345' }]);
 });
 
-test('WSV-4 趋势变化四卡：总/日均/最高/同步天数，涨幅带箭头', () => {
+test('WSV-4 趋势变化四卡：总/日均/最高/记录天数，涨幅带箭头', () => {
   const cards = buildStepMetricCards(
     { totalStep: 30000, avgStep: 7500, bestStep: 12000, syncedDays: 4 },
     { totalStep: 20000, avgStep: 5000, bestStep: 8000, syncedDays: 4 },
@@ -42,7 +42,7 @@ test('WSV-4 趋势变化四卡：总/日均/最高/同步天数，涨幅带箭�
     ['总步数', '3万', '步'],
     ['日均', '7,500', '步/天'],
     ['最高单日', '1.2万', '步'],
-    ['同步天数', '4', '天'],
+    ['记录天数', '4', '天'],
   ]);
   assert.equal(cards[0].diffText, '+50%');
   assert.equal(cards[0].dir, 'up');

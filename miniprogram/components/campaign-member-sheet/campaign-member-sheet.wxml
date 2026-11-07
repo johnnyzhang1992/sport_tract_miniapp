@@ -11,7 +11,7 @@
       <view class="sheet-close" catchtap="onClose">✕</view>
     </view>
 
-    <!-- 步数总览：辅助模式＝计入距离 vs 微信步数；步数PK＝累计步数 vs 同步天数 -->
+    <!-- 步数总览：辅助模式＝计入距离 vs 微信步数；步数PK＝累计步数 vs 记录天数 -->
     <view class="step-summary" wx:if="{{stepMode !== 'none'}}">
       <view class="step-cell">
         <view class="step-cell-label">{{stepMode === 'steps' ? '累计步数' : '本活动计入距离'}}</view>
@@ -21,7 +21,7 @@
         </view>
       </view>
       <view class="step-cell step-cell-right">
-        <view class="step-cell-label">{{stepMode === 'steps' ? '同步天数' : '微信步数'}}</view>
+        <view class="step-cell-label">{{stepMode === 'steps' ? '记录天数' : '微信步数'}}</view>
         <view class="step-cell-value">
           {{stepMode === 'steps' ? (steps ? steps.summary.days : member.countText) : (steps ? steps.summary.stepText : '—')}}
           <text class="step-cell-unit">{{stepMode === 'steps' ? '天' : '步'}}</text>

@@ -57,7 +57,7 @@ Page({
     hasData: false,
     summary: null, // { count, distanceKm, durationText, activeDays, elevationGain, calories }
     chartData: [], // 月度距离 [{label:'1月', value:km}]
-    step: null, // 微信步数概况（全年总/日均/同步天数）
+    step: null, // 微信步数概况（全年总/日均/记录天数）
     stepChartData: [], // 月度步数 [{label:'1月', value:step}]
     typeSummary: [], // 分类型汇总（各类型总距离/总时长/次数）
     highlights: [], // 最佳记录 [{ key, label, value, sub, id }]

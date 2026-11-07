@@ -9,7 +9,7 @@
     <!-- 三种导出共用同一套范围条件（步数不用类型） -->
     <view class="card">
       <view class="sec-title">导出范围</view>
-      <view class="sec-desc">时间与运动类型作用于运动记录和轨迹记录；微信步数只按时间导出。</view>
+      <view class="sec-desc">时间与运动类型作用于运动记录和轨迹记录；步数、足迹、照片只按时间导出。</view>
 
       <export-filter
         ranges="{{ranges}}"
@@ -38,6 +38,36 @@
       <view class="sec-title">微信步数</view>
       <view class="sec-desc">按天导出已同步的微信步数，含日期、星期与步数；只按时间范围筛选，未同步的日期不补零。</view>
       <view class="export-btn {{busy ? 'export-btn-busy' : ''}}" hover-class="export-btn-hover" bindtap="onExportStepsCsv">导出 CSV</view>
+    </view>
+
+    <!-- 足迹 CSV：免费；只受时间范围影响 -->
+    <view class="card">
+      <view class="sec-title">足迹记录</view>
+      <view class="sec-desc">到访日期、标题、分类、地点、同行人、描述全文与坐标，一行一条；只按时间范围筛选。</view>
+      <view class="export-btn {{busy ? 'export-btn-busy' : ''}}" hover-class="export-btn-hover" bindtap="onExportFootprintCsv">导出 CSV</view>
+    </view>
+
+    <!-- 照片打包 zip：会员权益；轨迹打点 + 足迹两个来源 -->
+    <view class="card">
+      <view class="sec-title-row">
+        <view class="sec-title">照片</view>
+        <view class="member-tag">会员</view>
+      </view>
+      <view class="sec-desc">轨迹打点与足迹里的照片按原图打包成 zip，目录按「轨迹 / 足迹」分组；已失效的旧图自动跳过并在说明里列明。单次最多 200 张。</view>
+
+      <view
+        wx:if="{{memberLoaded && canExportBundle}}"
+        class="export-btn {{busy ? 'export-btn-busy' : ''}}"
+        hover-class="export-btn-hover"
+        bindtap="onExportPhotos"
+      >导出照片包</view>
+
+      <view class="member-lock" wx:elif="{{memberLoaded}}">
+        <view class="lock-text">会员专属 · 开通后可打包导出照片</view>
+        <view class="lock-btn" hover-class="lock-btn-hover" bindtap="goMember">开通会员</view>
+      </view>
+
+      <view class="member-loading" wx:else>会员权益加载中…</view>
     </view>
 
     <!-- 轨迹记录 GPX：会员权益；按条件打包，不再逐条勾选 -->

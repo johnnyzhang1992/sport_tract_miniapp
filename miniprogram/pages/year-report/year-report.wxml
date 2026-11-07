@@ -51,7 +51,7 @@
         </view>
         <view class="step-item">
           <view class="step-num">{{step.syncedDays}}</view>
-          <view class="step-label">同步天数</view>
+          <view class="step-label">记录天数</view>
         </view>
       </view>
     </view>

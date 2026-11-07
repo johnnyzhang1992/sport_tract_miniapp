@@ -34,6 +34,7 @@ test('SRV-1 概况：总/日均/最多步数日（完整日期）/同步天数',
     avgText: '4,600',
     bestText: '1.2万',
     bestDateText: '2026/02/10',
+    bestDateShort: '02/10',
     syncedDays: 5,
   });
 });
@@ -45,6 +46,7 @@ test('SRV-2 无记录：hasData=false，最多步数日给占位且无日期', (
     avgText: '0',
     bestText: '—',
     bestDateText: '',
+    bestDateShort: '',
     syncedDays: 0,
   });
   assert.equal(buildStepSummary(null).hasData, false);

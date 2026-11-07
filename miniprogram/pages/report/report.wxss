@@ -217,15 +217,27 @@
   margin-top: 2rpx;
   line-height: 1.25;
 }
-/* 微信步数：两列四项，最多步数日多一行日期 */
+/* 微信步数：四列一行；最多步数日的日期跟在数值后，保持两行 */
 .step-grid .sum-item {
-  width: 50%;
+  width: 25%;
+  padding: 10rpx 4rpx;
 }
-.step-date {
-  margin-top: 2rpx;
+.step-grid .sum-num {
+  font-size: 30rpx;
+}
+.step-grid .sum-label {
   font-size: 20rpx;
+}
+.step-best-value {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4rpx;
+}
+.step-best-date {
+  font-size: 18rpx;
+  font-weight: 400;
   color: #8a93a6;
-  line-height: 1.3;
 }
 .step-trend-title {
   margin: 20rpx 0 4rpx;

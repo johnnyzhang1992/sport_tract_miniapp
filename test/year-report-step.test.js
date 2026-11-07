@@ -15,7 +15,7 @@ test('YR-S1 结构：微信步数汇总、独立月度步数卡、最佳记录�
   assert.match(w, /class="section-title">微信步数/);
   assert.match(w, /总步数/);
   assert.match(w, /日均步数/);
-  assert.match(w, /同步天数/);
+  assert.match(w, /记录天数/);
   assert.match(w, /月度步数/);
   assert.match(w, /unit="step"/);
   assert.match(w, /wx:if="\{\{item.id\}\}"> ›/, '步数纪录没有轨迹可跳，不显示箭头');

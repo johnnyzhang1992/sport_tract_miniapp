@@ -36,7 +36,7 @@
             </view>
           </view>
           <view class="ov-cell">
-            <view class="ov-label">同步天数</view>
+            <view class="ov-label">记录天数</view>
             <view class="ov-value">{{overview.syncedDays}}<text class="ov-unit">天</text></view>
           </view>
         </view>

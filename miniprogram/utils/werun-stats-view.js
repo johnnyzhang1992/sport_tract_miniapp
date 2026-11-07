@@ -70,7 +70,7 @@ function changeOf(cur, prev) {
   };
 }
 
-/** 步数趋势变化四卡：总步数 / 日均 / 最高单日 / 同步天数 */
+/** 步数趋势变化四卡：总步数 / 日均 / 最高单日 / 记录天数 */
 function buildStepMetricCards(cur, prev) {
   if (!cur) return [];
   if ((Number(cur.totalStep) || 0) === 0 && (!prev || (Number(prev.totalStep) || 0) === 0)) return [];
@@ -78,7 +78,7 @@ function buildStepMetricCards(cur, prev) {
     { key: 'total', label: '总步数', value: formatCompactCn(cur.totalStep), unit: '步', ...changeOf(Number(cur.totalStep) || 0, prev && Number(prev.totalStep) || 0) },
     { key: 'avg', label: '日均', value: formatCompactCn(cur.avgStep), unit: '步/天', ...changeOf(Number(cur.avgStep) || 0, prev && Number(prev.avgStep) || 0) },
     { key: 'best', label: '最高单日', value: formatCompactCn(cur.bestStep), unit: '步', ...changeOf(Number(cur.bestStep) || 0, prev && Number(prev.bestStep) || 0) },
-    { key: 'days', label: '同步天数', value: String(Number(cur.syncedDays) || 0), unit: '天', ...changeOf(Number(cur.syncedDays) || 0, prev && Number(prev.syncedDays) || 0) },
+    { key: 'days', label: '记录天数', value: String(Number(cur.syncedDays) || 0), unit: '天', ...changeOf(Number(cur.syncedDays) || 0, prev && Number(prev.syncedDays) || 0) },
   ];
 }
 

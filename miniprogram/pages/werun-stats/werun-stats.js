@@ -26,7 +26,7 @@ Page({
     range: 7,
     overview: null,
     trend: null,
-    stepMetricCards: [], // 近 30 天 vs 前 30 天：总步数/日均/最高单日/同步天数
+    stepMetricCards: [], // 近 30 天 vs 前 30 天：总步数/日均/最高单日/记录天数
     days: [],
     dayTotal: 0,
     dayPage: 1,

@@ -17,10 +17,14 @@ test('RP-S1 结构：微信步数卡、四项概况、月度步数图', () => {
   assert.match(w, /总步数/);
   assert.match(w, /日均步数/);
   assert.match(w, /最多步数日/);
-  assert.match(w, /同步天数/);
+  assert.match(w, /记录天数/);
   assert.match(w, /月度步数/);
   assert.match(w, /unit="step"/);
   assert.match(w, /wx:if="\{\{step && step.hasData\}\}"/);
+  assert.match(w, /class="step-best-date"/, '最多步数日的日期跟在数值后');
+  assert.ok(!w.includes('class="step-date"'), '最多步数日不再单独占第三行');
+  const css = read('miniprogram/pages/report/report.wxss');
+  assert.match(css, /\.step-grid \.sum-item \{[^}]*width: 25%/, '四个数据要排成一行');
 });
 
 /* ------------------------------- 桩 ------------------------------- */

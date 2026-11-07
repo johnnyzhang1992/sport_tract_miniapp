@@ -26,7 +26,7 @@ test('WSP-2 结构：四个时间档 + 概况 + 柱状趋势 + 每日明细分�
   const rangeIdx = wxml.indexOf('wx:for="{{ranges}}"');
   const statIdx = wxml.indexOf('<stat-chart');
   assert.ok(chartIdx >= 0 && rangeIdx > chartIdx && rangeIdx < statIdx, '时间档放在趋势卡内、图表之前');
-  assert.match(wxml, /总步数[\s\S]*日均步数[\s\S]*最高单日[\s\S]*同步天数/, '概况四项');
+  assert.match(wxml, /总步数[\s\S]*日均步数[\s\S]*最高单日[\s\S]*记录天数/, '概况四项');
   assert.match(wxml, /<stat-chart[\s\S]*type="bar"[\s\S]*unit="step"/, '趋势要用柱状图且单位是步');
   assert.match(wxml, /wx:for="\{\{days\}\}"/, '每日明细列表');
   assert.match(wxml, /item\.stepText/, '每日明细行展示步数');

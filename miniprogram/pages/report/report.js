@@ -105,7 +105,7 @@ Page({
     dateBucketLabel: '', // 桶列头：日期/星期/月份/半年
     dateView: 'table', // 日期汇总形态：table 表 / chart 柱状图
     dateChartData: [], // 日期汇总柱状图数据（距离 km）
-    step: null, // 微信步数概况（总/日均/最多步数日/同步天数）
+    step: null, // 微信步数概况（总/日均/最多步数日/记录天数）
     stepChartData: [], // 月度步数柱状图数据
     stepChartSlot: 28, // 月标签留位（跨年用完整 YYYY/MM）
     showStepChart: false, // 周/月周期只有 1 根柱，不画趋势

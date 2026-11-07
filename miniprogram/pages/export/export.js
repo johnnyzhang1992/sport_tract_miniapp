@@ -123,30 +123,51 @@ Page({
     return this.doExport('gpx');
   },
 
+  onExportFootprintCsv() {
+    return this.doExport('footprints');
+  },
+
+  onExportPhotos() {
+    if (!this.data.canExportBundle) {
+      wx.showToast({ title: '会员专属功能，开通后可打包照片', icon: 'none' });
+      return undefined;
+    }
+    return this.doExport('photos');
+  },
+
   /** 生成 → 下载落盘 → 收 loading → 拉分享。失败文案优先用后端 message（超限/频控/会员）。 */
   async doExport(kind) {
     if (this.data.busy) return;
     const cond = this.data.filter;
     let query = '';
     try {
-      query = kind === 'steps'
-        ? buildStepExportQuery({ rangeKey: cond.range, startDate: cond.start, endDate: cond.end })
-        : buildExportQuery({
+      if (kind === 'steps') {
+        // 步数按自然日一条：固定档必须取「含今天共 N 个自然日」，不能沿用活动的滚动 24h
+        query = buildStepExportQuery({ rangeKey: cond.range, startDate: cond.start, endDate: cond.end });
+      } else {
+        // 足迹/照片不吃运动类型（后端对应接口不收 type），活动/轨迹带类型
+        const withType = kind !== 'footprints' && kind !== 'photos';
+        query = buildExportQuery({
           rangeKey: cond.range,
-          type: cond.type,
+          type: withType ? cond.type : '',
           startDate: cond.start,
           endDate: cond.end,
         });
+      }
     } catch (err) {
       wx.showToast({ title: (err && err.message) || '筛选条件无效', icon: 'none' });
       return;
     }
     const path = kind === 'csv'
       ? '/activities/export/summary'
-      : kind === 'steps' ? '/werun/export/csv' : '/activities/export/gpx';
+      : kind === 'steps' ? '/werun/export/csv'
+        : kind === 'footprints' ? '/footprint-records/export/csv'
+          : kind === 'photos' ? '/activities/export/photos' : '/activities/export/gpx';
     const fileName = kind === 'csv'
       ? `运动记录_${fileStamp()}.csv`
-      : kind === 'steps' ? `微信步数_${fileStamp()}.csv` : `轨迹导出_${fileStamp()}.zip`;
+      : kind === 'steps' ? `微信步数_${fileStamp()}.csv`
+        : kind === 'footprints' ? `足迹记录_${fileStamp()}.csv`
+          : kind === 'photos' ? `照片导出_${fileStamp()}.zip` : `轨迹导出_${fileStamp()}.zip`;
     this.setData({ busy: kind });
     loading.show('生成中…');
     let filePath = '';

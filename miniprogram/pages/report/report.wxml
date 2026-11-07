@@ -99,13 +99,15 @@
         <view class="sum-label">日均步数</view>
       </view>
       <view class="sum-item">
-        <view class="sum-num">{{step.bestText}}</view>
+        <view class="sum-num step-best-value">
+          <text>{{step.bestText}}</text>
+          <text class="step-best-date" wx:if="{{step.bestDateShort}}">{{step.bestDateShort}}</text>
+        </view>
         <view class="sum-label">最多步数日</view>
-        <view class="step-date">{{step.bestDateText}}</view>
       </view>
       <view class="sum-item">
         <view class="sum-num">{{step.syncedDays}}</view>
-        <view class="sum-label">同步天数</view>
+        <view class="sum-label">记录天数</view>
       </view>
     </view>
     <block wx:if="{{showStepChart}}">

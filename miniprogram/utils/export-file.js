@@ -191,8 +191,26 @@ function exportTracksZip(opts) {
   );
 }
 
+/** 足迹 CSV 导出（时间档/自定义；visitDate 按自然日换算由后端完成，前端与活动导出同 query 口径） */
+function exportFootprintCsv(opts) {
+  return downloadAndShare(
+    `/footprint-records/export/csv${buildExportQuery(opts)}`,
+    `足迹记录_${fileStamp()}.csv`,
+  );
+}
+
+/** 照片打包 zip 导出（轨迹打点 + 足迹双源；会员权益，单次上限 200 张由后端兜底） */
+function exportPhotosZip(opts) {
+  return downloadAndShare(
+    `/activities/export/photos${buildExportQuery(opts)}`,
+    `照片导出_${fileStamp()}.zip`,
+  );
+}
+
 module.exports = {
   GPX_MAX_ITEMS,
+  exportFootprintCsv,
+  exportPhotosZip,
   EXPORT_RANGES,
   parseExportDate,
   rangeParams,

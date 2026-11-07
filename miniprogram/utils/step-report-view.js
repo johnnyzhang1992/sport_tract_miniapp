@@ -13,13 +13,18 @@ function slashDate(date) {
   return String(date || '').replace(/-/g, '/');
 }
 
+/** 'YYYY-MM-DD' → 'MM/DD'（四列一格里的日期后缀） */
+function mmdd(date) {
+  return String(date || '').slice(5).replace('-', '/');
+}
+
 /** 'YYYY-MM' → '2026年2月' */
 function monthCn(month) {
   const [y, m] = String(month || '').split('-');
   return y && m ? `${y}年${Number(m)}月` : '';
 }
 
-/** 概况：总/日均/最多步数日/同步天数；无同步记录时各值保持可渲染的占位 */
+/** 概况：总/日均/最多步数日/记录天数；无记录时各值保持可渲染的占位 */
 function buildStepSummary(o) {
   const hasData = !!(o && o.syncedDays > 0);
   return {
@@ -28,6 +33,7 @@ function buildStepSummary(o) {
     avgText: formatCompactCn((o && o.avgStep) || 0),
     bestText: hasData ? formatCompactCn(o.bestStep) : '—',
     bestDateText: hasData && o.bestDate ? slashDate(o.bestDate) : '',
+    bestDateShort: hasData && o.bestDate ? mmdd(o.bestDate) : '',
     syncedDays: (o && o.syncedDays) || 0,
   };
 }
@@ -75,4 +81,4 @@ function buildStepRecords(report) {
   return out;
 }
 
-module.exports = { buildStepSummary, buildStepMonths, buildStepRecords, slashDate, monthCn };
+module.exports = { buildStepSummary, buildStepMonths, buildStepRecords, slashDate, mmdd, monthCn };
