@@ -483,6 +483,26 @@ test('MP22 支付成功：弹开启提醒；点开启走订阅并上报', async 
   assert.equal(p.data.reminder.subscribed, true);
 });
 
+/* ------------------------- 数据概览入口（服务端角色旗标） ------------------------- */
+
+test('MP27 数据概览入口：只认服务端 operator 旗标，端上不自行判角色', async () => {
+  reset({ fixture: { operator: true } });
+  let p = boot();
+  await tick();
+  assert.equal(p.data.operator, true, 'admin 下发 true → 入口可见');
+
+  reset(); // 默认夹具不带 operator（普通用户）
+  p = boot();
+  await tick();
+  assert.equal(p.data.operator, false, '未下发 → 入口隐藏');
+
+  const w = read('miniprogram/pages/member/member.wxml');
+  assert.ok(w.includes('wx:if="{{operator}}"'), '入口渲染只挂服务端旗标');
+  const js = read('miniprogram/pages/member/member.js');
+  assert.ok(js.includes('d.operator'), '端上只消费服务端下发的 operator');
+  assert.ok(!/\.role\b/.test(js), '端上不读角色字段、不自行判 admin');
+});
+
 /* ------------------------- 进页防闪（缓存先渲染） ------------------------- */
 
 const CACHE_KEY = 'memberCenterCache_v1';

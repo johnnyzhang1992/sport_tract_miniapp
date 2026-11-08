@@ -43,8 +43,22 @@ function buildUserSeries(buckets) {
   };
 }
 
-function buildTrackData(buckets) {
-  return (buckets || []).map((b) => ({ label: b.label, value: Number(b.tracksCreated) || 0 }));
+const TRACK_SERIES_META = [
+  { field: 'tracksCreated', name: '新增轨迹', color: '#7fa8f9' },
+  { field: 'tracksFinished', name: '已完成轨迹', color: '#2b6cf6' },
+];
+
+/** 轨迹趋势：新增（按创建）与已完成（按结束）两组柱共用同一张图 */
+function buildTrackSeries(buckets) {
+  const rows = buckets || [];
+  return {
+    labels: rows.map((b) => b.label),
+    series: TRACK_SERIES_META.map((m) => ({
+      name: m.name,
+      color: m.color,
+      values: rows.map((b) => Number(b[m.field]) || 0),
+    })),
+  };
 }
 
-module.exports = { RANGES, granularityOptions, defaultGranularity, normalizeGranularity, buildUserSeries, buildTrackData };
+module.exports = { RANGES, granularityOptions, defaultGranularity, normalizeGranularity, buildUserSeries, buildTrackSeries };

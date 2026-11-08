@@ -80,7 +80,7 @@ const respondWith = (over) => (p) => {
     const q = new URLSearchParams(p.split('?')[1]);
     const n = q.get('range') === 'week' ? 7 : q.get('range') === 'month' ? 30 : 26;
     const buckets = Array.from({ length: n }, (_, i) => ({
-      key: `k${i}`, label: `11/${i + 1}`, newUsers: i, uv: i + 1, pv: i + 2, tracksCreated: i + 3,
+      key: `k${i}`, label: `11/${i + 1}`, newUsers: i, uv: i + 1, pv: i + 2, tracksCreated: i + 3, tracksFinished: i + 1,
     }));
     return Promise.resolve({ range: q.get('range'), granularity: q.get('granularity'), buckets });
   }
@@ -128,8 +128,9 @@ test('OP4 进页拉趋势：默认 week/day；三系列与轨迹图数据齐备'
   assert.ok(apiGets.includes('/operator/stats/trend?range=week&granularity=day'), apiGets.join(','));
   assert.deepEqual(pageDef.data.userChart.series.map((s) => s.name), ['新增用户', '登录UV', '登录PV']);
   assert.equal(pageDef.data.userChart.labels.length, 7);
-  assert.equal(pageDef.data.trackChart.length, 7);
-  assert.equal(pageDef.data.trackChart[0].value, 3);
+  assert.deepEqual(pageDef.data.trackChart.series.map((s) => s.name), ['新增轨迹', '已完成轨迹']);
+  assert.deepEqual(pageDef.data.trackChart.series[0].values, [3, 4, 5, 6, 7, 8, 9]);
+  assert.deepEqual(pageDef.data.trackChart.series[1].values, [1, 2, 3, 4, 5, 6, 7]);
   assert.equal(pageDef.data.trendFailed, false);
 });
 
@@ -196,9 +197,9 @@ test('OP8 趋势结构：范围/粒度 chips + 分组柱 + 轨迹柱都挂对组
   const w = read('miniprogram/pages/operator/operator.wxml');
   assert.match(w, /bindtap="onRange"/);
   assert.match(w, /bindtap="onGran"/);
-  assert.match(w, /type="grouped-bar"/);
+  assert.equal((w.match(/type="grouped-bar"/g) || []).length, 2, '用户与登录 + 轨迹都是分组柱');
   assert.match(w, /series="{{userChart.series}}"/);
-  assert.match(w, /data="{{trackChart}}"/);
+  assert.match(w, /series="{{trackChart.series}}"/);
   assert.equal((w.match(/show-tip="\{\{true\}\}"/g) || []).length, 2, '两张图都打开点柱看数');
   const cfg = JSON.parse(read('miniprogram/pages/operator/operator.json'));
   assert.ok(cfg.usingComponents && cfg.usingComponents['stat-chart'], 'stat-chart 组件要注册');

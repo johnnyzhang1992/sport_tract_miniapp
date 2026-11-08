@@ -6,7 +6,7 @@ const {
   granularityOptions,
   normalizeGranularity,
   buildUserSeries,
-  buildTrackData,
+  buildTrackSeries,
 } = require('../../utils/operator-trend');
 
 /**
@@ -71,7 +71,7 @@ Page({
         trendLoading: false,
         trendFailed: false,
         userChart: buildUserSeries(buckets),
-        trackChart: buildTrackData(buckets),
+        trackChart: buildTrackSeries(buckets),
       });
     } catch (e) {
       if (seq !== this._trendSeq) return;

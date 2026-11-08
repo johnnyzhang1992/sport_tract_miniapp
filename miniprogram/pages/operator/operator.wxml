@@ -57,7 +57,7 @@
             <view class="chart-title">用户与登录</view>
             <stat-chart type="grouped-bar" series="{{userChart.series}}" labels="{{userChart.labels}}" height="{{220}}" show-tip="{{true}}" empty-text="暂无数据" />
             <view class="chart-title">轨迹</view>
-            <stat-chart type="bar" data="{{trackChart}}" height="{{200}}" show-tip="{{true}}" empty-text="暂无轨迹" />
+            <stat-chart type="grouped-bar" series="{{trackChart.series}}" labels="{{trackChart.labels}}" height="{{200}}" show-tip="{{true}}" empty-text="暂无轨迹" />
           </block>
         </view>
 

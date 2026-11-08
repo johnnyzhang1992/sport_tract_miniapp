@@ -11,7 +11,7 @@ const {
   defaultGranularity,
   normalizeGranularity,
   buildUserSeries,
-  buildTrackData,
+  buildTrackSeries,
 } = require('../miniprogram/utils/operator-trend');
 
 test('OTU1 组合表：week 禁周、halfyear 禁天、month 全开；默认粒度与回退', () => {
@@ -49,14 +49,17 @@ test('OTU2 buckets→三系列：顺序/颜色/值/标签；空桶补 0 透传',
   assert.ok(empty.series.every((s) => s.values.length === 0));
 });
 
-test('OTU3 buckets→轨迹柱状数据：label/value 映射', () => {
+test('OTU3 buckets→轨迹双系列：新增/已完成各自取值', () => {
   const buckets = [
-    { label: '11/1', tracksCreated: 4 },
-    { label: '11/2', tracksCreated: 0 },
+    { label: '11/1', tracksCreated: 4, tracksFinished: 3 },
+    { label: '11/2', tracksCreated: 0, tracksFinished: 1 },
   ];
-  assert.deepEqual(buildTrackData(buckets), [
-    { label: '11/1', value: 4 },
-    { label: '11/2', value: 0 },
-  ]);
-  assert.deepEqual(buildTrackData([]), []);
+  const { labels, series } = buildTrackSeries(buckets);
+  assert.deepEqual(labels, ['11/1', '11/2']);
+  assert.deepEqual(series.map((s) => s.name), ['新增轨迹', '已完成轨迹']);
+  assert.deepEqual(series.map((s) => s.values), [[4, 0], [3, 1]]);
+  assert.notEqual(series[0].color, series[1].color);
+  const empty = buildTrackSeries([]);
+  assert.deepEqual(empty.labels, []);
+  assert.ok(empty.series.every((s) => s.values.length === 0));
 });
