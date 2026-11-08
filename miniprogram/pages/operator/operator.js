@@ -1,6 +1,13 @@
 const api = require('../../services/api');
 const storage = require('../../services/storage');
 const { ensureLogin } = require('../../utils/login-gate');
+const {
+  RANGES,
+  granularityOptions,
+  normalizeGranularity,
+  buildUserSeries,
+  buildTrackData,
+} = require('../../utils/operator-trend');
 
 /**
  * 数据概览（role=admin 微信用户＝站内运营者的只读页）：
@@ -14,6 +21,14 @@ Page({
     loggedIn: false,
     authorized: false,
     summary: null,
+    range: 'week',
+    granularity: 'day',
+    ranges: RANGES,
+    granOptions: granularityOptions('week'),
+    userChart: null,
+    trackChart: null,
+    trendLoading: false,
+    trendFailed: false,
   },
 
   onShow() {
@@ -35,11 +50,56 @@ Page({
         api.get('/operator/stats/summary'),
       ]);
       this.setData({ loading: false, authorized: true, summary: summary || null });
+      this.loadTrend();
     } catch (e) {
       const msg = (e && e.message) || '';
       this.setData({ loading: false, failed: true, authorized: !/仅运营者/.test(msg) });
       if (/仅运营者/.test(msg)) this.setData({ failed: false });
     }
+  },
+
+  /** 趋势：范围×粒度共享；快切序号守卫；已有图时静默更新不闪空态 */
+  async loadTrend() {
+    const seq = (this._trendSeq = (this._trendSeq || 0) + 1);
+    const { range, granularity } = this.data;
+    if (!this.data.userChart) this.setData({ trendLoading: true, trendFailed: false });
+    try {
+      const d = await api.get(`/operator/stats/trend?range=${range}&granularity=${granularity}`);
+      if (seq !== this._trendSeq) return;
+      const buckets = (d && d.buckets) || [];
+      this.setData({
+        trendLoading: false,
+        trendFailed: false,
+        userChart: buildUserSeries(buckets),
+        trackChart: buildTrackData(buckets),
+      });
+    } catch (e) {
+      if (seq !== this._trendSeq) return;
+      if (this.data.userChart) this.setData({ trendLoading: false });
+      else this.setData({ trendLoading: false, trendFailed: true });
+    }
+  },
+
+  onRange(e) {
+    const key = e.currentTarget.dataset.key;
+    if (!key || key === this.data.range) return;
+    this.setData({
+      range: key,
+      granularity: normalizeGranularity(key, this.data.granularity),
+      granOptions: granularityOptions(key),
+    });
+    this.loadTrend();
+  },
+
+  onGran(e) {
+    const { key, disabled } = e.currentTarget.dataset;
+    if (!key || disabled || key === this.data.granularity) return;
+    this.setData({ granularity: key });
+    this.loadTrend();
+  },
+
+  onRetryTrend() {
+    this.loadTrend();
   },
 
   onRetry() {

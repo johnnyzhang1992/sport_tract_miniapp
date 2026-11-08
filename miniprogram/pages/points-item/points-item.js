@@ -16,6 +16,7 @@ const { ensureLogin, waitSession } = require('../../utils/login-gate');
 const { pickItem, isMakeup } = require('../../utils/points-item-view');
 const { formatThousands } = require('../../utils/format');
 const { stockTextOf, todayLeftTextOf } = require('../../utils/points-view');
+const { setPageTitle } = require('../../utils/nav-title');
 
 Page({
   data: {
@@ -100,7 +101,7 @@ Page({
 
   /** 标题跟着商品走：这一页早已不只展示补签卡，写死「补签卡」会让免广告卡顶着错标题 */
   applyTitle(item) {
-    wx.setNavigationBarTitle({ title: (item && item.name) || '兑换商品' });
+    setPageTitle(this, (item && item.name) || '兑换商品');
   },
   /** 游客点「登录后兑换…」：登录成功才请求（不在进页时弹登录） */
   async onLoginTap() {

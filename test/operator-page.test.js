@@ -76,6 +76,14 @@ const respondWith = (over) => (p) => {
       generatedAt: 1,
     });
   }
+  if (p.startsWith('/operator/stats/trend')) {
+    const q = new URLSearchParams(p.split('?')[1]);
+    const n = q.get('range') === 'week' ? 7 : q.get('range') === 'month' ? 30 : 26;
+    const buckets = Array.from({ length: n }, (_, i) => ({
+      key: `k${i}`, label: `11/${i + 1}`, newUsers: i, uv: i + 1, pv: i + 2, tracksCreated: i + 3,
+    }));
+    return Promise.resolve({ range: q.get('range'), granularity: q.get('granularity'), buckets });
+  }
   return Promise.resolve({});
 };
 
@@ -83,7 +91,8 @@ function reset(over) {
   apiGets = []; apiPosts = []; modals = []; toasts = [];
   token = over && over.loggedOut ? null : { accessToken: 't' };
   respond = respondWith(over);
-  pageDef.data = { loading: true, failed: false, loggedIn: false, authorized: false, summary: null, items: [], expanded: '', preview: null, previewLoading: false, reasonIndex: -1, note: '', busy: '' };
+  pageDef.data = { loading: true, failed: false, loggedIn: false, authorized: false, summary: null, items: [], expanded: '', preview: null, previewLoading: false, reasonIndex: -1, note: '', busy: '', range: 'week', granularity: 'day', userChart: null, trackChart: null, trendLoading: false, trendFailed: false };
+  pageDef._trendSeq = 0;
   pageDef.setData = (patch) => { Object.assign(pageDef.data, patch || {}); };
   return pageDef;
 }
@@ -99,7 +108,7 @@ test('OP2 未授权（403 仅运营者）→ 不进列表态也不误报加载�
   await tick();
   assert.equal(pageDef.data.authorized, false);
   assert.equal(pageDef.data.failed, false, '403 是权限态不是失败态');
-  fakeApi.get = (p) => respond(p);
+  fakeApi.get = (p) => { apiGets.push(p); return respond(p); };
 });
 
 test('OP3 概览渲染：今日/昨日六项指标齐备', async () => {
@@ -109,5 +118,89 @@ test('OP3 概览渲染：今日/昨日六项指标齐备', async () => {
   assert.equal(pageDef.data.authorized, true);
   assert.equal(pageDef.data.summary.today.uv, 5);
   assert.equal(pageDef.data.summary.yesterday.newUsers, 0);
+});
+
+test('OP4 进页拉趋势：默认 week/day；三系列与轨迹图数据齐备', async () => {
+  reset();
+  pageDef.onShow();
+  await tick();
+  await tick();
+  assert.ok(apiGets.includes('/operator/stats/trend?range=week&granularity=day'), apiGets.join(','));
+  assert.deepEqual(pageDef.data.userChart.series.map((s) => s.name), ['新增用户', '登录UV', '登录PV']);
+  assert.equal(pageDef.data.userChart.labels.length, 7);
+  assert.equal(pageDef.data.trackChart.length, 7);
+  assert.equal(pageDef.data.trackChart[0].value, 3);
+  assert.equal(pageDef.data.trendFailed, false);
+});
+
+test('OP5 切范围：半年回退周粒度、一周回退天粒度；请求带新参数', async () => {
+  reset();
+  pageDef.onShow();
+  await tick();
+  await tick();
+  pageDef.onRange({ currentTarget: { dataset: { key: 'halfyear' } } });
+  assert.equal(pageDef.data.granularity, 'week', '半年天粒度禁用→回退周');
+  assert.equal(pageDef.data.granOptions.find((o) => o.key === 'day').disabled, true);
+  await tick();
+  assert.ok(apiGets.includes('/operator/stats/trend?range=halfyear&granularity=week'));
+  assert.equal(pageDef.data.userChart.labels.length, 26);
+
+  pageDef.onRange({ currentTarget: { dataset: { key: 'week' } } });
+  assert.equal(pageDef.data.granularity, 'day', '一周周粒度禁用→回退天');
+  await tick();
+  assert.ok(apiGets.includes('/operator/stats/trend?range=week&granularity=day'));
+});
+
+test('OP6 禁用粒度点击无效；可用粒度切换发请求', async () => {
+  reset();
+  pageDef.onShow();
+  await tick();
+  await tick();
+  const before = apiGets.length;
+  pageDef.onGran({ currentTarget: { dataset: { key: 'week', disabled: true } } });
+  await tick();
+  assert.equal(apiGets.length, before, '一周的周粒度禁用，点了不发请求');
+  assert.equal(pageDef.data.granularity, 'day');
+
+  pageDef.onRange({ currentTarget: { dataset: { key: 'month' } } });
+  await tick();
+  pageDef.onGran({ currentTarget: { dataset: { key: 'week', disabled: false } } });
+  await tick();
+  assert.ok(apiGets.includes('/operator/stats/trend?range=month&granularity=week'));
+});
+
+test('OP7 快切范围序号守卫：慢的旧响应不覆盖新响应', async () => {
+  reset();
+  pageDef.onShow();
+  await tick();
+  await tick();
+  let releaseOld;
+  const realRespond = respond;
+  respond = (p) => {
+    if (p.startsWith('/operator/stats/trend') && p.includes('range=month')) {
+      return new Promise((r) => { releaseOld = () => r(realRespond(p)); });
+    }
+    return realRespond(p);
+  };
+  pageDef.onRange({ currentTarget: { dataset: { key: 'month' } } }); // 挂起
+  pageDef.onRange({ currentTarget: { dataset: { key: 'halfyear' } } }); // 最新
+  await tick();
+  assert.equal(pageDef.data.userChart.labels.length, 26, '新响应已上屏');
+  releaseOld();
+  await tick();
+  assert.equal(pageDef.data.userChart.labels.length, 26, '旧响应回来不能覆盖');
+  assert.equal(pageDef.data.range, 'halfyear');
+});
+
+test('OP8 趋势结构：范围/粒度 chips + 分组柱 + 轨迹柱都挂对组件与 handler', () => {
+  const w = read('miniprogram/pages/operator/operator.wxml');
+  assert.match(w, /bindtap="onRange"/);
+  assert.match(w, /bindtap="onGran"/);
+  assert.match(w, /type="grouped-bar"/);
+  assert.match(w, /series="{{userChart.series}}"/);
+  assert.match(w, /data="{{trackChart}}"/);
+  assert.equal((w.match(/show-tip="\{\{true\}\}"/g) || []).length, 2, '两张图都打开点柱看数');
+  const cfg = JSON.parse(read('miniprogram/pages/operator/operator.json'));
+  assert.ok(cfg.usingComponents && cfg.usingComponents['stat-chart'], 'stat-chart 组件要注册');
 });
 

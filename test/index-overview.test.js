@@ -291,17 +291,6 @@ test('H10b 老服务端不带 me 字段：人数照常展示，名次退化为�
   assert.deepEqual(page.data.lbSummary.ranks, []);
 });
 
-test('H11 默认运动类型直接从登录返回的用户读数，不再打 /users/me', async () => {
-  resetEnv();
-  appStub.globalData.userInfo = { settings: { defaultType: 'cycling' } };
-
-  const p = makePage();
-  await p.applyDefaultType();
-
-  assert.deepEqual(apiCalls, [], 'login 已下发 user.settings，设置页保存也会写回 globalData');
-  assert.equal(p.data.selectedType, 'cycling');
-});
-
 test('H12 onShow 节流：60s 内切回不重复拉；过期 / 脏标记 / 登录态变化才重拉', async () => {
   const realNow = Date.now;
   let now = realNow();

@@ -1,24 +1,27 @@
 /**
  * 设置页（决策 F25）
- * 单位切换（公制/英制）、默认运动类型、高精度定位开关 → PUT /users/me settings
+ * 单位切换（公制/英制）、高精度定位开关 → PUT /users/me settings
  */
 const api = require('../../services/api');
 const storage = require('../../services/storage');
 const { setAdFreeUntil } = require('../../utils/ad-free');
-const config = require('../../config/index');
+// 首页运动类型显示开关（纯前端，wx storage 存储，即时生效）
+const sportDisplay = require('../../utils/sport-display');
 
 Page({
   data: {
+    // 运动类型显示与排序行：八个运动类型全展示，可拖 ≡ 排序、可开关收起
+    sportTypeRows: sportDisplay.toggleRows(),
+    dragIndex: -1, // 正在拖动的行下标（-1 = 未拖动）
+    dragOffset: 0, // 拖动行相对其槽位的位移（px）
     settings: {
       unit: 'metric',
-      defaultType: 'walking',
       highAccuracy: true,
       showBodyData: true,
       showSportData: true,
       kmAnnounce: true,
       dailyStepSync: true,
     },
-    activityTypes: config.ACTIVITY_TYPES,
     saving: false,
     loggedIn: false, // 登录态（决定是否展示退出登录入口）
     sportSheetVisible: false, // 关闭「展示运动数据」后的提示半屏
@@ -26,6 +29,7 @@ Page({
   },
 
   onLoad() {
+    this.setData({ sportTypeRows: sportDisplay.toggleRows() });
     this.loadSettings();
     this.refreshEntitlements();
   },
@@ -80,7 +84,7 @@ Page({
       this.setData({
         loggedIn: true, // 能拉到资料即已登录（游客态接口 401）
         settings: Object.assign(
-          { unit: 'metric', defaultType: 'walking', highAccuracy: true, showBodyData: true, showSportData: true, kmAnnounce: true, dailyStepSync: true },
+          { unit: 'metric', highAccuracy: true, showBodyData: true, showSportData: true, kmAnnounce: true, dailyStepSync: true },
           user.settings,
         ),
       });
@@ -90,8 +94,58 @@ Page({
     }
   },
 
-  onDefaultTypeChange(e) {
-    this.setData({ 'settings.defaultType': e.currentTarget.dataset.type });
+  /** 行高 px（行高用 rpx 定义，触摸位移是 px，拖拽启动时按屏宽换算一次） */
+  ensureRowHeight() {
+    if (this._sportRowH) return this._sportRowH;
+    const info = wx.getSystemInfoSync();
+    // 与 settings.wxss .sport-type-row 的 height(rpx) 保持一致
+    this._sportRowH = (info.windowWidth * 76) / 750;
+    return this._sportRowH;
+  },
+
+  onDragStart(e) {
+    const index = Number(e.currentTarget.dataset.index);
+    this._dragAnchorY = e.touches[0].clientY;
+    this._dragIndex = index;
+    this.ensureRowHeight();
+    this.setData({ dragIndex: index, dragOffset: 0 });
+  },
+
+  onDragMove(e) {
+    if (this._dragIndex < 0) return;
+    const rows = this.data.sportTypeRows;
+    const rowH = this.ensureRowHeight();
+    const y = e.touches[0].clientY;
+    // 越过半行阈值就整行换位（live splice）：拖动行始终跟随手指，其余行按新顺序即时重排
+    const steps = Math.trunc((y - this._dragAnchorY) / rowH);
+    const target = Math.max(0, Math.min(rows.length - 1, this._dragIndex + steps));
+    if (target !== this._dragIndex) {
+      const next = rows.slice();
+      const moved = next.splice(this._dragIndex, 1)[0];
+      next.splice(target, 0, moved);
+      this._dragIndex = target;
+      this._dragAnchorY += steps * rowH; // 重锚：后续位移以新槽位为基准
+      this.setData({ sportTypeRows: next });
+    }
+    this.setData({ dragOffset: y - this._dragAnchorY });
+  },
+
+  onDragEnd() {
+    if (this._dragIndex < 0) return;
+    // 落定：把最终顺序写进存储（顺序即首页网格顺序），清拖拽态
+    sportDisplay.setOrder(this.data.sportTypeRows.map((r) => r.type));
+    this._dragIndex = -1;
+    this.setData({ dragIndex: -1, dragOffset: 0 });
+  },
+
+  // 运动类型显示开关：即时持久化（纯前端，不进 PUT /users/me），无需保存按钮
+  onSportTypeToggle(e) {
+    const type = e.currentTarget.dataset.type;
+    const visible = !!e.detail.value;
+    sportDisplay.setTypeVisible(type, visible);
+    this.setData({
+      sportTypeRows: sportDisplay.toggleRows(),
+    });
   },
 
   onHighAccuracyChange(e) {

@@ -28,32 +28,6 @@
   color: #1a56d6;
   border: 2rpx solid #1a56d6;
 }
-.type-grid {
-  display: flex;
-  flex-wrap: wrap;
-}
-.type-item {
-  width: 25%; /* 一行 4 个（紧凑版） */
-  box-sizing: border-box;
-  padding: 8rpx 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  border-radius: 12rpx;
-  border: 2rpx solid transparent;
-}
-.type-item-active {
-  background: #eef4ff;
-  border-color: #1a56d6;
-}
-.type-icon {
-  width: 44rpx;
-  height: 44rpx;
-}
-.type-label {
-  font-size: 20rpx;
-  margin-top: 4rpx;
-}
 .switch-row {
   display: flex;
   align-items: center;
@@ -73,11 +47,6 @@
   color: #667080;
 }
 
-.type-icon {
-  width: 48rpx;
-  height: 48rpx;
-  margin-right: 10rpx;
-}
 
 /* 退出登录（居中红字行） */
 .logout-row {
@@ -179,4 +148,60 @@
 .quota-more {
   float: right;
   color: #2b6cf6;
+}
+
+/* 运动类型显示开关（2026-11-07）：行式布局 图标+名称+开关；复用旧 type-grid 的图标尺寸语言 */
+.sport-type-desc {
+  font-size: 24rpx;
+  color: #8a93a6;
+  line-height: 1.5;
+  margin-bottom: 8rpx;
+}
+.sport-type-row {
+  display: flex;
+  align-items: center;
+  height: 76rpx; /* 拖拽位移按整行计算，行高必须固定；与 settings.js ensureRowHeight 的 76 保持一致 */
+  box-sizing: border-box;
+  border-bottom: 1rpx solid #f2f3f5;
+  background: #fff;
+  position: relative;
+}
+.sport-type-row:last-child {
+  border-bottom: none;
+}
+.sport-type-row-dragging {
+  box-shadow: 0 6rpx 20rpx rgba(0, 0, 0, 0.18);
+  border-radius: 12rpx;
+  z-index: 5;
+}
+/* 拖拽热区：手柄+图标+名称整块、撑满行高，抓哪里都能拖；开关在热区外 */
+.sport-type-drag {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+.sport-type-handle {
+  width: 56rpx;
+  text-align: center;
+  color: #c0c6d1;
+  font-size: 28rpx;
+  line-height: 1;
+  margin-right: 8rpx;
+  flex-shrink: 0;
+}
+.sport-type-icon {
+  width: 36rpx;
+  height: 36rpx;
+  margin-right: 12rpx;
+  flex-shrink: 0;
+}
+.sport-type-label {
+  flex: 1;
+  font-size: 26rpx;
+  color: #1f2329;
+}
+.sport-type-label-off {
+  color: #c0c6d1;
 }

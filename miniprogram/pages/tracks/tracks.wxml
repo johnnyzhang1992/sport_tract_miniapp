@@ -1,18 +1,21 @@
 <view class="container">
-  <!-- 类型筛选（t-tabs） -->
-  <t-tabs
-    class="filter-tabs"
-    sticky
-    value="{{activeFilter}}"
-    bind:change="onTabChange"
-  >
-    <t-tab-panel
-      wx:for="{{filters}}"
-      wx:key="type"
-      label="{{item.label}}"
-      value="{{item.type}}"
-    />
-  </t-tabs>
+  <!-- 类型筛选（t-tabs）：右缘渐隐+箭头提示「还有更多类型可滑」 -->
+  <view class="tabs-wrap">
+    <t-tabs
+      class="filter-tabs"
+      sticky
+      value="{{activeFilter}}"
+      bind:change="onTabChange"
+    >
+      <t-tab-panel
+        wx:for="{{filters}}"
+        wx:key="type"
+        label="{{item.label}}"
+        value="{{item.type}}"
+      />
+    </t-tabs>
+    <view class="tabs-fade"><text class="tabs-fade-arrow">›</text></view>
+  </view>
 
   <!-- 省份筛选条（足迹地图跳转带入） -->
   <view class="province-bar" wx:if="{{provinceFilter}}">

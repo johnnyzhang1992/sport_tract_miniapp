@@ -35,7 +35,7 @@
         </view>
         <view class="ov-item">
           <view class="ov-num">{{overview.total.elevationGainText}}</view>
-          <view class="ov-label">爬升 m</view>
+          <view class="ov-label">爬升 米</view>
         </view>
         <view class="ov-item">
           <view class="ov-num">{{overview.total.caloriesText}}</view>
@@ -71,7 +71,7 @@
       </view>
     </view>
 
-    <!-- 运动日历：近 365 天数据摊成月历，有运动的天打勾；只换月份不重新请求 -->
+    <!-- 运动日历：近 365 天数据摊成月历，活跃日按次数着色；点日期下钻当天轨迹；只换月份不重新请求 -->
     <view class="cal-head">
       <view
         class="cal-arrow {{calPrevDisabled ? 'cal-arrow-off' : ''}}"
@@ -91,13 +91,16 @@
       <text class="cal-weekday" wx:for="{{calWeekdays}}" wx:key="*this">{{item}}</text>
     </view>
     <view class="cal-week" wx:for="{{calWeeks}}" wx:key="index" wx:for-item="week">
-      <view class="cal-cell" wx:for="{{week}}" wx:key="index" wx:for-item="cell">
-        <view class="cal-day {{cell.inMonth ? '' : 'cal-day-out'}} {{cell.isToday ? 'cal-day-today' : ''}}">{{cell.day}}</view>
-        <view wx:if="{{cell.hasActivity}}" class="cal-check cal-check-on {{cell.inMonth ? '' : 'cal-check-out'}}">✓</view>
-        <view wx:else class="cal-check"></view>
+      <view
+        class="cal-cell {{cell.inMonth && cell.hasActivity ? 'cal-cell-tap' : ''}}"
+        wx:for="{{week}}" wx:key="index" wx:for-item="cell"
+        data-date="{{cell.key}}" data-has="{{cell.inMonth && cell.hasActivity}}"
+        bindtap="onCalDayTap"
+      >
+        <view class="cal-day {{cell.inMonth ? '' : 'cal-day-out'}} {{cell.isToday ? 'cal-day-today' : ''}} {{cell.inMonth && cell.level ? 'cal-day-l' + cell.level : ''}}">{{cell.day}}</view>
       </view>
     </view>
-    <view class="cal-caption">{{calCaption}}</view>
+    <view class="cal-caption">{{calCaption}} · 点有色日期看当天轨迹</view>
   </view>
 
   <!-- 模板广告位（后台「广告管理」可开关；持免广告卡时不渲染） -->

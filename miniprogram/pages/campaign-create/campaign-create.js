@@ -16,6 +16,7 @@ const { slashDate } = require('../../utils/campaign.js');
 const api = require('../../services/api');
 const { ensureLogin } = require('../../utils/login-gate');
 const { markHomeDirty } = require('../../utils/home-refresh');
+const { setPageTitle } = require('../../utils/nav-title');
 
 const MAX_TITLE = 30;
 const MAX_DESC = 120;
@@ -137,7 +138,7 @@ Page({
     const id = (options && options.id) || '';
     if (id) {
       this.setData({ isEdit: true, editId: id });
-      wx.setNavigationBarTitle({ title: '编辑活动' });
+      setPageTitle(this, '编辑活动');
       this.loadForEdit(id);
       return;
     }

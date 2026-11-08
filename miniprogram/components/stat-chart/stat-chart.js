@@ -25,6 +25,8 @@ Component({
     emptyText: { type: String, value: '暂无数据' },
     /** 一个 X 标签的占位像素（默认按 MM/DD；YYYY/MM 这类长标签由调用方调大） */
     labelSlot: { type: Number, value: 28 },
+    /** 点柱看数：点某桶画数据气泡，再点收起（默认关，按页面需要打开） */
+    showTip: { type: Boolean, value: false },
   },
 
   data: {
@@ -33,6 +35,7 @@ Component({
 
   observers: {
     'data, type, series, labels': function () {
+      this._tipIndex = null; // 数据换了，旧的选中桶作废
       this.renderChart();
     },
   },
@@ -58,8 +61,8 @@ Component({
     axisLabels(values) {
       const maxV = Math.max(...values);
       const minV = Math.min(...values);
-      // 步数是可加量，Y 轴必须 0 基线；否则日均 8k 的柱看起来像每天只差几百
-      if (this.data && this.data.unit === 'step') {
+      // 步数/分组柱（计数可加量）Y 轴必须 0 基线；否则日均 8k 的柱看起来像每天只差几百
+      if ((this.data && this.data.unit === 'step') || (this.data && this.data.type === 'grouped-bar')) {
         return [maxV, (maxV * 3) / 4, maxV / 2, maxV / 4, 0].map((v) => Math.round(v));
       }
       if (maxV === minV) {
@@ -103,9 +106,117 @@ Component({
       return out;
     },
 
+    /** 触摸 x（canvas 内坐标）→ 桶下标；绘图区外返回 null */
+    hitSlotIndex(x, padLeft, chartW, n) {
+      const count = Number(n) || 0;
+      const w = Number(chartW) || 0;
+      if (count <= 0 || w <= 0) return null;
+      if (x < padLeft || x > padLeft + w) return null;
+      return Math.min(count - 1, Math.floor((x - padLeft) / (w / count)));
+    },
+
+    /** 气泡水平收边：先按锚点居中，再夹在画布内（左右各留 4px） */
+    clampTipX(anchorX, w, canvasW) {
+      return Math.max(4, Math.min(anchorX - w / 2, canvasW - w - 4));
+    },
+
+    /** 气泡数值：中文口径（≥1 万用万，其它千分位） */
+    tipValue(v) {
+      const n = Number(v) || 0;
+      if (n >= 10000) return `${Math.round(n / 1000) / 10}万`;
+      return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    },
+
+    /** 点柱看数：命中/收起（showTip 关时不响应） */
+    onChartTap(e) {
+      if (!this.data.showTip || !this._layout) return;
+      const pageX = (e.detail && e.detail.x) || 0;
+      wx.createSelectorQuery()
+        .in(this)
+        .select('#chartCanvas')
+        .boundingClientRect((rect) => {
+          if (!rect) return;
+          const { padLeft, chartW, n } = this._layout;
+          const idx = this.hitSlotIndex(pageX - rect.left, padLeft, chartW, n);
+          this._tipIndex = idx === this._tipIndex ? null : idx;
+          this.renderChart();
+        })
+        .exec();
+    },
+
+    /** 选中桶底纹（画在柱子之前，不遮柱） */
+    drawTipBand(ctx, axis, slotW, idx) {
+      if (idx == null || !axis) return;
+      ctx.fillStyle = 'rgba(43,108,246,0.06)';
+      ctx.fillRect(axis.padLeft + idx * slotW, axis.padTop, slotW, axis.chartH);
+    },
+
+    /** 单系列气泡数值：带单位（km/分钟/步），其它计数走中文口径 */
+    tipText(v) {
+      if (this.data.unit === 'km') return `${Number(v).toFixed(1)} km`;
+      if (this.data.unit === 'min') return `${Math.round(v)} 分钟`;
+      if (this.data.unit === 'step') return `${this.tipValue(v)} 步`;
+      return this.tipValue(v);
+    },
+
+    /** 数据气泡：白底圆角 + 每行文本（系列行带色块），左右收边 */
+    drawTip(ctx, lines, anchorX, width) {
+      ctx.font = '10px sans-serif';
+      const maxW = Math.max(...lines.map((l) => ctx.measureText(l.text).width + (l.color ? 12 : 0)));
+      const w = maxW + 20;
+      const h = lines.length * 16 + 10;
+      const x = this.clampTipX(anchorX, w, width);
+      const y = 2;
+      ctx.fillStyle = 'rgba(255,255,255,0.97)';
+      ctx.strokeStyle = '#e8e8e8';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(x, y, w, h, 6);
+      else ctx.rect(x, y, w, h);
+      ctx.fill();
+      ctx.stroke();
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      lines.forEach((l, i) => {
+        const ty = y + 10 + i * 16;
+        let tx = x + 10;
+        if (l.color) {
+          ctx.fillStyle = l.color;
+          ctx.fillRect(tx, ty - 4, 8, 8);
+          tx += 12;
+        }
+        ctx.fillStyle = i === 0 ? '#1f2329' : '#5b6474';
+        ctx.fillText(l.text, tx, ty);
+      });
+    },
+
     renderChart() {
       if (this.data.type === 'multi-line') {
         this.renderMultiLine();
+        return;
+      }
+      if (this.data.type === 'grouped-bar') {
+        const series = this.data.series || [];
+        const values = series.reduce((a, s) => a.concat(s.values || []), []);
+        const hasData = values.some((v) => v > 0);
+        this.setData({ hasData });
+        if (!hasData || values.length === 0) return;
+        wx.createSelectorQuery()
+          .in(this)
+          .select('#chartCanvas')
+          .fields({ node: true, size: true })
+          .exec((res) => {
+            if (!res || !res[0] || !res[0].node) return;
+            const canvas = res[0].node;
+            const { width } = res[0];
+            const ctx = canvas.getContext('2d');
+            const dpr = wx.getWindowInfo ? wx.getWindowInfo().pixelRatio : 2;
+            canvas.width = width * dpr;
+            canvas.height = this.data.height * dpr;
+            ctx.scale(dpr, dpr);
+            ctx.clearRect(0, 0, width, this.data.height);
+            this.drawGroupedBar(ctx, series, this.data.labels || [], width);
+          });
         return;
       }
       const data = this.data.data || [];
@@ -186,30 +297,11 @@ Component({
       const slotW = axis.chartW / n;
       const barW = Math.min(16, slotW * 0.55);
       const norm = this.normalize(values);
+      this._layout = { padLeft: axis.padLeft, chartW: axis.chartW, n };
 
       // X 标签：与两条折线共用同一套抽稀（含「末格挤掉太近的上一格」）
-      ctx.font = '10px sans-serif';
-      ctx.fillStyle = '#999';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'top';
-      const drawIdx = new Set(this.labelIndices(n, axis.chartW));
-      values.forEach((_, i) => {
-        if (!drawIdx.has(i)) return;
-        const x = axis.padLeft + i * slotW + slotW / 2;
-        const label = String(data[i].label);
-        // 首尾 label 用边缘对齐防裁剪
-        if (i === 0) {
-          ctx.textAlign = 'left';
-          ctx.fillText(label, axis.padLeft, H - axis.padBottom + 8);
-          ctx.textAlign = 'center';
-        } else if (i === n - 1) {
-          ctx.textAlign = 'right';
-          ctx.fillText(label, width - axis.padRight, H - axis.padBottom + 8);
-          ctx.textAlign = 'center';
-        } else {
-          ctx.fillText(label, x, H - axis.padBottom + 8);
-        }
-      });
+      this.drawXLabels(ctx, data.map((d) => d.label), width, axis);
+      this.drawTipBand(ctx, axis, slotW, this._tipIndex);
 
       // 柱子
       values.forEach((v, i) => {
@@ -240,6 +332,95 @@ Component({
       ctx.fill();
       ctx.fillStyle = '#1f2329';
       ctx.fillText(text, bx, by);
+
+      if (this._tipIndex != null && data[this._tipIndex]) {
+        this.drawTip(
+          ctx,
+          [
+            { text: String(data[this._tipIndex].label) },
+            { text: this.tipText(values[this._tipIndex]), color: this.data.color },
+          ],
+          axis.padLeft + this._tipIndex * slotW + slotW / 2,
+          width,
+        );
+      }
+    },
+
+    /** X 标签抽稀绘制（首尾贴边防裁剪），bar/grouped-bar 共用 */
+    drawXLabels(ctx, labels, width, axis) {
+      const H = this.data.height;
+      const n = labels.length;
+      const slotW = axis.chartW / n;
+      ctx.font = '10px sans-serif';
+      ctx.fillStyle = '#999';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      const drawIdx = new Set(this.labelIndices(n, axis.chartW));
+      labels.forEach((label, i) => {
+        if (!drawIdx.has(i)) return;
+        const x = axis.padLeft + i * slotW + slotW / 2;
+        if (i === 0) {
+          ctx.textAlign = 'left';
+          ctx.fillText(String(label), axis.padLeft, H - axis.padBottom + 8);
+          ctx.textAlign = 'center';
+        } else if (i === n - 1) {
+          ctx.textAlign = 'right';
+          ctx.fillText(String(label), width - axis.padRight, H - axis.padBottom + 8);
+          ctx.textAlign = 'center';
+        } else {
+          ctx.fillText(String(label), x, H - axis.padBottom + 8);
+        }
+      });
+    },
+
+    /** 分组柱布局：每桶 s 根柱占桶宽 70%，均分不重叠；返回相对绘图区左缘的 x/w */
+    groupedBarLayout(n, s, chartW) {
+      const count = Math.max(1, Number(n) || 0);
+      const seriesCount = Math.max(1, Number(s) || 1);
+      const slotW = chartW / count;
+      const groupW = slotW * 0.7;
+      const barW = groupW / seriesCount;
+      const rects = [];
+      for (let i = 0; i < count; i++) {
+        const x0 = i * slotW + (slotW - groupW) / 2;
+        for (let j = 0; j < seriesCount; j++) rects.push({ i, j, x: x0 + j * barW, w: barW });
+      }
+      return rects;
+    },
+
+    /** 三系列分组柱（运营趋势）：全局 max 归一、0 基线；图例在 wxml 行 */
+    drawGroupedBar(ctx, series, labels, width) {
+      const H = this.data.height;
+      const values = series.reduce((a, s) => a.concat(s.values || []), []);
+      const axis = this.drawAxis(ctx, values, width, H);
+      const maxV = axis.maxV || 1;
+      const slotW = axis.chartW / Math.max(1, labels.length);
+      this._layout = { padLeft: axis.padLeft, chartW: axis.chartW, n: labels.length };
+      this.drawXLabels(ctx, labels, width, axis);
+      this.drawTipBand(ctx, axis, slotW, this._tipIndex);
+      const rects = this.groupedBarLayout(labels.length, series.length, axis.chartW);
+      rects.forEach((r) => {
+        const v = Number((series[r.j].values || [])[r.i]) || 0;
+        const h = (v / maxV) * axis.chartH;
+        ctx.fillStyle = series[r.j].color;
+        ctx.globalAlpha = v > 0 ? 0.9 : 0.15;
+        ctx.fillRect(axis.padLeft + r.x, H - axis.padBottom - h, r.w, h);
+        ctx.globalAlpha = 1;
+      });
+      if (this._tipIndex != null && labels[this._tipIndex] != null) {
+        this.drawTip(
+          ctx,
+          [
+            { text: String(labels[this._tipIndex]) },
+            ...series.map((s) => ({
+              text: `${s.name} ${this.tipValue((s.values || [])[this._tipIndex])}`,
+              color: s.color,
+            })),
+          ],
+          axis.padLeft + this._tipIndex * slotW + slotW / 2,
+          width,
+        );
+      }
     },
 
     /** 折线图（Y 轴基于数据 min~max 范围，曲线占满绘图区） */

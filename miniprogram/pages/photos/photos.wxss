@@ -125,6 +125,7 @@
   height: 100%;
   display: block;
 }
+/* 未选=空心圈（避免实心圆被误读为已选）；已选=蓝底对勾 */
 .tick {
   position: absolute;
   right: 8rpx;
@@ -132,12 +133,16 @@
   width: 36rpx;
   height: 36rpx;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.35);
+  border: 3rpx solid #fff;
+  background: rgba(0, 0, 0, 0.15);
   color: #fff;
   font-size: 24rpx;
-  line-height: 36rpx;
+  line-height: 30rpx;
   text-align: center;
+  box-sizing: border-box;
 }
 .cell.on .tick {
+  border-color: #2b6cf6;
   background: #2b6cf6;
+  line-height: 30rpx;
 }

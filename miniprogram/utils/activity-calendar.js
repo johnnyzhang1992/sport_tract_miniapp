@@ -29,14 +29,16 @@ function dateKey(year, month, day) {
  * @param {number} year
  * @param {number} month 1-12
  * @param {string} today 'YYYY-MM-DD'（缺省取系统当天，仅用于标记今天）
- * @returns {{weeks: Array<Array<{day:number, inMonth:boolean, hasActivity:boolean, isToday:boolean}>>, activeDays:number}}
+ * @returns {{weeks: Array<Array<{day:number, key:string, inMonth:boolean, hasActivity:boolean, count:number, level:number, isToday:boolean}>>, activeDays:number}}
+ * level=0 无运动 / 1 浅 / 2 中 / 3 深，供页面做热度着色（取代旧的打勾）。
  */
 function buildMonthGrid(rows, year, month, today) {
-  const active = new Set(
+  const countByDate = new Map(
     (Array.isArray(rows) ? rows : [])
       .filter((r) => r && Number(r.count) > 0)
-      .map((r) => String(r.date)),
+      .map((r) => [String(r.date), Number(r.count)]),
   );
+  const active = new Set(countByDate.keys());
   const todayKey = today || new Date().toISOString().slice(0, 10);
 
   const total = daysInMonth(year, month);
@@ -72,16 +74,33 @@ function buildMonthGrid(rows, year, month, today) {
 
     const key = dateKey(cellYear, cellMonth, cellDay);
     const hasActivity = active.has(key);
+    const count = countByDate.get(key) || 0;
     if (inMonth && hasActivity) activeDays += 1;
     if (i % 7 === 0) weeks.push([]);
     weeks[weeks.length - 1].push({
       day: cellDay,
+      key,
       inMonth,
       hasActivity,
+      count,
+      // 热度档：1 次浅、2 次中、≥3 次深（无运动=0）
+      level: hasActivity ? (count >= 3 ? 3 : count === 2 ? 2 : 1) : 0,
       isToday: inMonth && key === todayKey,
     });
   }
   return { weeks, activeDays };
+}
+
+/** 近 365 天里最近一个有运动的月份；没有则返回 null（调用方回落当前月） */
+function latestActiveMonth(rows) {
+  const list = Array.isArray(rows) ? rows : [];
+  for (let i = list.length - 1; i >= 0; i--) {
+    if (list[i] && Number(list[i].count) > 0) {
+      const d = String(list[i].date || '');
+      if (/^\d{4}-\d{2}/.test(d)) return { year: Number(d.slice(0, 4)), month: Number(d.slice(5, 7)) };
+    }
+  }
+  return null;
 }
 
 /** 往前/后挪一个月（跨年自动进位），返回 {year, month} */
@@ -95,4 +114,4 @@ function compareMonth(a, b) {
   return a.year * 12 + a.month - (b.year * 12 + b.month);
 }
 
-module.exports = { buildMonthGrid, shiftMonth, compareMonth, WEEKDAYS };
+module.exports = { buildMonthGrid, shiftMonth, compareMonth, latestActiveMonth, WEEKDAYS };

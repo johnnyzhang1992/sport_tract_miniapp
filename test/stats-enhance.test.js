@@ -194,7 +194,9 @@ test('TS6 运动日历卡：三格数字在上、月历在下，可翻月、7 �
   assert.match(wxml, /bindtap="onCalPrev"/, '上一月');
   assert.match(wxml, /bindtap="onCalNext"/, '下一月');
   assert.match(wxml, /wx:for="\{\{calWeekdays\}\}"/, '周标题来自数据（7 列）');
-  assert.match(wxml, /wx:if="\{\{cell\.hasActivity\}\}"[^>]*class="cal-check/, '有运动的天打勾');
+  assert.match(wxml, /cal-day-l' \+ cell\.level/, '活跃日按热度着色');
+  assert.match(wxml, /bindtap="onCalDayTap"/, '点日期下钻当天轨迹');
+  assert.ok(!/class="cal-check/.test(wxml), '不再用打勾');
 
   const js = fs.readFileSync(path.join(__dirname, '../miniprogram/pages/stats/stats.js'), 'utf8');
   assert.match(js, /const \{[^}]*buildMonthGrid[^}]*\} = require\('\.\.\/\.\.\/utils\/activity-calendar'\)/, '用共享日历纯函数');

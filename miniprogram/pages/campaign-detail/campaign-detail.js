@@ -33,6 +33,7 @@ const { markHomeDirty } = require('../../utils/home-refresh');
 const { statusLabel, visibilityLabel, statusTagClass, fmtRange, joinCta, fmtPanel } = require('../../utils/campaign.js');
 const { initialOf, formatThousands } = require('../../utils/format.js');
 const { getWeRunAuthState, openWeRunSetting, syncWeRunSteps } = require('../../utils/werun');
+const { setPageTitle } = require('../../utils/nav-title');
 
 /** 成员昵称展示上限（字）；超出截断补「...」——排行行里昵称后面还跟「移出」按钮与距离，不能任其撑满 */
 const NAME_MAX = 5;
@@ -682,7 +683,7 @@ Page({
       : [];
     const ongoing = detail.status === 'active' || detail.status === 'upcoming';
     // 导航栏标题＝当前活动名（json 里的「活动详情」只作首屏兜底，详情落地后改写）
-    if (detail.title) wx.setNavigationBarTitle({ title: detail.title });
+    if (detail.title) setPageTitle(this, detail.title);
     this._memberPage = 1; // 成员分页页码只在 JS 用，不进 data
     this._myStats = isMember ? detail.myPanel || null : null;
     this.setData({

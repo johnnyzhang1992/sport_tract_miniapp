@@ -8,7 +8,7 @@ const { formatDuration, formatPaceParts, formatDurationStat, formatThousands, fo
 const { calcDiff } = require('../../utils/diff');
 const { buildTrophies } = require('../../utils/trophy');
 const { buildMetricCards, buildTrendChart, ARROW_ICON } = require('../../utils/stats-metrics');
-const { buildMonthGrid, shiftMonth, compareMonth, WEEKDAYS } = require('../../utils/activity-calendar');
+const { buildMonthGrid, shiftMonth, compareMonth, latestActiveMonth, WEEKDAYS } = require('../../utils/activity-calendar');
 const { bjDate } = require('../../utils/bj-date');
 const { buildStepRecords } = require('../../utils/step-report-view');
 
@@ -119,10 +119,14 @@ Page({
             avgText: formatCompactCn(steps.overview.avgStep),
           }
         : null;
+      // 首屏默认定位到最近有运动的月份（当前月可能整月无记录显得空）；翻过月则保留用户选择
+      const initCal = this.data.calYear
+        ? { year: this.data.calYear, month: this.data.calMonth }
+        : this.defaultCalendarMonth();
       this.setData({
         overview: decorated,
         metricCards: daily ? buildMetricCards(daily.data) : [],
-        ...this.applyCalendar(this.data.calYear || this.currentMonth().year, this.data.calMonth || this.currentMonth().month),
+        ...this.applyCalendar(initCal.year, initCal.month),
         compare: {
           week: this.decorateCompare(calcDiff(overview.week.distance || 0, overview.prevWeek ? overview.prevWeek.distance : 0), '上周'),
           month: this.decorateCompare(calcDiff(overview.month.distance || 0, overview.prevMonth ? overview.prevMonth.distance : 0), '上月'),
@@ -196,10 +200,28 @@ Page({
     }
   },
 
-  /** 当前月（东八区）：日历默认停在这里，也是「下一月」箭头的上限 */
+  /** 当前月（东八区）：「下一月」箭头的上限 */
   currentMonth() {
     const d = bjDate(Date.now());
     return { year: Number(String(d).slice(0, 4)), month: Number(String(d).slice(5, 7)) };
+  },
+
+  /** 首屏日历默认月：最近有运动的月份；没有数据回落当前月 */
+  defaultCalendarMonth() {
+    return latestActiveMonth(this._dailyRows) || this.currentMonth();
+  },
+
+  /** 点日历某天 → 轨迹页看当天记录（复用报告页日期下钻的 globalData 通道） */
+  onCalDayTap(e) {
+    const { date, has } = e.currentTarget.dataset;
+    if (!date || !has) return;
+    const from = Date.parse(`${date}T00:00:00+08:00`);
+    getApp().globalData.pendingTracksRange = {
+      from,
+      to: from + 86400000,
+      label: date.slice(5).replace('-', '/'),
+    };
+    wx.switchTab({ url: '/pages/tracks/tracks' });
   },
 
   /** 近 365 天里最早能翻到的月份（再往前没有数据） */

@@ -7,6 +7,8 @@
  * 5) 支付：delivered 才写免广告缓存并 toast「已开通」，cancelled 不提示，pending 用自己的话；
  * 6) 连点只下一单；加载失败显示重试，重试会再发请求；
  * 7) 下拉刷新：游客不发请求；登录后静默重拉（不清屏），失败保留内容只 toast，spinner 必收。
+ * 8) 进页防闪：成功拉取落盘缓存（带 userId 防串）；再进页先渲染缓存不切加载态，静默重拉；
+ *    串用户/token 解不出不画缓存；进页静默失败保留内容不 toast。
  * 桩：wx / Page 就地 stub，services/api、services/storage、utils/member-pay、utils/ad-free、utils/login-gate 用 require.cache 注入。
  * 运行：node --test test/member-page.test.js；依赖：仅 node 内置模块。
  */
@@ -52,6 +54,9 @@ let toasts = [];
 let loginCalls = 0;
 let token = { accessToken: 't' };
 let sysInfo = { platform: 'android', SDKVersion: '3.0.0', version: '8.0.50' };
+let storageMap = {};
+/** 与 api plugins/jwt.ts 同构的假 access token（payload.userId），供缓存防串解析 */
+const makeToken = (uid) => 'h.' + Buffer.from(JSON.stringify({ userId: uid, type: 'access' })).toString('base64') + '.s';
 
 const fakeApi = {
   get(p) {
@@ -110,6 +115,9 @@ global.wx = {
   showToast: (o) => toasts.push(o && o.title),
   showModal: (o) => modals.push(o),
   requestSubscribeMessage: (o) => subscribeRespond(o),
+  getStorageSync: (k) => (k in storageMap ? storageMap[k] : ''),
+  setStorageSync: (k, v) => { storageMap[k] = v; },
+  base64ToArrayBuffer: (b64) => Uint8Array.from(Buffer.from(b64, 'base64')).buffer,
 };
 
 let pageDef = null;
@@ -149,7 +157,8 @@ function reset(over) {
   adFreeWrites = [];
   toasts = [];
   loginCalls = 0;
-  token = over && over.loggedOut ? null : { accessToken: 't' };
+  storageMap = {};
+  token = over && over.loggedOut ? null : { accessToken: makeToken('u1') };
   sysInfo = (over && over.sysInfo) || { platform: 'android', SDKVersion: '3.0.0', version: '8.0.50' };
   productsRespond = () => Promise.resolve(fixture((over && over.fixture) || {}));
   reminderRespond = () => Promise.resolve({ enabled: true, templateId: 'TPL_TEST', daysBefore: 3, subscribed: false });
@@ -472,4 +481,63 @@ test('MP22 支付成功：弹开启提醒；点开启走订阅并上报', async 
   await tick();
   assert.equal(grantCalls.length, 1);
   assert.equal(p.data.reminder.subscribed, true);
+});
+
+/* ------------------------- 进页防闪（缓存先渲染） ------------------------- */
+
+const CACHE_KEY = 'memberCenterCache_v1';
+
+test('MP23 进页防闪：成功落盘缓存；再进页先渲染缓存不切加载态，仍静默重拉', async () => {
+  reset();
+  const p1 = boot();
+  await tick();
+  assert.equal(p1.data.cards.length, 2);
+  const cached = storageMap[CACHE_KEY];
+  assert.ok(cached && cached.payload && cached.userId === 'u1', '成功拉取后落盘缓存，带 userId 防串用户');
+
+  const callsBefore = apiCalls.length;
+  productsRespond = () => new Promise(() => {}); // 重拉挂起：观察进页瞬间的屏上状态
+  const p2 = boot();
+  assert.equal(p2.data.loading, false, '有缓存进页瞬间不切加载态（旧实现会先 setData loading:true）');
+  assert.equal(p2.data.cards.length, 2, '缓存直接渲染套餐卡');
+  assert.equal(p2.data.heroTitle, '会员月卡', '页头标题也从缓存渲染，不闪空白');
+  assert.equal(p2.data.loggedIn, true);
+  assert.ok(apiCalls.length > callsBefore, '渲染缓存后仍发静默重拉');
+});
+
+test('MP24 串用户防护：缓存 userId 与当前用户不一致不画缓存', async () => {
+  reset();
+  const p1 = boot();
+  await tick();
+  storageMap[CACHE_KEY].userId = 'someone_else';
+  productsRespond = () => new Promise(() => {});
+  const p2 = boot();
+  assert.equal(p2.data.loading, true, '别人的缓存不渲染，走正常加载态');
+  assert.equal(p2.data.cards.length, 0);
+});
+
+test('MP25 token 解不出 userId：不画缓存，走正常加载', async () => {
+  reset();
+  const p1 = boot();
+  await tick();
+  storageMap[CACHE_KEY].userId = null; // 历史脏缓存（旧版 userInfo 竞态写下的 null）
+  token = { accessToken: 'not-a-jwt' };
+  productsRespond = () => new Promise(() => {});
+  const p2 = boot();
+  assert.equal(p2.data.loading, true);
+  assert.equal(p2.data.cards.length, 0);
+});
+
+test('MP26 缓存进页后静默重拉失败：保留内容、不转错误态、不 toast', async () => {
+  reset();
+  const p1 = boot();
+  await tick();
+  productsRespond = () => Promise.reject(new Error('network'));
+  const p2 = boot();
+  await tick();
+  await tick();
+  assert.equal(p2.data.cards.length, 2, '重拉失败不清屏');
+  assert.equal(p2.data.failed, false);
+  assert.equal(p2.data.loading, false);
+  assert.deepEqual(toasts, [], '进页静默失败不弹 toast（下拉刷新才弹）');
 });

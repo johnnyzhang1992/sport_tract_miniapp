@@ -1,17 +1,34 @@
 <view class="container">
-  <!-- 默认运动类型 -->
+  <!-- 运动类型显示与排序（纯前端，即时生效）：拖 ≡ 调整首页顺序，开关控制是否在首页展示 -->
   <view class="card">
-    <view class="field-label">默认运动类型</view>
-    <view class="type-grid">
+    <view class="field-label">运动类型显示</view>
+    <view class="sport-type-desc">散步/跑步/徒步/骑行默认展示，其它四个默认关闭，打开后显示在首页「运动类型」；拖动 ≡ 调整首页顺序。</view>
+    <view class="sport-type-list">
       <view
-        wx:for="{{activityTypes}}"
+        wx:for="{{sportTypeRows}}"
         wx:key="type"
-        class="type-item {{settings.defaultType === item.type ? 'type-item-active' : ''}}"
-        data-type="{{item.type}}"
-        bindtap="onDefaultTypeChange"
+        class="sport-type-row {{dragIndex === index ? 'sport-type-row-dragging' : ''}}"
+        style="{{dragIndex === index ? 'transform: translateY(' + dragOffset + 'px);' : ''}}"
       >
-        <image class="type-icon" src="{{item.iconImg}}" mode="aspectFit"></image>
-        <view class="type-label">{{item.label}}</view>
+        <!-- 拖拽热区=手柄+图标+名称整块（整行高），开关独立不触发拖拽 -->
+        <view
+          class="sport-type-drag"
+          data-index="{{index}}"
+          catchtouchstart="onDragStart"
+          catchtouchmove="onDragMove"
+          catchtouchend="onDragEnd"
+          catchtouchcancel="onDragEnd"
+        >
+          <view class="sport-type-handle">≡</view>
+          <image class="sport-type-icon" src="{{item.iconImg}}" mode="aspectFit" />
+          <view class="sport-type-label {{item.visible ? '' : 'sport-type-label-off'}}">{{item.label}}</view>
+        </view>
+        <t-switch
+          size="small"
+          value="{{item.visible}}"
+          data-type="{{item.type}}"
+          bind:change="onSportTypeToggle"
+        />
       </view>
     </view>
   </view>

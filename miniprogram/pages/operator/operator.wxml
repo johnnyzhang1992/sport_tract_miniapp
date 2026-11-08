@@ -34,6 +34,33 @@
           </view>
         </view>
 
+        <!-- 趋势：范围三档 + 天/周粒度共享；用户与登录三系列分组柱 + 轨迹柱 -->
+        <view class="card trend-card">
+          <view class="chip-row">
+            <view
+              wx:for="{{ranges}}" wx:key="key"
+              class="chip {{range === item.key ? 'chip-on' : ''}}"
+              data-key="{{item.key}}" bindtap="onRange"
+            >{{item.label}}</view>
+          </view>
+          <view class="chip-row">
+            <view
+              wx:for="{{granOptions}}" wx:key="key"
+              class="chip chip-sm {{granularity === item.key ? 'chip-on' : ''}} {{item.disabled ? 'chip-off' : ''}}"
+              data-key="{{item.key}}" data-disabled="{{item.disabled}}" bindtap="onGran"
+            >{{item.label}}</view>
+          </view>
+
+          <view wx:if="{{trendLoading && !userChart}}" class="tip">加载中…</view>
+          <view wx:elif="{{trendFailed}}" class="tip tap" bindtap="onRetryTrend">趋势加载失败，点击重试</view>
+          <block wx:else>
+            <view class="chart-title">用户与登录</view>
+            <stat-chart type="grouped-bar" series="{{userChart.series}}" labels="{{userChart.labels}}" height="{{220}}" show-tip="{{true}}" empty-text="暂无数据" />
+            <view class="chart-title">轨迹</view>
+            <stat-chart type="bar" data="{{trackChart}}" height="{{200}}" show-tip="{{true}}" empty-text="暂无轨迹" />
+          </block>
+        </view>
+
         <view class="back-link" bindtap="goBack">返回</view>
       </block>
     </block>

@@ -10,6 +10,8 @@ function formatDuration(seconds) {
 const config = require('../../config/index');
 const api = require('../../services/api');
 const { avatarStack } = require('../../utils/campaign.js');
+// 首页运动类型显示开关（设置页可开关非默认类型，纯前端控制）
+const sportDisplay = require('../../utils/sport-display');
 
 // 首页概览本地缓存 key（先展示旧数据避免空白，接口返回后刷新）
 const OVERVIEW_CACHE_KEY = 'indexOverviewCache_v1';
@@ -61,9 +63,16 @@ Page({
   },
 
   onLoad() {
+    this.applySportDisplay();
+    // 设置页开关是即时生效的存储写；本页活着时收到变化就原地刷网格
+    this._offSportDisplay = sportDisplay.onChange(() => this.applySportDisplay());
     this.setupUpdateCheck();
     // 收藏引导：等首屏渲染稳定后再弹，不打架
     setTimeout(() => this.maybeShowFavGuide(), 800);
+  },
+
+  onUnload() {
+    if (this._offSportDisplay) this._offSportDisplay();
   },
 
   /**
@@ -103,8 +112,17 @@ Page({
     } catch (e) {}
   },
 
+  /** 运动类型网格 = config 全集按设置页开关过滤后的子集（常显四类 + 用户打开的类型） */
+  applySportDisplay() {
+    this.setData({ activityTypes: sportDisplay.visibleTypes() });
+  },
+
   onShow() {
-    this.applyDefaultType();
+    // 设置页可能改过运动类型开关：进页先重算网格，再把已不可见的选中类型回落到跑步
+    this.applySportDisplay();
+    if (!sportDisplay.isTypeVisible(this.data.selectedType)) {
+      this.setData({ selectedType: 'running' });
+    }
     // 节流：60s 内切 tab 回来不再全量重拉；但登录态变化（游客登录 / 退出）与 homeDirty
     // （刚跑完、刚加入/退出活动、刚删除轨迹）必须越过 TTL，否则用户会看到旧数字。
     const app = getApp();
@@ -291,29 +309,6 @@ Page({
     wx.navigateTo({
       url: `/pages/record/record?resume=1&activityId=${o.activityId}&type=${o.type || 'running'}`,
     });
-  },
-
-  /**
-   * 应用设置的默认运动类型（设置页保存到后端用户 settings）。
-   * 不再为此单独打 /users/me：登录响应本来就下发 user.settings，设置页保存后也会写回 globalData；
-   * 首页每次 onShow 多打一个接口只为读一个字段不值得。
-   */
-  async applyDefaultType() {
-    try {
-      const app = getApp();
-      // 已注册用户（本地有 token）静默恢复登录；游客不自动登录
-      if (app.hasSession() && !app.globalData.loggedIn) {
-        await app.login();
-      }
-      if (!app.globalData.loggedIn) return;
-      const user = app.globalData.userInfo || {};
-      const dt = user.settings && user.settings.defaultType;
-      if (dt && config.ACTIVITY_TYPES.some((t) => t.type === dt)) {
-        this.setData({ selectedType: dt });
-      }
-    } catch (e) {
-      console.error('读取默认运动类型失败', e);
-    }
   },
 
   onPullDownRefresh() {

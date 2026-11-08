@@ -10,6 +10,26 @@ const { ensureLogin } = require('../../utils/login-gate');
  * 会员中心（spec §6.1 / §8）。
  * 文案与数据全部来自 /member/products：价格、日均、权益四行、状态行、关闭态说明都不在端上拼。
  */
+const CACHE_KEY = 'memberCenterCache_v1';
+
+/** 缓存按 userId 校验防串用户。静默登录是异步的，userInfo 可能晚于首个请求就绪，
+ *  故同步解 accessToken 的 JWT payload（userId claim，见 api plugins/jwt.ts）；解不出不画缓存 */
+function currentUserId() {
+  const t = storage.getToken();
+  const jwt = t && t.accessToken;
+  if (!jwt) return null;
+  try {
+    let b64 = String(jwt).split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    while (b64.length % 4) b64 += '=';
+    const bytes = new Uint8Array(wx.base64ToArrayBuffer(b64));
+    let s = '';
+    for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+    const payload = JSON.parse(s);
+    return payload && payload.userId ? String(payload.userId) : null;
+  } catch (e) {
+    return null;
+  }
+}
 Page({
   data: {
     loading: true,
@@ -43,7 +63,25 @@ Page({
       this.setData({ loading: false, failed: false });
       return;
     }
-    this.syncData();
+    // 防闪：有同用户缓存先渲染缓存（不切加载态），再静默重拉；无缓存才走加载态
+    const painted = this.hydrateFromCache() || !!this._painted;
+    this.syncData({ silent: painted, quiet: true });
+  },
+
+  /** 进页瞬间用上次成功响应渲染；userId 不一致或 userInfo 未就绪不画 */
+  hydrateFromCache() {
+    if (this._painted) return true;
+    const uid = currentUserId();
+    if (!uid) return false;
+    let c = null;
+    try {
+      c = wx.getStorageSync(CACHE_KEY);
+    } catch (e) {
+      return false;
+    }
+    if (!c || !c.payload || c.userId !== uid) return false;
+    this.applyProducts(c.payload);
+    return true;
   },
 
   /** 下拉刷新：静默重拉，保留屏上内容不闪加载态；游客直接收 spinner */
@@ -61,49 +99,16 @@ Page({
 
   async syncData(opts) {
     const silent = !!(opts && opts.silent);
+    const quiet = !!(opts && opts.quiet);
     if (!silent) this.setData({ loading: true, failed: false });
     try {
       const d = await api.get('/member/products');
-      let sys = {};
+      this.applyProducts(d);
       try {
-        sys = wx.getSystemInfoSync();
+        wx.setStorageSync(CACHE_KEY, { userId: currentUserId(), cachedAt: Date.now(), payload: d });
       } catch (e) {
-        sys = {};
+        // 存储失败不影响主流程
       }
-      const cards = buildPlanCards(d && d.items);
-      // 刷新时保留原选择（档位还在就继续选它），首次进页默认选第一档
-      const selected = cards.find((c) => c.key === this.data.selectedKey) || cards[0] || null;
-      const statusText = (d && d.statusText) || '';
-      const status = splitStatusText(statusText);
-      this.setData({
-        loading: false,
-        failed: false,
-        enabled: !!(d && d.enabled),
-        operator: !!(d && d.operator), // 站内运营者（role=admin）：显示运营中心入口
-        notice: (d && d.notice) || '',
-        statusText,
-        cards,
-        selectedKey: selected ? selected.key : '',
-        selectedPriceText: selected ? selected.priceText : '',
-        heroPerks: selected ? selected.perkLines : [],
-        heroPerksView: buildPerkItems(selected ? selected.perkLines : []),
-        heroTitle: status.title || (selected ? selected.name : ''),
-        heroSub: status.sub,
-        bestValueKey: bestValueKey(cards),
-        entitlements: (d && d.entitlements) || null,
-        photoQuota: (d && d.photoQuota) || null, // 与会员权益同一个请求下发（服务端单一读数）
-        // iOS IAP 已在 MP 后台开通（2026-11-03）：客户端 ≥ 8.0.68（MIN_IOS_CLIENT，spec §2.1）
-        // 才显示付费入口；不达标的老微信仍整块隐藏（问询/退款链路服务端已就绪）
-        showPay: payVisible({
-          enabled: !!(d && d.enabled),
-          platform: sys.platform,
-          sdkVersion: sys.SDKVersion,
-          iosPayReady: sys.platform === 'ios'
-            ? compareVersion(sys.version, MIN_IOS_CLIENT) >= 0
-            : false,
-        }),
-      });
-      if (d && d.entitlements && d.entitlements.adFreeUntil) setAdFreeUntil(d.entitlements.adFreeUntil);
       try {
         const rem = await api.get('/member/reminder');
         if (rem) this.setData({ reminder: rem });
@@ -112,13 +117,58 @@ Page({
       }
     } catch (e) {
       if (silent) {
-        // 下拉刷新失败：屏上内容仍然可用，别整页转错误态
+        // 静默重拉失败：屏上内容仍然可用，别整页转错误态
         this.setData({ loading: false });
-        wx.showToast({ title: (e && e.message) || '刷新失败', icon: 'none' });
+        if (!quiet) wx.showToast({ title: (e && e.message) || '刷新失败', icon: 'none' });
       } else {
         this.setData({ loading: false, failed: true });
       }
     }
+  },
+
+  /** 把 /member/products 响应（或缓存的同构 payload）渲染上屏；缓存与实拉共用同一段视图构建 */
+  applyProducts(d) {
+    let sys = {};
+    try {
+      sys = wx.getSystemInfoSync();
+    } catch (e) {
+      sys = {};
+    }
+    const cards = buildPlanCards(d && d.items);
+    // 刷新时保留原选择（档位还在就继续选它），首次进页默认选第一档
+    const selected = cards.find((c) => c.key === this.data.selectedKey) || cards[0] || null;
+    const statusText = (d && d.statusText) || '';
+    const status = splitStatusText(statusText);
+    this.setData({
+      loading: false,
+      failed: false,
+      enabled: !!(d && d.enabled),
+      operator: !!(d && d.operator), // 站内运营者（role=admin）：显示运营中心入口
+      notice: (d && d.notice) || '',
+      statusText,
+      cards,
+      selectedKey: selected ? selected.key : '',
+      selectedPriceText: selected ? selected.priceText : '',
+      heroPerks: selected ? selected.perkLines : [],
+      heroPerksView: buildPerkItems(selected ? selected.perkLines : []),
+      heroTitle: status.title || (selected ? selected.name : ''),
+      heroSub: status.sub,
+      bestValueKey: bestValueKey(cards),
+      entitlements: (d && d.entitlements) || null,
+      photoQuota: (d && d.photoQuota) || null, // 与会员权益同一个请求下发（服务端单一读数）
+      // iOS IAP 已在 MP 后台开通（2026-11-03）：客户端 ≥ 8.0.68（MIN_IOS_CLIENT，spec §2.1）
+      // 才显示付费入口；不达标的老微信仍整块隐藏（问询/退款链路服务端已就绪）
+      showPay: payVisible({
+        enabled: !!(d && d.enabled),
+        platform: sys.platform,
+        sdkVersion: sys.SDKVersion,
+        iosPayReady: sys.platform === 'ios'
+          ? compareVersion(sys.version, MIN_IOS_CLIENT) >= 0
+          : false,
+      }),
+    });
+    this._painted = true;
+    if (d && d.entitlements && d.entitlements.adFreeUntil) setAdFreeUntil(d.entitlements.adFreeUntil);
   },
 
   /** 套餐行点击：切换选中档位，页头权益行跟着换（无付费入口时只作展示） */

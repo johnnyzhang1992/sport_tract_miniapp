@@ -1,8 +1,31 @@
-.filter-tabs {
+.tabs-wrap {
+  position: relative;
   margin-bottom: 8rpx;
+}
+.filter-tabs {
   /* 顶边与白色导航齐平，只圆下面两角；白底在组件内层，靠 overflow 裁出弧 */
   border-radius: 0 0 16rpx 16rpx;
   overflow: hidden;
+}
+/* 右缘渐隐+箭头：提示类型条可横滑、后面还有更多；不拦截点击 */
+.tabs-fade {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 12rpx;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0), #fff 70%);
+  border-radius: 0 0 16rpx 0;
+  pointer-events: none;
+}
+.tabs-fade-arrow {
+  color: #8a93a6;
+  font-size: 30rpx;
+  line-height: 1;
 }
 
 /* 展示模式切换（列表 / 图片） */

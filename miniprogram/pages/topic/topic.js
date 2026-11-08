@@ -2,6 +2,7 @@
 const api = require('../../services/api');
 const loading = require('../../utils/loading');
 const { markdownToHtml } = require('../../utils/markdown');
+const { setPageTitle } = require('../../utils/nav-title');
 
 Page({
   data: {
@@ -34,7 +35,7 @@ Page({
         },
         loading: false,
       });
-      wx.setNavigationBarTitle({ title: data.title || '专题' });
+      setPageTitle(this, data.title || '专题');
     } catch (e) {
       console.error('加载专题失败', e);
       this.setData({ loading: false, failed: true });

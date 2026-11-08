@@ -65,7 +65,7 @@ test('SS1 首行与首页同四项同顺序，其余四项排下一行，不再�
     const t = m[1].trim();
     if (t) labels.push(t);
   }
-  const expected = ['累计数据', '轨迹', '公里', '点亮省份', '点亮城市', '时长', '爬升 m', '千卡', '运动类型'];
+  const expected = ['累计数据', '轨迹', '公里', '点亮省份', '点亮城市', '时长', '爬升 米', '千卡', '运动类型'];
   assert.deepEqual(labels, expected, '首行四项与首页一致，其余按原相对顺序排下一行');
   assert.equal((block.match(/class="ov-item"/g) || []).length, 8, '首行 4 格 + 次行 4 格');
   assert.ok(!block.includes('活跃天数'), '活跃天数已移到运动日历上方的四张卡');

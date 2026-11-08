@@ -2,6 +2,7 @@
 const api = require('../../services/api');
 const loading = require('../../utils/loading');
 const { bjDateTime } = require('../../utils/bj-date');
+const { setPageTitle } = require('../../utils/nav-title');
 
 Page({
   data: {
@@ -37,7 +38,7 @@ Page({
         failed: false,
         notFound: false,
       });
-      wx.setNavigationBarTitle({ title: categoryText });
+      setPageTitle(this, categoryText);
       this.markRead();
     } catch (e) {
       this.setData({ loading: false, failed: true, notFound: e && e.statusCode === 404 });

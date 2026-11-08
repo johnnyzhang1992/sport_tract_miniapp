@@ -100,3 +100,25 @@
   font-size: 26rpx;
   padding: 32rpx 0;
 }
+
+/* 趋势卡：范围/粒度 chips + 两张图 */
+.chip-row {
+  display: flex;
+  gap: 12rpx;
+  margin-bottom: 16rpx;
+}
+.chip {
+  padding: 8rpx 24rpx;
+  border-radius: 999px;
+  background: #f6f7fb;
+  color: #5b6474;
+  font-size: 24rpx;
+}
+.chip-sm { padding: 4rpx 20rpx; font-size: 22rpx; }
+.chip-on { background: #2b6cf6; color: #fff; }
+.chip-off { color: #c0c6d1; }
+.chart-title {
+  font-size: 26rpx;
+  color: #5b6474;
+  margin: 8rpx 0 12rpx;
+}

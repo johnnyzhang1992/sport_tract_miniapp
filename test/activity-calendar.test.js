@@ -6,7 +6,7 @@
  */
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { buildMonthGrid, shiftMonth, compareMonth, WEEKDAYS } = require('../miniprogram/utils/activity-calendar.js');
+const { buildMonthGrid, shiftMonth, compareMonth, latestActiveMonth, WEEKDAYS } = require('../miniprogram/utils/activity-calendar.js');
 
 const rows = (...days) => days.map(([date, count]) => ({ date, count }));
 
@@ -78,4 +78,25 @@ test('AC6 count 为 0 或缺字段不算运动；空 rows 也不炸', () => {
   const g = buildMonthGrid([{ date: '2026-10-05', count: 0 }, { date: '2026-10-06' }], 2026, 10, '2026-10-01');
   assert.equal(g.activeDays, 0);
   assert.equal(buildMonthGrid(null, 2026, 10, '2026-10-01').activeDays, 0);
+});
+
+test('AC7 热度档与日期 key：1/2/≥3 次分三档；latestActiveMonth 取最近有运动月', () => {
+  const g = buildMonthGrid(
+    rows(['2026-10-01', 1], ['2026-10-02', 2], ['2026-10-03', 5]),
+    2026, 10, '2026-10-01',
+  );
+  const byDay = (d) => g.weeks.flat().find((c) => c.inMonth && c.day === d);
+  assert.equal(byDay(1).level, 1);
+  assert.equal(byDay(2).level, 2);
+  assert.equal(byDay(3).level, 3);
+  assert.equal(byDay(4).level, 0);
+  assert.equal(byDay(1).key, '2026-10-01');
+
+  assert.deepEqual(
+    latestActiveMonth(rows(['2026-08-01', 1], ['2026-10-03', 2], ['2026-11-01', 0])),
+    { year: 2026, month: 10 },
+    '跳过 count=0 的 11 月，取最近有运动的 10 月',
+  );
+  assert.equal(latestActiveMonth([]), null);
+  assert.equal(latestActiveMonth([{ date: '2026-11-01', count: 0 }]), null);
 });
