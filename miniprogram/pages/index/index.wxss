@@ -213,7 +213,8 @@
    icon 与副标题并排在下面。只作用于 .lb-card-stacked——官方专题那圈是全宽卡、
    继续复用 .lb-card 的横排，不能跟着变。 */
 .lb-card-stacked {
-  display: block; /* 覆盖 .lb-card 的 flex，让标题行与下方内容各占一行 */
+  display: flex; /* 覆盖 .lb-card 的 flex 横排：改纵向，标题行在上、内容行撑满剩余高度 */
+  flex-direction: column;
 }
 .lb-card-stacked .lb-title {
   color: #333;
@@ -231,7 +232,8 @@
 }
 .lb-foot {
   display: flex;
-  align-items: center; /* icon 与两行副标题垂直居中 */
+  flex: 1; /* 占满标题行以下的剩余高度（duo-row 两卡等高时与右卡对齐） */
+  align-items: center; /* 左侧图标在撑满后的全高内垂直居中 */
   gap: 20rpx;
   margin-top: 10rpx;
 }
