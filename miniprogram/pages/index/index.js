@@ -47,6 +47,7 @@ Page({
     loading: false,
     ongoingActivity: null, // 进行中（已暂停）运动入口
     lbSummary: null, // 运动榜摘要（卡片副标题）
+    stepsSummary: null, // 微信步数榜摘要（右侧卡片：今日排名/步数；游客回落参与人数）
     topics: [], // 生效中的官方专题（首页入口）
     notice: null, // 首页单行通知（{id,title}；null=不渲染）
     noticeDot: false, // 红点：登录用户才画
@@ -127,12 +128,13 @@ Page({
       this._lastAutoLoadAt = Date.now();
       this._autoLoadSession = session;
       app.globalData.homeDirty = false;
-      // 首屏只等这两块：通知条在顶部、日历/累计数据在第一屏；新榜/组队/专题在首屏之外，
+      // 首屏只等这两块：通知条在顶部、日历/累计数据在第一屏；新榜/步数榜/专题在首屏之外，
       // 等这一帧渲染完再拉，避免它们和首屏抢带宽（nextTick 后即「已绘制」）
       this.loadOverview();
       this.loadNotificationSummary(); // 整屏批次里一并拉（noticeDirty 也随之消费）
       wx.nextTick(() => {
         this.loadLeaderboardSummary();
+        this.loadStepsSummary();
         this.loadActiveTopics();
       });
     } else if (noticeDirty) {
@@ -250,6 +252,27 @@ Page({
     }
   },
 
+  /** 首页步数榜摘要：今日我的排名与步数；游客/无数据回落参与人数；失败静默 */
+  async loadStepsSummary() {
+    try {
+      const res = await api.get('/werun/board?period=day');
+      if (!res) return;
+      const me = res.me || null;
+      this.setData({
+        stepsSummary: me
+          ? { rank: me.rank, step: me.step || 0, players: res.players || 0 }
+          : { players: res.players || 0 },
+      });
+    } catch (e) {
+      // 静默：卡片仍展示默认文案
+    }
+  },
+
+  /** 步数榜卡片 → 微信步数排行榜页 */
+  goWerunBoard() {
+    wx.navigateTo({ url: '/pages/werun-board/werun-board' });
+  },
+
   /** 点击"继续运动"入口 → 回记录页（让用户选择继续/重新开始） */
   goOngoing() {
     const o = this.data.ongoingActivity;
@@ -265,6 +288,7 @@ Page({
     Promise.all([
       this.loadOverview(),
       this.loadLeaderboardSummary(),
+      this.loadStepsSummary(),
       this.loadActiveTopics(),
       this.loadNotificationSummary(),
     ]).finally(() => wx.stopPullDownRefresh());

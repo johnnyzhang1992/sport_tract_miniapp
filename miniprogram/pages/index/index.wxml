@@ -94,6 +94,31 @@
       </view>
     </view>
 
+    <!-- 微信步数榜入口卡片（右侧）：今日我的排名与步数；游客/无数据回落引导文案 -->
+    <view class="card duo-cell lb-card lb-card-stacked" hover-class="card-hover" hover-stay-time="80" bindtap="goWerunBoard">
+      <view class="lb-head">
+        <view class="lb-title">步数榜</view>
+        <view class="lb-arrow">›</view>
+      </view>
+      <view class="lb-foot">
+        <image class="lb-icon" src="/assets/icons/lucide-footprints.png" mode="aspectFit" />
+        <view class="lb-foot-text">
+          <block wx:if="{{stepsSummary && stepsSummary.rank != null}}">
+            <view class="lb-rank-line">
+              <text class="text-muted">今日第</text>
+              <text class="lb-rank-num">{{stepsSummary.rank}}</text>
+              <text class="text-muted">名</text>
+            </view>
+            <view class="lb-rank-line">
+              <text class="text-muted">走了</text>
+              <text class="lb-rank-num">{{stepsSummary.step}}</text>
+              <text class="text-muted">步</text>
+            </view>
+          </block>
+          <view class="lb-sub text-muted" wx:else>今天走了多少步？</view>
+        </view>
+      </view>
+    </view>
   </view>
 
   <!-- 官方专题入口（生效中的专题，点击查看详情） -->
