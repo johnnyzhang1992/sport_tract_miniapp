@@ -77,7 +77,7 @@
       <view class="lb-foot">
         <image class="lb-icon" src="/assets/icons/tab-rank-blue.png" mode="aspectFit" />
         <view class="lb-foot-text">
-          <block wx:if="{{lbSummary}}">
+          <block wx:if="{{lbSummary && lbSummary.ranks.length > 0}}">
             <view class="lb-rank-line" wx:for="{{lbSummary.ranks}}" wx:key="type">
               <text class="text-muted">{{item.label}}第</text>
               <text class="lb-rank-num">{{item.rank}}</text>
