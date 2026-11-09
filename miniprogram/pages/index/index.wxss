@@ -240,6 +240,9 @@
 .lb-foot-text {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center; /* 文案行在撑满后的全高内垂直居中 */
 }
 .lb-rank-line {
   display: flex;
