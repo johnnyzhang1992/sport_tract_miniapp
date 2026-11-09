@@ -215,7 +215,7 @@
 .lb-card-stacked {
   display: block; /* 卡片不能改 flex：标题行会渲染异常（标题居中、箭头贴字，2026-11-09 实测） */
   position: relative; /* lb-foot 绝对定位贴底的锚点 */
-  min-height: 150rpx; /* 预留标题行 + 两行排名/步数的空间（duo-row 两卡等高） */
+  min-height: 120rpx; /* 预留标题行 + 两行排名/步数的空间（duo-row 两卡等高） */
 }
 .lb-card-stacked .lb-title {
   color: #333;
