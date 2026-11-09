@@ -140,7 +140,7 @@ Page({
       return;
     }
     const today = localToday();
-    const endDate = plusDays(today, 7); // 结束日期默认今天 + 7 天
+    const endDate = plusDays(today, 6); // 结束日期默认今天 + 6 天（含首尾正好 7 天 → 「7天PK活动」）
     this.setData({
       startDate: today,
       endDate,

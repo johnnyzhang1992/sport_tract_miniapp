@@ -114,7 +114,7 @@ function legal(o = {}) {
 
 /* ---------------------------------- 用例 ---------------------------------- */
 
-test('CCP1 标题自动生成：结束日期默认今天+7，默认不限类型＝「综合运动8天PK活动」', async () => {
+test('CCP1 标题自动生成：结束日期默认今天+6（含首尾 7 天），默认不限类型＝「综合运动7天PK活动」', async () => {
   resetEnv();
   const page = makePage();
   page.onLoad(); // 真机进页走 onLoad：预填起止日期（结束=今天+7）
@@ -122,7 +122,7 @@ test('CCP1 标题自动生成：结束日期默认今天+7，默认不限类型�
   assert.match(page.data.endDateText, /^\d{4}\/\d{2}\/\d{2}$/);
   await page.onSubmit();
   assert.equal(apiCalls.length, 1);
-  assert.match(apiCalls[0].body.title, /^综合运动8天PK活动$/, `实际 ${apiCalls[0].body.title}`);
+  assert.match(apiCalls[0].body.title, /^综合运动7天PK活动$/, `实际 ${apiCalls[0].body.title}`);
 });
 
 test('CCP2 结束日期早于开始日期 → 不提交，toast 给出两个实际值', async () => {
@@ -290,7 +290,7 @@ test('CCP13 标题生成规则：单类型/多类型前三个加等/不限/步�
   assert.equal(page.data.canSubmit, true, '标题自动生成后无手填必填项，按钮恒可点');
 
   page.onTypeToggle({ currentTarget: { dataset: { type: 'walking' } } });
-  assert.match(page.data.title, /^散步8天PK活动$/, `实际 ${page.data.title}`);
+  assert.match(page.data.title, /^散步7天PK活动$/, `实际 ${page.data.title}`);
 
   page.onTypeToggle({ currentTarget: { dataset: { type: 'running' } } });
   page.onTypeToggle({ currentTarget: { dataset: { type: 'hiking' } } });
