@@ -1,4 +1,4 @@
-<!-- 创建活动页：标题 / 描述 / 可见性 / 运动类型 / 人数上限 / 起止日期 → 发起 -->
+<!-- 创建活动页：标题 / 可见性 / PK 类型 / 运动类型 / 人数上限 / 起止日期 → 发起 -->
 <view class="container">
   <view class="fgroup">
     <!-- 标题（必填，1–30 字；maxlength 镜像服务端上限，计数即时可见） -->
@@ -14,20 +14,6 @@
       />
     </view>
     <view class="fnote">必填，最长 {{maxTitle}} 字，当前 {{title.length}} 字</view>
-
-    <!-- 描述（可选，≤120 字） -->
-    <view class="flabel-block">描述</view>
-    <view class="ftextarea-wrap">
-      <textarea
-        class="ftextarea"
-        placeholder="活动说明（可选）"
-        placeholder-class="fph"
-        value="{{description}}"
-        bindinput="onDesc"
-        maxlength="{{maxDesc}}"
-      />
-    </view>
-    <view class="fnote">可选，最长 {{maxDesc}} 字，当前 {{description.length}} 字</view>
 
     <!-- PK 类型：运动PK 按轨迹；步数PK 只统计活动周期内微信步数。创建后不可改 -->
     <view class="frow">

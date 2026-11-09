@@ -104,7 +104,6 @@ function resetEnv() {
 function legal(o = {}) {
   return Object.assign({
     title: '周末一起去徒步',
-    description: '走西湖群山',
     visibility: 'private',
     allowedTypes: ['hiking', 'walking'],
     memberLimit: '20',
@@ -149,7 +148,6 @@ test('CCP3 合法表单 → POST /campaigns 且请求体字段完整，成功后
   assert.equal(apiCalls[0].path, '/campaigns');
   assert.deepEqual(apiCalls[0].body, {
     title: '周末一起去徒步',
-    description: '走西湖群山',
     visibility: 'private',
     kind: 'activity',
     allowedTypes: ['hiking', 'walking'],
@@ -234,23 +232,23 @@ test('CCP9 登录闸门未通过（早退）也复位 submitting，不锁死', a
   assert.equal(page.data.submitting, false, '早退分支必须复位 submitting，否则本页没有任何等价的重置路径');
 });
 
-test('CCP10 描述上限 120 字：超一个字就不提交，toast 给对象+实际值+上限', async () => {
+test('CCP10 描述字段已移除：页面无描述输入，创建/编辑请求体都不含 description', async () => {
   resetEnv();
+  const fs = require('fs');
+  const path = require('path');
+  const wxml = fs.readFileSync(path.join(__dirname, '../miniprogram/pages/campaign-create/campaign-create.wxml'), 'utf8');
+  assert.doesNotMatch(wxml, /onDesc/, 'wxml 不应再有描述输入绑定');
+  assert.doesNotMatch(wxml, /maxDesc/, 'wxml 不应再有描述字数上限');
+
   const page = makePage();
-  assert.equal(page.data.maxDesc, 120, '页面上限必须与服务端 CreateCampaignSchema 的 120 对齐');
+  assert.equal('description' in page.data, false, 'data 里不再有 description');
+  assert.equal('onDesc' in page, false, 'onDesc 处理器已移除');
+  assert.equal('maxDesc' in page.data, false, 'maxDesc 已移除');
 
-  Object.assign(page.data, legal({ description: '字'.repeat(120) }));
+  Object.assign(page.data, legal());
   await page.onSubmit();
-  assert.equal(apiCalls.length, 1, '恰好 120 字应照常提交');
-
-  resetEnv();
-  const page2 = makePage();
-  Object.assign(page2.data, legal({ description: '字'.repeat(121) }));
-  await page2.onSubmit();
-  assert.equal(apiCalls.length, 0, '超上限时一个请求都不发');
-  assert.match(toasts[0], /描述/, `提示要点名对象：${toasts[0]}`);
-  assert.match(toasts[0], /121/, '要带实际值');
-  assert.match(toasts[0], /120/, '要带上限');
+  assert.equal(apiCalls.length, 1);
+  assert.equal('description' in apiCalls[0].body, false, '创建请求体不含 description（服务端 .default(\'\') 兜底）');
 });
 
 test('CCP11 可见性说明文案：公开＝被邀请人自动加入（不再是「可搜索」）', async () => {
@@ -371,7 +369,6 @@ test('CCP17 带 id 进页＝编辑模式：拉详情预填六个字段，chips �
   assert.equal(page.data.isEdit, true);
   assert.equal(page.data.editId, 'cmp-abc');
   assert.equal(page.data.title, '原标题');
-  assert.equal(page.data.description, '原描述');
   assert.equal(page.data.visibility, 'private');
   assert.equal(page.data.memberLimit, '20', '人数上限在页面上是字符串（输入框的值）');
   assert.deepEqual(page.data.allowedTypes, ['hiking']);
@@ -398,7 +395,6 @@ test('CCP18 编辑提交走 PUT /campaigns/:id，请求体七字段齐、且绝�
   assert.equal(apiCalls[0].path, '/campaigns/cmp-abc');
   assert.deepEqual(apiCalls[0].body, {
     title: '改后的标题',
-    description: '原描述',
     visibility: 'private',
     allowedTypes: ['hiking'],
     stepAuxEnabled: false,
@@ -406,6 +402,7 @@ test('CCP18 编辑提交走 PUT /campaigns/:id，请求体七字段齐、且绝�
     endDate: '2026-10-09',
   });
   assert.ok(!('startDate' in apiCalls[0].body), '上送 startDate 会被服务端 .strict() 整请求 400');
+  assert.ok(!('description' in apiCalls[0].body), 'description 不上送：部分更新语义，不传＝保留原描述');
 });
 
 test('CCP18b 步数PK 创建：kind=steps，类型清空、辅助恒 false', async () => {

@@ -6,7 +6,7 @@
 //
 // 校验口径镜像服务端 CreateCampaignSchema / UpdateCampaignSchema
 // （sport_track_api/src/utils/validators.ts）：
-//   title 1–30、description ≤120、visibility public|private、allowedTypes ⊆ 8 项白名单（空=不限制）、
+//   title 1–30、visibility public|private、allowedTypes ⊆ 8 项白名单（空=不限制）、
 //   memberLimit 正整数 ≤500 或 null、endDate 严格 YYYY-MM-DD 且 endDate ≥ startDate。
 // 上限在端上先拦（maxlength + 即时提示 + onSubmit 兜底），别让用户提交完才吃 400。
 // 日期用 <picker mode="date"> 拿 YYYY-MM-DD 原样上送（服务端按东八区转 epoch，端上不做时区换算）。
@@ -19,7 +19,6 @@ const { markHomeDirty } = require('../../utils/home-refresh');
 const { setPageTitle } = require('../../utils/nav-title');
 
 const MAX_TITLE = 30;
-const MAX_DESC = 120;
 const MAX_MEMBERS = 500;
 const DEFAULT_MEMBERS = 100; // 人数上限的默认值（页面预填；清空＝不限制）
 /** 活动最长跨度（含首尾的日历日），与服务端 assertCampaignSpan 同一条线 */
@@ -72,7 +71,6 @@ function canSubmitOf(title) {
 Page({
   data: {
     title: '',
-    description: '',
     visibility: 'public',
     visibilityOptions: VISIBILITY_OPTIONS,
     // PK 类型：activity=运动PK（按轨迹） / steps=步数PK（只按活动周期内微信步数）
@@ -95,7 +93,6 @@ Page({
     isEdit: false, // 带 ?id= 进页即编辑模式
     editId: '',
     maxTitle: MAX_TITLE,
-    maxDesc: MAX_DESC,
     maxMembers: MAX_MEMBERS,
     defaultMembers: DEFAULT_MEMBERS,
   },
@@ -160,7 +157,6 @@ Page({
       const allowed = d.allowedTypes || [];
       this.setData({
         title: d.title || '',
-        description: d.description || '',
         visibility: d.visibility,
         kind,
         stepAuxEnabled: kind === 'activity' && d.stepAuxEnabled === true,
@@ -185,9 +181,6 @@ Page({
   onTitle(e) {
     const title = e.detail.value;
     this.setData({ title, canSubmit: canSubmitOf(title) });
-  },
-  onDesc(e) {
-    this.setData({ description: e.detail.value });
   },
   onVisibility(e) {
     const value = e.currentTarget.dataset.value;
@@ -261,7 +254,6 @@ Page({
     if (this.data.submitting) return;
 
     const title = String(this.data.title || '').trim();
-    const description = String(this.data.description || '').trim();
     const { visibility, allowedTypes, startDate, endDate, kind } = this.data;
     const isSteps = kind === 'steps';
     const memberRaw = String(this.data.memberLimit || '').trim();
@@ -269,9 +261,6 @@ Page({
     // 前端镜像服务端上限：违反时给「对象 + 实际值 + 上限」的提示，一个请求都不发
     if (title.length < 1 || title.length > MAX_TITLE) {
       return wx.showToast({ title: `标题需 1–${MAX_TITLE} 字，当前 ${title.length} 字`, icon: 'none' });
-    }
-    if (description.length > MAX_DESC) {
-      return wx.showToast({ title: `描述最多 ${MAX_DESC} 字，当前 ${description.length} 字`, icon: 'none' });
     }
     if (!startDate || !endDate) {
       return wx.showToast({ title: '请选择开始和结束日期', icon: 'none' });
@@ -314,7 +303,8 @@ Page({
       if (this.data.isEdit) {
         // 不带 startDate / kind：服务端 .strict()，多传字段＝整请求 400。
         // 步数PK 不收 allowedTypes / stepAuxEnabled（服务端会拒绝），只提交通用字段。
-        const editBody = { title, description, visibility, memberLimit, endDate };
+        const editBody = { title, visibility, memberLimit, endDate };
+        // description 不上送：服务端编辑是部分更新（不传＝保留原值），描述字段已从产品上去掉
         if (!isSteps) {
           editBody.allowedTypes = allowedTypes;
           editBody.stepAuxEnabled = this.data.stepAuxEnabled === true;
@@ -330,7 +320,6 @@ Page({
       }
       const created = await api.post('/campaigns', {
         title,
-        description,
         visibility,
         kind,
         // 步数PK 不区分运动类型；辅助开关只对普通运动PK 有意义
