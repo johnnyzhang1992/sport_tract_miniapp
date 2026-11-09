@@ -30,7 +30,7 @@
         <t-switch value="{{autoJoin}}" bind:change="onAutoJoin" />
       </view>
     </view>
-    <view class="fnote">{{autoJoin ? '开启：公开活动，被邀请人自动加入' : '关闭：需发起人同意后才能加入'}}</view>
+    <view class="fnote">{{autoJoin ? '开启：被邀请人，无需发起人审核即可加入' : '关闭：需发起人同意后才能加入'}}</view>
 
     <!-- 运动类型 / 步数辅助：仅普通运动PK 可见 -->
     <block wx:if="{{kind === 'activity'}}">
