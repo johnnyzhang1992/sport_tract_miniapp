@@ -21,8 +21,9 @@ Page({
     this.fetch();
   },
 
-  async fetch() {
-    loading.show('加载中…');
+  async fetch(opts = {}) {
+    const silent = opts.silent === true; // 下拉刷新不弹遮罩，保持页面内容
+    if (!silent) loading.show('加载中…');
     try {
       const data = await api.get(`/notifications/${this._id}`);
       const categoryText = data.categoryText || '系统通知';
@@ -43,8 +44,15 @@ Page({
     } catch (e) {
       this.setData({ loading: false, failed: true, notFound: e && e.statusCode === 404 });
     } finally {
-      loading.hide();
+      if (!silent) loading.hide();
     }
+  },
+
+  /** 下拉刷新：静默重拉；失败不打断当前内容 */
+  onPullDownRefresh() {
+    this.fetch({ silent: true })
+      .catch(() => wx.showToast({ title: '刷新失败', icon: 'none' }))
+      .finally(() => wx.stopPullDownRefresh());
   },
 
   /** 打开即已读：失败静默（下次进来仍是未读，不打扰阅读） */
