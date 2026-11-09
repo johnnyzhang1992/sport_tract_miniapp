@@ -441,4 +441,13 @@ Page({
       path: '/pages/werun-board/werun-board',
     };
   },
+
+  /** 分享到朋友圈：单页模式打开本页（榜单接口可选鉴权，游客可看）；只支持 query，不支持 path */
+  onShareTimeline() {
+    const label = this.data.periods[this.data.periodIndex].label;
+    return {
+      title: `微信步数${label} · 看看谁走得多`,
+      query: 'from=timeline',
+    };
+  },
 });
