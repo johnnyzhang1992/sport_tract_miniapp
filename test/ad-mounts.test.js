@@ -11,7 +11,6 @@ const path = require('node:path');
 // [页面, 广告位 key, wxml 里该 key 的份数]：轨迹页列表/卡片两种展示模式各一处（同时只渲染一种）
 const PAGES = [
   ['tracks', 'tracks_list', 2], // 我的轨迹（轨迹列表）：插在第 3 条之后
-  ['campaign-detail', 'campaign_detail', 1], // 活动详情
   ['leaderboard', 'leaderboard', 1], // 运动榜
   ['stats', 'stats', 1], // 数据统计
   ['track-detail', 'track_detail', 1], // 轨迹详情

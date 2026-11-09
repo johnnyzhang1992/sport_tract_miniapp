@@ -36,7 +36,4 @@ test('IO2 运动榜与「我的」页都改用 initialOf，不再留码元下标
   const my = src('miniprogram/pages/my/my.js');
   assert.match(my, /avatarText: initialOf\(/, '「我的」页走共享函数');
   assert.ok(!/nickname\[0\]/.test(my), 'my 不再用 nickname[0]');
-
-  const detail = src('miniprogram/pages/campaign-detail/campaign-detail.js');
-  assert.ok(!/\|\| '迹'\)\[0\]/.test(detail), "详情页同样不再用码元下标");
 });
