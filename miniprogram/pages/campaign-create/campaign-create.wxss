@@ -136,8 +136,8 @@
 /* 步数辅助开关：行式布局，控件靠右 */
 .aux-switch {
   margin-left: auto;
-  /* 开关视觉缩小到一半：transform 不占布局变化，origin 定在右侧保住右对齐 */
-  transform: scale(0.5);
+  /* 开关视觉缩小到 70%：transform 不占布局变化，origin 定在右侧保住右对齐 */
+  transform: scale(0.7);
   transform-origin: right center;
 }
 
