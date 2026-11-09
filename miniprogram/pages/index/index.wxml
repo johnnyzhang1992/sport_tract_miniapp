@@ -78,11 +78,6 @@
         <image class="lb-icon" src="/assets/icons/tab-rank-blue.png" mode="aspectFit" />
         <view class="lb-foot-text">
           <block wx:if="{{lbSummary}}">
-            <view class="lb-rank-line">
-              <text class="text-muted">全国</text>
-              <text class="lb-rank-num">{{lbSummary.totalUsers}}</text>
-              <text class="text-muted">位迹路者</text>
-            </view>
             <view class="lb-rank-line" wx:for="{{lbSummary.ranks}}" wx:key="type">
               <text class="text-muted">{{item.label}}第</text>
               <text class="lb-rank-num">{{item.rank}}</text>

@@ -250,7 +250,6 @@ test('H9 榜摘要一次请求：label 用服务端给的周期，不再端上�
   await page.loadLeaderboardSummary();
 
   assert.deepEqual(apiCalls, ['/stats/leaderboard-regions?me=1'], '一次拿全：人数 + 名次');
-  assert.equal(page.data.lbSummary.totalUsers, 27);
   assert.deepEqual(page.data.lbSummary.ranks.map((r) => r.label), ['散步月榜', '跑步月榜']);
 });
 
@@ -276,7 +275,7 @@ test('H10 卡片最多 1+2=3 行：三条上榜也只展示前两条排名', asy
   const page = makePage();
   await page.loadLeaderboardSummary();
 
-  assert.equal(page.data.lbSummary.ranks.length, 2, '排名行截到 2 条，加上「全国 N 位迹路者」共 3 行');
+  assert.equal(page.data.lbSummary.ranks.length, 2, '排名行截到 2 条');
   assert.deepEqual(page.data.lbSummary.ranks.map((r) => r.type), ['walking', 'running'], '按后端返回顺序取前两条');
 });
 
@@ -287,7 +286,6 @@ test('H10b 老服务端不带 me 字段：人数照常展示，名次退化为�
   const page = makePage();
   await page.loadLeaderboardSummary();
 
-  assert.equal(page.data.lbSummary.totalUsers, 27);
   assert.deepEqual(page.data.lbSummary.ranks, []);
 });
 

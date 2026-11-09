@@ -240,7 +240,6 @@ Page({
       const ranks = Array.isArray(me.ranks) ? me.ranks : [];
       this.setData({
         lbSummary: {
-          totalUsers: res.totalUsers,
           ranks: ranks.slice(0, 2).map((r) => { // 卡片最多 1+2=3 行
             const t = config.ACTIVITY_TYPES.find((x) => x.type === r.type);
             return { type: r.type, rank: r.rank, label: `${(t && t.label) || '运动'}${PERIOD_LABEL[period] || '榜'}` };
