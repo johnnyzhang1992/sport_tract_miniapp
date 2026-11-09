@@ -177,8 +177,16 @@ Page({
         withSubscriptions: true,
         success: (res) => {
           const ss = (res && res.subscriptionsSetting) || {};
-          const itemSettings = ss.itemSettings || [];
-          this._silentIds = itemSettings.filter((x) => x && x.type === 'accept').map((x) => x.id);
+          const raw = ss.itemSettings;
+          // 基础库 3.x：itemSettings 是对象 { 模板id: 'accept' }（勾选「总是保持以上选择」才返回）；
+          // 旧版资料里的数组形态 [{id, type}] 也兼容，不认未知形状（filter 崩溃防护）
+          let ids = [];
+          if (Array.isArray(raw)) {
+            ids = raw.filter((x) => x && x.type === 'accept').map((x) => x.id);
+          } else if (raw && typeof raw === 'object') {
+            ids = Object.keys(raw).filter((k) => raw[k] === 'accept');
+          }
+          this._silentIds = ids;
           resolve(this._silentIds);
         },
         fail: () => {
