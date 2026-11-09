@@ -114,15 +114,15 @@ function legal(o = {}) {
 
 /* ---------------------------------- 用例 ---------------------------------- */
 
-test('CCP1 标题为空 → 不提交，toast 点名对象与实际值', async () => {
+test('CCP1 标题自动生成：结束日期默认今天+7，默认不限类型＝「综合运动8天PK活动」', async () => {
   resetEnv();
   const page = makePage();
-  Object.assign(page.data, legal({ title: '   ' }));
+  page.onLoad(); // 真机进页走 onLoad：预填起止日期（结束=今天+7）
+  assert.equal(page.data.startDate, page.data.endDate && page.data.startDate, '开始日期=今天（预填）');
+  assert.match(page.data.endDateText, /^\d{4}\/\d{2}\/\d{2}$/);
   await page.onSubmit();
-  assert.equal(apiCalls.length, 0, '标题不合法时一个请求都不发');
-  assert.equal(navs.length, 0);
-  assert.ok(toasts.length >= 1, '要给用户具体提示');
-  assert.match(toasts[0], /标题/, `提示要点名对象：${toasts[0]}`);
+  assert.equal(apiCalls.length, 1);
+  assert.match(apiCalls[0].body.title, /^综合运动8天PK活动$/, `实际 ${apiCalls[0].body.title}`);
 });
 
 test('CCP2 结束日期早于开始日期 → 不提交，toast 给出两个实际值', async () => {
@@ -147,7 +147,7 @@ test('CCP3 合法表单 → POST /campaigns 且请求体字段完整，成功后
   assert.equal(apiCalls.length, 1);
   assert.equal(apiCalls[0].path, '/campaigns');
   assert.deepEqual(apiCalls[0].body, {
-    title: '周末一起去徒步',
+    title: '散步、徒步7天PK活动', // allowedTypes=[hiking,walking] → chips 顺序取 label；span 含首尾 7 天
     visibility: 'private',
     kind: 'activity',
     allowedTypes: ['hiking', 'walking'],
@@ -251,14 +251,25 @@ test('CCP10 描述字段已移除：页面无描述输入，创建/编辑请求�
   assert.equal('description' in apiCalls[0].body, false, '创建请求体不含 description（服务端 .default(\'\') 兜底）');
 });
 
-test('CCP11 可见性说明文案：公开＝被邀请人自动加入（不再是「可搜索」）', async () => {
+test('CCP11 自动加入开关：默认开启，onAutoJoin 派生 visibility（public/private）', async () => {
   const src = require('fs').readFileSync(
     require('path').join(__dirname, '../miniprogram/pages/campaign-create/campaign-create.wxml'),
     'utf8',
   );
-  assert.match(src, /公开：被邀请人自动加入/, '公开的说明要写清是「自动加入」');
-  assert.match(src, /隐私：需发起人同意后才能加入/, '隐私的说明要与公开对偶（差异在「要不要审批」，不是「能不能被发现」）');
+  assert.match(src, /自动加入/, '开关行名「自动加入」');
+  assert.match(src, /onAutoJoin/, '绑定 onAutoJoin');
+  assert.doesNotMatch(src, /onVisibility/, '旧可见性分段控件已移除');
   assert.doesNotMatch(src, /可搜索/, '没有活动广场，不能再写「可搜索并加入」');
+
+  resetEnv();
+  const page = makePage();
+  assert.equal(page.data.autoJoin, true, '默认打开');
+  assert.equal(page.data.visibility, 'public');
+  page.onAutoJoin({ detail: { value: false } });
+  assert.equal(page.data.autoJoin, false);
+  assert.equal(page.data.visibility, 'private', '关＝需发起人同意');
+  page.onAutoJoin({ detail: { value: true } });
+  assert.equal(page.data.visibility, 'public', '再打开回到公开');
 });
 
 test('CCP12 人数上限默认 100：进页就预填，直接提交即为数字 100', async () => {
@@ -272,21 +283,32 @@ test('CCP12 人数上限默认 100：进页就预填，直接提交即为数字 
   assert.equal(apiCalls[0].body.memberLimit, 100, '默认 100 要作为数字上送，不能漏成 null');
 });
 
-test('CCP13 必填项（标题）没填完 → canSubmit=false，按钮不可点；填好才转 true', () => {
+test('CCP13 标题生成规则：单类型/多类型前三个加等/不限/步数PK/天数变化联动', () => {
   resetEnv();
   const page = makePage();
-  page.onLoad(); // 真机进页走 onLoad：预填起止日期
-  assert.equal(page.data.canSubmit, false, '进页标题为空 → 按钮不可点');
+  page.onLoad();
+  assert.equal(page.data.canSubmit, true, '标题自动生成后无手填必填项，按钮恒可点');
 
-  page.onTitle({ detail: { value: '   ' } });
-  assert.equal(page.data.canSubmit, false, '只输空白字符不算填写（与 onSubmit 的 trim 口径一致）');
+  page.onTypeToggle({ currentTarget: { dataset: { type: 'walking' } } });
+  assert.match(page.data.title, /^散步8天PK活动$/, `实际 ${page.data.title}`);
 
-  page.onTitle({ detail: { value: '周末一起去徒步' } });
-  assert.equal(page.data.canSubmit, true, '必填项齐备 → 按钮可点');
+  page.onTypeToggle({ currentTarget: { dataset: { type: 'running' } } });
+  page.onTypeToggle({ currentTarget: { dataset: { type: 'hiking' } } });
+  page.onTypeToggle({ currentTarget: { dataset: { type: 'cycling' } } });
+  page.onTypeToggle({ currentTarget: { dataset: { type: 'skiing' } } });
+  assert.match(page.data.title, /^散步、跑步、徒步等\d+天PK活动$/, '超三个只展示前三个类型名加「等」');
 
-  page.onTitle({ detail: { value: '' } });
-  assert.equal(page.data.canSubmit, false, '清空标题后回到不可点');
+  page.onEndDate({ detail: { value: plusDaysLocal(page.data.startDate, 13) } });
+  assert.match(page.data.title, /14天PK活动$/, '天数随日期变化联动（含首尾 14 天）');
+
+  page.onKind({ currentTarget: { dataset: { value: 'steps' } } });
+  assert.match(page.data.title, /^微信步数14天PK活动$/, '步数PK 用「微信步数」开头');
 });
+
+function plusDaysLocal(dateStr, n) {
+  const t = Date.parse(`${dateStr}T00:00:00Z`);
+  return new Date(t + n * 86400000).toISOString().slice(0, 10);
+}
 
 test('CCP14 发起按钮的 disabled 由 submitting 与 !canSubmit 共同驱动', () => {
   const src = require('fs').readFileSync(
@@ -368,7 +390,8 @@ test('CCP17 带 id 进页＝编辑模式：拉详情预填六个字段，chips �
   );
   assert.equal(page.data.isEdit, true);
   assert.equal(page.data.editId, 'cmp-abc');
-  assert.equal(page.data.title, '原标题');
+  assert.equal(page.data.title, '徒步7天PK活动', '标题按当前类型与天数生成（不回填历史手填标题）');
+  assert.equal(page.data.autoJoin, false, '自动加入开关跟 visibility 走（private=关）');
   assert.equal(page.data.visibility, 'private');
   assert.equal(page.data.memberLimit, '20', '人数上限在页面上是字符串（输入框的值）');
   assert.deepEqual(page.data.allowedTypes, ['hiking']);
@@ -386,7 +409,6 @@ test('CCP18 编辑提交走 PUT /campaigns/:id，请求体七字段齐、且绝�
   await page.onLoad({ id: 'cmp-abc' });
   apiCalls.length = 0;
 
-  page.onTitle({ detail: { value: '改后的标题' } });
   page.onEndDate({ detail: { value: '2026-10-09' } });
   await page.onSubmit();
 
@@ -394,7 +416,7 @@ test('CCP18 编辑提交走 PUT /campaigns/:id，请求体七字段齐、且绝�
   assert.equal(apiCalls[0].method, 'PUT');
   assert.equal(apiCalls[0].path, '/campaigns/cmp-abc');
   assert.deepEqual(apiCalls[0].body, {
-    title: '改后的标题',
+    title: '徒步9天PK活动', // 日期改为 10-01~10-09（含首尾 9 天）后自动重算
     visibility: 'private',
     allowedTypes: ['hiking'],
     stepAuxEnabled: false,

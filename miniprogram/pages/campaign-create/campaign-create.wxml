@@ -1,19 +1,12 @@
-<!-- 创建活动页：标题 / 可见性 / PK 类型 / 运动类型 / 人数上限 / 起止日期 → 发起 -->
+<!-- 创建活动页：标题自动生成 / PK 类型 / 自动加入 / 运动类型 / 人数上限 / 起止日期 → 发起 -->
 <view class="container">
   <view class="fgroup">
-    <!-- 标题（必填，1–30 字；maxlength 镜像服务端上限，计数即时可见） -->
+    <!-- 标题：按所选类型与活动天数自动生成，不可编辑（类型/日期变化即重算） -->
     <view class="frow">
       <view class="flabel">标题</view>
-      <input
-        class="finput"
-        placeholder="给活动起个名字"
-        placeholder-class="fph"
-        value="{{title}}"
-        bindinput="onTitle"
-        maxlength="{{maxTitle}}"
-      />
+      <view class="fval">{{title}}</view>
     </view>
-    <view class="fnote">必填，最长 {{maxTitle}} 字，当前 {{title.length}} 字</view>
+    <view class="fnote">自动生成：所选运动类型 + 活动天数；多类型仅展示前三个，超出以「等」带过</view>
 
     <!-- PK 类型：运动PK 按轨迹；步数PK 只统计活动周期内微信步数。创建后不可改 -->
     <view class="frow">
@@ -30,20 +23,14 @@
     </view>
     <view class="fnote">{{kind === 'steps' ? '步数PK是独立类型，整个活动只按步数排名，不区分运动类型' : '运动PK按活动周期内的轨迹统计距离'}}{{isEdit ? '；PK 类型创建后不能再改' : ''}}</view>
 
-    <!-- 可见性：两选一（照列表页分段控件形态，不自造样式）；行式布局＝标签左、控件右，与相邻字段同一列 -->
+    <!-- 自动加入：开＝公开活动被邀请人自动加入；关＝需发起人同意（行式布局与相邻字段同列） -->
     <view class="frow">
-      <view class="flabel">可见性</view>
-      <view class="vis-row">
-        <view
-          wx:for="{{visibilityOptions}}"
-          wx:key="key"
-          class="vis-seg {{visibility === item.key ? 'vis-seg-active' : ''}}"
-          data-value="{{item.key}}"
-          bindtap="onVisibility"
-        >{{item.label}}</view>
+      <view class="flabel">自动加入</view>
+      <view class="aux-switch">
+        <t-switch value="{{autoJoin}}" bind:change="onAutoJoin" />
       </view>
     </view>
-    <view class="fnote">{{visibility === 'public' ? '公开：被邀请人自动加入' : '隐私：需发起人同意后才能加入'}}</view>
+    <view class="fnote">{{autoJoin ? '开启：公开活动，被邀请人自动加入' : '关闭：需发起人同意后才能加入'}}</view>
 
     <!-- 运动类型 / 步数辅助：仅普通运动PK 可见 -->
     <block wx:if="{{kind === 'activity'}}">

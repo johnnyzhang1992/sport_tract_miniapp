@@ -24,12 +24,6 @@ const DEFAULT_MEMBERS = 100; // 人数上限的默认值（页面预填；清空
 /** 活动最长跨度（含首尾的日历日），与服务端 assertCampaignSpan 同一条线 */
 const MAX_SPAN_DAYS = 365;
 
-// 可见性两选一（key 与后端 enum 一一对应）
-const VISIBILITY_OPTIONS = [
-  { key: 'public', label: '公开' },
-  { key: 'private', label: '隐私' },
-];
-
 /** PK 类型：活动创建后不可改（服务端 UpdateCampaignSchema 不收 kind） */
 const KIND_OPTIONS = [
   { key: 'activity', label: '运动PK' },
@@ -59,20 +53,26 @@ function spanDays(startDate, endDate) {
 }
 
 /**
- * 必填项是否齐备 → 驱动「发起活动」按钮的可点状态。
- * 必填只有标题：起止日期由 onLoad 预填、picker 也清不空，没有「没填」这个态可判。
- * 只判「填没填」，不判「填得对不对」：倒置日期、人数超 500 之类仍走 onSubmit 的 toast（要带实际值），
- * 否则按钮会时灰时亮却没人解释为什么。
+ * 标题自动生成（产品口径：标题不再手填）：`类型{含首尾天数}天PK活动`。
+ * - 步数PK 不分类型 → 「微信步数31天PK活动」；
+ * - 运动类型空选（不限）→ 「综合运动31天PK活动」；
+ * - 单选 → 「散步31天PK活动」；多选取前 3 个类型名，超出补「等」→ 「跑步、骑行、徒步等31天PK活动」。
+ * 服务端上限 30 字：超长兜底截断（正常组合到不了 30）。
  */
-function canSubmitOf(title) {
-  return String(title || '').trim().length > 0;
+function generatedTitleOf(kind, selectedLabels, startDate, endDate) {
+  const days = spanDays(startDate, endDate);
+  let head;
+  if (kind === 'steps') head = '微信步数';
+  else if (!selectedLabels.length) head = '综合运动';
+  else head = selectedLabels.slice(0, 3).join('、') + (selectedLabels.length > 3 ? '等' : '');
+  return `${head}${days}天PK活动`.slice(0, MAX_TITLE);
 }
 
 Page({
   data: {
     title: '',
+    autoJoin: true, // 自动加入开关（开=公开自动加入，关=需发起人同意）；visibility 由它派生
     visibility: 'public',
-    visibilityOptions: VISIBILITY_OPTIONS,
     // PK 类型：activity=运动PK（按轨迹） / steps=步数PK（只按活动周期内微信步数）
     kind: 'activity',
     kindOptions: KIND_OPTIONS,
@@ -89,7 +89,7 @@ Page({
     dateError: '', // 起止倒置的即时提示（onSubmit 仍会兜底再判一次）
     maxEndDate: '', // 结束日期可选上界＝开始日期 + 364 天（含首尾正好一年），跟着 startDate 挪
     submitting: false,
-    canSubmit: false, // 必填项未填完 → 「发起活动」保持不可点
+    canSubmit: true, // 标题自动生成后表单没有「没填」的必填项，按钮恒可点（校验都在 onSubmit 的 toast 里）
     isEdit: false, // 带 ?id= 进页即编辑模式
     editId: '',
     maxTitle: MAX_TITLE,
@@ -140,13 +140,15 @@ Page({
       return;
     }
     const today = localToday();
+    const endDate = plusDays(today, 7); // 结束日期默认今天 + 7 天
     this.setData({
       startDate: today,
-      endDate: today,
+      endDate,
       startDateText: slashDate(today),
-      endDateText: slashDate(today),
+      endDateText: slashDate(endDate),
       maxEndDate: plusDays(today, MAX_SPAN_DAYS - 1),
     });
+    this.syncTitle();
   },
 
   /** 编辑模式预填：日期直接取服务端下发的 YYYY-MM-DD 串（端上不做时区换算），chips 跟着 allowedTypes 点亮 */
@@ -156,8 +158,8 @@ Page({
       const kind = d.kind === 'steps' ? 'steps' : 'activity';
       const allowed = d.allowedTypes || [];
       this.setData({
-        title: d.title || '',
         visibility: d.visibility,
+        autoJoin: d.visibility === 'public',
         kind,
         stepAuxEnabled: kind === 'activity' && d.stepAuxEnabled === true,
         allowedTypes: allowed,
@@ -168,23 +170,31 @@ Page({
         startDateText: slashDate(d.startDate),
         endDateText: slashDate(d.endDate),
         maxEndDate: plusDays(d.startDate, MAX_SPAN_DAYS - 1),
-        canSubmit: canSubmitOf(d.title),
+        canSubmit: true,
       });
+      this.syncTitle(); // 标题按当前类型与活动天数重新生成（不再回填历史手填标题）
     } catch (e) {
-      // 非发起人 / 已解散 / 断网都到这里：退回来源页（详情页），别留一张点了也没用的空表单
+      // 非发起人 / 已解散 / 断网都到这里：退回来源页（详情页），别留一张点了也没用的空表单。
+      // canSubmit 置 false：返回动画期间按钮先锁住，即使被强行 onSubmit 也不会发出 PUT。
+      this.setData({ canSubmit: false });
       wx.showToast({ title: (e && e.message) || '活动信息加载失败', icon: 'none' });
       wx.navigateBack();
     }
   },
 
-  /** title 与 canSubmit 一次 setData 下发：分两次会多跑一趟视图层同步 */
-  onTitle(e) {
-    const title = e.detail.value;
-    this.setData({ title, canSubmit: canSubmitOf(title) });
+  /** 自动加入开关：开＝公开（被邀请人自动加入），关＝隐私（需发起人同意） */
+  onAutoJoin(e) {
+    const autoJoin = e.detail.value === true;
+    this.setData({ autoJoin, visibility: autoJoin ? 'public' : 'private' });
   },
-  onVisibility(e) {
-    const value = e.currentTarget.dataset.value;
-    if (value) this.setData({ visibility: value });
+
+  /** 标题自动生成：类型/天数变化后重算（创建与编辑同一口径） */
+  syncTitle() {
+    const { kind, allowedTypes, startDate, endDate, types } = this.data;
+    const labels = types
+      .filter((t) => allowedTypes.indexOf(t.type) >= 0)
+      .map((t) => t.label);
+    this.setData({ title: generatedTitleOf(kind, labels, startDate, endDate) });
   },
 
   /** PK 类型：编辑态不可改（服务端不收 kind）；切到步数PK时清空类型与辅助开关 */
@@ -199,9 +209,11 @@ Page({
         allowedTypes: [],
         types: this.data.types.map((t) => Object.assign({}, t, { active: false })),
       });
+      this.syncTitle();
       return;
     }
     this.setData({ kind });
+    this.syncTitle();
   },
 
   onStepAuxChange(e) {
@@ -220,6 +232,7 @@ Page({
       allowedTypes,
       types: this.data.types.map((t) => (t.type === type ? Object.assign({}, t, { active: !has }) : t)),
     });
+    this.syncTitle();
   },
 
   /** 人数上限：只收数字（数字键盘仍可能带出小数点/负号），上限在提交时兜底判 */
@@ -236,10 +249,12 @@ Page({
       maxEndDate: plusDays(startDate, MAX_SPAN_DAYS - 1),
     });
     this.refreshDateError();
+    this.syncTitle();
   },
   onEndDate(e) {
     this.setData({ endDate: e.detail.value, endDateText: slashDate(e.detail.value) });
     this.refreshDateError();
+    this.syncTitle();
   },
   /** 即时提示：起止倒置在选完当下就点名，不等提交 */
   refreshDateError() {
@@ -253,7 +268,8 @@ Page({
   async onSubmit() {
     if (this.data.submitting) return;
 
-    const title = String(this.data.title || '').trim();
+    this.syncTitle(); // 提交前按当前类型/天数重算，标题永远与表单一致
+    const title = this.data.title;
     const { visibility, allowedTypes, startDate, endDate, kind } = this.data;
     const isSteps = kind === 'steps';
     const memberRaw = String(this.data.memberLimit || '').trim();
