@@ -9,7 +9,6 @@ function formatDuration(seconds) {
 
 const config = require('../../config/index');
 const api = require('../../services/api');
-const { avatarStack } = require('../../utils/campaign.js');
 // 首页运动类型显示开关（设置页可开关非默认类型，纯前端控制）
 const sportDisplay = require('../../utils/sport-display');
 
@@ -34,13 +33,6 @@ function emptyHeatData() {
   return out;
 }
 
-/** 首页活动卡：标题 + 成员面（人数 + 头像堆叠）——WXML 不做格式化，统一在这里算好 */
-function toCampaignCard(c) {
-  return Object.assign({}, c, {
-    memberText: `${c.memberCount || 0} 人`,
-    avatarList: avatarStack(c.memberAvatars), // 签名 url 优先，回退预设图（见 utils/campaign.js）
-  });
-}
 
 Page({
   data: {
@@ -56,7 +48,6 @@ Page({
     ongoingActivity: null, // 进行中（已暂停）运动入口
     lbSummary: null, // 运动榜摘要（卡片副标题）
     topics: [], // 生效中的官方专题（首页入口）
-    campaigns: [], // 进行中的一起运动活动（首页区块，最多 3 条）
     notice: null, // 首页单行通知（{id,title}；null=不渲染）
     noticeDot: false, // 红点：登录用户才画
     favGuide: { visible: false, top: 0, right: 12, arrowRight: 20 }, // 收藏引导浮层
@@ -142,7 +133,6 @@ Page({
       this.loadNotificationSummary(); // 整屏批次里一并拉（noticeDirty 也随之消费）
       wx.nextTick(() => {
         this.loadLeaderboardSummary();
-        this.loadCampaigns();
         this.loadActiveTopics();
       });
     } else if (noticeDirty) {
@@ -186,48 +176,6 @@ Page({
     if (id) wx.navigateTo({ url: `/pages/topic/topic?id=${id}` });
   },
 
-  /**
-   * 一起运动（进行中）：只拉「我参与」一路 —— 服务端的 joined 筛选取 role ∈ ['member','creator']
-   * 且 joinedAt 非空的成员行，本来就把我发起的活动包含在内；原先并发 created 一路再按 id 去重，
-   * 等于同一个集合打两遍。
-   * status 直接用服务端派生的档位筛 active，不按 endAt 本地再算一遍（两边口径不分叉）。
-   * 游客直接退：接口要求登录，发出去必然 401。闸门判 hasSession() 而不是
-   * globalData.loggedIn——onShow 不 await 静默恢复，老用户冷启动那一刻 loggedIn 还是 false，
-   * 而 api.get 是从 storage 取 token 的；拿 loggedIn 判会把他们误当游客、区块整个空掉。
-   * 网络失败仍静默：区块退化成「发起一个活动」引导，不打扰首屏。
-   */
-  async loadCampaigns() {
-    if (!getApp().hasSession()) {
-      this.setData({ campaigns: [] });
-      return;
-    }
-    try {
-      const data = await api.get('/campaigns?role=joined');
-      const items = (data && data.items) || [];
-      this.setData({
-        campaigns: items.filter((c) => c && c.status === 'active').slice(0, 3).map(toCampaignCard),
-      });
-    } catch (e) {
-      // 静默：区块显示发起引导即可
-      this.setData({ campaigns: [] });
-    }
-  },
-
-  /** 活动卡片 → 活动详情 */
-  goCampaign(e) {
-    const id = e.currentTarget.dataset.id;
-    if (id) wx.navigateTo({ url: `/pages/campaign-detail/campaign-detail?id=${id}` });
-  },
-
-  /** 「查看全部」→ 活动列表页 */
-  goCampaignList() {
-    wx.navigateTo({ url: '/pages/campaign-list/campaign-list' });
-  },
-
-  /** 无进行中活动时的引导卡 → 创建活动页 */
-  goCampaignCreate() {
-    wx.navigateTo({ url: '/pages/campaign-create/campaign-create' });
-  },
 
   /** 版本更新检测：微信后台下载完新版本包后弹窗提醒，确认即应用并重启 */
   setupUpdateCheck() {
@@ -318,7 +266,6 @@ Page({
       this.loadOverview(),
       this.loadLeaderboardSummary(),
       this.loadActiveTopics(),
-      this.loadCampaigns(),
       this.loadNotificationSummary(),
     ]).finally(() => wx.stopPullDownRefresh());
   },

@@ -121,12 +121,11 @@ test('CU10 头像堆叠：签名 url 优先 → 预设图 → 都没有时用昵
   );
   assert.deepEqual(avatarStack(), []);
   assert.deepEqual(avatarStack([]), []);
-  // 两张卡（首页轮播 / 活动列表）都得真的渲染这枚占位圆，光有数据不算修好
+  // 活动列表页得真的渲染这枚占位圆，光有数据不算修好（首页组队区块已下线，不再渲染）
   const fs = require('fs');
   const path = require('path');
   [
     '../miniprogram/pages/campaign-list/campaign-list.wxml',
-    '../miniprogram/pages/index/index.wxml',
   ].forEach((rel) => {
     const w = fs.readFileSync(path.join(__dirname, rel), 'utf8').replace(/<!--[\s\S]*?-->/g, '');
     assert.match(w, /class="member-av member-av-char"/, `${rel} 用占位圆渲染`);

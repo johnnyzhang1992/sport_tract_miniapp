@@ -14,26 +14,6 @@
     <view class="notice-arrow">›</view>
   </view>
 
-  <!-- 活动卡（首页横滑共用）：标题 + 成员面（头像堆叠 + 人数）。
-       箭头是整张卡的直接子节点，靠 .camp-card 的 align-items:center 对整卡垂直居中 -->
-  <template name="campaign-card">
-    <view class="camp-card" hover-class="camp-card-hover" hover-stay-time="80" data-id="{{id}}" bindtap="goCampaign">
-      <view class="camp-card-main">
-        <view class="camp-card-title">{{title}}</view>
-        <view class="camp-card-members">
-          <view class="member-av-stack">
-            <block wx:for="{{avatarList}}" wx:key="key">
-              <image wx:if="{{item.src}}" class="member-av" src="{{item.src}}" mode="aspectFill" lazy-load />
-              <view wx:else class="member-av member-av-char">{{item.text}}</view>
-            </block>
-          </view>
-          <view class="member-av-text">{{memberText}}</view>
-        </view>
-      </view>
-      <view class="camp-card-arrow">›</view>
-    </view>
-  </template>
-
   <!-- 未登录引导条（游客态，点击去个人中心登录） -->
   <view wx:if="{{notLoggedIn}}" class="login-tip" hover-class="login-tip-hover" hover-stay-time="80" bindtap="goLogin">
     <image class="login-tip-icon" src="/assets/icons/lucide-user.png" mode="aspectFit" />
@@ -114,40 +94,6 @@
       </view>
     </view>
 
-    <!-- 一起运动活动区块：标题行右侧「查看更多」常驻（全为已结束/已解散时它是进列表页的唯一入口）；
-         有活动 → 横滑卡片（半宽容器里一屏只放得下一条，多了左右滑），无 → 发起引导 -->
-    <view class="card duo-cell {{campaigns.length > 0 ? '' : 'campaign-cell-empty'}}">
-      <view class="section-head">
-        <view class="section-title section-title-flat">组队运动</view>
-        <view class="campaign-more" hover-class="campaign-more-hover" hover-stay-time="80" bindtap="goCampaignList"><text class="campaign-more-text">查看更多</text><text class="campaign-more-arrow">›</text></view>
-      </view>
-
-      <!-- 横向可滚动：本区块只有半屏宽，一屏一条，卡片右侧故意露出下一条的边当「可滑」提示 -->
-      <scroll-view
-        wx:if="{{campaigns.length > 0}}"
-        class="camp-scroll"
-        scroll-x
-        enable-flex
-        show-scrollbar="{{false}}"
-      >
-        <block wx:for="{{campaigns}}" wx:key="id">
-          <template is="campaign-card" data="{{...item}}" />
-        </block>
-      </scroll-view>
-
-      <view
-        wx:else
-        class="lb-card campaign-row"
-        hover-class="card-hover"
-        hover-stay-time="80"
-        bindtap="goCampaignCreate"
-      >
-        <view class="lb-body">
-          <view class="lb-title campaign-lead">运动竞赛，和好友来场PK</view>
-        </view>
-        <view class="lb-arrow">›</view>
-      </view>
-    </view>
   </view>
 
   <!-- 官方专题入口（生效中的专题，点击查看详情） -->
