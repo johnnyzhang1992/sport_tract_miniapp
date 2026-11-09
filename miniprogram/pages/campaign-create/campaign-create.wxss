@@ -136,6 +136,9 @@
 /* 步数辅助开关：行式布局，控件靠右 */
 .aux-switch {
   margin-left: auto;
+  /* 开关视觉缩小到一半：transform 不占布局变化，origin 定在右侧保住右对齐 */
+  transform: scale(0.5);
+  transform-origin: right center;
 }
 
 /* 运动类型多选 chips：形态复用 footprint-form 的 .cat-*（选中＝品牌蓝底白字） */
