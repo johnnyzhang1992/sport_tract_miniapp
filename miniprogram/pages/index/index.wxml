@@ -101,7 +101,7 @@
         <view class="lb-arrow">›</view>
       </view>
       <view class="lb-foot">
-        <image class="lb-icon" src="/assets/icons/lucide-footprints.png" mode="aspectFit" />
+        <image class="lb-icon" src="/assets/icons/lucide-footprints-blue.png" mode="aspectFit" />
         <view class="lb-foot-text">
           <block wx:if="{{stepsSummary && stepsSummary.rank != null}}">
             <view class="lb-rank-line">
