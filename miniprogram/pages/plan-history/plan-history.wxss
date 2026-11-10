@@ -52,8 +52,7 @@
 }
 .cal-canvas {
   width: 100%;
-  height: 900rpx; /* 实际像素尺寸由 JS 按行数设定，这里只占位 */
-  display: block;
+  display: block; /* 高度由 inline style（JS 按行数算出的 px）给定，必须与内部像素比例一致 */
 }
 .cal-hit {
   position: absolute;

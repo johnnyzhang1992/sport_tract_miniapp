@@ -30,6 +30,7 @@ function leadingBlanks(y, m) {
 Page({
   data: {
     hitRowH: 48, // 点击层单行高度（draw 时按真实列宽算好下发）
+    canvasH: 300, // canvas CSS 高度（必须与内部像素高宽比一致，否则圆环会被拉成椭圆）
     y: 0,
     m: 0,
     monthText: '',
@@ -152,6 +153,7 @@ Page({
         ctx.clearRect(0, 0, W, H);
 
         if (Math.abs((this.data.hitRowH || 0) - rowH) > 0.5) this.setData({ hitRowH: rowH });
+        if (Math.abs((this.data.canvasH || 0) - H) > 0.5) this.setData({ canvasH: H });
         const numY = rowH * 0.24;      // 数字基线（上移，与环拉开）
         const ringCy = rowH * 0.63;    // 环中心
         const R = Math.min(colW * 0.205, 12); // 外环半径（略收小）
