@@ -517,7 +517,9 @@
 .plan-num-green { color: #6bbf1f; } /* #92e82a 在白底偏亮，压深一档保可读 */
 .plan-num-cyan { color: #0fa9b4; } /* #1ad4e0 同上 */
 .plan-goal {
-  font-size: 22rpx;
+  font-size: 34rpx; /* 与当前值同档放大，仅降为次要色 */
+  font-weight: 700;
+  line-height: 1.1;
   color: #86909c;
 }
 .plan-dot {
