@@ -30,8 +30,6 @@ function leadingBlanks(y, m) {
 
 Page({
   data: {
-    hitRowH: 48, // 点击层单行高度（draw 时按真实列宽算好下发）
-    canvasH: 300, // canvas CSS 高度（必须与内部像素高宽比一致，否则圆环会被拉成椭圆）
     y: 0,
     m: 0,
     monthText: '',
@@ -53,19 +51,12 @@ Page({
     selected: null,
     loading: true,
     failed: false,
-    canvasW: 0,
-    canvasH: 0,
   },
 
   onLoad() {
     const { y, m } = bjNowMonth();
     this.setData({ y, m, monthText: `${y}年${m}月` });
     this.load();
-  },
-
-  onReady() {
-    // 首帧布局就绪后补画一次：draw 内部有重试，这里兜住更极端的时序
-    this.draw();
   },
 
   onShow() {
@@ -152,7 +143,7 @@ Page({
         planForSheet: (cur && cur.plan) || null,
         summary: this.buildSummary(sum),
         loading: false,
-      }, () => this.draw());
+      });
       this._loaded = true;
     } catch (e) {
       this.setData({ loading: false, failed: true });
@@ -213,107 +204,6 @@ Page({
       ],
       remainText: remain.length ? `还差 ${remain.join(' · ')}` : '本期目标已全部达成',
     };
-  },
-
-  /** 把整月的「日期数字 + 迷你三环 + 今天圈 + 达成点」一次画在一张 canvas 上
-   *  （数字与环必须同一坐标系，否则会出现数字与环错行） */
-  draw(attempt = 0) {
-    // 每次绘制领一个令牌：并发/过期请求回来后直接丢弃，避免旧数据覆盖新画布
-    const token = (this._drawToken = (this._drawToken || 0) + 1);
-    const q = this.createSelectorQuery();
-    q.select('#cal-canvas').boundingClientRect();
-    q.select('#cal-canvas').node();
-    q.exec((res) => {
-      if (this._drawToken !== token) return;
-      const rect = res && res[0];
-      const canvas = res && res[1] && res[1].node;
-      const cells = this.data.cells || [];
-      /**
-       * 为什么需要重试：进页首帧里 canvas 节点/布局往往还没就绪（rect.width=0 或 node 为 null），
-       * 之前 node 拿不到就直接 return，于是偶发「日历空白」且不会再画。
-       * 这里统一短间隔重试（最多 10 次 ≈ 800ms），并跳过空数据态。
-       */
-      if (!canvas || !rect || !rect.width || cells.length === 0) {
-        if (attempt < 10) {
-          setTimeout(() => {
-            if (this._drawToken === token) this.draw(attempt + 1);
-          }, 80);
-        }
-        return;
-      }
-      {
-        const dpr = (wx.getSystemInfoSync().pixelRatio) || 2;
-        const W = rect.width;
-        const colW = W / 7;
-        const rowH = colW * 1.05;
-        const rows = Math.ceil(cells.length / 7);
-        const H = rowH * rows;
-        canvas.width = W * dpr;
-        canvas.height = H * dpr;
-        const ctx = canvas.getContext('2d');
-        ctx.scale(dpr, dpr);
-        ctx.clearRect(0, 0, W, H);
-
-        if (Math.abs((this.data.hitRowH || 0) - rowH) > 0.5) this.setData({ hitRowH: rowH });
-        if (Math.abs((this.data.canvasH || 0) - H) > 0.5) this.setData({ canvasH: H });
-        const numY = rowH * 0.24;      // 数字基线（上移，与环拉开）
-        const ringCy = rowH * 0.63;    // 环中心
-        const R = Math.min(colW * 0.205, 12); // 外环半径（略收小）
-        const rings = [
-          { dr: 0, color: COLORS.red, dim: COLORS.redDim },
-          { dr: -3.2, color: COLORS.green, dim: COLORS.greenDim },
-          { dr: -6.4, color: COLORS.cyan, dim: COLORS.cyanDim },
-        ];
-
-        this.data.cells.forEach((c, i) => {
-          const cx = (i % 7) * colW + colW / 2;
-          const originY = Math.floor(i / 7) * rowH;
-          if (c.out) return;
-
-          // 日期数字：今天用蓝色实心圈包住
-          ctx.font = `${c.today ? 'bold ' : ''}11px -apple-system, "PingFang SC", sans-serif`;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          if (c.today) {
-            ctx.beginPath();
-            ctx.fillStyle = '#2B6CF6';
-            ctx.arc(cx, originY + numY, 8.5, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = '#fff';
-          } else {
-            ctx.fillStyle = '#4E5969';
-          }
-          ctx.fillText(c.day, cx, originY + numY + 0.5);
-
-          // 三环
-          const cy = originY + ringCy;
-          ctx.lineWidth = 2.4;
-          ctx.lineCap = 'round';
-          rings.forEach((ring, ri) => {
-            const r = R + ring.dr;
-            ctx.beginPath();
-            ctx.strokeStyle = ring.dim;
-            ctx.arc(cx, cy, r, 0, Math.PI * 2);
-            ctx.stroke();
-            const pct = c.pct[ri] || 0;
-            if (pct > 0) {
-              ctx.beginPath();
-              ctx.strokeStyle = ring.color;
-              ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, pct));
-              ctx.stroke();
-            }
-          });
-
-          // 三项全达成：日期数字右侧绿点
-          if (c.done) {
-            ctx.beginPath();
-            ctx.fillStyle = '#7CC93F';
-            ctx.arc(cx + 11, originY + numY - 3, 2.2, 0, Math.PI * 2);
-            ctx.fill();
-          }
-        });
-      }
-    });
   },
 
   /** 点某天（透明点击层）→ 在日历下方就地展示当日数据（不再跳页） */
@@ -381,40 +271,18 @@ Page({
     this.setData({ selectedDate: '', selected: null });
   },
 
-  /** 兜底：直接点 canvas 时按坐标反推日期（当前 wxml 用透明点击层，保留以防改回） */
-  onCalTap(e) {
-    const touch = (e.detail && e.detail.x != null)
-      ? { x: e.detail.x, y: e.detail.y }
-      : (e.touches && e.touches[0] ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null);
-    if (!touch) return;
-    const query = this.createSelectorQuery();
-    query.select('#cal-canvas').boundingClientRect();
-    query.exec((res) => {
-      const rect = res && res[0];
-      if (!rect) return;
-      const colW = rect.width / 7;
-      const rowH = colW * 1.05;
-      const col = Math.floor((touch.x - rect.left) / colW);
-      const row = Math.floor((touch.y - rect.top) / rowH);
-      const idx = row * 7 + col;
-      const cell = this.data.cells[idx];
-      if (!cell || cell.out || !cell.date) return;
-      this.loadDay(cell.date);
-    });
-  },
-
   /** 右上角：打开「创建/更改计划」半屏（不再跳页面） */
   openPlanSheet() {
     this.setData({ sheetVisible: true });
   },
 
   closePlanSheet() {
-    this.setData({ sheetVisible: false }, () => this.draw());
+    this.setData({ sheetVisible: false });
   },
 
   /** 半屏保存成功 → 收起并重拉（月历/概况/奖杯一起刷新） */
   onPlanSaved() {
-    this.setData({ sheetVisible: false }, () => this.draw());
+    this.setData({ sheetVisible: false });
     this.load();
   },
 

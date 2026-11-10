@@ -134,22 +134,6 @@ test('PHC1 月历装载：cells 补齐整行、pct 归一、达成与今天标�
   assert.equal(p.data.hasPlan, true, '有计划 → 右上角显示「更改计划」');
 });
 
-test('PHC5 半屏打开时卸载 canvas（原生组件会盖住蒙层），关闭后重绘', async () => {
-  const fs = require('fs');
-  const path = require('path');
-  const wxml = fs.readFileSync(path.join(__dirname, '../miniprogram/pages/plan-history/plan-history.wxml'), 'utf8');
-  assert.match(wxml, /<canvas wx:if="\{\{!sheetVisible\}\}"/, 'canvas 必须受 sheetVisible 控制');
-
-  const p = boot(historyDef);
-  let drew = 0;
-  p.draw = () => { drew += 1; };
-  p.openPlanSheet();
-  assert.equal(p.data.sheetVisible, true);
-  p.closePlanSheet();
-  assert.equal(p.data.sheetVisible, false);
-  assert.equal(drew, 1, '关闭后要重绘月历');
-});
-
 test('PHC4 无计划：右上角显示「创建计划」；有计划时显示「更改计划」', async () => {
   respond = (p) => {
     if (p.startsWith('/plan/calendar')) return Promise.resolve({ month: '2026-11', days: [], weeks: [] });
@@ -295,46 +279,16 @@ test('PHC3 选中日期装载：三项格式化与轨迹摘要（原单日页逻
   assert.equal(p.data.selected.tracks[0].durText, '18 分钟');
 });
 
-test('PHC6 绘制健壮性：canvas 节点/尺寸未就绪时重试，就绪后画出；并发只认最后一次', async () => {
-  const p = boot(historyDef);
-  // 还原真实 draw（boot 里被桩掉了），只替换 canvas 相关 API
-  p.draw = historyDef.draw;
-  p.data.cells = [{ key: 'd1', date: '2026-11-01', day: '1', out: false, pct: [1, 0.5, 0], done: false }];
+test('PHC8 月历用纯 CSS 三环（conic-gradient + mask），不再依赖 canvas', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const wxml = fs.readFileSync(path.join(__dirname, '../miniprogram/pages/plan-history/plan-history.wxml'), 'utf8');
+  const wxss = fs.readFileSync(path.join(__dirname, '../miniprogram/pages/plan-history/plan-history.wxss'), 'utf8');
 
-  let calls = 0;
-  const created = [];
-  const canvasStub = {
-    width: 0, height: 0,
-    getContext: () => ({
-      scale() {}, clearRect() {}, beginPath() {}, arc() {}, stroke() {}, fill() {},
-      fillText() {}, set font(v) {}, set textAlign(v) {}, set textBaseline(v) {},
-      set lineWidth(v) {}, set lineCap(v) {}, set strokeStyle(v) {}, set fillStyle(v) {},
-    }),
-  };
-  p.createSelectorQuery = () => {
-    const q = {
-      select: () => q,
-      boundingClientRect: () => q,
-      node: () => q,
-      exec: (cb) => {
-        calls += 1;
-        // 第一次：节点还没就绪（模拟首帧空白）；之后正常
-        if (calls === 1) return cb([{ width: 342 }, { node: null }]);
-        created.push(canvasStub);
-        return cb([{ width: 342 }, { node: canvasStub }]);
-      },
-    };
-    return q;
-  };
-  p.setData = (patch, cb) => {
-    Object.assign(p.data, patch);
-    if (cb) cb();
-  };
-
-  p.draw();
-  assert.equal(calls, 1, '第一次拿不到节点');
-  await new Promise((r) => setTimeout(r, 120));
-  assert.ok(calls >= 2, '未就绪要自动重试');
-  assert.equal(created.length, 1, '重试后成功绘制');
-  assert.ok(canvasStub.width > 0, '画布像素尺寸已设置（不再是空白）');
+  assert.equal(/<canvas/.test(wxml), false, '不再使用 canvas（真机偶发空白）');
+  assert.match(wxml, /conic-gradient\(#FA114F/, '距离环用 conic-gradient 画扇形');
+  assert.match(wxml, /conic-gradient\(#92E82A/, '时间环');
+  assert.match(wxml, /conic-gradient\(#1AD4E0/, '次数环');
+  assert.match(wxss, /-webkit-mask: radial-gradient/, '用 mask 挖空成环');
+  assert.match(wxml, /bindtap="onCellTap"/, '整格可点（不再需要透明点击层）');
 });

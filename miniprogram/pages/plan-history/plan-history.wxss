@@ -46,24 +46,62 @@
   color: #86909c;
 }
 
-/* 日期数字与 canvas 叠放在同一网格上：数字在上半，环在下半 */
-.cal-body {
-  position: relative;
-}
-.cal-canvas {
-  width: 100%;
-  display: block; /* 高度由 inline style（JS 按行数算出的 px）给定，必须与内部像素比例一致 */
-}
-.cal-hit {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
+/* 月历网格：每格 = 日期数字 + 三个 CSS 环（同一 flex 列，天然对齐） */
+.cal-grid {
   display: flex;
   flex-wrap: wrap;
 }
-.hit-cell {
+.cal-cell {
   width: 14.2857%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4rpx 0 8rpx;
+  position: relative;
+}
+.cal-cell-out {
+  opacity: 0.35;
+}
+.cal-num {
+  font-size: 22rpx;
+  line-height: 30rpx;
+  color: #4e5969;
+}
+.cal-num-today {
+  min-width: 34rpx;
+  height: 34rpx;
+  line-height: 34rpx;
+  text-align: center;
+  border-radius: 50%;
+  background: #2b6cf6;
+  color: #fff;
+  font-weight: 600;
+}
+/* 三环：每环一个节点，conic-gradient 画扇形，mask 挖空成"环"（3rpx 线宽） */
+.rings {
+  position: relative;
+  width: 52rpx;
+  height: 52rpx;
+  margin-top: 6rpx;
+}
+.ring {
+  position: absolute;
+  border-radius: 50%;
+  -webkit-mask: radial-gradient(closest-side, transparent calc(100% - 6rpx), #000 calc(100% - 6rpx));
+  mask: radial-gradient(closest-side, transparent calc(100% - 6rpx), #000 calc(100% - 6rpx));
+}
+.ring-red { inset: 0; }
+.ring-green { inset: 8rpx; }
+.ring-cyan { inset: 16rpx; }
+/* 三项达成：日期右侧绿点 */
+.cal-done {
+  position: absolute;
+  top: 6rpx;
+  right: 22rpx;
+  width: 8rpx;
+  height: 8rpx;
+  border-radius: 50%;
+  background: #7cc93f;
 }
 
 /* 图例 */

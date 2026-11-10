@@ -8,25 +8,29 @@
     <view class="month-right" bindtap="openPlanSheet">{{hasPlan ? '更改计划' : '创建计划'}}</view>
   </view>
 
-  <!-- 月历：日期数字 + 三环（canvas 一次画完）+ 点按进详情 -->
+  <!-- 月历：日期数字 + 三个 CSS 环（conic-gradient + mask），点某格看当日详情 -->
   <view class="cal-card">
     <view class="cal-week">
       <view wx:for="{{weekHead}}" wx:key="*this">{{item}}</view>
     </view>
     <view class="cal-body">
-      <!-- 日期数字与三环都画在 canvas 上：同一坐标系，不会错行 -->
-      <!-- canvas 是原生组件，层级高于蒙层/弹窗：半屏打开时先卸载，关闭后再重绘 -->
-      <canvas wx:if="{{!sheetVisible}}" type="2d" id="cal-canvas" class="cal-canvas" style="height: {{canvasH}}px"></canvas>
-      <!-- 透明点击层：每格一个 view，避免 canvas 事件与坐标换算的不确定性 -->
-      <view class="cal-hit">
+      <!-- 纯 CSS 三环：conic-gradient 画进度扇形 + mask 挖空成环；数字在上、环在下，同一格内天然对齐 -->
+      <view class="cal-grid">
         <view
           wx:for="{{cells}}"
           wx:key="key"
-          class="hit-cell"
-          style="height: {{hitRowH}}px"
+          class="cal-cell {{item.out ? 'cal-cell-out' : ''}}"
           data-date="{{item.date}}"
           bindtap="onCellTap"
-        ></view>
+        >
+          <view class="cal-num {{item.today ? 'cal-num-today' : ''}}">{{item.day}}</view>
+          <view class="rings" wx:if="{{!item.out}}">
+            <view class="ring ring-red" style="background: conic-gradient(#FA114F {{item.pct[0] * 100}}%, #FBD9E4 0);"></view>
+            <view class="ring ring-green" style="background: conic-gradient(#92E82A {{item.pct[1] * 100}}%, #E6F7D4 0);"></view>
+            <view class="ring ring-cyan" style="background: conic-gradient(#1AD4E0 {{item.pct[2] * 100}}%, #D5F6F9 0);"></view>
+          </view>
+          <view class="cal-done" wx:if="{{item.done}}"></view>
+        </view>
       </view>
     </view>
   </view>
