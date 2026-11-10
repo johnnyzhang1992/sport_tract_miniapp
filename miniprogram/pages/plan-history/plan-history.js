@@ -63,8 +63,13 @@ Page({
     this.load();
   },
 
+  onReady() {
+    // 首帧布局就绪后补画一次：draw 内部有重试，这里兜住更极端的时序
+    this.draw();
+  },
+
   onShow() {
-    // 从计划页改完计划回来：历史进度可能变化，静默重拉
+    // 从半屏/其他页回来：历史进度可能变化，静默重拉并重绘
     if (this._loaded) this.load();
   },
 
@@ -212,21 +217,36 @@ Page({
 
   /** 把整月的「日期数字 + 迷你三环 + 今天圈 + 达成点」一次画在一张 canvas 上
    *  （数字与环必须同一坐标系，否则会出现数字与环错行） */
-  draw(retry = 1) {
-    this.createSelectorQuery().select('#cal-canvas').boundingClientRect().exec((res) => {
+  draw(attempt = 0) {
+    // 每次绘制领一个令牌：并发/过期请求回来后直接丢弃，避免旧数据覆盖新画布
+    const token = (this._drawToken = (this._drawToken || 0) + 1);
+    const q = this.createSelectorQuery();
+    q.select('#cal-canvas').boundingClientRect();
+    q.select('#cal-canvas').node();
+    q.exec((res) => {
+      if (this._drawToken !== token) return;
       const rect = res && res[0];
-      if (!rect || !rect.width) {
-        if (retry > 0) setTimeout(() => this.draw(retry - 1), 120);
+      const canvas = res && res[1] && res[1].node;
+      const cells = this.data.cells || [];
+      /**
+       * 为什么需要重试：进页首帧里 canvas 节点/布局往往还没就绪（rect.width=0 或 node 为 null），
+       * 之前 node 拿不到就直接 return，于是偶发「日历空白」且不会再画。
+       * 这里统一短间隔重试（最多 10 次 ≈ 800ms），并跳过空数据态。
+       */
+      if (!canvas || !rect || !rect.width || cells.length === 0) {
+        if (attempt < 10) {
+          setTimeout(() => {
+            if (this._drawToken === token) this.draw(attempt + 1);
+          }, 80);
+        }
         return;
       }
-      this.createSelectorQuery().select('#cal-canvas').node((n) => {
-        const canvas = n && n.node;
-        if (!canvas) return;
+      {
         const dpr = (wx.getSystemInfoSync().pixelRatio) || 2;
         const W = rect.width;
         const colW = W / 7;
         const rowH = colW * 1.05;
-        const rows = Math.ceil(this.data.cells.length / 7);
+        const rows = Math.ceil(cells.length / 7);
         const H = rowH * rows;
         canvas.width = W * dpr;
         canvas.height = H * dpr;
@@ -292,7 +312,7 @@ Page({
             ctx.fill();
           }
         });
-      }).exec();
+      }
     });
   },
 

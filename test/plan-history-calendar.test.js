@@ -294,3 +294,47 @@ test('PHC3 选中日期装载：三项格式化与轨迹摘要（原单日页逻
   assert.equal(p.data.selected.tracks[0].distText, '2.4 km');
   assert.equal(p.data.selected.tracks[0].durText, '18 分钟');
 });
+
+test('PHC6 绘制健壮性：canvas 节点/尺寸未就绪时重试，就绪后画出；并发只认最后一次', async () => {
+  const p = boot(historyDef);
+  // 还原真实 draw（boot 里被桩掉了），只替换 canvas 相关 API
+  p.draw = historyDef.draw;
+  p.data.cells = [{ key: 'd1', date: '2026-11-01', day: '1', out: false, pct: [1, 0.5, 0], done: false }];
+
+  let calls = 0;
+  const created = [];
+  const canvasStub = {
+    width: 0, height: 0,
+    getContext: () => ({
+      scale() {}, clearRect() {}, beginPath() {}, arc() {}, stroke() {}, fill() {},
+      fillText() {}, set font(v) {}, set textAlign(v) {}, set textBaseline(v) {},
+      set lineWidth(v) {}, set lineCap(v) {}, set strokeStyle(v) {}, set fillStyle(v) {},
+    }),
+  };
+  p.createSelectorQuery = () => {
+    const q = {
+      select: () => q,
+      boundingClientRect: () => q,
+      node: () => q,
+      exec: (cb) => {
+        calls += 1;
+        // 第一次：节点还没就绪（模拟首帧空白）；之后正常
+        if (calls === 1) return cb([{ width: 342 }, { node: null }]);
+        created.push(canvasStub);
+        return cb([{ width: 342 }, { node: canvasStub }]);
+      },
+    };
+    return q;
+  };
+  p.setData = (patch, cb) => {
+    Object.assign(p.data, patch);
+    if (cb) cb();
+  };
+
+  p.draw();
+  assert.equal(calls, 1, '第一次拿不到节点');
+  await new Promise((r) => setTimeout(r, 120));
+  assert.ok(calls >= 2, '未就绪要自动重试');
+  assert.equal(created.length, 1, '重试后成功绘制');
+  assert.ok(canvasStub.width > 0, '画布像素尺寸已设置（不再是空白）');
+});
