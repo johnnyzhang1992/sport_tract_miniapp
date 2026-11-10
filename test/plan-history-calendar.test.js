@@ -131,6 +131,38 @@ test('PHC1 月历装载：cells 补齐整行、pct 归一、达成与今天标�
   assert.equal(p.data.summary.trophies.length, 3);
   assert.equal(p.data.summary.trophies[0].progressText, '已解锁');
   assert.equal(p.data.summary.trophies[2].progressText, '8/20', '未解锁显示进度');
+  assert.equal(p.data.hasPlan, true, '有计划 → 右上角显示「更改计划」');
+});
+
+test('PHC4 无计划：右上角显示「创建计划」；有计划时显示「更改计划」', async () => {
+  respond = (p) => {
+    if (p.startsWith('/plan/calendar')) return Promise.resolve({ month: '2026-11', days: [], weeks: [] });
+    if (p === '/plan/summary') return Promise.resolve(null);
+    if (p === '/plan/current') return Promise.resolve({ plan: null, progress: { distanceM: 0, durationSec: 0, count: 0 }, rings: [] });
+    return Promise.resolve({});
+  };
+  const p = boot(historyDef);
+  await p.load();
+  await flush();
+  assert.equal(p.data.hasPlan, false, '无计划');
+  assert.equal(p.data.current, null, '没有当前周期卡');
+
+  // 有计划（同一次会话再拉一次）
+  respond = (p2) => {
+    if (p2.startsWith('/plan/calendar')) return Promise.resolve({ month: '2026-11', days: [], weeks: [] });
+    if (p2 === '/plan/summary') return Promise.resolve(null);
+    if (p2 === '/plan/current') {
+      return Promise.resolve({
+        plan: { period: 'daily', targets: { distanceM: 3000, durationMin: 30, count: 1 } },
+        progress: { distanceM: 0, durationSec: 0, count: 0 },
+        rings: [],
+      });
+    }
+    return Promise.resolve({});
+  };
+  await p.load();
+  await flush();
+  assert.equal(p.data.hasPlan, true, '有计划');
 });
 
 test('PHC1b 当前周期已达成：remainText 提示已全部达成', async () => {

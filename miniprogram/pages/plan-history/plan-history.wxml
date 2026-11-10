@@ -5,7 +5,7 @@
     <view class="month-nav" bindtap="prevMonth">‹</view>
     <view class="month-title">{{monthText}}</view>
     <view class="month-nav" bindtap="nextMonth">›</view>
-    <view class="month-right" bindtap="goPlan">更改计划</view>
+    <view class="month-right" bindtap="goPlan">{{hasPlan ? '更改计划' : '创建计划'}}</view>
   </view>
 
   <!-- 月历：日期数字 + 三环（canvas 一次画完）+ 点按进详情 -->

@@ -43,6 +43,8 @@ Page({
     current: null,
     /** 记录数据概况 + 里程碑奖杯（GET /plan/summary） */
     summary: null,
+    /** 是否已有计划：右上角据此显示「更改计划」或「创建计划」 */
+    hasPlan: false,
     /** 选中的日期与当日详情（点日历某天后在下方就地展开，不再跳页） */
     selectedDate: '',
     selected: null,
@@ -138,6 +140,7 @@ Page({
         cells,
         weeks,
         current: this.buildCurrent(cur),
+        hasPlan: !!(cur && cur.plan),
         summary: this.buildSummary(sum),
         loading: false,
       }, () => this.draw());
