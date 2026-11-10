@@ -542,13 +542,15 @@
   min-width: 0;
 }
 .plan-guide-title {
-  font-size: 28rpx;
-  font-weight: 500; /* 与 .section-title 统一（卡片标题） */
+  /* 引导句不是卡片标题：字号必须小于 .section-title(28rpx)，字重也降一档 */
+  font-size: 26rpx;
+  font-weight: 400;
   color: #333;
 }
 .plan-guide-sub {
   margin-top: 4rpx;
   font-size: 22rpx;
+  font-weight: 400;
 }
 
 /* 计划卡最右侧「今日」栏：今日步数 + 今日运动距离（2026-11-10） */

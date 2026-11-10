@@ -138,7 +138,8 @@
   <!-- 运动计划：标题行卡片级（与其他卡一致）；下方左三环 canvas + 右目标信息；无计划 → 引导 -->
   <view class="card plan-card" hover-class="card-hover" bindtap="goPlan">
     <view class="section-head">
-      <view class="section-title">每日计划</view>
+      <!-- 标题跟随状态：有计划显示「每天计划/每周计划」，无计划显示「运动计划」 -->
+      <view class="section-title">{{planCard && planCard.plan ? planCard.periodText + '计划' : '运动计划'}}</view>
       <view class="lb-arrow">›</view>
     </view>
     <view class="plan-body">
