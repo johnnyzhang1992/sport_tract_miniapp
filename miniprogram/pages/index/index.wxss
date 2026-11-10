@@ -473,3 +473,54 @@
   border-radius: 999rpx;
   padding: 6rpx 24rpx;
 }
+
+/* 运动计划卡：标题行与其他卡一致（section-head）；下方 plan-body＝左三环 + 右目标行（2026-11-10） */
+.plan-card {
+  display: block;
+}
+.plan-rings {
+  width: 140rpx;
+  height: 140rpx;
+  flex-shrink: 0;
+}
+.plan-body {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  margin-top: 12rpx;
+}
+.plan-info {
+  flex: 1;
+  min-width: 0;
+  text-align: left; /* 三行目标文案水平居左 */
+}
+.plan-line {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: #333;
+}
+.plan-dot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.plan-dot-red { background: #fa114f; }
+.plan-dot-green { background: #92e82a; }
+.plan-dot-cyan { background: #1ad4e0; }
+.plan-guide {
+  flex: 1;
+  min-width: 0;
+}
+.plan-guide-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #333;
+}
+.plan-guide-sub {
+  margin-top: 4rpx;
+  font-size: 22rpx;
+}

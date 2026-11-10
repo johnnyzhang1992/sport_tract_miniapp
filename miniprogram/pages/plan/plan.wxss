@@ -1,0 +1,70 @@
+/* 运动计划设置页：周期分段 + 三项目标行 + 保存 */
+.progress-card {
+  background: linear-gradient(135deg, #2b6cf6, #6a9bff);
+  color: #fff;
+}
+.progress-label {
+  font-size: 24rpx;
+  opacity: 0.85;
+}
+.progress-detail {
+  margin-top: 8rpx;
+  font-size: 34rpx;
+  font-weight: 600;
+}
+.fgroup {
+  margin-bottom: 14rpx;
+}
+.period-row {
+  display: flex;
+  gap: 14rpx;
+  margin-top: 12rpx;
+}
+.period-seg {
+  flex: 1;
+  text-align: center;
+  padding: 14rpx 0;
+  border-radius: 12rpx;
+  background: #f2f3f5;
+  font-size: 28rpx;
+  color: #333;
+}
+.period-seg-active {
+  background: #2b6cf6;
+  color: #fff;
+  font-weight: 600;
+}
+.frow {
+  display: flex;
+  align-items: center;
+  margin-top: 24rpx;
+}
+.flabel {
+  width: 160rpx;
+  font-size: 28rpx;
+  color: #333;
+}
+.finput {
+  flex: 1;
+  border-bottom: 1rpx solid #e5e6eb;
+  padding: 8rpx 4rpx;
+  font-size: 30rpx;
+}
+.finput-num {
+  text-align: right;
+}
+.funit {
+  width: 90rpx;
+  margin-left: 12rpx;
+  font-size: 26rpx;
+  color: #86909c;
+  text-align: left;
+}
+.fnote {
+  margin-top: 16rpx;
+  font-size: 22rpx;
+  color: #86909c;
+}
+.submit-btn {
+  margin-top: 24rpx;
+}

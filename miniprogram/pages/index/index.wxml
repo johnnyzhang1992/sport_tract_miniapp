@@ -135,6 +135,30 @@
     <view class="lb-arrow">›</view>
   </view>
 
+  <!-- 运动计划：标题行卡片级（与其他卡一致）；下方左三环 canvas + 右目标信息；无计划 → 引导 -->
+  <view class="card plan-card" hover-class="card-hover" bindtap="goPlan">
+    <view class="section-head">
+      <view class="section-title">每日计划</view>
+      <view class="lb-arrow">›</view>
+    </view>
+    <view class="plan-body">
+      <block wx:if="{{planCard && planCard.plan}}">
+        <canvas type="2d" id="plan-rings" class="plan-rings"></canvas>
+        <view class="plan-info">
+          <view class="plan-line"><view class="plan-dot plan-dot-red"></view><text>距离 {{planCard.distanceText}}</text></view>
+          <view class="plan-line"><view class="plan-dot plan-dot-green"></view><text>时间 {{planCard.durationText}}</text></view>
+          <view class="plan-line"><view class="plan-dot plan-dot-cyan"></view><text>次数 {{planCard.countText}}</text></view>
+        </view>
+      </block>
+      <block wx:else>
+        <view class="plan-guide">
+          <view class="plan-guide-title">设定你的运动计划</view>
+          <view class="plan-guide-sub text-muted">坚持每天动一下，圆环见证完成度</view>
+        </view>
+      </block>
+    </view>
+  </view>
+
   <!-- 运动类型选择 -->
   <view class="card">
     <view class="section-title">运动类型</view>

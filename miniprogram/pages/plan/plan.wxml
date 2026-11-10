@@ -1,0 +1,43 @@
+<!-- 运动计划设置：周期（每天/每周）+ 三项目标（距离/时间/次数）；保存即生效 -->
+<view class="container">
+  <!-- 当期进度摘要 -->
+  <view class="card progress-card">
+    <view class="progress-label">{{progressText}}</view>
+    <view class="progress-detail">{{progressDetail || '—'}}</view>
+  </view>
+
+  <!-- 计划周期：每天 / 每周 -->
+  <view class="card fgroup">
+    <view class="section-title">计划周期</view>
+    <view class="period-row">
+      <view
+        wx:for="{{periods}}"
+        wx:key="key"
+        class="period-seg {{period === item.key ? 'period-seg-active' : ''}}"
+        data-value="{{item.key}}"
+        bindtap="onPeriod"
+      >{{item.label}}</view>
+    </view>
+    <view class="fnote">完成度按所选周期实时统计：每天＝当天 0 点起；每周＝本周一 0 点起</view>
+
+    <!-- 三项目标（三环固定：距离/时间/次数） -->
+    <view class="frow">
+      <view class="flabel">运动距离</view>
+      <input class="finput finput-num" type="digit" placeholder="如 5" placeholder-class="fph" value="{{distanceKm}}" bindinput="onDistance" />
+      <view class="funit">km</view>
+    </view>
+    <view class="frow">
+      <view class="flabel">运动时间</view>
+      <input class="finput finput-num" type="number" placeholder="如 30" placeholder-class="fph" value="{{durationMin}}" bindinput="onDuration" />
+      <view class="funit">分钟</view>
+    </view>
+    <view class="frow">
+      <view class="flabel">运动次数</view>
+      <input class="finput finput-num" type="number" placeholder="如 1" placeholder-class="fph" value="{{count}}" bindinput="onCount" />
+      <view class="funit">次</view>
+    </view>
+    <view class="fnote">三项都需设置；超额完成时圆环保持满环，数字显示实际值</view>
+  </view>
+
+  <button class="btn-primary submit-btn" disabled="{{saving || loading}}" loading="{{saving}}" bindtap="onSave">{{saving ? '保存中…' : '保存计划'}}</button>
+</view>

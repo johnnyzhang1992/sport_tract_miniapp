@@ -32,7 +32,8 @@
     "pages/member/member",
     "pages/member-orders/member-orders",
     "pages/operator/operator",
-    "pages/photos/photos"
+    "pages/photos/photos",
+    "pages/plan/plan"
   ],
   "window": {
     "navigationBarBackgroundColor": "#ffffff",
@@ -98,7 +99,9 @@
   "preloadRule": {
     "pages/footprint-list/footprint-list": {
       "network": "wifi",
-      "packages": ["packageFootprint"]
+      "packages": [
+        "packageFootprint"
+      ]
     }
   },
   "requiredBackgroundModes": [

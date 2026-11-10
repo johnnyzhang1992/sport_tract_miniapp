@@ -48,6 +48,7 @@ Page({
     ongoingActivity: null, // 进行中（已暂停）运动入口
     lbSummary: null, // 运动榜摘要（卡片副标题）
     stepsSummary: null, // 微信步数榜摘要（右侧卡片：今日排名/步数；游客回落参与人数）
+    planCard: null, // 运动计划卡（三环 + 右侧目标信息）；null＝无计划 → 引导卡
     topics: [], // 生效中的官方专题（首页入口）
     notice: null, // 首页单行通知（{id,title}；null=不渲染）
     noticeDot: false, // 红点：登录用户才画
@@ -135,6 +136,7 @@ Page({
       wx.nextTick(() => {
         this.loadLeaderboardSummary();
         this.loadStepsSummary();
+        this.loadPlan();
         this.loadActiveTopics();
       });
     } else if (noticeDirty) {
@@ -272,6 +274,85 @@ Page({
     wx.navigateTo({ url: '/pages/werun-board/werun-board' });
   },
 
+  /** 运动计划卡：拉计划与当期进度；有计划 → 准备三环数据并绘制；无计划 → 引导卡 */
+  async loadPlan() {
+    try {
+      const d = await api.get('/plan/current');
+      if (!d || !d.plan) {
+        this.setData({ planCard: null });
+        return;
+      }
+      const t = d.plan.targets;
+      const km = (m) => (Math.round(m / 100) / 10).toFixed(1);
+      this.setData({
+        planCard: {
+          plan: true,
+          periodText: d.plan.period === 'weekly' ? '每周' : '每日',
+          distanceText: `${km(d.progress.distanceM)}/${km(t.distanceM)} km`,
+          durationText: `${Math.round(d.progress.durationSec / 60)}/${t.durationMin} 分钟`,
+          countText: `${d.progress.count}/${t.count} 次`,
+          pcts: (d.rings || []).map((r) => r.pct),
+        },
+      });
+      wx.nextTick(() => this.drawPlanRings());
+    } catch (e) {
+      // 静默：卡片维持上一帧状态
+    }
+  },
+
+  /** 三同心环绘制（canvas 2d）：底环灰（数据为空也常驻渲染）、进度弧顶部起顺时针、超额封顶。
+   *  尺寸不依赖 fields().size（实测对 wx:if 内的 canvas 会返回 undefined），改由 140rpx 换算 px。 */
+  drawPlanRings(retry = 1) {
+    this.createSelectorQuery().select('#plan-rings').node((res) => {
+      const canvas = res && res.node;
+      if (!canvas) {
+        if (retry > 0) setTimeout(() => this.drawPlanRings(retry - 1), 120);
+        return;
+      }
+      try {
+        const info = wx.getSystemInfoSync();
+        const cssSize = Math.max(60, (info.screenWidth * 160) / 750); // .plan-rings 宽 160rpx 换算 px
+        const dpr = info.pixelRatio || 2;
+        canvas.width = cssSize * dpr;
+        canvas.height = cssSize * dpr;
+        const ctx = canvas.getContext('2d');
+        ctx.scale(dpr, dpr);
+        const cx = cssSize / 2;
+        const cy = cssSize / 2;
+        // 外→内：距离（红）/ 时间（绿）/ 次数（青）
+        const rings = [
+          { r: cx - 6, color: '#FA114F', pct: (this.data.planCard && this.data.planCard.pcts[0]) || 0 },
+          { r: cx - 19, color: '#92E82A', pct: (this.data.planCard && this.data.planCard.pcts[1]) || 0 },
+          { r: cx - 32, color: '#1AD4E0', pct: (this.data.planCard && this.data.planCard.pcts[2]) || 0 },
+        ];
+        const LW = 5;
+        ctx.clearRect(0, 0, cssSize, cssSize);
+        ctx.lineWidth = LW;
+        ctx.lineCap = 'round';
+        for (const ring of rings) {
+          ctx.beginPath();
+          ctx.strokeStyle = '#dcdfe6'; // 底环浅灰（可见）：进度 0/空数据时也清晰可见
+          ctx.arc(cx, cy, ring.r, 0, Math.PI * 2);
+          ctx.stroke();
+          if (ring.pct > 0) {
+            ctx.beginPath();
+            ctx.strokeStyle = ring.color;
+            // 顶部起顺时针；pct 封顶 1（超额显示满环）
+            ctx.arc(cx, cy, ring.r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, ring.pct));
+            ctx.stroke();
+          }
+        }
+      } catch (err) {
+        console.error('[index] 运动计划环绘制失败', err);
+      }
+    }).exec();
+  },
+
+  /** 运动计划卡 → 计划设置页 */
+  goPlan() {
+    wx.navigateTo({ url: '/pages/plan/plan' });
+  },
+
   /** 点击"继续运动"入口 → 回记录页（让用户选择继续/重新开始） */
   goOngoing() {
     const o = this.data.ongoingActivity;
@@ -288,6 +369,7 @@ Page({
       this.loadOverview(),
       this.loadLeaderboardSummary(),
       this.loadStepsSummary(),
+      this.loadPlan(),
       this.loadActiveTopics(),
       this.loadNotificationSummary(),
     ]).finally(() => wx.stopPullDownRefresh());
