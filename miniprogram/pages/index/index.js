@@ -349,9 +349,9 @@ Page({
     }).exec();
   },
 
-  /** 运动计划卡 → 计划设置页 */
+  /** 运动计划卡 → 计划历史（月历）；改计划入口在历史页右上角 */
   goPlan() {
-    wx.navigateTo({ url: '/pages/plan/plan' });
+    wx.navigateTo({ url: '/pages/plan-history/plan-history' });
   },
 
   /** 点击"继续运动"入口 → 回记录页（让用户选择继续/重新开始） */

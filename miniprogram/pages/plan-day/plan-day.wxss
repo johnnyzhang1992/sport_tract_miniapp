@@ -1,0 +1,181 @@
+/* 单日详情：头部 + 本周条 + 大环 + 三项指标 + 轨迹摘要 */
+.head {
+  display: flex;
+  align-items: center;
+  padding: 8rpx 0 12rpx;
+}
+.head-title {
+  flex: 1;
+  font-size: 34rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+.head-badge {
+  margin-left: 12rpx;
+  font-size: 20rpx;
+  color: #3f9b1c;
+  background: #eaf7e6;
+  padding: 4rpx 12rpx;
+  border-radius: 999rpx;
+}
+
+/* 本周七天 */
+.week-strip {
+  display: flex;
+  gap: 6rpx;
+  padding: 4rpx 0 12rpx;
+}
+.strip-day {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rpx;
+  padding: 8rpx 0;
+  border-radius: 12rpx;
+}
+.strip-sel {
+  background: #eaf0ff;
+}
+.strip-wd {
+  font-size: 20rpx;
+  color: #86909c;
+}
+.strip-num {
+  font-size: 26rpx;
+  color: #1f2329;
+}
+.strip-sel .strip-num {
+  color: #2b6cf6;
+  font-weight: 600;
+}
+
+/* 大环 */
+.big-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 8rpx 0 20rpx;
+}
+.big-ring {
+  width: 400rpx;
+  height: 400rpx;
+}
+
+/* 三项指标 */
+.metrics {
+  padding: 8rpx 24rpx 4rpx;
+}
+.metric {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18rpx 0;
+  border-bottom: 1rpx solid #f2f3f5;
+}
+.metric:last-of-type {
+  border-bottom: none;
+}
+.metric-info {
+  display: flex;
+  flex-direction: column;
+}
+.metric-name {
+  font-size: 22rpx;
+  color: #86909c;
+}
+.metric-line {
+  display: flex;
+  align-items: baseline;
+  margin-top: 2rpx;
+}
+.metric-cur {
+  font-size: 44rpx;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.metric-sep {
+  font-size: 32rpx;
+  font-weight: 700;
+}
+.metric-unit {
+  margin-left: 8rpx;
+  font-size: 24rpx;
+  color: #86909c;
+}
+.metric-red { color: #fa114f; }
+.metric-green { color: #6bbf1f; }
+.metric-cyan { color: #0fa9b4; }
+.metric-pct {
+  font-size: 26rpx;
+  font-weight: 600;
+}
+.metric-edit {
+  text-align: center;
+  padding: 16rpx 0 12rpx;
+  font-size: 24rpx;
+  color: #2b6cf6;
+}
+
+/* 轨迹摘要 */
+.tracks {
+  margin-top: 16rpx;
+  padding: 8rpx 24rpx;
+}
+.tracks-title {
+  font-size: 24rpx;
+  color: #86909c;
+  padding: 14rpx 0 6rpx;
+}
+.track-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 14rpx 0;
+  border-bottom: 1rpx solid #f2f3f5;
+}
+.track-row:last-child {
+  border-bottom: none;
+}
+.track-icon {
+  font-size: 32rpx;
+}
+.track-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.track-label {
+  font-size: 28rpx;
+  color: #1f2329;
+}
+.track-sub {
+  font-size: 22rpx;
+  color: #86909c;
+}
+.track-time {
+  font-size: 22rpx;
+  color: #86909c;
+}
+.empty {
+  margin-top: 16rpx;
+  text-align: center;
+  padding: 60rpx 0;
+  font-size: 26rpx;
+  color: #86909c;
+}
+
+.state {
+  padding: 40rpx 0;
+  text-align: center;
+  font-size: 26rpx;
+}
+.retry {
+  display: inline-block;
+  margin-top: 16rpx;
+  padding: 10rpx 32rpx;
+  border-radius: 999rpx;
+  background: #2b6cf6;
+  color: #fff;
+  font-size: 26rpx;
+}
