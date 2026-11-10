@@ -54,8 +54,10 @@
         <view class="cur-bar">
           <view class="cur-bar-fill cur-bar-{{item.dot}}" style="width: {{item.pct}}%"></view>
         </view>
-        <text class="cur-val">{{item.cur}}/{{item.target}}</text>
-        <text class="cur-unit">{{item.unit}}</text>
+        <view class="cur-vals">
+          <text class="cur-val">{{item.cur}}/{{item.target}}</text>
+          <text class="cur-unit">{{item.unit}}</text>
+        </view>
       </view>
       <view class="day-tracks" wx:if="{{selected.tracks.length > 0}}">
         <view class="day-track" wx:for="{{selected.tracks}}" wx:key="id">
@@ -82,8 +84,10 @@
       <view class="cur-bar">
         <view class="cur-bar-fill cur-bar-{{item.dot}}" style="width: {{item.pct}}%"></view>
       </view>
-      <text class="cur-val">{{item.cur}}/{{item.target}}</text>
-      <text class="cur-unit">{{item.unit}}</text>
+      <view class="cur-vals">
+        <text class="cur-val">{{item.cur}}/{{item.target}}</text>
+        <text class="cur-unit">{{item.unit}}</text>
+      </view>
     </view>
     <view class="cur-remain">{{current.remainText}}</view>
   </view>

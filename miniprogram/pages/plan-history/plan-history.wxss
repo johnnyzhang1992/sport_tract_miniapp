@@ -190,7 +190,7 @@
   border-radius: 999rpx;
   background: #f2f3f5;
   overflow: hidden;
-  margin-right: 14rpx;
+  margin-right: 12rpx;
 }
 .cur-bar-fill {
   height: 100%;
@@ -203,13 +203,22 @@
   font-size: 26rpx;
   font-weight: 600;
   color: #1f2329;
+  text-align: right; /* 数值右对齐：三行右边缘齐平 */
+}
+/* 数值 + 单位固定宽度并贴右：进度条长度因此一致（原 flex 平分会被文字宽度带偏） */
+.cur-vals {
+  width: 200rpx;
   flex-shrink: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
 }
 .cur-unit {
-  width: 62rpx;
-  margin-left: 4rpx;
+  width: 58rpx;
+  margin-left: 6rpx;
   font-size: 20rpx;
   color: #86909c;
+  flex-shrink: 0;
 }
 .cur-remain {
   margin-top: 14rpx;
