@@ -196,7 +196,7 @@
 }
 .lb-title {
   font-size: 28rpx;
-  font-weight: 600;
+  font-weight: 500; /* 与 .section-title 统一（卡片标题） */
   color: #1f2329;
 }
 .lb-sub {
@@ -543,7 +543,7 @@
 }
 .plan-guide-title {
   font-size: 28rpx;
-  font-weight: 600;
+  font-weight: 500; /* 与 .section-title 统一（卡片标题） */
   color: #333;
 }
 .plan-guide-sub {
