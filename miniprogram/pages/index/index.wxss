@@ -496,12 +496,29 @@
 }
 .plan-line {
   display: flex;
-  align-items: center;
+  align-items: baseline; /* 数字放大后与标签基线对齐 */
   gap: 8rpx;
-  margin-top: 4rpx; /* 三行间距收紧 */
+  margin-top: 4rpx;
   font-size: 24rpx;
   line-height: 1.35;
   color: #333;
+}
+.plan-label {
+  font-size: 24rpx;
+  color: #333;
+}
+/* 当期实际值：放大 + 对应色（与圆环同色） */
+.plan-num {
+  font-size: 34rpx;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.plan-num-red { color: #fa114f; }
+.plan-num-green { color: #6bbf1f; } /* #92e82a 在白底偏亮，压深一档保可读 */
+.plan-num-cyan { color: #0fa9b4; } /* #1ad4e0 同上 */
+.plan-goal {
+  font-size: 22rpx;
+  color: #86909c;
 }
 .plan-dot {
   width: 12rpx;

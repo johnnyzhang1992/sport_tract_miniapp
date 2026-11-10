@@ -145,9 +145,24 @@
       <block wx:if="{{planCard && planCard.plan}}">
         <canvas type="2d" id="plan-rings" class="plan-rings"></canvas>
         <view class="plan-info">
-          <view class="plan-line"><view class="plan-dot plan-dot-red"></view><text>距离 {{planCard.distanceText}}</text></view>
-          <view class="plan-line"><view class="plan-dot plan-dot-green"></view><text>时间 {{planCard.durationText}}</text></view>
-          <view class="plan-line"><view class="plan-dot plan-dot-cyan"></view><text>次数 {{planCard.countText}}</text></view>
+          <view class="plan-line">
+            <view class="plan-dot plan-dot-red"></view>
+            <text class="plan-label">距离</text>
+            <text class="plan-num plan-num-red">{{planCard.distanceValue}}</text>
+            <text class="plan-goal">/{{planCard.distanceGoal}}</text>
+          </view>
+          <view class="plan-line">
+            <view class="plan-dot plan-dot-green"></view>
+            <text class="plan-label">时间</text>
+            <text class="plan-num plan-num-green">{{planCard.durationValue}}</text>
+            <text class="plan-goal">/{{planCard.durationGoal}}</text>
+          </view>
+          <view class="plan-line">
+            <view class="plan-dot plan-dot-cyan"></view>
+            <text class="plan-label">次数</text>
+            <text class="plan-num plan-num-cyan">{{planCard.countValue}}</text>
+            <text class="plan-goal">/{{planCard.countGoal}}</text>
+          </view>
         </view>
       </block>
       <block wx:else>

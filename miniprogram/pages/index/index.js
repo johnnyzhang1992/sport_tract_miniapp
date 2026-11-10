@@ -288,9 +288,10 @@ Page({
         planCard: {
           plan: true,
           periodText: d.plan.period === 'weekly' ? '每周' : '每日',
-          distanceText: `${km(d.progress.distanceM)}/${km(t.distanceM)} km`,
-          durationText: `${Math.round(d.progress.durationSec / 60)}/${t.durationMin} 分钟`,
-          countText: `${d.progress.count}/${t.count} 次`,
+          // 数字与目标分开：数字单独放大着色，目标走次要小字
+          distanceValue: km(d.progress.distanceM), distanceGoal: `${km(t.distanceM)} km`,
+          durationValue: String(Math.round(d.progress.durationSec / 60)), durationGoal: `${t.durationMin} 分钟`,
+          countValue: String(d.progress.count), countGoal: `${t.count} 次`,
           pcts: (d.rings || []).map((r) => r.pct),
         },
       });

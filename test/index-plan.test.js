@@ -53,9 +53,12 @@ test('IP1 有计划：planCard 装载周期文案、当前/目标文本与三环
   await flush();
   assert.ok(p.data.planCard && p.data.planCard.plan === true);
   assert.equal(p.data.planCard.periodText, '每周');
-  assert.equal(p.data.planCard.distanceText, '25.0/20.0 km', '超额时当前值显示实际值（>目标）');
-  assert.equal(p.data.planCard.durationText, '120/120 分钟');
-  assert.equal(p.data.planCard.countText, '4/3 次');
+  assert.equal(p.data.planCard.distanceValue, '25.0', '当前值显示实际值（可超额）');
+  assert.equal(p.data.planCard.distanceGoal, '20.0 km', '目标值单独下发');
+  assert.equal(p.data.planCard.durationValue, '120');
+  assert.equal(p.data.planCard.durationGoal, '120 分钟');
+  assert.equal(p.data.planCard.countValue, '4');
+  assert.equal(p.data.planCard.countGoal, '3 次');
   assert.deepEqual(p.data.planCard.pcts, [1, 1, 1], 'pct 封顶 1');
 });
 
