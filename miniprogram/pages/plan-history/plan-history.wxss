@@ -203,15 +203,16 @@
   font-size: 26rpx;
   font-weight: 600;
   color: #1f2329;
-  text-align: right; /* 数值右对齐：三行右边缘齐平 */
+  text-align: left;
 }
-/* 数值 + 单位固定宽度并贴右：进度条长度因此一致（原 flex 平分会被文字宽度带偏） */
+/* 数值 + 单位固定宽度、内部左对齐：三行左边缘齐平，与进度条保持固定间距；
+   容器宽度固定 → 三条进度条等长（原 flex 平分会被文字宽度带偏） */
 .cur-vals {
   width: 200rpx;
   flex-shrink: 0;
   display: flex;
   align-items: baseline;
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 .cur-unit {
   width: 58rpx;
