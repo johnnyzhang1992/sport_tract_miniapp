@@ -41,6 +41,8 @@ Page({
     weeks: [],
     /** 当前周期概况：{ periodText, achieved, metrics, remainText }（未选中日期时展示） */
     current: null,
+    /** 记录数据概况 + 里程碑奖杯（GET /plan/summary） */
+    summary: null,
     /** 选中的日期与当日详情（点日历某天后在下方就地展开，不再跳页） */
     selectedDate: '',
     selected: null,
@@ -87,9 +89,10 @@ Page({
     this.setData({ loading: true, failed: false });
     try {
       // 并行拉当前周期进度（概况卡用），失败不影响月历
-      const [res, cur] = await Promise.all([
+      const [res, cur, sum] = await Promise.all([
         api.get(`/plan/calendar?month=${month}`),
         api.get('/plan/current').catch(() => null),
+        api.get('/plan/summary').catch(() => null),
       ]);
       const days = (res && res.days) || [];
       const byDate = {};
@@ -131,11 +134,45 @@ Page({
         };
       });
 
-      this.setData({ cells, weeks, current: this.buildCurrent(cur), loading: false }, () => this.draw());
+      this.setData({
+        cells,
+        weeks,
+        current: this.buildCurrent(cur),
+        summary: this.buildSummary(sum),
+        loading: false,
+      }, () => this.draw());
       this._loaded = true;
     } catch (e) {
       this.setData({ loading: false, failed: true });
     }
+  },
+
+  /** 记录数据概况 + 奖杯：里程碑固定档位，未解锁也占位（与统计页奖杯墙同款口径） */
+  buildSummary(sum) {
+    if (!sum) return null;
+    const km = (m) => (Math.round((Number(m) || 0) / 100) / 10).toFixed(1);
+    const hours = (sec) => {
+      const s2 = Number(sec) || 0;
+      if (s2 < 3600) return `${Math.round(s2 / 60)} 分钟`;
+      return `${(Math.round((s2 / 3600) * 10) / 10).toFixed(1)} 小时`;
+    };
+    return {
+      cards: [
+        { key: 'periods', num: String(sum.totalPeriods || 0), cap: '已完成周期' },
+        { key: 'achieved', num: String(sum.achievedPeriods || 0), cap: '达成次数' },
+        { key: 'rate', num: `${Math.round((sum.rate || 0) * 100)}%`, cap: '达成率' },
+        { key: 'streak', num: String((sum.streak && sum.streak.current) || 0), cap: '连续达成' },
+      ],
+      totalsText: `累计 ${km(sum.totals && sum.totals.distanceM)} km · ${hours(sum.totals && sum.totals.durationSec)} · ${(sum.totals && sum.totals.count) || 0} 次运动`,
+      bestStreakText: `最佳连续 ${(sum.streak && sum.streak.best) || 0} 次`,
+      trophies: (sum.milestones || []).map((m) => ({
+        key: m.key,
+        label: m.label,
+        desc: m.desc,
+        unlocked: !!m.unlocked,
+        progressText: m.unlocked ? '已解锁' : `${m.cur}/${m.need}`,
+      })),
+    };
   },
 
   /** 当前周期概况：三项当前/目标 + 百分比 + 剩余 */

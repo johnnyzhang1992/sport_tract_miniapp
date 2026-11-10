@@ -38,6 +38,38 @@
     <view class="lg"><view class="lg-dot lg-done"></view>三项达成</view>
   </view>
 
+  <!-- 记录数据概况：已完成周期 / 达成次数 / 达成率 / 连续达成 + 累计 -->
+  <view class="card sum-card" wx:if="{{summary}}">
+    <view class="sum-title-row">
+      <text class="sum-title">记录数据概况</text>
+      <text class="sum-best">{{summary.bestStreakText}}</text>
+    </view>
+    <view class="sum-grid">
+      <view class="sum-item" wx:for="{{summary.cards}}" wx:key="key">
+        <text class="sum-num">{{item.num}}</text>
+        <text class="sum-cap">{{item.cap}}</text>
+      </view>
+    </view>
+    <view class="sum-totals">{{summary.totalsText}}</view>
+  </view>
+
+  <!-- 里程碑奖杯：固定档位，未解锁置灰（口径同统计页奖杯墙） -->
+  <view class="card trophy-card" wx:if="{{summary && summary.trophies.length}}">
+    <view class="sum-title-row">
+      <text class="sum-title">里程碑奖杯</text>
+    </view>
+    <view class="trophy-grid">
+      <view class="trophy-item {{item.unlocked ? '' : 'trophy-locked'}}" wx:for="{{summary.trophies}}" wx:key="key">
+        <view class="trophy-badge {{item.unlocked ? 'trophy-badge-on' : 'trophy-badge-locked'}}">
+          <text class="{{item.unlocked ? 'trophy-check' : 'trophy-lock'}}">{{item.unlocked ? '✓' : '—'}}</text>
+        </view>
+        <text class="trophy-label">{{item.label}}</text>
+        <text class="trophy-desc">{{item.desc}}</text>
+        <text class="trophy-progress">{{item.progressText}}</text>
+      </view>
+    </view>
+  </view>
+
   <!-- 选中的某天：就地展开（不跳页）；再点同一天收起 -->
   <view class="card cur-card" wx:if="{{selected}}">
     <view class="cur-head">

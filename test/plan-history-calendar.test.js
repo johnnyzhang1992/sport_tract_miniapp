@@ -69,6 +69,18 @@ test('PHC1 月历装载：cells 补齐整行、pct 归一、达成与今天标�
         ],
       });
     }
+    if (p === '/plan/summary') {
+      return Promise.resolve({
+        totalPeriods: 12, achievedPeriods: 8, rate: 0.67,
+        streak: { current: 3, best: 5 },
+        totals: { distanceM: 48000, durationSec: 14400, count: 12 },
+        milestones: [
+          { key: 'first', label: '首次达成', desc: '完成 1 次目标', unlocked: true, cur: 8, need: 1 },
+          { key: 'week', label: '坚持一周', desc: '达成 7 次', unlocked: true, cur: 8, need: 7 },
+          { key: 'habit', label: '习惯养成', desc: '达成 20 次', unlocked: false, cur: 8, need: 20 },
+        ],
+      });
+    }
     if (p === '/plan/current') {
       return Promise.resolve({
         plan: { period: 'daily', targets: { distanceM: 3000, durationMin: 30, count: 1 } },
@@ -110,11 +122,32 @@ test('PHC1 月历装载：cells 补齐整行、pct 归一、达成与今天标�
   ]);
   assert.match(p.data.current.remainText, /还差/);
   assert.match(p.data.current.remainText, /1\.5 km/);
+
+  // 记录数据概况 + 奖杯
+  assert.ok(p.data.summary, '装载概况');
+  assert.deepEqual(p.data.summary.cards.map((c) => `${c.num}${c.cap}`), ['12已完成周期', '8达成次数', '67%达成率', '3连续达成']);
+  assert.match(p.data.summary.totalsText, /累计 48\.0 km/);
+  assert.equal(p.data.summary.bestStreakText, '最佳连续 5 次');
+  assert.equal(p.data.summary.trophies.length, 3);
+  assert.equal(p.data.summary.trophies[0].progressText, '已解锁');
+  assert.equal(p.data.summary.trophies[2].progressText, '8/20', '未解锁显示进度');
 });
 
 test('PHC1b 当前周期已达成：remainText 提示已全部达成', async () => {
   respond = (p) => {
     if (p.startsWith('/plan/calendar')) return Promise.resolve({ month: '2026-11', days: [], weeks: [] });
+    if (p === '/plan/summary') {
+      return Promise.resolve({
+        totalPeriods: 12, achievedPeriods: 8, rate: 0.67,
+        streak: { current: 3, best: 5 },
+        totals: { distanceM: 48000, durationSec: 14400, count: 12 },
+        milestones: [
+          { key: 'first', label: '首次达成', desc: '完成 1 次目标', unlocked: true, cur: 8, need: 1 },
+          { key: 'week', label: '坚持一周', desc: '达成 7 次', unlocked: true, cur: 8, need: 7 },
+          { key: 'habit', label: '习惯养成', desc: '达成 20 次', unlocked: false, cur: 8, need: 20 },
+        ],
+      });
+    }
     if (p === '/plan/current') {
       return Promise.resolve({
         plan: { period: 'weekly', targets: { distanceM: 21000, durationMin: 210, count: 7 } },
