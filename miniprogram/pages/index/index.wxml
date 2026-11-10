@@ -161,6 +161,22 @@
             <text class="plan-num plan-num-cyan">{{planCard.countValue}}<text class="plan-goal">/{{planCard.countNum}}</text></text><text class="plan-unit">次</text>
           </view>
         </view>
+        <!-- 最右侧「今日」栏：今日步数 + 今日运动距离 -->
+        <view class="plan-today">
+          <view class="plan-today-title">今日</view>
+          <view class="plan-today-line">
+            <text class="plan-today-num">{{planCard.todaySteps}}</text>
+            <text class="plan-today-unit">步</text>
+          </view>
+          <view class="plan-today-line">
+            <text class="plan-today-num">{{planCard.todayDistance}}</text>
+            <text class="plan-today-unit">km</text>
+          </view>
+          <view class="plan-today-line">
+            <text class="plan-today-num">{{planCard.todayDuration}}</text>
+            <text class="plan-today-unit">分钟</text>
+          </view>
+        </view>
       </block>
       <block wx:else>
         <view class="plan-guide">

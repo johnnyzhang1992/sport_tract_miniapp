@@ -259,11 +259,17 @@ Page({
       const res = await api.get('/werun/board?period=day');
       if (!res) return;
       const me = res.me || null;
-      this.setData({
+      const step = (me && me.step) || 0;
+      const patch = {
         stepsSummary: me
-          ? { rank: me.rank, step: me.step || 0, players: res.players || 0 }
+          ? { rank: me.rank, step, players: res.players || 0 }
           : { players: res.players || 0 },
-      });
+      };
+      // 计划卡最右侧「今日」栏复用这份步数（两个接口独立加载，谁先到都能各自成稿）
+      if (this.data.planCard && this.data.planCard.plan) {
+        patch['planCard.todaySteps'] = String(step);
+      }
+      this.setData(patch);
     } catch (e) {
       // 静默：卡片仍展示默认文案
     }
@@ -292,6 +298,12 @@ Page({
           distanceValue: km(d.progress.distanceM), distanceNum: km(t.distanceM),
           durationValue: String(Math.round(d.progress.durationSec / 60)), durationNum: String(t.durationMin),
           countValue: String(d.progress.count), countNum: String(t.count),
+          // 今日运动距离来自 /plan/current 的 today 段；今日步数复用步数榜摘要（未同步时显示 0）
+          todayDistance: km((d.today && d.today.distanceM) || 0),
+          todayDuration: String(Math.round(((d.today && d.today.durationSec) || 0) / 60)),
+          // 步数可能与计划并行加载：已有摘要就直接用，否则等 loadStepsSummary 回填
+          todaySteps: (this.data.stepsSummary && this.data.stepsSummary.step != null)
+            ? String(this.data.stepsSummary.step) : '0',
           pcts: (d.rings || []).map((r) => r.pct),
         },
       });

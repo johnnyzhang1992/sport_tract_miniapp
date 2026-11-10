@@ -42,6 +42,7 @@ test('IP1 有计划：planCard 装载周期文案、当前/目标文本与三环
   planResponse = {
     plan: { period: 'weekly', targets: { distanceM: 20000, durationMin: 120, count: 3 }, updatedAt: 1 },
     progress: { distanceM: 25000, durationSec: 7200, count: 4 },
+    today: { distanceM: 2000, durationSec: 1200, count: 1 },
     rings: [
       { key: 'distance', value: 25000, target: 20000, pct: 1 },
       { key: 'duration', value: 7200, target: 7200, pct: 1 },
@@ -60,6 +61,8 @@ test('IP1 有计划：planCard 装载周期文案、当前/目标文本与三环
   assert.equal(p.data.planCard.countValue, '4');
   assert.equal(p.data.planCard.countNum, '3');
   assert.deepEqual(p.data.planCard.pcts, [1, 1, 1], 'pct 封顶 1');
+  assert.equal(p.data.planCard.todayDistance, '2.0', '今日距离');
+  assert.equal(p.data.planCard.todayDuration, '20', '今日时长（分钟）');
 });
 
 test('IP2 无计划：planCard 置 null（首页渲染引导卡）', async () => {
