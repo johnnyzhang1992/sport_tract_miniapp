@@ -289,9 +289,9 @@ Page({
           plan: true,
           periodText: d.plan.period === 'weekly' ? '每周' : '每日',
           // 数字与目标分开：数字单独放大着色，目标走次要小字
-          distanceValue: km(d.progress.distanceM), distanceGoal: `${km(t.distanceM)} km`,
-          durationValue: String(Math.round(d.progress.durationSec / 60)), durationGoal: `${t.durationMin} 分钟`,
-          countValue: String(d.progress.count), countGoal: `${t.count} 次`,
+          distanceValue: km(d.progress.distanceM), distanceNum: km(t.distanceM),
+          durationValue: String(Math.round(d.progress.durationSec / 60)), durationNum: String(t.durationMin),
+          countValue: String(d.progress.count), countNum: String(t.count),
           pcts: (d.rings || []).map((r) => r.pct),
         },
       });
