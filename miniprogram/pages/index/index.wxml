@@ -148,20 +148,17 @@
           <view class="plan-line">
             <view class="plan-dot plan-dot-red"></view>
             <text class="plan-label">距离</text>
-            <text class="plan-num plan-num-red">{{planCard.distanceValue}}</text>
-            <text class="plan-goal">/{{planCard.distanceGoal}}</text>
+            <text class="plan-num plan-num-red">{{planCard.distanceValue}}<text class="plan-goal">/{{planCard.distanceGoal}}</text></text>
           </view>
           <view class="plan-line">
             <view class="plan-dot plan-dot-green"></view>
             <text class="plan-label">时间</text>
-            <text class="plan-num plan-num-green">{{planCard.durationValue}}</text>
-            <text class="plan-goal">/{{planCard.durationGoal}}</text>
+            <text class="plan-num plan-num-green">{{planCard.durationValue}}<text class="plan-goal">/{{planCard.durationGoal}}</text></text>
           </view>
           <view class="plan-line">
             <view class="plan-dot plan-dot-cyan"></view>
             <text class="plan-label">次数</text>
-            <text class="plan-num plan-num-cyan">{{planCard.countValue}}</text>
-            <text class="plan-goal">/{{planCard.countGoal}}</text>
+            <text class="plan-num plan-num-cyan">{{planCard.countValue}}<text class="plan-goal">/{{planCard.countGoal}}</text></text>
           </view>
         </view>
       </block>
