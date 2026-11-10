@@ -1,4 +1,7 @@
 {
   "navigationBarTitleText": "计划历史",
-  "enablePullDownRefresh": true
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "plan-edit-sheet": "/components/plan-edit-sheet/plan-edit-sheet"
+  }
 }

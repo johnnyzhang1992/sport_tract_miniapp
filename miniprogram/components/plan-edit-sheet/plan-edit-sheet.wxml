@@ -1,0 +1,60 @@
+<!-- 计划编辑半屏：创建/更改计划共用；点遮罩或关闭按钮收起 -->
+<view class="sheet-mask {{visible ? 'sheet-mask-on' : ''}}" wx:if="{{visible}}" bindtap="onClose">
+  <view class="sheet" catchtap="noop">
+    <view class="sheet-head">
+      <text class="sheet-title">{{plan ? '更改计划' : '创建计划'}}</text>
+      <text class="sheet-close" bindtap="onClose">✕</text>
+    </view>
+
+    <!-- 周期 -->
+    <view class="period-row">
+      <view
+        wx:for="{{periods}}"
+        wx:key="key"
+        class="period-seg {{period === item.key ? 'period-seg-active' : ''}}"
+        data-value="{{item.key}}"
+        bindtap="onPeriod"
+      >{{item.label}}</view>
+    </view>
+    <view class="sheet-note">每天＝当天 0 点起统计；每周＝本周一 0 点起统计</view>
+
+    <!-- 三项目标：步进器 -->
+    <view class="goal-row">
+      <view class="goal-dot goal-dot-red"></view>
+      <text class="goal-label">运动距离</text>
+      <view class="stepper">
+        <view class="step-btn" hover-class="step-btn-hover" data-key="distance" data-delta="-1" bindtap="onStep">−</view>
+        <input class="step-input" type="digit" value="{{distanceKm}}" bindinput="onDistance" />
+        <view class="step-btn" hover-class="step-btn-hover" data-key="distance" data-delta="1" bindtap="onStep">+</view>
+      </view>
+      <text class="goal-unit">km</text>
+    </view>
+
+    <view class="goal-row">
+      <view class="goal-dot goal-dot-green"></view>
+      <text class="goal-label">运动时间</text>
+      <view class="stepper">
+        <view class="step-btn" hover-class="step-btn-hover" data-key="duration" data-delta="-1" bindtap="onStep">−</view>
+        <input class="step-input" type="number" value="{{durationMin}}" bindinput="onDuration" />
+        <view class="step-btn" hover-class="step-btn-hover" data-key="duration" data-delta="1" bindtap="onStep">+</view>
+      </view>
+      <text class="goal-unit">分钟</text>
+    </view>
+
+    <view class="goal-row">
+      <view class="goal-dot goal-dot-cyan"></view>
+      <text class="goal-label">运动次数</text>
+      <view class="stepper">
+        <view class="step-btn" hover-class="step-btn-hover" data-key="count" data-delta="-1" bindtap="onStep">−</view>
+        <input class="step-input" type="number" value="{{count}}" bindinput="onCount" />
+        <view class="step-btn" hover-class="step-btn-hover" data-key="count" data-delta="1" bindtap="onStep">+</view>
+      </view>
+      <text class="goal-unit">次</text>
+    </view>
+
+    <view class="sheet-note">点 − / + 快速调整（距离 0.5、时间 5、次数 1），也可直接输入；三项都需大于 0</view>
+
+    <!-- 用 view 实现按钮：微信原生 button 默认宽度固定 184px，会顶掉 width:100% -->
+    <view class="sheet-save {{saving ? 'sheet-save-disabled' : ''}}" hover-class="{{saving ? '' : 'sheet-save-hover'}}" bindtap="onSave">{{saving ? '保存中…' : '保存计划'}}</view>
+  </view>
+</view>

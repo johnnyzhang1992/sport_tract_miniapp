@@ -5,7 +5,7 @@
     <view class="month-nav" bindtap="prevMonth">‹</view>
     <view class="month-title">{{monthText}}</view>
     <view class="month-nav" bindtap="nextMonth">›</view>
-    <view class="month-right" bindtap="goPlan">{{hasPlan ? '更改计划' : '创建计划'}}</view>
+    <view class="month-right" bindtap="openPlanSheet">{{hasPlan ? '更改计划' : '创建计划'}}</view>
   </view>
 
   <!-- 月历：日期数字 + 三环（canvas 一次画完）+ 点按进详情 -->
@@ -15,7 +15,8 @@
     </view>
     <view class="cal-body">
       <!-- 日期数字与三环都画在 canvas 上：同一坐标系，不会错行 -->
-      <canvas type="2d" id="cal-canvas" class="cal-canvas" style="height: {{canvasH}}px"></canvas>
+      <!-- canvas 是原生组件，层级高于蒙层/弹窗：半屏打开时先卸载，关闭后再重绘 -->
+      <canvas wx:if="{{!sheetVisible}}" type="2d" id="cal-canvas" class="cal-canvas" style="height: {{canvasH}}px"></canvas>
       <!-- 透明点击层：每格一个 view，避免 canvas 事件与坐标换算的不确定性 -->
       <view class="cal-hit">
         <view
@@ -136,6 +137,9 @@
       </view>
     </view>
   </block>
+
+  <!-- 创建/更改计划半屏 -->
+  <plan-edit-sheet visible="{{sheetVisible}}" plan="{{planForSheet}}" bind:close="closePlanSheet" bind:saved="onPlanSaved" />
 
   <view wx:if="{{failed}}" class="state">
     <text class="text-muted">加载失败</text>

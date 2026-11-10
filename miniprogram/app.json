@@ -33,7 +33,6 @@
     "pages/member-orders/member-orders",
     "pages/operator/operator",
     "pages/photos/photos",
-    "pages/plan/plan",
     "pages/plan-history/plan-history"
   ],
   "window": {

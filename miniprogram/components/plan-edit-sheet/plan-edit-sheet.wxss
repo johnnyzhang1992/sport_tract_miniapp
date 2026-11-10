@@ -1,0 +1,147 @@
+/* 计划编辑半屏 */
+.sheet-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.55); /* 加深蒙层：与白底弹窗对比更清晰 */
+  display: flex;
+  align-items: flex-end;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+.sheet-mask-on {
+  opacity: 1;
+}
+.sheet {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  box-sizing: border-box;
+  background: #fff; /* 不透明底：盖住页面内容，避免月历数字从顶部圆角处透出 */
+  border-radius: 24rpx 24rpx 0 0;
+  padding: 32rpx 28rpx calc(48rpx + env(safe-area-inset-bottom)); /* 顶部避开圆角、底部留白：保存按钮不贴下边缘 */
+  transform: translateY(100%);
+  animation: sheet-up 0.22s ease forwards;
+}
+@keyframes sheet-up {
+  to { transform: translateY(0); }
+}
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8rpx;
+}
+.sheet-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+.sheet-close {
+  font-size: 30rpx;
+  color: #8a93a6;
+  padding: 4rpx 8rpx;
+}
+
+.period-row {
+  display: flex;
+  gap: 12rpx;
+  margin-top: 16rpx;
+}
+.period-seg {
+  flex: 1;
+  text-align: center;
+  padding: 16rpx 0;
+  border-radius: 12rpx;
+  background: #f2f3f5;
+  font-size: 28rpx;
+  color: #333;
+}
+.period-seg-active {
+  background: #2b6cf6;
+  color: #fff;
+  font-weight: 600;
+}
+
+.goal-row {
+  display: flex;
+  align-items: center;
+  margin-top: 20rpx;
+}
+.goal-dot {
+  width: 14rpx;
+  height: 14rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-right: 12rpx;
+}
+.goal-dot-red { background: #fa114f; }
+.goal-dot-green { background: #92e82a; }
+.goal-dot-cyan { background: #1ad4e0; }
+.goal-label {
+  flex: 1;
+  min-width: 0;
+  font-size: 28rpx;
+  color: #1f2329;
+}
+.stepper {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  border: 1rpx solid #e5e6eb;
+  border-radius: 12rpx;
+  overflow: hidden;
+}
+.step-btn {
+  width: 64rpx;
+  height: 64rpx;
+  line-height: 64rpx;
+  text-align: center;
+  font-size: 34rpx;
+  color: #2b6cf6;
+  background: #f7f8fa;
+}
+.step-btn-hover {
+  background: #eaf0ff;
+}
+.step-input {
+  width: 120rpx;
+  height: 64rpx;
+  line-height: 64rpx;
+  text-align: center;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+.goal-unit {
+  width: 76rpx;
+  margin-left: 12rpx;
+  font-size: 24rpx;
+  color: #86909c;
+}
+
+.sheet-note {
+  margin-top: 14rpx;
+  font-size: 22rpx;
+  line-height: 1.5;
+  color: #86909c;
+}
+.sheet-save {
+  margin-top: 32rpx;
+  width: 100%;
+  height: 96rpx;
+  display: flex;
+  align-items: center; /* 文字垂直居中 */
+  justify-content: center;
+  border-radius: 999rpx;
+  background: #2b6cf6;
+  color: #fff;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+.sheet-save-hover {
+  opacity: 0.9;
+}
+.sheet-save-disabled {
+  opacity: 0.6;
+}

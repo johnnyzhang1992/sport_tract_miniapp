@@ -134,6 +134,22 @@ test('PHC1 月历装载：cells 补齐整行、pct 归一、达成与今天标�
   assert.equal(p.data.hasPlan, true, '有计划 → 右上角显示「更改计划」');
 });
 
+test('PHC5 半屏打开时卸载 canvas（原生组件会盖住蒙层），关闭后重绘', async () => {
+  const fs = require('fs');
+  const path = require('path');
+  const wxml = fs.readFileSync(path.join(__dirname, '../miniprogram/pages/plan-history/plan-history.wxml'), 'utf8');
+  assert.match(wxml, /<canvas wx:if="\{\{!sheetVisible\}\}"/, 'canvas 必须受 sheetVisible 控制');
+
+  const p = boot(historyDef);
+  let drew = 0;
+  p.draw = () => { drew += 1; };
+  p.openPlanSheet();
+  assert.equal(p.data.sheetVisible, true);
+  p.closePlanSheet();
+  assert.equal(p.data.sheetVisible, false);
+  assert.equal(drew, 1, '关闭后要重绘月历');
+});
+
 test('PHC4 无计划：右上角显示「创建计划」；有计划时显示「更改计划」', async () => {
   respond = (p) => {
     if (p.startsWith('/plan/calendar')) return Promise.resolve({ month: '2026-11', days: [], weeks: [] });
@@ -237,8 +253,12 @@ test('PHC2 点日历某天 → 就地展开当日详情（不跳页）；再点�
   assert.equal(p.data.selectedDate, '');
   assert.equal(p.data.selected, null);
 
-  p.goPlan();
-  assert.deepEqual(navs, ['/pages/plan/plan'], '历史页保留更改计划入口');
+  navs.length = 0;
+  p.openPlanSheet();
+  assert.equal(p.data.sheetVisible, true, '右上角改为打开半屏（不跳页）');
+  assert.deepEqual(navs, [], '不产生页面跳转');
+  p.onPlanSaved();
+  assert.equal(p.data.sheetVisible, false, '保存后收起');
 });
 
 test('PHC3 选中日期装载：三项格式化与轨迹摘要（原单日页逻辑已并入历史页）', async () => {

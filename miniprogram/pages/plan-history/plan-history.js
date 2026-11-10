@@ -45,6 +45,9 @@ Page({
     summary: null,
     /** 是否已有计划：右上角据此显示「更改计划」或「创建计划」 */
     hasPlan: false,
+    /** 创建/更改计划半屏 */
+    sheetVisible: false,
+    planForSheet: null,
     /** 选中的日期与当日详情（点日历某天后在下方就地展开，不再跳页） */
     selectedDate: '',
     selected: null,
@@ -141,6 +144,7 @@ Page({
         weeks,
         current: this.buildCurrent(cur),
         hasPlan: !!(cur && cur.plan),
+        planForSheet: (cur && cur.plan) || null,
         summary: this.buildSummary(sum),
         loading: false,
       }, () => this.draw());
@@ -379,8 +383,19 @@ Page({
     });
   },
 
-  goPlan() {
-    wx.navigateTo({ url: '/pages/plan/plan' });
+  /** 右上角：打开「创建/更改计划」半屏（不再跳页面） */
+  openPlanSheet() {
+    this.setData({ sheetVisible: true });
+  },
+
+  closePlanSheet() {
+    this.setData({ sheetVisible: false }, () => this.draw());
+  },
+
+  /** 半屏保存成功 → 收起并重拉（月历/概况/奖杯一起刷新） */
+  onPlanSaved() {
+    this.setData({ sheetVisible: false }, () => this.draw());
+    this.load();
   },
 
   onRetry() {
