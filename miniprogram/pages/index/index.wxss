@@ -487,7 +487,7 @@
   display: flex;
   align-items: center;
   gap: 32rpx; /* 圆环与右侧文案之间留白加大 */
-  margin-top: 6rpx; /* 标题行与内容之间收紧 */
+  /* 标题与内容间距由 .section-head 的 margin-bottom 统一给，此处不再叠加 */
 }
 .plan-info {
   flex: 1;
