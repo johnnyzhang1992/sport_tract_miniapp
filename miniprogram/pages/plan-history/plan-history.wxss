@@ -149,7 +149,7 @@
 
 /* 当前周期概况卡 */
 .cur-card {
-  margin-top: 8rpx;
+  margin: 0 0 12rpx; /* 置于月历上方：与下方日历拉开间距 */
   padding: 18rpx 24rpx 16rpx;
 }
 .cur-head {
