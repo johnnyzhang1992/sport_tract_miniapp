@@ -317,7 +317,7 @@ Page({
     this.setData({ selectedDate: '', selected: null });
   },
 
-  /** 兜底：直接点 canvas 时按坐标反推日期（当前 wxml 已改用点击层，保留以防改回） */
+  /** 兜底：直接点 canvas 时按坐标反推日期（当前 wxml 用透明点击层，保留以防改回） */
   onCalTap(e) {
     const touch = (e.detail && e.detail.x != null)
       ? { x: e.detail.x, y: e.detail.y }
@@ -335,7 +335,7 @@ Page({
       const idx = row * 7 + col;
       const cell = this.data.cells[idx];
       if (!cell || cell.out || !cell.date) return;
-      wx.navigateTo({ url: `/pages/plan-day/plan-day?date=${cell.date}` });
+      this.loadDay(cell.date);
     });
   },
 
