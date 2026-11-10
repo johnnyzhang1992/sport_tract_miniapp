@@ -506,6 +506,13 @@
 .plan-label {
   font-size: 24rpx;
   color: #333;
+  flex: 1; /* 标签占满左侧，把数值推到右端（两端对齐，右侧不留大片空白） */
+  min-width: 0;
+}
+.plan-value {
+  display: flex;
+  align-items: baseline;
+  flex-shrink: 0;
 }
 /* 当期实际值：放大 + 对应色（与圆环同色） */
 .plan-num {

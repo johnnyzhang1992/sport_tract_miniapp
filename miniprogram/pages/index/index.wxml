@@ -148,17 +148,23 @@
           <view class="plan-line">
             <view class="plan-dot plan-dot-red"></view>
             <text class="plan-label">距离</text>
-            <text class="plan-num plan-num-red">{{planCard.distanceValue}}<text class="plan-goal">/{{planCard.distanceNum}}</text></text><text class="plan-unit">km</text>
+            <view class="plan-value">
+              <text class="plan-num plan-num-red">{{planCard.distanceValue}}<text class="plan-goal">/{{planCard.distanceNum}}</text></text><text class="plan-unit">km</text>
+            </view>
           </view>
           <view class="plan-line">
             <view class="plan-dot plan-dot-green"></view>
             <text class="plan-label">时间</text>
-            <text class="plan-num plan-num-green">{{planCard.durationValue}}<text class="plan-goal">/{{planCard.durationNum}}</text></text><text class="plan-unit">分钟</text>
+            <view class="plan-value">
+              <text class="plan-num plan-num-green">{{planCard.durationValue}}<text class="plan-goal">/{{planCard.durationNum}}</text></text><text class="plan-unit">分钟</text>
+            </view>
           </view>
           <view class="plan-line">
             <view class="plan-dot plan-dot-cyan"></view>
             <text class="plan-label">次数</text>
-            <text class="plan-num plan-num-cyan">{{planCard.countValue}}<text class="plan-goal">/{{planCard.countNum}}</text></text><text class="plan-unit">次</text>
+            <view class="plan-value">
+              <text class="plan-num plan-num-cyan">{{planCard.countValue}}<text class="plan-goal">/{{planCard.countNum}}</text></text><text class="plan-unit">次</text>
+            </view>
           </view>
         </view>
       </block>
