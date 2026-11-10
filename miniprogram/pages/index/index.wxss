@@ -479,15 +479,15 @@
   display: block;
 }
 .plan-rings {
-  width: 140rpx;
-  height: 140rpx;
+  width: 110rpx;
+  height: 110rpx;
   flex-shrink: 0;
 }
 .plan-body {
   display: flex;
   align-items: center;
-  gap: 20rpx;
-  margin-top: 12rpx;
+  gap: 16rpx;
+  margin-top: 6rpx; /* 标题行与内容之间收紧 */
 }
 .plan-info {
   flex: 1;
@@ -497,9 +497,10 @@
 .plan-line {
   display: flex;
   align-items: center;
-  gap: 10rpx;
-  margin-top: 8rpx;
+  gap: 8rpx;
+  margin-top: 4rpx; /* 三行间距收紧 */
   font-size: 24rpx;
+  line-height: 1.35;
   color: #333;
 }
 .plan-dot {

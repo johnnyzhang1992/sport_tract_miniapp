@@ -311,7 +311,7 @@ Page({
       }
       try {
         const info = wx.getSystemInfoSync();
-        const cssSize = Math.max(60, (info.screenWidth * 160) / 750); // .plan-rings 宽 160rpx 换算 px
+        const cssSize = Math.max(50, (info.screenWidth * 110) / 750); // .plan-rings 宽 110rpx 换算 px
         const dpr = info.pixelRatio || 2;
         canvas.width = cssSize * dpr;
         canvas.height = cssSize * dpr;
@@ -321,11 +321,11 @@ Page({
         const cy = cssSize / 2;
         // 外→内：距离（红）/ 时间（绿）/ 次数（青）；底环＝同色低透明度
         const rings = [
-          { r: cx - 6, rgb: '250,17,79', pct: (this.data.planCard && this.data.planCard.pcts[0]) || 0 },
-          { r: cx - 19, rgb: '146,232,42', pct: (this.data.planCard && this.data.planCard.pcts[1]) || 0 },
-          { r: cx - 32, rgb: '26,212,224', pct: (this.data.planCard && this.data.planCard.pcts[2]) || 0 },
+          { r: cx - 5, rgb: '250,17,79', pct: (this.data.planCard && this.data.planCard.pcts[0]) || 0 },
+          { r: cx - 16, rgb: '146,232,42', pct: (this.data.planCard && this.data.planCard.pcts[1]) || 0 },
+          { r: cx - 27, rgb: '26,212,224', pct: (this.data.planCard && this.data.planCard.pcts[2]) || 0 },
         ];
-        const LW = 7;
+        const LW = 6;
         ctx.clearRect(0, 0, cssSize, cssSize);
         ctx.lineWidth = LW;
         ctx.lineCap = 'round';
