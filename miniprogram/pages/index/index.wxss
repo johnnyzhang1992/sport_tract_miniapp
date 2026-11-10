@@ -18,7 +18,7 @@
 }
 .section-title {
   font-size: 28rpx;
-  font-weight: 600;
+  font-weight: 500; /* 卡片标题字重下调（600 → 500） */
   margin-bottom: 12rpx;
 }
 .type-grid {
