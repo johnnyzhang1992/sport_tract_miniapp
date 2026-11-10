@@ -240,7 +240,7 @@ Page({
       const ranks = Array.isArray(me.ranks) ? me.ranks : [];
       this.setData({
         lbSummary: {
-          ranks: ranks.slice(0, 2).map((r) => { // 卡片最多 1+2=3 行
+          ranks: ranks.slice(0, 1).map((r) => { // 只展示一条上榜数据（服务端已截首条，这里兜底）
             const t = config.ACTIVITY_TYPES.find((x) => x.type === r.type);
             return { type: r.type, rank: r.rank, label: `${(t && t.label) || '运动'}${PERIOD_LABEL[period] || '榜'}` };
           }),

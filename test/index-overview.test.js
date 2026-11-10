@@ -250,10 +250,10 @@ test('H9 榜摘要一次请求：label 用服务端给的周期，不再端上�
   await page.loadLeaderboardSummary();
 
   assert.deepEqual(apiCalls, ['/stats/leaderboard-regions?me=1'], '一次拿全：人数 + 名次');
-  assert.deepEqual(page.data.lbSummary.ranks.map((r) => r.label), ['散步月榜', '跑步月榜']);
+  assert.deepEqual(page.data.lbSummary.ranks.map((r) => r.label), ['散步月榜'], '只保留一条上榜数据（最好的那一项）');
 });
 
-test('H10 卡片最多 1+2=3 行：三条上榜也只展示前两条排名', async () => {
+test('H10 只展示一条上榜数据：三条上榜也只取名次最好的第一条', async () => {
   resetEnv();
   respond = (p) => {
     if (p === '/stats/leaderboard-regions?me=1') {
@@ -275,8 +275,8 @@ test('H10 卡片最多 1+2=3 行：三条上榜也只展示前两条排名', asy
   const page = makePage();
   await page.loadLeaderboardSummary();
 
-  assert.equal(page.data.lbSummary.ranks.length, 2, '排名行截到 2 条');
-  assert.deepEqual(page.data.lbSummary.ranks.map((r) => r.type), ['walking', 'running'], '按后端返回顺序取前两条');
+  assert.equal(page.data.lbSummary.ranks.length, 1, '只保留一条上榜数据');
+  assert.deepEqual(page.data.lbSummary.ranks.map((r) => r.type), ['walking'], '按后端返回顺序取第一条');
 });
 
 test('H10b 老服务端不带 me 字段：人数照常展示，名次退化为空（不崩、不编造）', async () => {
