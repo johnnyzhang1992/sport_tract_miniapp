@@ -165,10 +165,6 @@
         <view class="plan-today">
           <view class="plan-today-title">今日</view>
           <view class="plan-today-line">
-            <text class="plan-today-num">{{planCard.todaySteps}}</text>
-            <text class="plan-today-unit">步</text>
-          </view>
-          <view class="plan-today-line">
             <text class="plan-today-num">{{planCard.todayDistance}}</text>
             <text class="plan-today-unit">km</text>
           </view>
