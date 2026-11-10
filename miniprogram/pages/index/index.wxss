@@ -499,17 +499,17 @@
   align-items: baseline; /* 数字放大后与标签基线对齐 */
   gap: 8rpx;
   margin-top: 4rpx;
-  font-size: 24rpx;
-  line-height: 1.35;
+  font-size: 22rpx;
+  line-height: 1.3;
   color: #333;
 }
 .plan-label {
-  font-size: 24rpx;
+  font-size: 22rpx;
   color: #333;
 }
 /* 当期实际值：放大 + 对应色（与圆环同色） */
 .plan-num {
-  font-size: 32rpx;
+  font-size: 28rpx;
   font-weight: 700;
   line-height: 1.1;
 }
@@ -517,13 +517,13 @@
 .plan-num-green { color: #6bbf1f; } /* #92e82a 在白底偏亮，压深一档保可读 */
 .plan-num-cyan { color: #0fa9b4; } /* #1ad4e0 同上 */
 .plan-goal {
-  font-size: 32rpx; /* 与当前值同档 */
+  font-size: 28rpx; /* 与当前值同档 */
   font-weight: 700;
   line-height: 1.1;
   /* 颜色由同行 .plan-num-* 继承：2.0 与 /3.0 同色同字号 */
 }
 .plan-unit {
-  font-size: 24rpx; /* 单位比数字小一档 */
+  font-size: 22rpx; /* 单位比数字小一档 */
   font-weight: 600;
   margin-left: 4rpx;
   /* 颜色同样继承行色 */
