@@ -319,28 +319,25 @@ Page({
         ctx.scale(dpr, dpr);
         const cx = cssSize / 2;
         const cy = cssSize / 2;
-        // 外→内：距离（红）/ 时间（绿）/ 次数（青）
+        // 外→内：距离（红）/ 时间（绿）/ 次数（青）；底环＝同色低透明度
         const rings = [
-          { r: cx - 6, color: '#FA114F', pct: (this.data.planCard && this.data.planCard.pcts[0]) || 0 },
-          { r: cx - 19, color: '#92E82A', pct: (this.data.planCard && this.data.planCard.pcts[1]) || 0 },
-          { r: cx - 32, color: '#1AD4E0', pct: (this.data.planCard && this.data.planCard.pcts[2]) || 0 },
+          { r: cx - 6, rgb: '250,17,79', pct: (this.data.planCard && this.data.planCard.pcts[0]) || 0 },
+          { r: cx - 19, rgb: '146,232,42', pct: (this.data.planCard && this.data.planCard.pcts[1]) || 0 },
+          { r: cx - 32, rgb: '26,212,224', pct: (this.data.planCard && this.data.planCard.pcts[2]) || 0 },
         ];
-        const LW = 5;
+        const LW = 7;
         ctx.clearRect(0, 0, cssSize, cssSize);
         ctx.lineWidth = LW;
         ctx.lineCap = 'round';
         for (const ring of rings) {
           ctx.beginPath();
-          ctx.strokeStyle = '#dcdfe6'; // 底环浅灰（可见）：进度 0/空数据时也清晰可见
+          ctx.strokeStyle = `rgba(${ring.rgb}, 0.25)`; // 底环：同色 25% 透明度
           ctx.arc(cx, cy, ring.r, 0, Math.PI * 2);
           ctx.stroke();
-          if (ring.pct > 0) {
-            ctx.beginPath();
-            ctx.strokeStyle = ring.color;
-            // 顶部起顺时针；pct 封顶 1（超额显示满环）
-            ctx.arc(cx, cy, ring.r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, ring.pct));
-            ctx.stroke();
-          }
+          ctx.beginPath();
+          ctx.strokeStyle = `rgb(${ring.rgb})`; // 进度弧：实色（超额封顶满环）
+          ctx.arc(cx, cy, ring.r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, ring.pct));
+          ctx.stroke();
         }
       } catch (err) {
         console.error('[index] 运动计划环绘制失败', err);
