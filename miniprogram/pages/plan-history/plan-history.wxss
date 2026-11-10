@@ -218,3 +218,42 @@
   font-size: 22rpx;
   color: #86909c;
 }
+
+/* 选中日的详情卡：头部右侧（徽章 + 收起）与当天轨迹 */
+.cur-head-right {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+.cur-close {
+  font-size: 22rpx;
+  color: #2b6cf6;
+}
+.day-tracks {
+  margin-top: 14rpx;
+  padding-top: 6rpx;
+  border-top: 1rpx solid #f2f3f5;
+}
+.day-track {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  padding: 10rpx 0;
+}
+.day-track-icon {
+  font-size: 26rpx;
+}
+.day-track-label {
+  font-size: 24rpx;
+  color: #1f2329;
+  flex-shrink: 0;
+}
+.day-track-sub {
+  flex: 1;
+  font-size: 22rpx;
+  color: #86909c;
+}
+.day-track-time {
+  font-size: 22rpx;
+  color: #86909c;
+}

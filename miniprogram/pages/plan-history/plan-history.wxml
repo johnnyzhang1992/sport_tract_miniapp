@@ -38,8 +38,40 @@
     <view class="lg"><view class="lg-dot lg-done"></view>三项达成</view>
   </view>
 
-  <!-- 当前周期概况：今天/本周的三项完成度 -->
-  <view class="card cur-card" wx:if="{{current}}">
+  <!-- 选中的某天：就地展开（不跳页）；再点同一天收起 -->
+  <view class="card cur-card" wx:if="{{selected}}">
+    <view class="cur-head">
+      <text class="cur-title">{{selected.title}}</text>
+      <view class="cur-head-right">
+        <text class="badge {{selected.achieved ? 'badge-done' : 'badge-miss'}}">{{selected.achieved ? '已达成' : (selected.loading ? '加载中' : '未达成')}}</text>
+        <text class="cur-close" bindtap="clearSelected">收起</text>
+      </view>
+    </view>
+    <block wx:if="{{!selected.loading}}">
+      <view class="cur-metric" wx:for="{{selected.metrics}}" wx:key="key">
+        <view class="cur-dot cur-dot-{{item.dot}}"></view>
+        <text class="cur-label">{{item.label}}</text>
+        <view class="cur-bar">
+          <view class="cur-bar-fill cur-bar-{{item.dot}}" style="width: {{item.pct}}%"></view>
+        </view>
+        <text class="cur-val">{{item.cur}}/{{item.target}}</text>
+        <text class="cur-unit">{{item.unit}}</text>
+      </view>
+      <view class="day-tracks" wx:if="{{selected.tracks.length > 0}}">
+        <view class="day-track" wx:for="{{selected.tracks}}" wx:key="id">
+          <text class="day-track-icon">{{item.icon}}</text>
+          <text class="day-track-label">{{item.label}}</text>
+          <text class="day-track-sub">{{item.distText}} · {{item.durText}}</text>
+          <text class="day-track-time">{{item.timeText}}</text>
+        </view>
+      </view>
+      <view class="cur-remain" wx:else>当天没有运动记录</view>
+    </block>
+    <view class="cur-remain" wx:else>加载中…</view>
+  </view>
+
+  <!-- 当前周期概况：今天/本周的三项完成度（未选中日期时展示） -->
+  <view class="card cur-card" wx:elif="{{current}}">
     <view class="cur-head">
       <text class="cur-title">当前周期 · {{current.periodText}}</text>
       <text class="badge {{current.achieved ? 'badge-done' : 'badge-miss'}}">{{current.achieved ? '已达成' : '进行中'}}</text>

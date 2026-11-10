@@ -33,9 +33,7 @@ global.getApp = () => ({ hasSession: () => true, globalData: {} });
 
 require('../miniprogram/pages/plan-history/plan-history.js');
 const historyDef = pageDef;
-require('../miniprogram/pages/plan-day/plan-day.js');
-const dayDef = pageDef;
-assert.ok(historyDef && dayDef);
+assert.ok(historyDef);
 
 function boot(def) {
   const p = Object.assign({}, def);
@@ -139,17 +137,46 @@ test('PHC1b 当前周期已达成：remainText 提示已全部达成', async () 
   assert.equal(p.data.current.remainText, '本期目标已全部达成');
 });
 
-test('PHC2 点格子跳单日详情；更改计划跳设置页', async () => {
+test('PHC2 点日历某天 → 就地展开当日详情（不跳页）；再点收起；更改计划仍跳设置页', async () => {
+  respond = (p) => {
+    if (p.startsWith('/plan/day')) {
+      return Promise.resolve({
+        date: '2026-11-10',
+        rings: [
+          { key: 'distance', value: 2400, target: 3000, pct: 0.8 },
+          { key: 'duration', value: 1080, target: 1800, pct: 0.6 },
+          { key: 'count', value: 1, target: 1, pct: 1 },
+        ],
+        allAchieved: false,
+        tracks: [{ id: 't1', type: 'running', distanceM: 2400, durationSec: 1080, startTime: Date.parse('2026-11-10T09:12:00+08:00') }],
+      });
+    }
+    return Promise.resolve({});
+  };
   navs.length = 0;
   const p = boot(historyDef);
-  p.onCellTap({ currentTarget: { dataset: { date: '2026-11-10' } } });
-  assert.deepEqual(navs, ['/pages/plan-day/plan-day?date=2026-11-10']);
+  await p.onCellTap({ currentTarget: { dataset: { date: '2026-11-10' } } });
+  await flush();
+
+  assert.deepEqual(navs, [], '不跳页');
+  assert.equal(p.data.selectedDate, '2026-11-10');
+  assert.equal(p.data.selected.title, '11月10日 · 周二');
+  assert.deepEqual(p.data.selected.metrics.map((m) => `${m.cur}/${m.target}${m.unit}`), [
+    '2.4/3.0km', '18/30分钟', '1/1次',
+  ]);
+  assert.equal(p.data.selected.tracks.length, 1);
+  assert.equal(p.data.selected.tracks[0].timeText, '09:12');
+
+  // 再点同一天 → 收起
+  await p.onCellTap({ currentTarget: { dataset: { date: '2026-11-10' } } });
+  assert.equal(p.data.selectedDate, '');
+  assert.equal(p.data.selected, null);
 
   p.goPlan();
-  assert.equal(navs[1], '/pages/plan/plan', '历史页保留更改计划入口');
+  assert.deepEqual(navs, ['/pages/plan/plan'], '历史页保留更改计划入口');
 });
 
-test('PHC3 单日详情装载：三项格式化与轨迹摘要', async () => {
+test('PHC3 选中日期装载：三项格式化与轨迹摘要（原单日页逻辑已并入历史页）', async () => {
   respond = (p) => {
     if (p.startsWith('/plan/day')) {
       return Promise.resolve({
@@ -169,18 +196,16 @@ test('PHC3 单日详情装载：三项格式化与轨迹摘要', async () => {
     }
     return Promise.resolve({});
   };
-  const p = boot(dayDef);
-  await p.load('2026-11-10');
+  const p = boot(historyDef);
+  await p.loadDay('2026-11-10');
   await flush();
 
-  assert.equal(p.data.dateText, '2026年11月10日');
-  assert.deepEqual(p.data.metrics.map((m) => `${m.value}/${m.target}${m.unit}`), [
+  assert.equal(p.data.selected.title, '11月10日 · 周二');
+  assert.deepEqual(p.data.selected.metrics.map((m) => `${m.cur}/${m.target}${m.unit}`), [
     '2.4/3.0km', '18/30分钟', '1/1次',
   ]);
-  assert.equal(p.data.metrics[0].pct, 80);
-  assert.equal(p.data.tracks.length, 1);
-  assert.equal(p.data.tracks[0].distText, '2.4 km');
-  assert.equal(p.data.tracks[0].durText, '18 分钟');
-  assert.equal(p.data.weekStrip.length, 7, '顶部本周条七天');
-  assert.equal(p.data.weekStrip.filter((d) => d.sel).length, 1, '只有一个选中日');
+  assert.equal(p.data.selected.metrics[0].pct, 80);
+  assert.equal(p.data.selected.tracks.length, 1);
+  assert.equal(p.data.selected.tracks[0].distText, '2.4 km');
+  assert.equal(p.data.selected.tracks[0].durText, '18 分钟');
 });

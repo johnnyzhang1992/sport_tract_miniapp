@@ -6,7 +6,8 @@
  * 数据：GET /plan/calendar?month=YYYY-MM（有快照用快照，当期实时聚合）
  */
 const api = require('../../services/api');
-const { bjParts, bjMid } = require('../../utils/bj-date');
+const { bjParts } = require('../../utils/bj-date');
+const config = require('../../config/index');
 
 const COLORS = {
   red: '#FA114F', redDim: '#FBD9E4',
@@ -38,8 +39,11 @@ Page({
     /** 画布上的日期格：{ date, day, out, today, pct:[a,b,c], done, hasData } */
     cells: [],
     weeks: [],
-    /** 当前周期概况：{ periodText, achieved, metrics:[{key,label,dot,cur,target,unit,pct}], remainText } */
+    /** 当前周期概况：{ periodText, achieved, metrics, remainText }（未选中日期时展示） */
     current: null,
+    /** 选中的日期与当日详情（点日历某天后在下方就地展开，不再跳页） */
+    selectedDate: '',
+    selected: null,
     loading: true,
     failed: false,
     canvasW: 0,
@@ -248,11 +252,69 @@ Page({
     });
   },
 
-  /** 点某天（透明点击层）→ 单日详情 */
+  /** 点某天（透明点击层）→ 在日历下方就地展示当日数据（不再跳页） */
   onCellTap(e) {
     const date = e.currentTarget.dataset.date;
     if (!date) return;
-    wx.navigateTo({ url: `/pages/plan-day/plan-day?date=${date}` });
+    if (date === this.data.selectedDate) { // 再点一次收起，回到当前周期概况
+      this.clearSelected();
+      return;
+    }
+    this.loadDay(date);
+  },
+
+  /** 加载某天详情（三项 + 当天轨迹），失败只清空详情、不影响月历 */
+  async loadDay(date) {
+    const p = bjParts(Date.parse(`${date}T00:00:00+08:00`));
+    this.setData({
+      selectedDate: date,
+      selected: { date, title: `${p.m}月${p.d}日 · 周${WEEK_CN[p.dow]}`, loading: true, achieved: false, metrics: [], tracks: [], failed: false },
+    });
+    try {
+      const d = await api.get(`/plan/day?date=${date}`);
+      if (this.data.selectedDate !== date) return; // 快速连点：只认最后一次
+      const byKey = {};
+      for (const r of d.rings || []) byKey[r.key] = r;
+      const dist = byKey.distance || { value: 0, target: 0, pct: 0 };
+      const dur = byKey.duration || { value: 0, target: 0, pct: 0 };
+      const cnt = byKey.count || { value: 0, target: 0, pct: 0 };
+      const km = (m) => (Math.round((Number(m) || 0) / 100) / 10).toFixed(1);
+      const min = (sec) => String(Math.round((Number(sec) || 0) / 60));
+      this.setData({
+        selected: {
+          date,
+          title: `${p.m}月${p.d}日 · 周${WEEK_CN[p.dow]}`,
+          loading: false,
+          achieved: !!d.allAchieved,
+          metrics: [
+            { key: 'distance', label: '距离', dot: 'red', cur: km(dist.value), target: km(dist.target), unit: 'km', pct: Math.round((dist.pct || 0) * 100) },
+            { key: 'duration', label: '时间', dot: 'green', cur: min(dur.value), target: min(dur.target), unit: '分钟', pct: Math.round((dur.pct || 0) * 100) },
+            { key: 'count', label: '次数', dot: 'cyan', cur: String(cnt.value), target: String(cnt.target), unit: '次', pct: Math.round((cnt.pct || 0) * 100) },
+          ],
+          tracks: (d.tracks || []).map((t) => {
+            const meta = (config.ACTIVITY_TYPES || []).find((x) => x.type === t.type) || {};
+            const tt = new Date(t.startTime + 8 * 3600_000);
+            return {
+              id: t.id,
+              icon: meta.icon || '🏃',
+              label: meta.label || '运动',
+              distText: `${km(t.distanceM)} km`,
+              durText: `${min(t.durationSec)} 分钟`,
+              timeText: `${String(tt.getUTCHours()).padStart(2, '0')}:${String(tt.getUTCMinutes()).padStart(2, '0')}`,
+            };
+          }),
+          failed: false,
+        },
+      });
+    } catch (e) {
+      if (this.data.selectedDate !== date) return;
+      this.setData({ selected: Object.assign({}, this.data.selected, { loading: false, failed: true }) });
+    }
+  },
+
+  /** 收起当日详情，回到当前周期概况 */
+  clearSelected() {
+    this.setData({ selectedDate: '', selected: null });
   },
 
   /** 兜底：直接点 canvas 时按坐标反推日期（当前 wxml 已改用点击层，保留以防改回） */

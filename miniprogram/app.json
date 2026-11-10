@@ -34,8 +34,7 @@
     "pages/operator/operator",
     "pages/photos/photos",
     "pages/plan/plan",
-    "pages/plan-history/plan-history",
-    "pages/plan-day/plan-day"
+    "pages/plan-history/plan-history"
   ],
   "window": {
     "navigationBarBackgroundColor": "#ffffff",
