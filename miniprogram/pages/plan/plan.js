@@ -15,6 +15,38 @@ const PLAN_DEFAULTS = {
   weekly: { distanceKm: '21', durationMin: '210', count: '7' },
 };
 
+/** 草稿存储键：每个周期各存一份用户输入，切周期/重进页面都能还原 */
+const DRAFT_KEY = 'planDraftV1';
+
+function readDrafts() {
+  try {
+    const raw = wx.getStorageSync(DRAFT_KEY);
+    return raw && typeof raw === 'object' ? raw : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function writeDrafts(drafts) {
+  try {
+    wx.setStorageSync(DRAFT_KEY, drafts);
+  } catch (e) {
+    // 存储失败不影响填写
+  }
+}
+
+/** 草稿是否有效：三项都已填写（空草稿＝没填过，应该回落到默认值） */
+function validDraft(d) {
+  return !!d && !!String(d.distanceKm || '').trim()
+    && !!String(d.durationMin || '').trim()
+    && !!String(d.count || '').trim();
+}
+
+/** 当前三个输入框的值打包成一份草稿 */
+function draftOf(data) {
+  return { distanceKm: String(data.distanceKm || ''), durationMin: String(data.durationMin || ''), count: String(data.count || '') };
+}
+
 Page({
   data: {
     periods: PERIODS,
@@ -27,7 +59,9 @@ Page({
     progressDetail: '',
     saving: false,
     loading: true,
-    customized: false, // 用户是否手动改过目标：改过就不再套用周期默认值
+    // 每个周期各自的输入草稿：{ daily: {...}, weekly: {...} }
+    // 优先级：服务端已保存的计划 > 本地草稿 > 默认值（已保存过的值永不被默认值覆盖）
+    drafts: {},
   },
 
   onLoad() {
@@ -41,16 +75,24 @@ Page({
       const t = (d && d.plan && d.plan.targets) || null;
       const progress = (d && d.progress) || { distanceM: 0, durationSec: 0, count: 0 };
       const patch = { loading: false };
-      if (!t) {
-        // 没有计划：按当前选择的周期预填默认目标，用户直接保存即可
-        Object.assign(patch, PLAN_DEFAULTS[this.data.period] || PLAN_DEFAULTS.daily);
-      }
+      const drafts = readDrafts();
       if (t) {
-        patch.period = (d.plan.period === 'weekly') ? 'weekly' : 'daily';
-        patch.distanceKm = String(Math.round(t.distanceM / 100) / 10); // 米 → km 一位小数
-        patch.durationMin = String(t.durationMin || '');
-        patch.count = String(t.count || '');
+        // 服务端已保存的计划：写入该周期的草稿（最高优先级，切走再切回也不会被默认值改写）
+        const savedPeriod = d.plan.period === 'weekly' ? 'weekly' : 'daily';
+        drafts[savedPeriod] = {
+          distanceKm: String(Math.round(t.distanceM / 100) / 10), // 米 → km 一位小数
+          durationMin: String(t.durationMin || ''),
+          count: String(t.count || ''),
+        };
+        patch.period = savedPeriod;
+        Object.assign(patch, drafts[savedPeriod]);
+      } else {
+        // 没有保存过的计划：优先还原本地草稿，没有草稿才用该周期的默认值
+        const cur = this.data.period;
+        const draft = validDraft(drafts[cur]) ? drafts[cur] : (PLAN_DEFAULTS[cur] || PLAN_DEFAULTS.daily);
+        Object.assign(patch, draft);
       }
+      patch.drafts = drafts;
       // 进度摘要：按计划周期的口径描述（无计划时也展示最近窗口的累计，引导设定目标）
       const periodLabel = d && d.plan ? (d.plan.period === 'weekly' ? '本周' : '今天') : '今天';
       patch.progressText = `${periodLabel}已完成`;
@@ -65,10 +107,21 @@ Page({
   onPeriod(e) {
     const key = e.currentTarget.dataset.value;
     if (!key || key === this.data.period) return;
-    // 没手动改过目标时，切周期同时套用该周期的默认值（每天 3/30/1、每周 21/210/7）
-    const patch = { period: key };
-    if (!this.data.customized) Object.assign(patch, PLAN_DEFAULTS[key] || {});
-    this.setData(patch);
+    // 当前输入先落草稿（用户填过的值不会因为切周期而丢）；目标周期有草稿就还原，否则用默认值
+    const drafts = Object.assign({}, this.data.drafts);
+    drafts[this.data.period] = draftOf(this.data);
+    const next = validDraft(drafts[key]) ? drafts[key] : (PLAN_DEFAULTS[key] || PLAN_DEFAULTS.daily);
+    drafts[key] = next;
+    writeDrafts(drafts);
+    this.setData(Object.assign({ period: key, drafts }, next));
+  },
+
+  /** 输入变化统一落草稿：切周期/重进页面都能还原用户自己填的值 */
+  saveDraft(patch) {
+    const drafts = Object.assign({}, this.data.drafts);
+    drafts[this.data.period] = Object.assign(draftOf(this.data), patch);
+    writeDrafts(drafts);
+    this.setData(Object.assign({ drafts }, patch));
   },
 
   /**
@@ -82,32 +135,32 @@ Page({
     if (key === 'distance') {
       const cur = Number(this.data.distanceKm) || 0;
       const next = Math.max(0.5, Math.min(500, cur + step * 0.5));
-      this.setData({ distanceKm: String(Math.round(next * 10) / 10), customized: true });
+      this.saveDraft({ distanceKm: String(Math.round(next * 10) / 10) });
       return;
     }
     if (key === 'duration') {
       const cur = Number(this.data.durationMin) || 0;
       const next = Math.max(5, Math.min(10080, cur + step * 5));
-      this.setData({ durationMin: String(next), customized: true });
+      this.saveDraft({ durationMin: String(next) });
       return;
     }
     if (key === 'count') {
       const cur = Number(this.data.count) || 0;
       const next = Math.max(1, Math.min(999, cur + step));
-      this.setData({ count: String(next), customized: true });
+      this.saveDraft({ count: String(next) });
     }
   },
 
   onDistance(e) {
-    this.setData({ distanceKm: String(e.detail.value || '').replace(/[^\d.]/g, ''), customized: true });
+    this.saveDraft({ distanceKm: String(e.detail.value || '').replace(/[^\d.]/g, '') });
   },
 
   onDuration(e) {
-    this.setData({ durationMin: String(e.detail.value || '').replace(/\D/g, ''), customized: true });
+    this.saveDraft({ durationMin: String(e.detail.value || '').replace(/\D/g, '') });
   },
 
   onCount(e) {
-    this.setData({ count: String(e.detail.value || '').replace(/\D/g, ''), customized: true });
+    this.saveDraft({ count: String(e.detail.value || '').replace(/\D/g, '') });
   },
 
   async onSave() {

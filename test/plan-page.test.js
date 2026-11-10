@@ -25,10 +25,14 @@ const apiPath = require.resolve('../miniprogram/services/api.js');
 require.cache[apiPath] = { id: apiPath, filename: apiPath, loaded: true, exports: fakeApi, children: [], paths: [] };
 
 
+const localStorageMap = new Map();
 global.wx = {
   showToast: (o) => toasts.push(o && o.title),
   navigateBack: () => navBacks.push(1),
   getSystemInfoSync: () => ({ pixelRatio: 2 }),
+  getStorageSync: (k) => (localStorageMap.has(k) ? localStorageMap.get(k) : ''),
+  setStorageSync: (k, v) => localStorageMap.set(k, v),
+  removeStorageSync: (k) => localStorageMap.delete(k),
 };
 
 let toasts = [];
@@ -38,7 +42,9 @@ global.Page = (d) => { pageDef = d; };
 require('../miniprogram/pages/plan/plan.js');
 assert.ok(pageDef, 'plan.js 应通过 Page() 交出页面对象');
 
-function makePage() {
+function makePage(opts = {}) {
+  // 用例间隔离：草稿是持久化的，不清理会互相影响（需要验证「重进页面」时传 keepStorage）
+  if (!opts.keepStorage) localStorageMap.clear();
   const p = Object.assign({}, pageDef);
   p.data = JSON.parse(JSON.stringify(pageDef.data));
   p.setData = (patch) => Object.assign(p.data, patch);
@@ -140,11 +146,13 @@ test('PL6 默认值：无计划时按周期预填；切周期跟随；手动改�
   p.onPeriod({ currentTarget: { dataset: { value: 'daily' } } });
   assert.equal(p.data.distanceKm, '3', '切回每天 → 恢复每天默认');
 
-  // 手动改过目标：再切周期不覆盖用户输入
+  // 各周期各自记草稿：每天改 8km 后切到每周 → 每周用自己的草稿(21)；切回每天 → 还原用户填的 8
   p.onDistance({ detail: { value: '8' } });
   p.onPeriod({ currentTarget: { dataset: { value: 'weekly' } } });
-  assert.equal(p.data.distanceKm, '8', '手动改过就不套默认值');
   assert.equal(p.data.period, 'weekly');
+  assert.equal(p.data.distanceKm, '21', '每周用自己那份草稿');
+  p.onPeriod({ currentTarget: { dataset: { value: 'daily' } } });
+  assert.equal(p.data.distanceKm, '8', '切回每天还原用户填过的值（不被默认值覆盖）');
 });
 
 test('PL7 步进器步长：距离 0.5、时间 5、次数 1，且不降到 0', () => {
@@ -165,4 +173,40 @@ test('PL7 步进器步长：距离 0.5、时间 5、次数 1，且不降到 0', 
   Object.assign(p.data, { distanceKm: '0.5' });
   p.onStep({ currentTarget: { dataset: { key: 'distance', delta: '-1' } } });
   assert.equal(p.data.distanceKm, '0.5', '距离下限 0.5');
+});
+
+test('PL8 已有保存值的周期，切走再切回不被默认值覆盖', async () => {
+  localStorageMap.clear();
+  planResponse = {
+    plan: { period: 'daily', targets: { distanceM: 5000, durationMin: 45, count: 2 }, updatedAt: 1 },
+    progress: { distanceM: 0, durationSec: 0, count: 0 },
+    today: { distanceM: 0, durationSec: 0, count: 0 },
+    rings: [],
+  };
+  const p = makePage();
+  await p.load();
+  assert.equal(p.data.distanceKm, '5', '预填服务端值');
+
+  p.onPeriod({ currentTarget: { dataset: { value: 'weekly' } } });
+  assert.equal(p.data.distanceKm, '21', '另一个周期没有保存值 → 默认值');
+  p.onPeriod({ currentTarget: { dataset: { value: 'daily' } } });
+  assert.equal(p.data.distanceKm, '5', '回到已保存的周期 → 仍是服务端值 5，不是默认 3');
+  assert.equal(p.data.durationMin, '45');
+  assert.equal(p.data.count, '2');
+});
+
+test('PL9 草稿持久化：重进页面还原用户填过的值（无保存计划时）', async () => {
+  localStorageMap.clear();
+  planResponse = { plan: null, progress: { distanceM: 0, durationSec: 0, count: 0 }, today: { distanceM: 0, durationSec: 0, count: 0 }, rings: [] };
+
+  const p1 = makePage();
+  await p1.load();
+  assert.equal(p1.data.distanceKm, '3', '首次进入用默认值');
+  p1.onDistance({ detail: { value: '6.5' } });
+  assert.equal(localStorageMap.get('planDraftV1').daily.distanceKm, '6.5', '输入即落本地草稿');
+
+  // 「重进页面」：新实例读同一份 storage
+  const p2 = makePage({ keepStorage: true });
+  await p2.load();
+  assert.equal(p2.data.distanceKm, '6.5', '重进页面还原草稿，不回落到默认值');
 });
