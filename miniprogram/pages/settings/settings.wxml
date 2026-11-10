@@ -39,7 +39,7 @@
       <view class="switch-title">高精度定位</view>
       <view class="text-muted">采集海拔与更准轨迹，更耗电</view>
     </view>
-    <t-switch value="{{settings.highAccuracy}}" bind:change="onHighAccuracyChange" />
+    <t-switch value="{{settings.highAccuracy}}" bind:change="onHighAccuracyChange" size="small" />
   </view>
 
   <!-- 展示身高体重 -->
@@ -48,16 +48,16 @@
       <view class="switch-title">展示身高体重</view>
       <view class="text-muted">在个人中心展示您的身高与体重</view>
     </view>
-    <t-switch value="{{settings.showBodyData}}" bind:change="onShowBodyDataChange" />
+    <t-switch value="{{settings.showBodyData}}" bind:change="onShowBodyDataChange" size="small" />
   </view>
 
-  <!-- 展示运动数据 -->
+  <!-- 隐私模式 -->
   <view class="card switch-row">
     <view class="switch-info">
-      <view class="switch-title">展示运动数据</view>
-      <view class="text-muted">允许他人查看你的累计运动数据</view>
+      <view class="switch-title">隐私模式</view>
+      <view class="text-muted">开启后，运动榜与步数榜不展示你的昵称和头像，资料卡不再展示你的运动数据</view>
     </view>
-    <t-switch value="{{settings.showSportData}}" bind:change="onShowSportDataChange" />
+    <t-switch value="{{settings.privacyMode}}" bind:change="onPrivacyModeChange" size="small" />
   </view>
 
   <!-- 整公里播报 -->
@@ -66,7 +66,7 @@
       <view class="switch-title">整公里播报</view>
       <view class="text-muted">运动中每满一公里震动并显示分段用时</view>
     </view>
-    <t-switch value="{{settings.kmAnnounce}}" bind:change="onKmAnnounceChange" />
+    <t-switch value="{{settings.kmAnnounce}}" bind:change="onKmAnnounceChange" size="small" />
   </view>
 
   <!-- 同步微信步数（步数PK / 步数辅助）：关闭后只在进行中的活动页按需同步 -->
@@ -75,7 +75,7 @@
       <view class="switch-title">同步微信步数</view>
       <view class="text-muted">开启后每天进入小程序自动同步</view>
     </view>
-    <t-switch value="{{settings.dailyStepSync}}" bind:change="onDailyStepSyncChange" />
+    <t-switch value="{{settings.dailyStepSync}}" bind:change="onDailyStepSyncChange" size="small" />
   </view>
 
   <!-- 照片额度（2026-11-05）：用户查「我还能传多少张」的自然位置；
@@ -121,13 +121,4 @@
     loading="{{saving}}"
     bind:tap="save"
   >保存</t-button>
-
-  <!-- 关闭展示运动数据的提示半屏 -->
-  <view class="sport-mask" wx:if="{{sportSheetVisible}}" bindtap="closeSportSheet">
-    <view class="sport-sheet" catchtap="noop">
-      <view class="sport-title">已关闭展示运动数据</view>
-      <view class="sport-body">保存设置后生效。运动榜仍保留你的名次和距离，但他人点开资料卡时不再看到累计运动数据；你自己的统计不受影响。</view>
-      <view class="sport-btn" bindtap="closeSportSheet">知道了</view>
-    </view>
-  </view>
 </view>

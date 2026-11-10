@@ -88,8 +88,8 @@
             <text class="rank-name">{{item.name}}</text>
             <image class="gender-img" src="{{item.genderIcon}}" mode="aspectFit" />
           </view>
-          <view class="rank-meta">{{item.count}} 条</view>
-          <view class="rank-dist">{{item.distanceKm}} km</view>
+          <view class="rank-meta">{{item.countText}}</view>
+          <view class="rank-dist">{{item.distText}}</view>
         </view>
         <view class="rank-empty" wx:if="{{board.top.length === 0}}">
           <text>{{periods[periodIndex].label}}{{periodWindow ? ' · ' + periodWindow.text : ''}}{{provinceIndex > 0 ? ' · ' + provinceOptions[provinceIndex] : ''}}还没有{{types[typeIndex].label}}轨迹{{nextPeriodKey === null && prevPeriodKey ? '，快来抢占第一名的位置！' : '。'}}</text>

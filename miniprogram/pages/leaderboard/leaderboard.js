@@ -102,6 +102,8 @@ function decorateRows(board) {
     ...r,
     genderIcon: GENDER_ICONS[r.gender] || GENDER_ICONS[0],
     medalIcon: r.rank <= 3 ? `/assets/icons/rank-medal-${r.rank}.png` : '',
+    countText: `${r.count} 条`,
+    distText: `${r.distanceKm} km`,
     ...avatarOf(r),
   });
   return {
@@ -781,6 +783,12 @@ Page({
     try {
       const d = await getApp().globalData.api.get(`/stats/profile/${uid}`);
       if (seq !== this._sheetSeq) return;
+      // 隐私模式（2026-11-09）：目标用户开启隐私 → 不弹半屏，toast 提醒
+      if (d && d.privacyMode === true) {
+        this.setData({ userSheet: { visible: false, loading: false, error: false } });
+        wx.showToast({ title: '该用户已开启隐私模式', icon: 'none' });
+        return;
+      }
       const t = (d && d.total) || {};
       const fp = (d && d.footprint) || {};
       const dur = formatDurationStat(t.duration || 0);

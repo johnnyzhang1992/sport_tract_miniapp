@@ -19,12 +19,12 @@ Page({
       highAccuracy: true,
       showBodyData: true,
       showSportData: true,
+      privacyMode: false, // 隐私模式：榜单条目对他人匿名、资料卡对他人关闭
       kmAnnounce: true,
       dailyStepSync: true,
     },
     saving: false,
     loggedIn: false, // 登录态（决定是否展示退出登录入口）
-    sportSheetVisible: false, // 关闭「展示运动数据」后的提示半屏
     photoQuota: null, // 照片额度用量（used/limit/remaining/percent/isMember），来自 /member/entitlements
   },
 
@@ -84,7 +84,7 @@ Page({
       this.setData({
         loggedIn: true, // 能拉到资料即已登录（游客态接口 401）
         settings: Object.assign(
-          { unit: 'metric', highAccuracy: true, showBodyData: true, showSportData: true, kmAnnounce: true, dailyStepSync: true },
+          { unit: 'metric', highAccuracy: true, showBodyData: true, showSportData: true, privacyMode: false, kmAnnounce: true, dailyStepSync: true },
           user.settings,
         ),
       });
@@ -164,20 +164,12 @@ Page({
     this.setData({ 'settings.dailyStepSync': e.detail.value });
   },
 
-  /** 关闭「展示运动数据」：弹半屏解释影响范围；重新打开则收起 */
-  onShowSportDataChange(e) {
-    const value = !!e.detail.value;
-    this.setData({
-      'settings.showSportData': value,
-      sportSheetVisible: value ? false : true,
-    });
+  /** 隐私模式：榜单条目对他人匿名、资料卡对他人关闭（即时改本地，随「保存」落库） */
+  onPrivacyModeChange(e) {
+    this.setData({ 'settings.privacyMode': !!e.detail.value });
   },
 
-  closeSportSheet() {
-    this.setData({ sportSheetVisible: false });
-  },
 
-  noop() {},
 
   /** 打开隐私政策 */
   openPrivacy() {
