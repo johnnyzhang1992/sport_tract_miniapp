@@ -9,6 +9,12 @@ const PERIODS = [
   { key: 'weekly', label: '每周' },
 ];
 
+/** 无计划时的默认目标（按周期给出）：每天 3km/30 分钟/1 次；每周 21km/210 分钟/7 次 */
+const PLAN_DEFAULTS = {
+  daily: { distanceKm: '3', durationMin: '30', count: '1' },
+  weekly: { distanceKm: '21', durationMin: '210', count: '7' },
+};
+
 Page({
   data: {
     periods: PERIODS,
@@ -21,6 +27,7 @@ Page({
     progressDetail: '',
     saving: false,
     loading: true,
+    customized: false, // 用户是否手动改过目标：改过就不再套用周期默认值
   },
 
   onLoad() {
@@ -34,6 +41,10 @@ Page({
       const t = (d && d.plan && d.plan.targets) || null;
       const progress = (d && d.progress) || { distanceM: 0, durationSec: 0, count: 0 };
       const patch = { loading: false };
+      if (!t) {
+        // 没有计划：按当前选择的周期预填默认目标，用户直接保存即可
+        Object.assign(patch, PLAN_DEFAULTS[this.data.period] || PLAN_DEFAULTS.daily);
+      }
       if (t) {
         patch.period = (d.plan.period === 'weekly') ? 'weekly' : 'daily';
         patch.distanceKm = String(Math.round(t.distanceM / 100) / 10); // 米 → km 一位小数
@@ -53,19 +64,50 @@ Page({
 
   onPeriod(e) {
     const key = e.currentTarget.dataset.value;
-    if (key) this.setData({ period: key });
+    if (!key || key === this.data.period) return;
+    // 没手动改过目标时，切周期同时套用该周期的默认值（每天 3/30/1、每周 21/210/7）
+    const patch = { period: key };
+    if (!this.data.customized) Object.assign(patch, PLAN_DEFAULTS[key] || {});
+    this.setData(patch);
+  },
+
+  /**
+   * 步进器：− / + 快速调整。
+   * 步长：距离 0.5km（一位小数）、时间 5 分钟、次数 1；下限停在最小值（三项都必须 > 0，不能减到 0）。
+   */
+  onStep(e) {
+    const { key, delta } = e.currentTarget.dataset;
+    const step = Number(delta);
+    if (!key || !step) return;
+    if (key === 'distance') {
+      const cur = Number(this.data.distanceKm) || 0;
+      const next = Math.max(0.5, Math.min(500, cur + step * 0.5));
+      this.setData({ distanceKm: String(Math.round(next * 10) / 10), customized: true });
+      return;
+    }
+    if (key === 'duration') {
+      const cur = Number(this.data.durationMin) || 0;
+      const next = Math.max(5, Math.min(10080, cur + step * 5));
+      this.setData({ durationMin: String(next), customized: true });
+      return;
+    }
+    if (key === 'count') {
+      const cur = Number(this.data.count) || 0;
+      const next = Math.max(1, Math.min(999, cur + step));
+      this.setData({ count: String(next), customized: true });
+    }
   },
 
   onDistance(e) {
-    this.setData({ distanceKm: String(e.detail.value || '').replace(/[^\d.]/g, '') });
+    this.setData({ distanceKm: String(e.detail.value || '').replace(/[^\d.]/g, ''), customized: true });
   },
 
   onDuration(e) {
-    this.setData({ durationMin: String(e.detail.value || '').replace(/\D/g, '') });
+    this.setData({ durationMin: String(e.detail.value || '').replace(/\D/g, ''), customized: true });
   },
 
   onCount(e) {
-    this.setData({ count: String(e.detail.value || '').replace(/\D/g, '') });
+    this.setData({ count: String(e.detail.value || '').replace(/\D/g, ''), customized: true });
   },
 
   async onSave() {

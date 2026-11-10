@@ -119,3 +119,50 @@ test('PL5 无计划：表单为空、进度摘要走今天口径、不炸', asyn
   assert.equal(p.data.plan === undefined || p.data.plan === null, true);
   assert.equal(p.data.progressText, '今天已完成');
 });
+
+test('PL6 默认值：无计划时按周期预填；切周期跟随；手动改过后不再覆盖', async () => {
+  planResponse = { plan: null, progress: { distanceM: 0, durationSec: 0, count: 0 }, today: { distanceM: 0, durationSec: 0, count: 0 }, rings: [] };
+  const p = makePage();
+  await p.load();
+  assert.deepEqual(
+    { d: p.data.distanceKm, t: p.data.durationMin, c: p.data.count },
+    { d: '3', t: '30', c: '1' },
+    '无计划 → 每天默认 3km/30 分钟/1 次',
+  );
+
+  p.onPeriod({ currentTarget: { dataset: { value: 'weekly' } } });
+  assert.deepEqual(
+    { d: p.data.distanceKm, t: p.data.durationMin, c: p.data.count },
+    { d: '21', t: '210', c: '7' },
+    '切每周 → 21km/210 分钟/7 次',
+  );
+
+  p.onPeriod({ currentTarget: { dataset: { value: 'daily' } } });
+  assert.equal(p.data.distanceKm, '3', '切回每天 → 恢复每天默认');
+
+  // 手动改过目标：再切周期不覆盖用户输入
+  p.onDistance({ detail: { value: '8' } });
+  p.onPeriod({ currentTarget: { dataset: { value: 'weekly' } } });
+  assert.equal(p.data.distanceKm, '8', '手动改过就不套默认值');
+  assert.equal(p.data.period, 'weekly');
+});
+
+test('PL7 步进器步长：距离 0.5、时间 5、次数 1，且不降到 0', () => {
+  const p = makePage();
+  Object.assign(p.data, { distanceKm: '3', durationMin: '30', count: '1' });
+
+  p.onStep({ currentTarget: { dataset: { key: 'distance', delta: '1' } } });
+  assert.equal(p.data.distanceKm, '3.5');
+  p.onStep({ currentTarget: { dataset: { key: 'duration', delta: '1' } } });
+  assert.equal(p.data.durationMin, '35');
+  p.onStep({ currentTarget: { dataset: { key: 'count', delta: '1' } } });
+  assert.equal(p.data.count, '2');
+
+  // 减到下限停住（三项都不能为 0）
+  p.onStep({ currentTarget: { dataset: { key: 'count', delta: '-1' } } });
+  p.onStep({ currentTarget: { dataset: { key: 'count', delta: '-1' } } });
+  assert.equal(p.data.count, '1', '次数下限 1');
+  Object.assign(p.data, { distanceKm: '0.5' });
+  p.onStep({ currentTarget: { dataset: { key: 'distance', delta: '-1' } } });
+  assert.equal(p.data.distanceKm, '0.5', '距离下限 0.5');
+});

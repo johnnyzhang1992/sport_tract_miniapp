@@ -1,29 +1,40 @@
-/* 运动计划设置页：周期分段 + 三项目标行 + 保存 */
+/* 运动计划设置页：进度摘要 + 周期分段 + 三项目标步进器 + 固定底部保存 */
+.container {
+  padding: 24rpx 24rpx calc(180rpx + env(safe-area-inset-bottom)); /* 给固定底栏让位 */
+}
+
+/* 当期进度摘要 */
 .progress-card {
   background: linear-gradient(135deg, #2b6cf6, #6a9bff);
   color: #fff;
 }
 .progress-label {
   font-size: 24rpx;
-  opacity: 0.85;
+  opacity: 0.88;
 }
 .progress-detail {
-  margin-top: 8rpx;
-  font-size: 34rpx;
+  margin-top: 6rpx;
+  font-size: 32rpx;
   font-weight: 600;
 }
-.fgroup {
-  margin-bottom: 14rpx;
+
+/* 卡片标题：与首页卡片同字重 */
+.card-title {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #1f2329;
 }
+
+/* 周期分段 */
 .period-row {
   display: flex;
   gap: 14rpx;
-  margin-top: 12rpx;
+  margin-top: 16rpx;
 }
 .period-seg {
   flex: 1;
   text-align: center;
-  padding: 14rpx 0;
+  padding: 16rpx 0;
   border-radius: 12rpx;
   background: #f2f3f5;
   font-size: 28rpx;
@@ -34,37 +45,86 @@
   color: #fff;
   font-weight: 600;
 }
-.frow {
+
+/* 三项目标行 */
+.goal-row {
   display: flex;
   align-items: center;
-  margin-top: 24rpx;
+  margin-top: 20rpx;
 }
-.flabel {
-  width: 160rpx;
-  font-size: 28rpx;
-  color: #333;
+.goal-dot {
+  width: 14rpx;
+  height: 14rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-right: 12rpx;
 }
-.finput {
+.goal-dot-red { background: #fa114f; }
+.goal-dot-green { background: #92e82a; }
+.goal-dot-cyan { background: #1ad4e0; }
+.goal-label {
   flex: 1;
-  border-bottom: 1rpx solid #e5e6eb;
-  padding: 8rpx 4rpx;
+  min-width: 0;
+  font-size: 28rpx;
+  color: #1f2329;
+}
+
+/* 步进器：− 输入 + */
+.stepper {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  border: 1rpx solid #e5e6eb;
+  border-radius: 12rpx;
+  overflow: hidden;
+}
+.step-btn {
+  width: 64rpx;
+  height: 64rpx;
+  line-height: 64rpx;
+  text-align: center;
+  font-size: 34rpx;
+  color: #2b6cf6;
+  background: #f7f8fa;
+}
+.step-btn-hover {
+  background: #eaf0ff;
+}
+.step-input {
+  width: 120rpx;
+  height: 64rpx;
+  line-height: 64rpx;
+  text-align: center;
   font-size: 30rpx;
+  font-weight: 600;
+  color: #1f2329;
 }
-.finput-num {
-  text-align: right;
+.step-ph {
+  color: #c9cdd4;
+  font-weight: 400;
 }
-.funit {
-  width: 90rpx;
+.goal-unit {
+  width: 76rpx;
   margin-left: 12rpx;
-  font-size: 26rpx;
+  font-size: 24rpx;
   color: #86909c;
-  text-align: left;
 }
+
+/* 说明小字 */
 .fnote {
   margin-top: 16rpx;
   font-size: 22rpx;
+  line-height: 1.5;
   color: #86909c;
 }
-.submit-btn {
-  margin-top: 24rpx;
+
+/* 固定底部保存栏 */
+.bottom-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 16rpx 24rpx calc(16rpx + env(safe-area-inset-bottom));
+  background: #fff;
+  box-shadow: 0 -2rpx 12rpx rgba(31, 35, 41, 0.06);
 }
