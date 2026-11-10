@@ -71,6 +71,18 @@ test('PHC1 月历装载：cells 补齐整行、pct 归一、达成与今天标�
         ],
       });
     }
+    if (p === '/plan/current') {
+      return Promise.resolve({
+        plan: { period: 'daily', targets: { distanceM: 3000, durationMin: 30, count: 1 } },
+        progress: { distanceM: 1500, durationSec: 600, count: 0 },
+        today: { distanceM: 1500, durationSec: 600, count: 0 },
+        rings: [
+          { key: 'distance', value: 1500, target: 3000, pct: 0.5 },
+          { key: 'duration', value: 600, target: 1800, pct: 0.33 },
+          { key: 'count', value: 0, target: 1, pct: 0 },
+        ],
+      });
+    }
     return Promise.resolve({});
   };
 
@@ -90,6 +102,41 @@ test('PHC1 月历装载：cells 补齐整行、pct 归一、达成与今天标�
   assert.match(p.data.weeks[0].rangeText, /月.*日 - .*月.*日/, '周记录展示区间');
   assert.equal(p.data.weeks[0].achieved, false);
   assert.match(p.data.weeks[0].distText, /12\.0\/21\.0 km/);
+
+  // 当前周期概况卡
+  assert.ok(p.data.current, '装载当前周期概况');
+  assert.equal(p.data.current.periodText, '今天');
+  assert.equal(p.data.current.achieved, false);
+  assert.deepEqual(p.data.current.metrics.map((m) => `${m.cur}/${m.target}${m.unit}`), [
+    '1.5/3.0km', '10/30分钟', '0/1次',
+  ]);
+  assert.match(p.data.current.remainText, /还差/);
+  assert.match(p.data.current.remainText, /1\.5 km/);
+});
+
+test('PHC1b 当前周期已达成：remainText 提示已全部达成', async () => {
+  respond = (p) => {
+    if (p.startsWith('/plan/calendar')) return Promise.resolve({ month: '2026-11', days: [], weeks: [] });
+    if (p === '/plan/current') {
+      return Promise.resolve({
+        plan: { period: 'weekly', targets: { distanceM: 21000, durationMin: 210, count: 7 } },
+        progress: { distanceM: 25000, durationSec: 13000, count: 8 },
+        today: { distanceM: 0, durationSec: 0, count: 0 },
+        rings: [
+          { key: 'distance', value: 25000, target: 21000, pct: 1 },
+          { key: 'duration', value: 13000, target: 12600, pct: 1 },
+          { key: 'count', value: 8, target: 7, pct: 1 },
+        ],
+      });
+    }
+    return Promise.resolve({});
+  };
+  const p = boot(historyDef);
+  await p.load();
+  await flush();
+  assert.equal(p.data.current.periodText, '本周');
+  assert.equal(p.data.current.achieved, true);
+  assert.equal(p.data.current.remainText, '本期目标已全部达成');
 });
 
 test('PHC2 点格子跳单日详情；更改计划跳设置页', async () => {

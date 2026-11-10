@@ -38,6 +38,8 @@ Page({
     /** 画布上的日期格：{ date, day, out, today, pct:[a,b,c], done, hasData } */
     cells: [],
     weeks: [],
+    /** 当前周期概况：{ periodText, achieved, metrics:[{key,label,dot,cur,target,unit,pct}], remainText } */
+    current: null,
     loading: true,
     failed: false,
     canvasW: 0,
@@ -80,7 +82,11 @@ Page({
     const month = `${y}-${String(m).padStart(2, '0')}`;
     this.setData({ loading: true, failed: false });
     try {
-      const res = await api.get(`/plan/calendar?month=${month}`);
+      // 并行拉当前周期进度（概况卡用），失败不影响月历
+      const [res, cur] = await Promise.all([
+        api.get(`/plan/calendar?month=${month}`),
+        api.get('/plan/current').catch(() => null),
+      ]);
       const days = (res && res.days) || [];
       const byDate = {};
       for (const d of days) byDate[d.date] = d;
@@ -121,11 +127,39 @@ Page({
         };
       });
 
-      this.setData({ cells, weeks, loading: false }, () => this.draw());
+      this.setData({ cells, weeks, current: this.buildCurrent(cur), loading: false }, () => this.draw());
       this._loaded = true;
     } catch (e) {
       this.setData({ loading: false, failed: true });
     }
+  },
+
+  /** 当前周期概况：三项当前/目标 + 百分比 + 剩余 */
+  buildCurrent(cur) {
+    if (!cur || !cur.plan) return null;
+    const byKey = {};
+    for (const r of cur.rings || []) byKey[r.key] = r;
+    const dist = byKey.distance || { value: 0, target: 0, pct: 0 };
+    const dur = byKey.duration || { value: 0, target: 0, pct: 0 };
+    const cnt = byKey.count || { value: 0, target: 0, pct: 0 };
+    const km = (m) => (Math.round((Number(m) || 0) / 100) / 10).toFixed(1);
+    const min = (sec) => String(Math.round((Number(sec) || 0) / 60));
+    const remainOf = (value, target, fmt) => Math.max(0, target - value);
+    const remain = [
+      remainOf(dist.value, dist.target) > 0 ? `${km(remainOf(dist.value, dist.target))} km` : '',
+      remainOf(dur.value, dur.target) > 0 ? `${min(remainOf(dur.value, dur.target))} 分钟` : '',
+      remainOf(cnt.value, cnt.target) > 0 ? `${remainOf(cnt.value, cnt.target)} 次` : '',
+    ].filter(Boolean);
+    return {
+      periodText: cur.plan.period === 'weekly' ? '本周' : '今天',
+      achieved: remain.length === 0,
+      metrics: [
+        { key: 'distance', label: '距离', dot: 'red', cur: km(dist.value), target: km(dist.target), unit: 'km', pct: Math.round((dist.pct || 0) * 100) },
+        { key: 'duration', label: '时间', dot: 'green', cur: min(dur.value), target: min(dur.target), unit: '分钟', pct: Math.round((dur.pct || 0) * 100) },
+        { key: 'count', label: '次数', dot: 'cyan', cur: String(cnt.value), target: String(cnt.target), unit: '次', pct: Math.round((cnt.pct || 0) * 100) },
+      ],
+      remainText: remain.length ? `还差 ${remain.join(' · ')}` : '本期目标已全部达成',
+    };
   },
 
   /** 把整月的「日期数字 + 迷你三环 + 今天圈 + 达成点」一次画在一张 canvas 上

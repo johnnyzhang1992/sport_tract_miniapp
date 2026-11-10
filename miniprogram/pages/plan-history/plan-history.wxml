@@ -38,6 +38,24 @@
     <view class="lg"><view class="lg-dot lg-done"></view>三项达成</view>
   </view>
 
+  <!-- 当前周期概况：今天/本周的三项完成度 -->
+  <view class="card cur-card" wx:if="{{current}}">
+    <view class="cur-head">
+      <text class="cur-title">当前周期 · {{current.periodText}}</text>
+      <text class="badge {{current.achieved ? 'badge-done' : 'badge-miss'}}">{{current.achieved ? '已达成' : '进行中'}}</text>
+    </view>
+    <view class="cur-metric" wx:for="{{current.metrics}}" wx:key="key">
+      <view class="cur-dot cur-dot-{{item.dot}}"></view>
+      <text class="cur-label">{{item.label}}</text>
+      <view class="cur-bar">
+        <view class="cur-bar-fill cur-bar-{{item.dot}}" style="width: {{item.pct}}%"></view>
+      </view>
+      <text class="cur-val">{{item.cur}}/{{item.target}}</text>
+      <text class="cur-unit">{{item.unit}}</text>
+    </view>
+    <view class="cur-remain">{{current.remainText}}</view>
+  </view>
+
   <!-- 周计划记录（用「每周」计划的周期单独列，不塞进日历格子） -->
   <block wx:if="{{weeks.length > 0}}">
     <view class="card week-card">

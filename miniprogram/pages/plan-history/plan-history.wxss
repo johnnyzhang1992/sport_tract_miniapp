@@ -146,3 +146,75 @@
   color: #fff;
   font-size: 26rpx;
 }
+
+/* 当前周期概况卡 */
+.cur-card {
+  margin-top: 8rpx;
+  padding: 18rpx 24rpx 16rpx;
+}
+.cur-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6rpx;
+}
+.cur-title {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #1f2329;
+}
+.cur-metric {
+  display: flex;
+  align-items: center;
+  margin-top: 12rpx;
+}
+.cur-dot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-right: 10rpx;
+}
+.cur-dot-red { background: #fa114f; }
+.cur-dot-green { background: #92e82a; }
+.cur-dot-cyan { background: #1ad4e0; }
+.cur-label {
+  width: 64rpx;
+  font-size: 22rpx;
+  color: #86909c;
+  flex-shrink: 0;
+}
+.cur-bar {
+  flex: 1;
+  height: 10rpx;
+  border-radius: 999rpx;
+  background: #f2f3f5;
+  overflow: hidden;
+  margin-right: 14rpx;
+}
+.cur-bar-fill {
+  height: 100%;
+  border-radius: 999rpx;
+}
+.cur-bar-red { background: #fa114f; }
+.cur-bar-green { background: #92e82a; }
+.cur-bar-cyan { background: #1ad4e0; }
+.cur-val {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #1f2329;
+  flex-shrink: 0;
+}
+.cur-unit {
+  width: 62rpx;
+  margin-left: 4rpx;
+  font-size: 20rpx;
+  color: #86909c;
+}
+.cur-remain {
+  margin-top: 14rpx;
+  padding-top: 12rpx;
+  border-top: 1rpx solid #f2f3f5;
+  font-size: 22rpx;
+  color: #86909c;
+}
