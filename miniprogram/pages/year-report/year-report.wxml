@@ -59,13 +59,13 @@
     <!-- 月度分解 -->
     <view class="card">
       <view class="section-title">月度运动距离（公里）</view>
-      <stat-chart data="{{chartData}}" type="bar" unit="km" color="#2b6cf6" height="{{200}}" empty-text="" />
+      <stat-chart data="{{chartData}}" type="bar" unit="km" color="#2b6cf6" height="{{200}}" show-tip="{{true}}" empty-text="" />
     </view>
 
     <!-- 月度步数（1–12 月零填充） -->
     <view class="card" wx:if="{{step && step.hasData}}">
       <view class="section-title">月度步数</view>
-      <stat-chart data="{{stepChartData}}" type="bar" unit="step" color="#2b6cf6" height="{{200}}" empty-text="" />
+      <stat-chart data="{{stepChartData}}" type="bar" unit="step" color="#2b6cf6" height="{{200}}" show-tip="{{true}}" empty-text="" />
     </view>
 
     <!-- 分类型汇总（各类型总距离/总时长/次数） -->

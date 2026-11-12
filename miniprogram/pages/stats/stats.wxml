@@ -315,7 +315,7 @@
               >{{item.label}}</view>
             </view>
           </scroll-view>
-          <stat-chart data="{{sheetTrend.data}}" type="bar" unit="{{sheetTrend.unit}}" height="{{240}}" empty-text="暂无运动数据" />
+          <stat-chart data="{{sheetTrend.data}}" type="bar" unit="{{sheetTrend.unit}}" height="{{240}}" show-tip="{{true}}" empty-text="暂无运动数据" />
           <view class="sheet-trend-note" wx:if="{{sheetTrend.note}}">{{sheetTrend.note}}</view>
         </view>
 

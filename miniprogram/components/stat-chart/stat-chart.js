@@ -316,22 +316,25 @@ Component({
 
       // 最大值标注：柱上方白底块（不遮柱、不出界、不受柱宽影响）
       // padTop=18 保证上方空间：白块高 14px，by=8 时白块 [0,14]，柱顶 ≥18 不重叠
-      const maxV = Math.max(...values);
-      const maxIdx = values.indexOf(maxV);
-      const barTop = H - axis.padBottom - norm[maxIdx] * axis.chartH;
-      ctx.font = '10px sans-serif';
-      ctx.textAlign = 'center';
-      const text = this.formatValue(maxV, maxV);
-      const tw = ctx.measureText(text).width;
-      const bx = axis.padLeft + maxIdx * slotW + slotW / 2;
-      const blockH = 14;
-      const by = Math.max(8, barTop - 10);
-      ctx.fillStyle = 'rgba(255,255,255,0.95)';
-      ctx.beginPath();
-      ctx.roundRect ? ctx.roundRect(bx - tw / 2 - 4, by - 8, tw + 8, blockH, 4) : ctx.rect(bx - tw / 2 - 4, by - 8, tw + 8, blockH);
-      ctx.fill();
-      ctx.fillStyle = '#1f2329';
-      ctx.fillText(text, bx, by);
+      // 气泡开着时不画：两者都贴画布顶部同一行，气泡会正好盖住最大值（实测 8 月柱）
+      if (this._tipIndex == null) {
+        const maxV = Math.max(...values);
+        const maxIdx = values.indexOf(maxV);
+        const barTop = H - axis.padBottom - norm[maxIdx] * axis.chartH;
+        ctx.font = '10px sans-serif';
+        ctx.textAlign = 'center';
+        const text = this.formatValue(maxV, maxV);
+        const tw = ctx.measureText(text).width;
+        const bx = axis.padLeft + maxIdx * slotW + slotW / 2;
+        const blockH = 14;
+        const by = Math.max(8, barTop - 10);
+        ctx.fillStyle = 'rgba(255,255,255,0.95)';
+        ctx.beginPath();
+        ctx.roundRect ? ctx.roundRect(bx - tw / 2 - 4, by - 8, tw + 8, blockH, 4) : ctx.rect(bx - tw / 2 - 4, by - 8, tw + 8, blockH);
+        ctx.fill();
+        ctx.fillStyle = '#1f2329';
+        ctx.fillText(text, bx, by);
+      }
 
       if (this._tipIndex != null && data[this._tipIndex]) {
         this.drawTip(

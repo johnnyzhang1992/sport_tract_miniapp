@@ -112,7 +112,7 @@
     </view>
     <block wx:if="{{showStepChart}}">
       <view class="step-trend-title">月度步数</view>
-      <stat-chart data="{{stepChartData}}" type="bar" unit="step" height="{{200}}" label-slot="{{stepChartSlot}}" empty-text="该时段暂无步数记录" />
+      <stat-chart data="{{stepChartData}}" type="bar" unit="step" height="{{200}}" label-slot="{{stepChartSlot}}" show-tip="{{true}}" empty-text="该时段暂无步数记录" />
     </block>
   </view>
 
@@ -204,7 +204,7 @@
       </view>
       <view class="ds-hint">点任意一行可查看该时段的轨迹</view>
     </view>
-    <stat-chart wx:else id="dateChart" data="{{dateChartData}}" type="bar" unit="km" height="{{230}}" empty-text="该时段暂无运动记录" />
+    <stat-chart wx:else id="dateChart" data="{{dateChartData}}" type="bar" unit="km" height="{{230}}" show-tip="{{true}}" empty-text="该时段暂无运动记录" />
   </view>
 
   <!-- 互跳：累计看板 -->
