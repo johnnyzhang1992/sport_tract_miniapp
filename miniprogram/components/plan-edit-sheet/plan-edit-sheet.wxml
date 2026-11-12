@@ -16,7 +16,7 @@
         bindtap="onPeriod"
       >{{item.label}}</view>
     </view>
-    <view class="sheet-note">每天＝当天 0 点起统计；每周＝本周一 0 点起统计</view>
+    <view class="sheet-note">每天＝当天 0 点起统计；每周＝从设定当天起，7 天为一期</view>
 
     <!-- 三项目标：步进器 -->
     <view class="goal-row">

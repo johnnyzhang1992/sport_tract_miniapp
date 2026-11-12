@@ -11,6 +11,8 @@ const config = require('../../config/index');
 const prompts = require('../../utils/plan-prompts');
 const { markHomeDirty } = require('../../utils/home-refresh');
 
+const { formatPeriodTitle } = require('../../utils/plan-period');
+
 const COLORS = {
   red: '#FA114F', redDim: '#FBD9E4',
   green: '#92E82A', greenDim: '#E6F7D4',
@@ -181,7 +183,7 @@ Page({
     };
   },
 
-  /** 当前周期概况：三项当前/目标 + 百分比 + 剩余 */
+  /** 当前期概况：三项当前/目标 + 百分比 + 剩余 */
   buildCurrent(cur) {
     if (!cur || !cur.plan) return null;
     const byKey = {};
@@ -198,7 +200,9 @@ Page({
       remainOf(cnt.value, cnt.target) > 0 ? `${remainOf(cnt.value, cnt.target)} 次` : '',
     ].filter(Boolean);
     return {
-      periodText: cur.plan.period === 'weekly' ? '本周' : '今天',
+      periodText: cur.plan.period === 'weekly'
+        ? formatPeriodTitle(cur.windowStart, cur.windowEnd)
+        : '今天',
       achieved: remain.length === 0,
       metrics: [
         { key: 'distance', label: '距离', dot: 'red', cur: km(dist.value), target: km(dist.target), unit: 'km', pct: Math.round((dist.pct || 0) * 100) },
@@ -296,7 +300,7 @@ Page({
    * 三处弹窗（2026-11-10，文案已确认）——规则在 utils/plan-prompts：
    * 1. 无计划：进页提示创建，「暂不」后 3 天内不再问；
    * 2. 里程碑新解锁（含首次达成）：恭喜弹窗，同一里程碑只弹一次，多个只弹最高档；
-   * 2b. 当期达成（当天/本周三项都达标）：同期首次进页弹一次（本地按 periodKey 去重）；
+   * 2b. 当期达成（当天/本期三项都达标）：同期首次进页弹一次（本地按 periodKey 去重）；
    * 3. 连续 3 期 ≥200%：建议加量，「保持现状」后 7 天不再问，改计划重新观察。
    * 同一次进入只弹一个：里程碑恭喜 > 当期达成 > 加量提示，后面的让到下一次进入。
    */

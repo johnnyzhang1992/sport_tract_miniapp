@@ -77,10 +77,10 @@
     <view class="cur-remain" wx:else>加载中…</view>
   </view>
 
-  <!-- 当前周期概况：今天/本周的三项完成度（未选中日期时展示） -->
+  <!-- 当前期概况：今天/本期（日期范围）的三项完成度（未选中日期时展示） -->
   <view class="card cur-card" wx:elif="{{current}}">
     <view class="cur-head">
-      <text class="cur-title">当前周期 · {{current.periodText}}</text>
+      <text class="cur-title">当前期 · {{current.periodText}}</text>
       <text class="badge {{current.achieved ? 'badge-done' : 'badge-miss'}}">{{current.achieved ? '已达成' : '进行中'}}</text>
     </view>
     <view class="cur-metric" wx:for="{{current.metrics}}" wx:key="key">

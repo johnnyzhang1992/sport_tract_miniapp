@@ -182,8 +182,15 @@ test('PHC1b 当前周期已达成：remainText 提示已全部达成', async () 
       });
     }
     if (p === '/plan/current') {
+      const today0 = (() => {
+        const d = new Date(Date.now() + 8 * 3600_000);
+        return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - 8 * 3600_000;
+      })();
       return Promise.resolve({
         plan: { period: 'weekly', targets: { distanceM: 21000, durationMin: 210, count: 7 } },
+        // 固定 7 天一期：今天 00:00（东八区）起，到 +7 天
+        windowStart: today0,
+        windowEnd: today0 + 7 * 86_400_000,
         progress: { distanceM: 25000, durationSec: 13000, count: 8 },
         today: { distanceM: 0, durationSec: 0, count: 0 },
         rings: [
@@ -198,7 +205,11 @@ test('PHC1b 当前周期已达成：remainText 提示已全部达成', async () 
   const p = boot(historyDef);
   await p.load();
   await flush();
-  assert.equal(p.data.current.periodText, '本周');
+  assert.match(
+    p.data.current.periodText,
+    /^\d+\.\d+–\d+\.\d+（第 1\/7 天）$/,
+    '周计划显示当期日期范围 + 第 1/7 天',
+  );
   assert.equal(p.data.current.achieved, true);
   assert.equal(p.data.current.remainText, '本期目标已全部达成');
 });
@@ -323,7 +334,7 @@ test('PHC10 当期达成：当天首次进页弹一次；同周期再进不弹�
 
   p.maybePrompt({ plan: Object.assign({}, plan, { period: 'weekly' }), allAchieved: true, periodKey: '2026-11-10' }, sum);
   assert.equal(modals.length, 2, '新周期达成要弹');
-  assert.equal(modals[1].title, '本周目标达成');
+  assert.equal(modals[1].title, '本期目标达成');
 
   p.maybePrompt({ plan, allAchieved: false, periodKey: '2026-11-13' }, sum);
   assert.equal(modals.length, 2, '未达成不弹');
