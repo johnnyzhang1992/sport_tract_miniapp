@@ -7,7 +7,8 @@
  *   <ad-template adslot="tracks_list" />
  * （adslot 的值是后台「广告管理」里配的广告位 key，unit-id 由后台下发，不在端上写死）
  *
- * 展示条件：后台在架（拿得到 unit-id）**且** 未免广告期——任一不满足就不渲染。
+ * 展示条件：后台在架（拿得到 unit-id）**且** 未免广告期 **且** 未被外部频次拦截（blocked）——
+ * 任一不满足就不渲染。
  * 广告拉取失败（无库存、单元无效、被驳回）就把整块收掉，不留空白占位
  * （官方建议：保留组件、隐藏父容器，不要移除标签）。
  */
@@ -29,12 +30,17 @@ Component({
     margin: { type: String, value: '0 0 24rpx' },
     /** 圆角（rpx）：跟宿主页卡片的 border-radius 对齐（全局 .card 16、积分/榜单/活动页 20） */
     radius: { type: Number, value: 16 },
+    /** 外部频次上限拦截（如首页每日 3 次）：true 时不渲染，页内其它广告位不传默认 false */
+    blocked: { type: Boolean, value: false },
   },
 
   data: { show: false, unitId: '' },
 
   observers: {
     adslot() {
+      this.refresh();
+    },
+    blocked() {
       this.refresh();
     },
   },
@@ -63,7 +69,7 @@ Component({
   methods: {
     refresh() {
       const unitId = getAdSlot(this.data.adslot);
-      const show = !!unitId && !isAdFree();
+      const show = !!unitId && !isAdFree() && !this.data.blocked;
       if (show !== this.data.show || unitId !== this.data.unitId) this.setData({ show, unitId });
     },
     onAdLoad(e) {

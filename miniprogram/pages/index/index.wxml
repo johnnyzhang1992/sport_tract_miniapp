@@ -62,8 +62,9 @@
 
   <!-- 累计数据已移到「统计」tab；首页不再重复展示 -->
 
-  <!-- 模板广告（后台「广告管理」按 home_bottom 配置 unitId，可随时下架；免广告卡生效时不渲染） -->
-  <ad-template adslot="home_bottom" />
+  <!-- 模板广告（后台「广告管理」按 home_bottom 配置 unitId，可随时下架；免广告卡生效时不渲染；
+       每日展示上限 3 次，由冷启动计数决定 homeAdAllowed） -->
+  <ad-template adslot="home_bottom" blocked="{{!homeAdAllowed}}" />
 
   <!-- 运动榜 + 一起运动：一行两格，各占一半。榜卡单行：左标题、右上榜文案（单行省略）+ › -->
   <view class="duo-row">

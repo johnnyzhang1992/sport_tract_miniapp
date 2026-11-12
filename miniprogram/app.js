@@ -3,6 +3,7 @@ const { request } = api;
 const { getToken, setToken, clearToken, getProfileGuideDone, setProfileGuideDone } = require('./services/storage');
 const { setAdFreeUntil } = require('./utils/ad-free');
 const { refreshAdSlots } = require('./utils/ad-slots');
+const adCap = require('./utils/ad-cap');
 const { syncDailySteps } = require('./utils/werun');
 
 App({
@@ -12,6 +13,7 @@ App({
     loginPromise: null,
     profileGuideAsked: false, // 完善资料引导本次会话是否已弹过
     fpDirty: false, // 足迹数据被别的页改过（列表页新增/编辑/删除）：tab 页 onShow 据此补拉
+    homeAdAllowed: true, // 本次冷启动是否还能展示首页广告（每日 3 次上限，见 utils/ad-cap）
     api, // 网络层挂全局（分包页面无法 require 主包 JS，经 getApp() 访问）
   },
 
@@ -27,6 +29,8 @@ App({
     this.checkPrivacy();
     // 广告位在架配置：进小程序拉一次（缓存 5 分钟内不重复请求）；后台下架最迟一个 TTL 生效
     refreshAdSlots();
+    // 首页广告每日展示上限：冷启动记 1 次（切 tab / 返回首页不计数），满 3 次当天不再展示
+    this.globalData.homeAdAllowed = adCap.recordLaunch(adCap.currentUserId());
   },
 
   /** 本地是否有登录会话（已注册用户静默恢复的依据；游客无 token 视为未注册） */

@@ -24,7 +24,11 @@ test('IA1 首页注册并挂载 home_bottom 广告位', () => {
   );
 
   const wxml = read('miniprogram/pages/index/index.wxml');
-  assert.match(wxml, /<ad-template adslot="home_bottom" \/>/, '挂载位必须用 home_bottom slot key');
+  assert.match(
+    wxml,
+    /<ad-template[^>]*adslot="home_bottom"[^>]*blocked="\{\{!homeAdAllowed\}\}"[^>]*\/>/,
+    '挂载位必须用 home_bottom slot key，并按每日展示上限传 blocked',
+  );
 });
 
 test('IA2 挂载位在运动日历卡之后、运动榜/一起运动双格之前', () => {

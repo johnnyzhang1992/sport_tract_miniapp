@@ -38,9 +38,9 @@ function seedSlots(items) {
 }
 const tick = () => new Promise((r) => setTimeout(r, 0));
 
-function mount(slot) {
+function mount(slot, extra) {
   const c = Object.assign({}, compDef.methods);
-  c.data = Object.assign({}, compDef.data, { adslot: slot, intervals: 30 });
+  c.data = Object.assign({}, compDef.data, { adslot: slot, intervals: 30, blocked: false }, extra || {});
   c.events = [];
   c.setData = (patch) => Object.assign(c.data, patch);
   c.triggerEvent = (name, detail) => c.events.push([name, detail]);
@@ -139,4 +139,18 @@ test('AT7 detached 后不再响应状态变化（避免对已销毁实例 setDat
 
   adFree.setAdFreeUntil(0);
   assert.equal(c.data.show, false, 'detached 后权益变化也不该再动它');
+});
+
+test('AT8 首页频次上限拦截（blocked）时不渲染；解除后自动恢复', async () => {
+  storage.clear();
+  adFree.setAdFreeUntil(0);
+  seedSlots({ [SLOT]: UNIT });
+  const c = mount(SLOT, { blocked: true });
+  await tick();
+  assert.equal(c.data.show, false, '达到每日展示上限就不该渲染广告');
+
+  c.data.blocked = false;
+  compDef.observers.blocked.call(c);
+  assert.equal(c.data.show, true, '上限解除（次日/换用户）后要恢复渲染');
+  compDef.lifetimes.detached.call(c);
 });

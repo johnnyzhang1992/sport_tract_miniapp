@@ -45,6 +45,7 @@ Page({
     // 日历段失败原因（null=正常）：卡片不能悄悄消失，文案点名到接口与实际报错
     heatError: null,
     notLoggedIn: false, // 游客态：展示登录引导
+    homeAdAllowed: true, // 首页广告当日展示次数未达上限（冷启动计数，见 utils/ad-cap）
     loading: false,
     ongoingActivity: null, // 进行中（已暂停）运动入口
     lbSummary: null, // 运动榜摘要（卡片副标题）
@@ -58,6 +59,8 @@ Page({
 
   onLoad() {
     this.applySportDisplay();
+    // 首页广告每日次数上限在 app.onLaunch 算好，整次运行内不变（切 tab/返回不重算）
+    this.setData({ homeAdAllowed: !!getApp().globalData.homeAdAllowed });
     // 设置页开关是即时生效的存储写；本页活着时收到变化就原地刷网格
     this._offSportDisplay = sportDisplay.onChange(() => this.applySportDisplay());
     this.setupUpdateCheck();
