@@ -8,6 +8,8 @@
 const api = require('../../services/api');
 const { bjParts } = require('../../utils/bj-date');
 const config = require('../../config/index');
+const prompts = require('../../utils/plan-prompts');
+const { markHomeDirty } = require('../../utils/home-refresh');
 
 const COLORS = {
   red: '#FA114F', redDim: '#FBD9E4',
@@ -145,6 +147,7 @@ Page({
         loading: false,
       });
       this._loaded = true;
+      this.maybePrompt(cur, sum);
     } catch (e) {
       this.setData({ loading: false, failed: true });
     }
@@ -280,10 +283,95 @@ Page({
     this.setData({ sheetVisible: false });
   },
 
-  /** 半屏保存成功 → 收起并重拉（月历/概况/奖杯一起刷新） */
+  /** 半屏保存成功 → 收起并重拉（月历/概况/奖杯一起刷新；加量观察重新开始） */
   onPlanSaved() {
     this.setData({ sheetVisible: false });
+    try { wx.removeStorageSync('planRaisePromptV1'); } catch (e) { /* 存储异常不阻断 */ }
+    // 计划目标/周期变了：首页计划卡（含三环）必须立刻更新，越过 onShow 的 60s 节流
+    markHomeDirty();
     this.load();
+  },
+
+  /**
+   * 三处弹窗（2026-11-10，文案已确认）——规则在 utils/plan-prompts：
+   * 1. 无计划：进页提示创建，「暂不」后 3 天内不再问；
+   * 2. 里程碑新解锁（含首次达成）：恭喜弹窗，同一里程碑只弹一次，多个只弹最高档；
+   * 2b. 当期达成（当天/本周三项都达标）：同期首次进页弹一次（本地按 periodKey 去重）；
+   * 3. 连续 3 期 ≥200%：建议加量，「保持现状」后 7 天不再问，改计划重新观察。
+   * 同一次进入只弹一个：里程碑恭喜 > 当期达成 > 加量提示，后面的让到下一次进入。
+   */
+  maybePrompt(cur, sum) {
+    const plan = (cur && cur.plan) || null;
+    if (!plan) {
+      let declined = 0;
+      try { declined = Number(wx.getStorageSync('planCreatePromptV1')) || 0; } catch (e) { /* 存储异常视为从未提示 */ }
+      if (!prompts.shouldPromptCreatePlan(declined)) return;
+      wx.showModal({
+        title: '还没有运动计划',
+        content: '定个小目标，每天进步一点点。距离、时长、次数三环计划，帮你把坚持变成看得见的成就。',
+        confirmText: '创建计划',
+        cancelText: '暂不',
+        success: (r) => {
+          if (r.confirm) this.setData({ sheetVisible: true });
+          else {
+            try { wx.setStorageSync('planCreatePromptV1', Date.now()); } catch (e) { /* 存储异常不阻断 */ }
+          }
+        },
+      });
+      return;
+    }
+
+    const sig = prompts.planSignature(plan);
+    // ② 里程碑恭喜：本地记「已看」，新解锁才弹
+    let seen = [];
+    try { seen = wx.getStorageSync('planMilestoneSeenV1') || []; } catch (e) { /* 存储异常视为空 */ }
+    const news = prompts.pickNewMilestones(sum && sum.milestones, seen);
+    if (news.length) {
+      const keys = news.map((x) => x.key);
+      try { wx.setStorageSync('planMilestoneSeenV1', seen.concat(keys)); } catch (e) { /* 存储异常不阻断 */ }
+      const top = news[news.length - 1]; // 最高档
+      wx.showModal({
+        title: `🏆 里程碑达成 · ${top.label}`,
+        content: prompts.MILESTONE_COPY[top.key] || top.desc,
+        confirmText: '太棒了',
+        showCancel: false,
+      });
+      return; // 本次不再问加量
+    }
+
+    // ②b 当期达成（日/周计划三项都达标）：同期首次进页弹一次（本地按 periodKey 去重）
+    if (cur && cur.allAchieved && cur.periodKey) {
+      let notified = '';
+      try { notified = wx.getStorageSync('planAchievedNotifiedV1') || ''; } catch (e) { /* 存储异常视为未弹 */ }
+      if (notified !== cur.periodKey) {
+        try { wx.setStorageSync('planAchievedNotifiedV1', cur.periodKey); } catch (e) { /* 存储异常不阻断 */ }
+        const copy = prompts.ACHIEVE_COPY[plan.period] || prompts.ACHIEVE_COPY.daily;
+        wx.showModal({
+          title: copy.title,
+          content: copy.content,
+          confirmText: copy.confirmText,
+          showCancel: false,
+        });
+        return; // 本次不再问加量
+      }
+    }
+
+    // ③ 加量建议
+    let raiseRec = null;
+    try { raiseRec = wx.getStorageSync('planRaisePromptV1') || null; } catch (e) { /* 存储异常视为从未提示 */ }
+    if (!prompts.shouldPromptRaisePlan({ overStreak: sum && sum.overStreak, planSig: sig, last: raiseRec })) return;
+    wx.showModal({
+      title: '要不要把计划加量？',
+      content: '最近 3 个周期你都完成到目标的 2 倍以上，当前计划可能偏轻松了。调高一点，让每一滴汗都算数～',
+      confirmText: '更改计划',
+      cancelText: '保持现状',
+      success: (r) => {
+        if (r.confirm) this.setData({ sheetVisible: true });
+        else {
+          try { wx.setStorageSync('planRaisePromptV1', { ts: Date.now(), sig }); } catch (e) { /* 存储异常不阻断 */ }
+        }
+      },
+    });
   },
 
   onRetry() {

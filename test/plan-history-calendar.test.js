@@ -29,7 +29,8 @@ global.wx = {
 };
 let pageDef = null;
 global.Page = (d) => { pageDef = d; };
-global.getApp = () => ({ hasSession: () => true, globalData: {} });
+const appGlobalData = {};
+global.getApp = () => ({ hasSession: () => true, globalData: appGlobalData });
 
 require('../miniprogram/pages/plan-history/plan-history.js');
 const historyDef = pageDef;
@@ -291,4 +292,39 @@ test('PHC8 月历用纯 CSS 三环（conic-gradient + mask），不再依赖 can
   assert.match(wxml, /conic-gradient\(#1AD4E0/, '次数环');
   assert.match(wxss, /-webkit-mask: radial-gradient/, '用 mask 挖空成环');
   assert.match(wxml, /bindtap="onCellTap"/, '整格可点（不再需要透明点击层）');
+});
+
+test('PHC9 保存计划后打 homeDirty：返回首页无视 60s 节流立刻重拉计划卡', () => {
+  appGlobalData.homeDirty = undefined;
+  const p = boot(historyDef);
+  p.onPlanSaved();
+  assert.equal(appGlobalData.homeDirty, true, '保存计划要给首页打脏标记（首页 onShow 见标记即越 TTL 重拉）');
+});
+
+test('PHC10 当期达成：当天首次进页弹一次；同周期再进不弹；周计划文案不同；未达成不弹', () => {
+  const store = new Map();
+  const modals = [];
+  wx.getStorageSync = (k) => (store.has(k) ? store.get(k) : '');
+  wx.setStorageSync = (k, v) => store.set(k, v);
+  wx.showModal = (o) => modals.push(o);
+
+  const p = boot(historyDef);
+  const plan = { period: 'daily', targets: { distanceM: 5000, durationMin: 30, count: 1 } };
+  const sum = { milestones: [], overStreak: 0 };
+
+  p.maybePrompt({ plan, allAchieved: true, periodKey: '2026-11-12' }, sum);
+  assert.equal(modals.length, 1, '当天达成首次进页要弹');
+  assert.equal(modals[0].title, '今日目标达成');
+  assert.equal(modals[0].content, '三项计划全部完成，干得漂亮！');
+  assert.equal(modals[0].confirmText, '太棒了');
+
+  p.maybePrompt({ plan, allAchieved: true, periodKey: '2026-11-12' }, sum);
+  assert.equal(modals.length, 1, '同一周期再进不弹');
+
+  p.maybePrompt({ plan: Object.assign({}, plan, { period: 'weekly' }), allAchieved: true, periodKey: '2026-11-10' }, sum);
+  assert.equal(modals.length, 2, '新周期达成要弹');
+  assert.equal(modals[1].title, '本周目标达成');
+
+  p.maybePrompt({ plan, allAchieved: false, periodKey: '2026-11-13' }, sum);
+  assert.equal(modals.length, 2, '未达成不弹');
 });
