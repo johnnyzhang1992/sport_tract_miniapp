@@ -289,6 +289,19 @@ test('H10b 老服务端不带 me 字段：人数照常展示，名次退化为�
   assert.deepEqual(page.data.lbSummary.ranks, []);
 });
 
+test('H10c 步数榜摘要带今日步数：中文数字口径（千分位 / 万）', async () => {
+  resetEnv();
+  respond = (p) => (p === '/werun/board?period=day' ? Promise.resolve({ players: 120, me: { rank: 3, step: 8231 } }) : Promise.resolve({}));
+  const page = makePage();
+  await page.loadStepsSummary();
+  assert.equal(page.data.stepsSummary.rank, 3);
+  assert.equal(page.data.stepsSummary.stepText, '8,231', '低于 1 万保留千分位');
+
+  respond = (p) => (p === '/werun/board?period=day' ? Promise.resolve({ players: 120, me: { rank: 2, step: 17355 } }) : Promise.resolve({}));
+  await page.loadStepsSummary();
+  assert.equal(page.data.stepsSummary.stepText, '1.7万', '≥1 万用万');
+});
+
 test('H12 onShow 节流：60s 内切回不重复拉；过期 / 脏标记 / 登录态变化才重拉', async () => {
   const realNow = Date.now;
   let now = realNow();

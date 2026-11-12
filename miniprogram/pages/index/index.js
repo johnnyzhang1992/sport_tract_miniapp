@@ -9,6 +9,7 @@ function formatDuration(seconds) {
 
 const config = require('../../config/index');
 const api = require('../../services/api');
+const { formatCompactCn } = require('../../utils/format');
 // 首页运动类型显示开关（设置页可开关非默认类型，纯前端控制）
 const sportDisplay = require('../../utils/sport-display');
 
@@ -253,7 +254,7 @@ Page({
     }
   },
 
-  /** 首页步数榜摘要：今日我的排名与步数；游客/无数据回落参与人数；失败静默 */
+  /** 首页步数榜摘要：今日我的名次与步数；未上榜/游客回落默认文案；失败静默 */
   async loadStepsSummary() {
     try {
       const res = await api.get('/werun/board?period=day');
@@ -261,7 +262,7 @@ Page({
       const me = res.me || null;
       this.setData({
         stepsSummary: me
-          ? { rank: me.rank, step: me.step || 0, players: res.players || 0 }
+          ? { rank: me.rank, step: me.step || 0, stepText: formatCompactCn(me.step || 0), players: res.players || 0 }
           : { players: res.players || 0 },
       });
     } catch (e) {

@@ -199,60 +199,38 @@
   font-weight: 500; /* 与 .section-title 统一（卡片标题） */
   color: #1f2329;
 }
-.lb-sub {
-  font-size: 22rpx;
-  margin-top: 2rpx;
-}
 .lb-arrow {
   font-size: 36rpx;
   color: #667080;
   flex-shrink: 0;
 }
 
-/* 半屏宽那一格（duo-row 里的运动榜）：标题行放不下 icon，改成「标题 + ›」一行、
-   icon 与副标题并排在下面。只作用于 .lb-card-stacked——官方专题那圈是全宽卡、
-   继续复用 .lb-card 的横排，不能跟着变。 */
-.lb-card-stacked {
-  display: block; /* 卡片不能改 flex：标题行会渲染异常（2026-11-09 实测）；高度由内容自然撑开 */
+/* 半屏宽榜卡（duo-row 里的运动榜/步数榜，2026-11-09）：单行——左标题、右上榜文案 + ›。
+   右文案单行省略，不把半宽卡撑破；官方专题那圈是全宽卡、继续复用 .lb-card 横排。 */
+.lb-card-row {
+  gap: 10rpx;
 }
-.lb-card-stacked .lb-title {
+.lb-card-row .lb-title {
+  flex-shrink: 0;
   color: #333;
 }
-.lb-head {
-  display: flex;
-  align-items: center;
-}
-.lb-head .lb-title {
-  flex: 1;
-  min-width: 0; /* 标题过长时省略，不把箭头挤出去 */
-}
-.lb-head .lb-arrow {
-  font-size: 28rpx; /* 与右格标题行「查看更多 ›」的箭头同档 */
-}
-.lb-foot {
-  display: flex;
-  align-items: center; /* 左侧图标与文案垂直居中 */
-  gap: 20rpx;
-  margin-top: 10rpx; /* 回归文档流：内容变多时卡片高度自然撑开，不挤压标题行 */
-}
-.lb-foot-text {
+.lb-side {
   flex: 1;
   min-width: 0;
-}
-.lb-rank-line {
   display: flex;
-  align-items: baseline;
-  gap: 2rpx;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4rpx;
 }
-.lb-rank-line .text-muted {
+.lb-copy {
   font-size: 22rpx;
-  color: #333;
+  color: #8a93a6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.lb-rank-num {
-  font-size: 28rpx;
-  font-weight: 700;
-  color: #2b6cf6;
-  line-height: 1;
+.lb-card-row .lb-arrow {
+  font-size: 28rpx; /* 与半宽卡标题行同档 */
 }
 
 /* 官方专题入口（复用 lb-card 布局） */
