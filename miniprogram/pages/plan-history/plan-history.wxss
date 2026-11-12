@@ -165,6 +165,11 @@
   background: #eaf7e6;
   color: #3f9b1c;
 }
+.badge-none {
+  background: #f2f3f5;
+  color: #8a919e;
+}
+
 .badge-miss {
   background: #f2f3f5;
   color: #86909c;

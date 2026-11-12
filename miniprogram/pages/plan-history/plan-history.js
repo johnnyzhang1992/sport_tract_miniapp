@@ -119,7 +119,8 @@ Page({
           out: false,
           today: date === todayStr,
           pct: item ? item.rings.map((r) => Math.max(0, Math.min(1, Number(r.pct) || 0))) : [0, 0, 0],
-          done: !!(item && item.allAchieved),
+          // 未覆盖计划期的日子：三环目标为 0，也不算「三项达成」
+          done: !!(item && item.allAchieved && !item.noPlan),
           hasData: !!(item && item.source !== 'none'),
         });
       }
@@ -229,7 +230,7 @@ Page({
     const p = bjParts(Date.parse(`${date}T00:00:00+08:00`));
     this.setData({
       selectedDate: date,
-      selected: { date, title: `${p.m}月${p.d}日 · 周${WEEK_CN[p.dow]}`, loading: true, achieved: false, metrics: [], tracks: [], failed: false },
+      selected: { date, title: `${p.m}月${p.d}日 · 周${WEEK_CN[p.dow]}`, loading: true, achieved: false, noPlan: false, metrics: [], tracks: [], failed: false },
     });
     try {
       const d = await api.get(`/plan/day?date=${date}`);
@@ -246,7 +247,9 @@ Page({
           date,
           title: `${p.m}月${p.d}日 · 周${WEEK_CN[p.dow]}`,
           loading: false,
-          achieved: !!d.allAchieved,
+          // 该日不在任何计划期内（计划开始之前/计划已取消）：不拿当前目标回溯评价
+          noPlan: !!d.noPlan,
+          achieved: !d.noPlan && !!d.allAchieved,
           metrics: [
             { key: 'distance', label: '距离', dot: 'red', cur: km(dist.value), target: km(dist.target), unit: 'km', pct: Math.round((dist.pct || 0) * 100) },
             { key: 'duration', label: '时间', dot: 'green', cur: min(dur.value), target: min(dur.target), unit: '分钟', pct: Math.round((dur.pct || 0) * 100) },

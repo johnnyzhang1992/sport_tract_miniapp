@@ -291,6 +291,42 @@ test('PHC3 选中日期装载：三项格式化与轨迹摘要（原单日页逻
   assert.equal(p.data.selected.tracks[0].durText, '18 分钟');
 });
 
+test('PHC9 未覆盖计划期的日期：徽标「无计划」、不展示三项完成度（不拿当前目标回溯）', async () => {
+  respond = (p) => {
+    if (p.startsWith('/plan/day')) {
+      return Promise.resolve({
+        date: '2026-10-07',
+        windowStart: 0,
+        rings: [
+          { key: 'distance', value: 2900, target: 0, pct: 0 },
+          { key: 'duration', value: 1380, target: 0, pct: 0 },
+          { key: 'count', value: 0, target: 0, pct: 0 },
+        ],
+        allAchieved: false,
+        noPlan: true,
+        source: 'none',
+        tracks: [
+          { id: 't1', type: 'running', distanceM: 2900, durationSec: 1380, startTime: Date.parse('2026-10-07T09:00:00+08:00') },
+        ],
+      });
+    }
+    return Promise.resolve({});
+  };
+  const p = boot(historyDef);
+  await p.loadDay('2026-10-07');
+  await flush();
+
+  assert.equal(p.data.selected.noPlan, true, '端上要知道这天没有计划');
+  assert.equal(p.data.selected.achieved, false, '不算达成');
+  assert.equal(p.data.selected.tracks.length, 1, '当天运动记录照常展示');
+  const wxml = require('fs').readFileSync(
+    require('path').join(__dirname, '../miniprogram/pages/plan-history/plan-history.wxml'), 'utf8',
+  );
+  assert.ok(wxml.includes('selected.noPlan'), '模板对 noPlan 有单独分支');
+  assert.ok(wxml.includes('badge-none'), '徽标样式为「无计划」态');
+  assert.ok(/wx:if="\{\{selected.noPlan\}\}"/.test(wxml), '无计划时给出说明文案');
+});
+
 test('PHC8 月历用纯 CSS 三环（conic-gradient + mask），不再依赖 canvas', () => {
   const fs = require('fs');
   const path = require('path');

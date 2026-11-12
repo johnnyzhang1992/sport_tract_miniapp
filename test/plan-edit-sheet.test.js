@@ -1,6 +1,6 @@
 /**
  * 计划编辑半屏（components/plan-edit-sheet）：
- * - 打开时预填：有已保存计划用它；否则用该周期草稿；再否则默认值（每天 3/30/1、每周 21/210/7）；
+ * - 打开时预填：有已保存计划用它；否则用该周期草稿；再否则默认值（每天 3/30/1、每周 15/150/5）；
  * - 步进器步长与下限；输入落草稿（切周期/重开可还原）；
  * - 校验与保存（km→米）、保存成功抛 saved 事件。
  * 运行：node --test test/plan-edit-sheet.test.js
@@ -49,7 +49,7 @@ function boot(props = {}) {
   return c;
 }
 
-test('PES1 打开预填：无计划 → 每天默认 3/30/1；切每周 → 21/210/7', () => {
+test('PES1 打开预填：无计划 → 每天默认 3/30/1；切每周 → 15/150/5', () => {
   storage.clear();
   const c = boot();
   c.init();
@@ -60,7 +60,7 @@ test('PES1 打开预填：无计划 → 每天默认 3/30/1；切每周 → 21/2
   c.onPeriod({ currentTarget: { dataset: { value: 'weekly' } } });
   assert.deepEqual(
     { d: c.data.distanceKm, t: c.data.durationMin, c: c.data.count },
-    { d: '21', t: '210', c: '7' },
+    { d: '15', t: '150', c: '5' },
   );
 });
 
@@ -74,7 +74,7 @@ test('PES2 有已保存计划：按计划预填，切周期不被默认值覆盖
   assert.equal(c.data.count, '2');
 
   c.onPeriod({ currentTarget: { dataset: { value: 'weekly' } } });
-  assert.equal(c.data.distanceKm, '21', '每周没有保存值 → 默认值');
+  assert.equal(c.data.distanceKm, '15', '每周没有保存值 → 默认值 15km');
   c.onPeriod({ currentTarget: { dataset: { value: 'daily' } } });
   assert.equal(c.data.distanceKm, '5', '切回每天 → 已保存的 5km 不被默认值覆盖');
 });

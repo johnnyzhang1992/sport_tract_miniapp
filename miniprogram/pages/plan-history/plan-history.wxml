@@ -48,22 +48,27 @@
     <view class="cur-head">
       <text class="cur-title">{{selected.title}}</text>
       <view class="cur-head-right">
-        <text class="badge {{selected.achieved ? 'badge-done' : 'badge-miss'}}">{{selected.achieved ? '已达成' : (selected.loading ? '加载中' : '未达成')}}</text>
+        <!-- 未覆盖计划期的日期（计划开始之前）：既不算达成也不算未达成，只如实展示当天运动 -->
+        <text wx:if="{{selected.noPlan}}" class="badge badge-none">无计划</text>
+        <text wx:else class="badge {{selected.achieved ? 'badge-done' : 'badge-miss'}}">{{selected.achieved ? '已达成' : (selected.loading ? '加载中' : '未达成')}}</text>
         <text class="cur-close" bindtap="clearSelected">收起</text>
       </view>
     </view>
     <block wx:if="{{!selected.loading}}">
-      <view class="cur-metric" wx:for="{{selected.metrics}}" wx:key="key">
-        <view class="cur-dot cur-dot-{{item.dot}}"></view>
-        <text class="cur-label">{{item.label}}</text>
-        <view class="cur-bar">
-          <view class="cur-bar-fill cur-bar-{{item.dot}}" style="width: {{item.pct}}%"></view>
+      <view class="cur-remain" wx:if="{{selected.noPlan}}">当天没有运动计划</view>
+      <block wx:else>
+        <view class="cur-metric" wx:for="{{selected.metrics}}" wx:key="key">
+          <view class="cur-dot cur-dot-{{item.dot}}"></view>
+          <text class="cur-label">{{item.label}}</text>
+          <view class="cur-bar">
+            <view class="cur-bar-fill cur-bar-{{item.dot}}" style="width: {{item.pct}}%"></view>
+          </view>
+          <view class="cur-vals">
+            <text class="cur-val">{{item.cur}}/{{item.target}}</text>
+            <text class="cur-unit">{{item.unit}}</text>
+          </view>
         </view>
-        <view class="cur-vals">
-          <text class="cur-val">{{item.cur}}/{{item.target}}</text>
-          <text class="cur-unit">{{item.unit}}</text>
-        </view>
-      </view>
+      </block>
       <view class="day-tracks" wx:if="{{selected.tracks.length > 0}}">
         <view class="day-track" wx:for="{{selected.tracks}}" wx:key="id">
           <text class="day-track-icon">{{item.icon}}</text>
