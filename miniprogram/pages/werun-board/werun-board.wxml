@@ -78,9 +78,10 @@
         <text>{{periods[periodIndex].label}}{{periodWindow ? ' · ' + periodWindow.text : ''}}{{provinceIndex > 0 ? ' · ' + provinceOptions[provinceIndex] : ''}}还没有步数数据。在小程序内授权微信运动后，步数会自动同步进来。</text>
       </view>
     </view>
-
-    <view class="players-line" wx:if="{{board}}">{{board.players}} 人参与</view>
   </view>
+
+  <!-- 模板广告位：复用运动榜的 leaderboard 广告位与后台开关（免广告卡生效时不渲染） -->
+  <ad-template adslot="leaderboard" radius="{{20}}" />
 
   <!-- 我的排名：贴底通栏（入榜也展示；TOP3 显示奖牌图标）；游客无排名不渲染 -->
   <view class="me-card" wx:if="{{board && board.me}}">

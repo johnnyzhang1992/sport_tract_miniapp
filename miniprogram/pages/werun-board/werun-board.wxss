@@ -194,12 +194,6 @@
   color: #667080;
   font-size: 24rpx;
 }
-.players-line {
-  padding: 12rpx 8rpx 0;
-  font-size: 22rpx;
-  color: #667080;
-  text-align: right;
-}
 
 /* 游客轻提示条（榜单可看，仅提示登录后有"我的排名"） */
 .guest-tip {

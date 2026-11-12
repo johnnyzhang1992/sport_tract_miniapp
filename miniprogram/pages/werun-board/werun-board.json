@@ -3,6 +3,7 @@
   "enablePullDownRefresh": true,
   "backgroundTextStyle": "dark",
   "usingComponents": {
-    "user-profile-sheet": "/components/user-profile-sheet/user-profile-sheet"
+    "user-profile-sheet": "/components/user-profile-sheet/user-profile-sheet",
+    "ad-template": "/components/ad-template/ad-template"
   }
 }

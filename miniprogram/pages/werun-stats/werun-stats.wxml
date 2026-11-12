@@ -66,6 +66,9 @@
         </view>
       </view>
 
+      <!-- 模板广告位：复用统计页的 stats 广告位与后台开关（免广告卡生效时不渲染） -->
+      <ad-template adslot="stats" />
+
       <!-- 每日变化趋势：时间档只作用于这张图；7/30 按日、半年按周、一年按月 -->
       <view class="card">
         <view class="card-head">
@@ -87,6 +90,7 @@
           unit="step"
           height="{{210}}"
           label-slot="{{trend.labelSlot}}"
+          show-tip="{{true}}"
           empty-text="暂无步数数据"
         />
       </view>

@@ -15,6 +15,8 @@ const PAGES = [
   ['stats', 'stats', 1], // 数据统计
   ['track-detail', 'track_detail', 1], // 轨迹详情
   ['points', 'points', 1], // 我的积分：插在签到卡与每日任务卡之间
+  ['werun-board', 'leaderboard', 1], // 微信步数榜：复用运动榜的广告位与后台开关
+  ['werun-stats', 'stats', 1], // 微信步数统计：步数趋势卡上方，复用统计页广告位
 ];
 
 for (const [page, key, count] of PAGES) {
