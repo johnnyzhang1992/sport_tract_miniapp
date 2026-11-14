@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "计划历史",
+  "navigationBarTitleText": "运动计划",
   "enablePullDownRefresh": true,
   "usingComponents": {
     "plan-edit-sheet": "/components/plan-edit-sheet/plan-edit-sheet"

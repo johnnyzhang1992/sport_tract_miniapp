@@ -353,7 +353,7 @@ Page({
     }).exec();
   },
 
-  /** 运动计划卡 → 计划历史（月历）；改计划入口在历史页右上角 */
+  /** 运动计划卡 → 运动计划页（月历）；改计划入口在该页右上角 */
   goPlan() {
     wx.navigateTo({ url: '/pages/plan-history/plan-history' });
   },
