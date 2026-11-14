@@ -124,9 +124,13 @@ test('PHC1 月历装载：cells 补齐整行、pct 归一、达成与今天标�
 
   // 记录数据概况 + 奖杯
   assert.ok(p.data.summary, '装载概况');
-  assert.deepEqual(p.data.summary.cards.map((c) => `${c.num}${c.cap}`), ['12已完成周期', '8达成次数', '67%达成率', '3连续达成']);
+  // 四列（2026-11-14）：去掉「已完成周期」，补「最佳连续」
+  assert.deepEqual(
+    p.data.summary.cards.map((c) => `${c.num}${c.cap}`),
+    ['8达成次数', '67%达成率', '3连续达成', '5最佳连续'],
+  );
   assert.match(p.data.summary.totalsText, /累计 48\.0 km/);
-  assert.equal(p.data.summary.bestStreakText, '最佳连续 5 次');
+  assert.equal(p.data.summary.bestStreakText, undefined, '标题右侧的最佳连续已并入第四列');
   assert.equal(p.data.summary.trophies.length, 4, '奖杯扁平表 = 后端 trophies 全量');
   // 卡面第三行三态：未获得=进度条；获得一次=获取日期；获得多次=次数
   assert.equal(p.data.summary.trophies[0].earnedCount, 1, '首次达成已获得');

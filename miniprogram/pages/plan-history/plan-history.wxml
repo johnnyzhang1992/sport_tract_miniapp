@@ -106,7 +106,6 @@
   <view class="card sum-card" wx:if="{{summary}}">
     <view class="sum-title-row">
       <text class="sum-title">记录数据概况</text>
-      <text class="sum-best">{{summary.bestStreakText}}</text>
     </view>
     <view class="sum-grid">
       <view class="sum-item" wx:for="{{summary.cards}}" wx:key="key">

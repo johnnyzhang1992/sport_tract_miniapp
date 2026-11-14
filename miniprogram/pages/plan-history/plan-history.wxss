@@ -232,10 +232,11 @@
 .cur-dot-green { background: #92e82a; }
 .cur-dot-cyan { background: #1ad4e0; }
 .cur-label {
-  width: 64rpx;
+  /* 三行标签都是两个字：不写死盒宽，盒子直接贴住文字（原 64rpx 有 20rpx 空档挤在条前面） */
   font-size: 22rpx;
   color: #86909c;
   flex-shrink: 0;
+  margin-right: 10rpx;
 }
 .cur-bar {
   flex: 1;
@@ -243,7 +244,7 @@
   border-radius: 999rpx;
   background: #f2f3f5;
   overflow: hidden;
-  margin-right: 12rpx;
+  margin-right: 8rpx;
 }
 .cur-bar-fill {
   height: 100%;
@@ -257,22 +258,24 @@
   font-weight: 600;
   color: #1f2329;
   text-align: left;
+  white-space: nowrap;
 }
-/* 数值 + 单位固定宽度、内部左对齐：三行左边缘齐平，与进度条保持固定间距；
-   容器宽度固定 → 三条进度条等长（原 flex 平分会被文字宽度带偏） */
+/* 数值 + 单位：固定宽度保证三条进度条等长；左对齐 → 数值紧贴进度条（不再出现条与数字之间的大空档），
+   富余宽度落在最右侧当空气感留白（200 → 176 → 128rpx，且每次收窄都把空间还给进度条） */
 .cur-vals {
-  width: 200rpx;
+  width: 128rpx;
   flex-shrink: 0;
   display: flex;
   align-items: baseline;
   justify-content: flex-start;
+  overflow: visible;
 }
 .cur-unit {
-  width: 58rpx;
-  margin-left: 6rpx;
+  margin-left: 4rpx;
   font-size: 20rpx;
   color: #86909c;
   flex-shrink: 0;
+  white-space: nowrap;
 }
 .cur-remain {
   margin-top: 14rpx;
@@ -336,10 +339,6 @@
   font-size: 28rpx;
   font-weight: 500;
   color: #1f2329;
-}
-.sum-best {
-  font-size: 22rpx;
-  color: #86909c;
 }
 .sum-grid {
   display: flex;

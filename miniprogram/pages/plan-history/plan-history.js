@@ -213,14 +213,14 @@ Page({
     }
     return {
       trophyGroups,
+      // 四列（2026-11-14）：去掉「已完成周期」（对用户没意义），补上「最佳连续」
       cards: [
-        { key: 'periods', num: String(sum.totalPeriods || 0), cap: '已完成周期' },
         { key: 'achieved', num: String(sum.achievedPeriods || 0), cap: '达成次数' },
         { key: 'rate', num: `${Math.round((sum.rate || 0) * 100)}%`, cap: '达成率' },
         { key: 'streak', num: String((sum.streak && sum.streak.current) || 0), cap: '连续达成' },
+        { key: 'best', num: String((sum.streak && sum.streak.best) || 0), cap: '最佳连续' },
       ],
       totalsText: `累计 ${km(sum.totals && sum.totals.distanceM)} km · ${hours(sum.totals && sum.totals.durationSec)} · ${(sum.totals && sum.totals.count) || 0} 次运动`,
-      bestStreakText: `最佳连续 ${(sum.streak && sum.streak.best) || 0} 次`,
       // 扁平表：详情半屏按 key 取；desc 从后端原值带出（分组 items 里没带）
       trophies: (sum.trophies || []).map((t) => ({
         key: t.key,
