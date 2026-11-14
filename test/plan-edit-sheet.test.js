@@ -49,7 +49,7 @@ function boot(props = {}) {
   return c;
 }
 
-test('PES1 打开预填：无计划 → 每天默认 3/30/1；切每周 → 15/150/5', () => {
+test('PES1 打开预填：无计划 → 每天默认 3/30/1（周计划下线，仅每日）', () => {
   storage.clear();
   const c = boot();
   c.init();
@@ -57,14 +57,10 @@ test('PES1 打开预填：无计划 → 每天默认 3/30/1；切每周 → 15/1
     { d: c.data.distanceKm, t: c.data.durationMin, c: c.data.count },
     { d: '3', t: '30', c: '1' },
   );
-  c.onPeriod({ currentTarget: { dataset: { value: 'weekly' } } });
-  assert.deepEqual(
-    { d: c.data.distanceKm, t: c.data.durationMin, c: c.data.count },
-    { d: '15', t: '150', c: '5' },
-  );
+  assert.equal(c.data.period, 'daily', '仅每日计划');
 });
 
-test('PES2 有已保存计划：按计划预填，切周期不被默认值覆盖已保存的那一档', () => {
+test('PES2 有已保存计划：按计划预填（周计划下线，仅每日）', () => {
   storage.clear();
   const c = boot({ plan: { period: 'daily', targets: { distanceM: 5000, durationMin: 45, count: 2 } } });
   c.init();
@@ -72,11 +68,6 @@ test('PES2 有已保存计划：按计划预填，切周期不被默认值覆盖
   assert.equal(c.data.distanceKm, '5');
   assert.equal(c.data.durationMin, '45');
   assert.equal(c.data.count, '2');
-
-  c.onPeriod({ currentTarget: { dataset: { value: 'weekly' } } });
-  assert.equal(c.data.distanceKm, '15', '每周没有保存值 → 默认值 15km');
-  c.onPeriod({ currentTarget: { dataset: { value: 'daily' } } });
-  assert.equal(c.data.distanceKm, '5', '切回每天 → 已保存的 5km 不被默认值覆盖');
 });
 
 test('PES3 步进器：距离 0.5、时间 5、次数 1，且有下限', () => {

@@ -64,10 +64,6 @@ test('PHC1 月历装载：cells 补齐整行、pct 归一、达成与今天标�
         days: [
           { date: `${y}-${mm}-01`, windowStart: 1, rings: [{ key: 'distance', pct: 1.4 }, { key: 'duration', pct: 0.5 }, { key: 'count', pct: 0 }], allAchieved: false, source: 'snapshot' },
         ],
-        weeks: [
-          { period: 'weekly', periodKey: `${y}-${mm}-03`, windowStart: Date.parse(`${y}-${mm}-03T00:00:00+08:00`), windowEnd: Date.parse(`${y}-${mm}-10T00:00:00+08:00`),
-            rings: [{ key: 'distance', value: 12000, target: 21000, pct: 0.57 }], allAchieved: false },
-        ],
       });
     }
     if (p === '/plan/summary') {
@@ -115,10 +111,6 @@ test('PHC1 月历装载：cells 补齐整行、pct 归一、达成与今天标�
   const first = p.data.cells.find((c) => c.date === `${y}-${mm}-01`);
   assert.deepEqual(first.pct, [1, 0.5, 0], 'pct 归一化并封顶 1');
   assert.equal(first.done, false);
-  assert.equal(p.data.weeks.length, 1);
-  assert.match(p.data.weeks[0].rangeText, /月.*日 - .*月.*日/, '周记录展示区间');
-  assert.equal(p.data.weeks[0].achieved, false);
-  assert.match(p.data.weeks[0].distText, /12\.0\/21\.0 km/);
 
   // 当前周期概况卡
   assert.ok(p.data.current, '装载当前周期概况');
@@ -227,11 +219,7 @@ test('PHC1b 当前周期已达成：remainText 提示已全部达成', async () 
   const p = boot(historyDef);
   await p.load();
   await flush();
-  assert.match(
-    p.data.current.periodText,
-    /^\d+\.\d+–\d+\.\d+（第 1\/7 天）$/,
-    '周计划显示当期日期范围 + 第 1/7 天',
-  );
+  assert.equal(p.data.current.periodText, '今天', '周计划下线后当期标题恒为「今天」');
   assert.equal(p.data.current.achieved, true);
   assert.equal(p.data.current.remainText, '本期目标已全部达成');
 });
@@ -390,33 +378,12 @@ test('PHC10 当期达成：当天首次进页弹一次；同周期再进不弹�
   p.maybePrompt({ plan, allAchieved: true, periodKey: '2026-11-12' }, sum);
   assert.equal(modals.length, 1, '同一周期再进不弹');
 
-  p.maybePrompt({ plan: Object.assign({}, plan, { period: 'weekly' }), allAchieved: true, periodKey: '2026-11-10' }, sum);
+  // 周计划已下线：任意新周期（不同 periodKey）当天达成只弹一次「今日目标达成」
+  p.maybePrompt({ plan, allAchieved: true, periodKey: '2026-11-11' }, sum);
   assert.equal(modals.length, 2, '新周期达成要弹');
-  assert.equal(modals[1].title, '本期目标达成');
+  assert.equal(modals[1].title, '今日目标达成');
 
   p.maybePrompt({ plan, allAchieved: false, periodKey: '2026-11-13' }, sum);
   assert.equal(modals.length, 2, '未达成不弹');
 });
 
-test('PHC9 周计划记录：当前周实时进度（live）不进列表，历史周照常', async () => {
-  respond = (p) => {
-    if (p.startsWith('/plan/calendar')) {
-      return Promise.resolve({
-        month: '2026-11',
-        days: [],
-        weeks: [
-          { period: 'weekly', periodKey: '2026-10-26', windowStart: Date.parse('2026-10-26T00:00:00+08:00'), windowEnd: Date.parse('2026-11-02T00:00:00+08:00'), source: 'snapshot', allAchieved: true, rings: [{ key: 'distance', value: 21000, target: 21000, pct: 1 }] },
-          { period: 'weekly', periodKey: '2026-11-12', windowStart: Date.parse('2026-11-12T00:00:00+08:00'), windowEnd: Date.parse('2026-11-19T00:00:00+08:00'), source: 'live', allAchieved: false, rings: [{ key: 'distance', value: 0, target: 21000, pct: 0 }] },
-        ],
-      });
-    }
-    if (p === '/plan/summary') return Promise.resolve(null);
-    if (p === '/plan/current') return Promise.resolve({ plan: null, progress: { distanceM: 0, durationSec: 0, count: 0 }, rings: [] });
-    return Promise.resolve({});
-  };
-  const p = boot(historyDef);
-  await p.load();
-  await flush();
-  assert.equal(p.data.weeks.length, 1, 'live 周被过滤：底部不再出现与「当前期」重复的卡');
-  assert.equal(p.data.weeks[0].rangeText, '10月26日 - 11月1日', '历史周照常展示');
-});

@@ -73,8 +73,8 @@ test('PP5 计划签名：period 或任一目标变化 → 签名变化', () => {
   assert.equal(sig(null), '');
 });
 
-test('PP6 文案：8 个里程碑都配了恭喜正文', () => {
-  const keys = ['first', 'week', 'habit', 'x2', 'x2pro', 'x3', 'x4', 'x5'];
+test('PP6 文案：7 个里程碑都配了恭喜正文（双倍宗师与 200% 章合并后移除）', () => {
+  const keys = ['first', 'week', 'habit', 'x2', 'x3', 'x4', 'x5'];
   for (const k of keys) {
     assert.equal(typeof prompts.MILESTONE_COPY[k], 'string');
     assert.ok(prompts.MILESTONE_COPY[k].length >= 10, `${k} 文案太短`);

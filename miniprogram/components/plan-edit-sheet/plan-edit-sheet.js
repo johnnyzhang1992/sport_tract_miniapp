@@ -13,11 +13,7 @@ Component({
   },
 
   data: {
-    periods: [
-      { key: 'daily', label: '每天' },
-      { key: 'weekly', label: '每周' },
-    ],
-    period: 'daily',
+    period: 'daily', // 2026-11-14 周计划下线：仅每日计划（周期切换 UI 移除）
     distanceKm: '',
     durationMin: '',
     count: '',
@@ -39,8 +35,10 @@ Component({
       const patch = { drafts };
       if (plan && plan.period) {
         const saved = formOfPlan(plan);
-        patch.period = plan.period;
-        drafts[plan.period] = saved;
+        // 周期固定 daily（2026-11-14 周计划下线）：不再继承 plan.period——
+        // 存量周计划文档回传 'weekly' 会被 API 拒绝，用户就保存不了计划了
+        patch.period = 'daily';
+        drafts.daily = saved;
         Object.assign(patch, saved);
       } else {
         const cur = this.data.period || 'daily';
@@ -48,21 +46,6 @@ Component({
         Object.assign(patch, draft);
       }
       this.setData(patch);
-    },
-
-    onPeriod(e) {
-      const key = e.currentTarget.dataset.value;
-      if (!key || key === this.data.period) return;
-      const drafts = Object.assign({}, this.data.drafts);
-      drafts[this.data.period] = {
-        distanceKm: this.data.distanceKm,
-        durationMin: this.data.durationMin,
-        count: this.data.count,
-      };
-      const next = validDraft(drafts[key]) ? drafts[key] : (PLAN_DEFAULTS[key] || PLAN_DEFAULTS.daily);
-      drafts[key] = next;
-      writeDrafts(drafts);
-      this.setData(Object.assign({ period: key, drafts }, next));
     },
 
     /** 输入变化统一落草稿 */

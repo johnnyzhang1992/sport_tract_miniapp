@@ -53,7 +53,7 @@ test('IP1 有计划：planCard 装载周期文案、当前/目标文本与三环
   await p.loadPlan();
   await flush();
   assert.ok(p.data.planCard && p.data.planCard.plan === true);
-  assert.equal(p.data.planCard.periodText, '每周');
+  assert.equal(p.data.planCard.periodText, '每日', '周计划下线后计划卡恒为每日');
   assert.equal(p.data.planCard.distanceValue, '25.0', '当前值显示实际值（可超额）');
   assert.equal(p.data.planCard.distanceNum, '20.0', '目标值单独下发（单位另出）');
   assert.equal(p.data.planCard.durationValue, '120');

@@ -6,17 +6,8 @@
       <text class="sheet-close" bindtap="onClose">✕</text>
     </view>
 
-    <!-- 周期 -->
-    <view class="period-row">
-      <view
-        wx:for="{{periods}}"
-        wx:key="key"
-        class="period-seg {{period === item.key ? 'period-seg-active' : ''}}"
-        data-value="{{item.key}}"
-        bindtap="onPeriod"
-      >{{item.label}}</view>
-    </view>
-    <view class="sheet-note">每天＝当天 0 点起统计；每周＝从设定当天起，7 天为一期</view>
+    <!-- 周期（2026-11-14 周计划下线：仅保留每日计划） -->
+    <view class="sheet-note">目标按「每天」统计，当天 0 点起算</view>
 
     <!-- 三项目标：步进器 -->
     <view class="goal-row">

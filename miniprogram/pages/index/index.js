@@ -291,7 +291,7 @@ Page({
       this.setData({
         planCard: {
           plan: true,
-          periodText: d.plan.period === 'weekly' ? '每周' : '每日',
+          periodText: '每日', // 周计划已下线（2026-11-14），计划卡恒为每日口径
           // 数字与目标分开：数字单独放大着色，目标走次要小字
           distanceValue: km(d.progress.distanceM), distanceNum: km(t.distanceM),
           durationValue: String(Math.round(d.progress.durationSec / 60)), durationNum: String(t.durationMin),

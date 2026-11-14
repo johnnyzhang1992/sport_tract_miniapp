@@ -191,18 +191,6 @@
     </view>
   </view>
 
-  <!-- 周计划记录（用「每周」计划的周期单独列，不塞进日历格子） -->
-  <block wx:if="{{weeks.length > 0}}">
-    <view class="card week-card">
-      <view class="week-row" wx:for="{{weeks}}" wx:key="key">
-        <view class="week-main">
-          <text class="week-range">{{item.rangeText}}</text>
-          <text class="week-sub">{{item.distText}} · {{item.pct}}%</text>
-        </view>
-        <text class="badge {{item.achieved ? 'badge-done' : 'badge-miss'}}">{{item.achieved ? '周计划达成' : '未达成'}}</text>
-      </view>
-    </view>
-  </block>
 
   <!-- 创建/更改计划半屏 -->
   <plan-edit-sheet visible="{{sheetVisible}}" plan="{{planForSheet}}" bind:close="closePlanSheet" bind:saved="onPlanSaved" />

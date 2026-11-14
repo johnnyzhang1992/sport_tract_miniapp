@@ -1,12 +1,11 @@
 /**
  * 运动计划的表单口径（创建/更改计划半屏与后端共用同一套默认值与草稿规则）。
- * - 默认值：每天 3km/30 分钟/1 次；每周 15km/150 分钟/5 次
+ * - 默认值：每天 3km/30 分钟/1 次（周计划已于 2026-11-14 下线）
  * - 草稿：每个周期各存一份用户输入（storage 持久化），切周期/重开半屏都能还原
  */
 
 const PLAN_DEFAULTS = {
   daily: { distanceKm: '3', durationMin: '30', count: '1' },
-  weekly: { distanceKm: '15', durationMin: '150', count: '5' },
 };
 
 const DRAFT_KEY = 'planDraftV1';

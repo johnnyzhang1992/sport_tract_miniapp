@@ -40,7 +40,6 @@ Page({
     weekHead: ['一', '二', '三', '四', '五', '六', '日'],
     /** 画布上的日期格：{ date, day, out, today, pct:[a,b,c], done, hasData } */
     cells: [],
-    weeks: [],
     /** 当前周期概况：{ periodText, achieved, metrics, remainText }（未选中日期时展示） */
     current: null,
     /** 记录数据概况 + 里程碑奖杯（GET /plan/summary） */
@@ -127,28 +126,13 @@ Page({
       // 末尾补齐到整行
       while (cells.length % 7 !== 0) cells.push({ key: `t${cells.length}`, out: true, day: '', pct: [0, 0, 0], done: false });
 
-      // 周计划记录只列历史周（source=snapshot）：当前周的实时进度与「当前期」卡完全重复，
-      // 列在底部会被当成多出来的一块（2026-11-14 用户反馈去掉）
-      const weeks = ((res && res.weeks) || [])
-        .filter((w) => w.source !== 'live')
-        .map((w) => {
-        const s = bjParts(w.windowStart);
-        const e = bjParts(w.windowEnd - 1);
-        const dist = (w.rings || []).find((r) => r.key === 'distance') || { value: 0, target: 0, pct: 0 };
-        return {
-          key: `${w.period}:${w.periodKey}`,
-          rangeText: `${s.m}月${s.d}日 - ${e.m}月${e.d}日`,
-          achieved: !!w.allAchieved,
-          distText: `${(Math.round(dist.value / 100) / 10).toFixed(1)}/${(Math.round(dist.target / 100) / 10).toFixed(1)} km`,
-          pct: Math.round((dist.pct || 0) * 100),
-        };
-      });
+      // 周计划已下线（2026-11-14）：周计划记录区移除，日计划用户本就没有周记录
+
 
       // 记录型奖杯详情需要 records 明细（当前纪录/日期），页面级暂存原始 sum
       this._lastSummary = sum;
       this.setData({
         cells,
-        weeks,
         current: this.buildCurrent(cur),
         hasPlan: !!(cur && cur.plan),
         planForSheet: (cur && cur.plan) || null,
@@ -176,7 +160,7 @@ Page({
     // 徽章视觉：系列 → 形状/主题 class + 徽章中央文字（档位数）；数量以气泡压在徽章上（Apple 奖章形态）
     const SHORT_LABELS = {
       first: '首次达成', week: '坚持一周', habit: '习惯养成',
-      x2: '双倍火力', x2pro: '双倍宗师', x3: '三倍王者', x4: '四倍狂人', x5: '五倍传奇',
+      x2: '200%完成目标', x3: '300%完成目标', x4: '400%完成目标', x5: '500%完成目标',
       'rec-dist': '距离纪录', 'rec-dur': '时长纪录', streak: '最坚持', ring: '合上圆环', goal: '完成目标',
       'perfect-week-all': '完美周·全能', 'perfect-week-single': '完美周·单项',
     };
@@ -193,14 +177,6 @@ Page({
       if (exact) return exact;
       const prefix = Object.keys(SHORT_LABELS).find((k) => t.key.indexOf(`${k}-`) === 0);
       return prefix ? SHORT_LABELS[prefix] : t.label;
-    };
-
-    /** 卡面第三行：该徽章自己的进度（当前计数/档位，封顶不超额）；完美周无阶梯只显示个数 */
-    const countTextOf = (t) => {
-      const cur = t.cur ?? 0;
-      if (t.group === 'week') return String(cur);
-      const tier = t.tier ?? 0;
-      return `${Math.min(cur, tier)}/${tier}`;
     };
     const trophyGroups = [];
     const byGroup = new Map();
@@ -311,9 +287,8 @@ Page({
       remainOf(cnt.value, cnt.target) > 0 ? `${remainOf(cnt.value, cnt.target)} 次` : '',
     ].filter(Boolean);
     return {
-      periodText: cur.plan.period === 'weekly'
-        ? formatPeriodTitle(cur.windowStart, cur.windowEnd)
-        : '今天',
+      // 周计划已下线（2026-11-14）：当前期恒为「今天」
+      periodText: '今天',
       achieved: remain.length === 0,
       metrics: [
         { key: 'distance', label: '距离', dot: 'red', cur: km(dist.value), target: km(dist.target), unit: 'km', pct: Math.round((dist.pct || 0) * 100) },
