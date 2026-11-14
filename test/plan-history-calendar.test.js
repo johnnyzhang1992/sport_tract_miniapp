@@ -80,6 +80,12 @@ test('PHC1 月历装载：cells 补齐整行、pct 归一、达成与今天标�
           { key: 'week', label: '坚持一周', desc: '达成 7 次', unlocked: true, cur: 8, need: 7 },
           { key: 'habit', label: '习惯养成', desc: '达成 20 次', unlocked: false, cur: 8, need: 20 },
         ],
+        trophies: [
+          { key: 'first', label: '首次达成', desc: '完成 1 次目标', icon: '🥇', unlocked: true, cur: 8, tier: 1, group: 'plan', earnedCount: 1, earnDateText: '2026-10-20', pct: 100 },
+          { key: 'week', label: '坚持一周', desc: '达成 7 次', icon: '📅', unlocked: true, cur: 8, tier: 7, group: 'plan', earnedCount: 1, earnDateText: '2026-10-26', pct: 100 },
+          { key: 'habit', label: '习惯养成', desc: '达成 20 次', icon: '💪', unlocked: false, cur: 8, tier: 20, group: 'plan', earnedCount: 0, earnDateText: '', pct: 40 },
+          { key: 'rec-dist-100', label: '新距离记录·100次', desc: '刷新单日运动距离纪录 100 次', icon: '📏', unlocked: false, cur: 2, tier: 100, group: 'record', valueText: '8.20 km', dateText: '2026-11-01', earnedCount: 0, earnDateText: '', pct: 2 },
+        ],
       });
     }
     if (p === '/plan/current') {
@@ -129,9 +135,25 @@ test('PHC1 月历装载：cells 补齐整行、pct 归一、达成与今天标�
   assert.deepEqual(p.data.summary.cards.map((c) => `${c.num}${c.cap}`), ['12已完成周期', '8达成次数', '67%达成率', '3连续达成']);
   assert.match(p.data.summary.totalsText, /累计 48\.0 km/);
   assert.equal(p.data.summary.bestStreakText, '最佳连续 5 次');
-  assert.equal(p.data.summary.trophies.length, 3);
-  assert.equal(p.data.summary.trophies[0].progressText, '已解锁');
-  assert.equal(p.data.summary.trophies[2].progressText, '8/20', '未解锁显示进度');
+  assert.equal(p.data.summary.trophies.length, 4, '奖杯扁平表 = 后端 trophies 全量');
+  // 卡面第三行三态：未获得=进度条；获得一次=获取日期；获得多次=次数
+  assert.equal(p.data.summary.trophies[0].earnedCount, 1, '首次达成已获得');
+  assert.match(p.data.summary.trophies[0].earnDateText, /2026-/, '获得一次 → 展示获取日期');
+  assert.equal(p.data.summary.trophies[2].earnedCount, 0, '习惯养成未获得');
+  assert.equal(p.data.summary.trophies[2].pct, Math.round((8 / 20) * 100), '未获得 → 进度条百分比 cur/tier');
+  assert.equal(p.data.summary.trophies[3].unlocked, false, '未解锁标记');
+  assert.equal(p.data.summary.trophyGroups.length, 2, '分组：里程碑 + 新纪录');
+  assert.deepEqual(p.data.summary.trophyGroups.map((g) => g.title), ['里程碑', '新纪录']);
+  assert.equal(p.data.summary.trophyGroups[1].items[0].earnedCount, 0, '新纪录卡未获得 → 进度条');
+  // 徽章字段名必须与 wxml 绑定一致（曾叫 text 导致中央档位数字整墙不显示）
+  assert.equal(p.data.summary.trophies[3].badgeText, '100', '记录型徽章中央印档位数');
+  assert.equal(p.data.summary.trophyGroups[0].items[0].badgeText, '1', '里程碑徽章中央印需要次数');
+  // wxml 绑定路径必须指向 summary.trophyGroups（曾错写成顶层 trophyGroups 导致奖杯区整块消失）
+  const trophyWxml = require('fs').readFileSync(
+    require('path').join(__dirname, '../miniprogram/pages/plan-history/plan-history.wxml'), 'utf8',
+  );
+  assert.ok(trophyWxml.includes('wx:if="{{summary && summary.trophyGroups.length}}"'), '奖杯区 wx:if 绑定 summary.trophyGroups');
+  assert.ok(trophyWxml.includes('wx:for="{{summary.trophyGroups}}"'), '奖杯分组循环绑定 summary.trophyGroups');
   assert.equal(p.data.hasPlan, true, '有计划 → 右上角显示「更改计划」');
 });
 
@@ -374,4 +396,27 @@ test('PHC10 当期达成：当天首次进页弹一次；同周期再进不弹�
 
   p.maybePrompt({ plan, allAchieved: false, periodKey: '2026-11-13' }, sum);
   assert.equal(modals.length, 2, '未达成不弹');
+});
+
+test('PHC9 周计划记录：当前周实时进度（live）不进列表，历史周照常', async () => {
+  respond = (p) => {
+    if (p.startsWith('/plan/calendar')) {
+      return Promise.resolve({
+        month: '2026-11',
+        days: [],
+        weeks: [
+          { period: 'weekly', periodKey: '2026-10-26', windowStart: Date.parse('2026-10-26T00:00:00+08:00'), windowEnd: Date.parse('2026-11-02T00:00:00+08:00'), source: 'snapshot', allAchieved: true, rings: [{ key: 'distance', value: 21000, target: 21000, pct: 1 }] },
+          { period: 'weekly', periodKey: '2026-11-12', windowStart: Date.parse('2026-11-12T00:00:00+08:00'), windowEnd: Date.parse('2026-11-19T00:00:00+08:00'), source: 'live', allAchieved: false, rings: [{ key: 'distance', value: 0, target: 21000, pct: 0 }] },
+        ],
+      });
+    }
+    if (p === '/plan/summary') return Promise.resolve(null);
+    if (p === '/plan/current') return Promise.resolve({ plan: null, progress: { distanceM: 0, durationSec: 0, count: 0 }, rings: [] });
+    return Promise.resolve({});
+  };
+  const p = boot(historyDef);
+  await p.load();
+  await flush();
+  assert.equal(p.data.weeks.length, 1, 'live 周被过滤：底部不再出现与「当前期」重复的卡');
+  assert.equal(p.data.weeks[0].rangeText, '10月26日 - 11月1日', '历史周照常展示');
 });

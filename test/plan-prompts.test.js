@@ -80,3 +80,28 @@ test('PP6 文案：8 个里程碑都配了恭喜正文', () => {
     assert.ok(prompts.MILESTONE_COPY[k].length >= 10, `${k} 文案太短`);
   }
 });
+
+/* ------------------------- 新增奖杯恭喜（docs/21） ------------------------- */
+
+const T = (key, extra = {}) => Object.assign({ key, label: key, unlocked: true }, extra);
+
+test('PT1 新解锁且没看过 → 挑出；已看过/未解锁不挑', () => {
+  const trophies = [
+    T('ring-100', { unlocked: true }),
+    T('ring-365', { unlocked: false }),
+    T('goal-100', { unlocked: true }),
+  ];
+  const picked = prompts.pickNewTrophies(trophies, ['ring-100']);
+  assert.deepEqual(picked.map((t) => t.key), ['goal-100'], '看过的不再弹，未解锁的不算解锁');
+});
+
+test('PT2 多个新解锁：保持服务端顺序（调用方取最后一个 = 最稀有）', () => {
+  const trophies = [T('rec-dist-100'), T('rec-dist-365'), T('goal-100'), T('perfect-week-single')];
+  const picked = prompts.pickNewTrophies(trophies, []);
+  assert.deepEqual(picked.map((t) => t.key), ['rec-dist-100', 'rec-dist-365', 'goal-100', 'perfect-week-single']);
+});
+
+test('PT3 seen 为空/未传不炸', () => {
+  const picked = prompts.pickNewTrophies([T('goal-100')], undefined);
+  assert.equal(picked.length, 1);
+});

@@ -28,6 +28,15 @@ const MILESTONE_COPY = {
   x5: '500% 达成 3 次！计划已经拦不住你，传奇请收下敬佩。',
 };
 
+/** 新增奖杯（docs/21）的恭喜文案：按分区给一句，key 用服务端完整 key（如 rec-dist-100） */
+const TROPHY_COPY = {
+  record: '单日运动纪录刷新！今天的你超过了昨天的自己。',
+  streak: '连续运动天数达到新档位，坚持就是胜利。',
+  rings: '圆环合上次数达到新档位，持续达标太强了。',
+  goal: '累计完成运动次数达到新档位，里程碑 +1。',
+  week: '收获一个完美周！这一周的计划全部兑现。',
+};
+
 /** 当期达成弹窗（2026-11-12 用户确认：标题按周期、正文/按钮固定） */
 const ACHIEVE_COPY = {
   daily: { title: '今日目标达成', content: '三项计划全部完成，干得漂亮！', confirmText: '太棒了' },
@@ -49,6 +58,16 @@ function shouldPromptCreatePlan(lastDeclinedTs, now = Date.now()) {
 function pickNewMilestones(milestones, seenKeys) {
   const seen = new Set(seenKeys || []);
   return (milestones || []).filter((m) => m && m.unlocked && !seen.has(m.key));
+}
+
+/**
+ * 挑出「新解锁」的奖杯（docs/21 新增 27 座，含合上圆环/完成目标/完美周等）。
+ * 与里程碑同款规则：unlocked 且没看过；返回保持服务端顺序（低→高、稀有度递增），
+ * 调用方取最后一个即最值得恭喜的一座。
+ */
+function pickNewTrophies(trophies, seenKeys) {
+  const seen = new Set(seenKeys || []);
+  return (trophies || []).filter((t) => t && t.unlocked && !seen.has(t.key));
 }
 
 /**
@@ -79,9 +98,11 @@ module.exports = {
   RAISE_OVER_STREAK,
   OVER_RATIO,
   MILESTONE_COPY,
+  TROPHY_COPY,
   ACHIEVE_COPY,
   shouldPromptCreatePlan,
   pickNewMilestones,
+  pickNewTrophies,
   shouldPromptRaisePlan,
   planSignature,
 };

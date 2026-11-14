@@ -117,20 +117,77 @@
     <view class="sum-totals">{{summary.totalsText}}</view>
   </view>
 
-  <!-- 里程碑奖杯：固定档位，未解锁置灰（口径同统计页奖杯墙） -->
-  <view class="card trophy-card" wx:if="{{summary && summary.trophies.length}}">
+  <!-- 里程碑奖杯（docs/21 改版）：卡面=图标+名称+当前次数，分区展示；点击进详情半屏 -->
+  <view class="card trophy-card" wx:if="{{summary && summary.trophyGroups.length}}">
     <view class="sum-title-row">
       <text class="sum-title">里程碑奖杯</text>
     </view>
-    <view class="trophy-grid">
-      <view class="trophy-item {{item.unlocked ? '' : 'trophy-locked'}}" wx:for="{{summary.trophies}}" wx:key="key">
-        <view class="trophy-badge {{item.unlocked ? 'trophy-badge-on' : 'trophy-badge-locked'}}">
-          <text class="{{item.unlocked ? 'trophy-check' : 'trophy-lock'}}">{{item.unlocked ? '✓' : '—'}}</text>
+    <block wx:for="{{summary.trophyGroups}}" wx:key="key" wx:for-item="grp">
+      <view class="trophy-group-title">{{grp.title}}</view>
+      <view class="trophy-grid">
+        <view
+          class="trophy-item {{item.unlocked ? '' : 'trophy-locked'}}"
+          wx:for="{{grp.items}}"
+          wx:key="key"
+          data-key="{{item.key}}"
+          hover-class="trophy-item-hover"
+          hover-stay-time="80"
+          bindtap="onTrophyTap"
+        >
+          <!-- 徽章：外层挂数量气泡（不被形状裁切），内层裁形状 + 档位数字印中央；
+               未解锁 = 淡彩同款（形状完整可辨），不再是白线稿 -->
+          <view class="trophy-badge-wrap">
+            <block wx:if="{{grp.key === 'rings'}}">
+              <!-- 合上圆环：嵌套三环（首页三环配色 青外/绿中/红内，深色间隔） -->
+              <view class="ringbadge-o">
+                <view class="ringbadge-g">
+                  <view class="ringbadge-r">
+                    <view class="ringbadge-core">
+                      <text class="badge-center">{{item.badgeText}}</text>
+                    </view>
+                  </view>
+                </view>
+              </view>
+            </block>
+            <view wx:else class="trophy-badge {{item.cls}}">
+              <text class="badge-center">{{item.badgeText}}</text>
+            </view>
+          </view>
+          <text class="trophy-label">{{item.label}}</text>
+          <!-- 第三行三态：未获得=进度条；获得一次=获取日期；获得多次=次数 -->
+          <view class="trophy-progress" wx:if="{{item.earnedCount === 0}}">
+            <view class="trophy-progress-fill" style="width: {{item.pct}}%;"></view>
+          </view>
+          <text class="trophy-count" wx:elif="{{item.earnedCount === 1}}">{{item.earnDateText}}</text>
+          <text class="trophy-count" wx:else>获得 {{item.earnedCount}} 次</text>
         </view>
-        <text class="trophy-label">{{item.label}}</text>
-        <text class="trophy-desc">{{item.desc}}</text>
-        <text class="trophy-progress">{{item.progressText}}</text>
       </view>
+    </block>
+  </view>
+
+  <!-- 奖杯详情半屏：点击奖杯卡打开 -->
+  <view class="trophy-sheet-mask" wx:if="{{trophyDetail}}" bindtap="closeTrophyDetail">
+    <view class="trophy-sheet" catchtap="noop">
+      <view class="trophy-badge-wrap trophy-sheet-badge">
+        <block wx:if="{{trophyDetail.group === 'rings'}}">
+          <view class="ringbadge-o">
+            <view class="ringbadge-g">
+              <view class="ringbadge-r">
+                <view class="ringbadge-core">
+                  <text class="badge-center">{{trophyDetail.badgeText}}</text>
+                </view>
+              </view>
+            </view>
+          </view>
+        </block>
+        <view wx:else class="trophy-badge {{trophyDetail.cls}}">
+          <text class="badge-center">{{trophyDetail.badgeText}}</text>
+        </view>
+      </view>
+      <text class="trophy-sheet-label">{{trophyDetail.label}}</text>
+      <text class="trophy-sheet-state {{trophyDetail.unlocked ? '' : 'trophy-sheet-state-off'}}">{{trophyDetail.unlocked ? '已解锁' : '未解锁'}}</text>
+      <text class="trophy-sheet-desc">{{trophyDetail.desc}}</text>
+      <view class="trophy-sheet-progress" wx:for="{{trophyDetail.detailLines}}" wx:key="*this">{{item}}</view>
     </view>
   </view>
 

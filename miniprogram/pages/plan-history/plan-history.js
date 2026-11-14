@@ -127,7 +127,11 @@ Page({
       // 末尾补齐到整行
       while (cells.length % 7 !== 0) cells.push({ key: `t${cells.length}`, out: true, day: '', pct: [0, 0, 0], done: false });
 
-      const weeks = ((res && res.weeks) || []).map((w) => {
+      // 周计划记录只列历史周（source=snapshot）：当前周的实时进度与「当前期」卡完全重复，
+      // 列在底部会被当成多出来的一块（2026-11-14 用户反馈去掉）
+      const weeks = ((res && res.weeks) || [])
+        .filter((w) => w.source !== 'live')
+        .map((w) => {
         const s = bjParts(w.windowStart);
         const e = bjParts(w.windowEnd - 1);
         const dist = (w.rings || []).find((r) => r.key === 'distance') || { value: 0, target: 0, pct: 0 };
@@ -140,6 +144,8 @@ Page({
         };
       });
 
+      // 记录型奖杯详情需要 records 明细（当前纪录/日期），页面级暂存原始 sum
+      this._lastSummary = sum;
       this.setData({
         cells,
         weeks,
@@ -165,7 +171,58 @@ Page({
       if (s2 < 3600) return `${Math.round(s2 / 60)} 分钟`;
       return `${(Math.round((s2 / 3600) * 10) / 10).toFixed(1)} 小时`;
     };
+    // 分组展示：组序固定，组内保持后端顺序
+    const TROPHY_GROUP_TITLES = { plan: '里程碑', record: '新纪录', streak: '最坚持', rings: '合上圆环', goal: '完成目标', week: '完美周' };
+    // 徽章视觉：系列 → 形状/主题 class + 徽章中央文字（档位数）；数量以气泡压在徽章上（Apple 奖章形态）
+    const SHORT_LABELS = {
+      first: '首次达成', week: '坚持一周', habit: '习惯养成',
+      x2: '双倍火力', x2pro: '双倍宗师', x3: '三倍王者', x4: '四倍狂人', x5: '五倍传奇',
+      'rec-dist': '距离纪录', 'rec-dur': '时长纪录', streak: '最坚持', ring: '合上圆环', goal: '完成目标',
+      'perfect-week-all': '完美周·全能', 'perfect-week-single': '完美周·单项',
+    };
+    const badgeOf = (t) => {
+      if (t.group === 'plan') return { cls: 'b-plan', badgeText: String(t.tier) };
+      if (t.key === 'perfect-week-all') return { cls: 'b-hex b-week-all', badgeText: '🌟' };
+      if (t.key === 'perfect-week-single') return { cls: 'b-hex b-week-single', badgeText: '✨' };
+      const map = { 'rec-dist': 'b-shield b-dist', 'rec-dur': 'b-hex b-dur', streak: 'b-hex b-streak', ring: 'b-ring', goal: 'b-goal' };
+      const prefix = Object.keys(map).find((k) => t.key.indexOf(k) === 0);
+      return { cls: prefix ? map[prefix] : 'b-plan', badgeText: String(t.tier) };
+    };
+    const shortLabelOf = (t) => {
+      const exact = SHORT_LABELS[t.key];
+      if (exact) return exact;
+      const prefix = Object.keys(SHORT_LABELS).find((k) => t.key.indexOf(`${k}-`) === 0);
+      return prefix ? SHORT_LABELS[prefix] : t.label;
+    };
+
+    /** 卡面第三行：该徽章自己的进度（当前计数/档位，封顶不超额）；完美周无阶梯只显示个数 */
+    const countTextOf = (t) => {
+      const cur = t.cur ?? 0;
+      if (t.group === 'week') return String(cur);
+      const tier = t.tier ?? 0;
+      return `${Math.min(cur, tier)}/${tier}`;
+    };
+    const trophyGroups = [];
+    const byGroup = new Map();
+    for (const t of (sum.trophies || [])) {
+      if (!byGroup.has(t.group)) {
+        const g = { key: t.group, title: TROPHY_GROUP_TITLES[t.group] || '奖杯', items: [] };
+        byGroup.set(t.group, g);
+        trophyGroups.push(g);
+      }
+      byGroup.get(t.group).items.push({
+        key: t.key,
+        label: shortLabelOf(t),
+        icon: t.icon || '🏆',
+        unlocked: !!t.unlocked,
+        earnedCount: t.earnedCount ?? 0,
+        earnDateText: t.earnDateText || '',
+        pct: t.pct ?? 0,
+        ...badgeOf(t),
+      });
+    }
     return {
+      trophyGroups,
       cards: [
         { key: 'periods', num: String(sum.totalPeriods || 0), cap: '已完成周期' },
         { key: 'achieved', num: String(sum.achievedPeriods || 0), cap: '达成次数' },
@@ -174,15 +231,68 @@ Page({
       ],
       totalsText: `累计 ${km(sum.totals && sum.totals.distanceM)} km · ${hours(sum.totals && sum.totals.durationSec)} · ${(sum.totals && sum.totals.count) || 0} 次运动`,
       bestStreakText: `最佳连续 ${(sum.streak && sum.streak.best) || 0} 次`,
-      trophies: (sum.milestones || []).map((m) => ({
-        key: m.key,
-        label: m.label,
-        desc: m.desc,
-        unlocked: !!m.unlocked,
-        progressText: m.unlocked ? '已解锁' : `${m.cur}/${m.need}`,
+      // 扁平表：详情半屏按 key 取；desc 从后端原值带出（分组 items 里没带）
+      trophies: (sum.trophies || []).map((t) => ({
+        key: t.key,
+        label: t.label,
+        desc: t.desc || '',
+        icon: t.icon || '🏆',
+        unlocked: !!t.unlocked,
+        earnedCount: t.earnedCount ?? 0,
+        earnDateText: t.earnDateText || '',
+        pct: t.pct ?? 0,
+        cur: t.cur ?? 0,
+        tier: t.tier ?? 0,
+        nextTier: t.nextTier ?? null,
+        valueText: t.valueText || '',
+        dateText: t.dateText || '',
+        group: t.group || 'plan',
+        ...badgeOf(t),
+        shortLabel: shortLabelOf(t),
       })),
     };
   },
+
+  /** 点击奖杯卡：详情半屏（图标/名称/描述 + 获得次数 + 当前进展） */
+  onTrophyTap(e) {
+    const key = e.currentTarget.dataset.key;
+    const t = ((this.data.summary && this.data.summary.trophies) || []).find((x) => x.key === key);
+    if (!t) return;
+    const rec = (this._lastSummary && this._lastSummary.records) || null;
+    const detailLines = [];
+    // 获得次数：按系列措辞（记录型顺带展示当前纪录与产生日期）
+    if (t.key.indexOf('rec-dist') === 0) {
+      detailLines.push(`已刷新距离纪录 ${t.cur} 次`);
+      if (rec && rec.distance.bestM > 0) {
+        detailLines.push(`当前纪录 ${(Math.round(rec.distance.bestM / 10) / 100).toFixed(2)} km · 产生于 ${rec.distance.dateText}`);
+      }
+    } else if (t.key.indexOf('rec-dur') === 0) {
+      detailLines.push(`已刷新时长纪录 ${t.cur} 次`);
+      if (rec && rec.duration.bestSec > 0) {
+        detailLines.push(`当前纪录 ${Math.round(rec.duration.bestSec / 60)} 分钟 · 产生于 ${rec.duration.dateText}`);
+      }
+    } else if (t.group === 'streak') {
+      detailLines.push(`最长连续运动 ${t.cur} 天`);
+      if (rec && rec.streak.bestEndText) detailLines.push(`${rec.streak.bestEndText} 结束`);
+      detailLines.push(`目前连续 ${(rec && rec.streak.current) || 0} 天`);
+    } else if (t.group === 'rings') {
+      detailLines.push(`已合上圆环 ${t.cur} 次`);
+    } else if (t.group === 'goal') {
+      detailLines.push(`已完成运动 ${t.cur} 次`);
+    } else if (t.group === 'week') {
+      detailLines.push(`已获得 ${t.cur} 个完美周`);
+    } else {
+      detailLines.push(`已达成 ${t.cur} 次 · 目标 ${t.tier} 次`);
+    }
+    this.setData({ trophyDetail: { ...t, detailLines } });
+  },
+
+  closeTrophyDetail() {
+    this.setData({ trophyDetail: null });
+  },
+
+  /** 半屏内容区拦截冒泡（点内容不关闭） */
+  noop() {},
 
   /** 当前期概况：三项当前/目标 + 百分比 + 剩余 */
   buildCurrent(cur) {
@@ -340,6 +450,21 @@ Page({
       wx.showModal({
         title: `🏆 里程碑达成 · ${top.label}`,
         content: prompts.MILESTONE_COPY[top.key] || top.desc,
+        confirmText: '太棒了',
+        showCancel: false,
+      });
+      return; // 本次不再问加量
+    }
+
+    // ②a 新增奖杯恭喜（docs/21）：同机制——unlocked 且没看过才弹；一次多个取服务端最后一个
+    const trophyNews = prompts.pickNewTrophies(sum && sum.trophies, seen);
+    if (trophyNews.length) {
+      const keys = trophyNews.map((x) => x.key);
+      try { wx.setStorageSync('planMilestoneSeenV1', seen.concat(keys)); } catch (e) { /* 存储异常不阻断 */ }
+      const top = trophyNews[trophyNews.length - 1]; // 服务端顺序最后一个 = 最稀有
+      wx.showModal({
+        title: `🏅 徽章解锁 · ${top.label}`,
+        content: prompts.TROPHY_COPY[top.group] || '恭喜解锁新徽章，继续保持！',
         confirmText: '太棒了',
         showCancel: false,
       });
