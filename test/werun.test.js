@@ -7,7 +7,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
 const api = require('../miniprogram/services/api');
-const { syncWeRunSteps, syncDailySteps, isDailyStepSyncOn } = require('../miniprogram/utils/werun.js');
+const { syncWeRunSteps, syncDailySteps, isDailyStepSyncOn, isAppHidden } = require('../miniprogram/utils/werun.js');
 
 /* ---------------------------------- 环境桩 ---------------------------------- */
 
@@ -181,7 +181,7 @@ test('WR-DS2 未登录：直接跳过', async () => {
   assert.equal(current.calls.login, 0);
 });
 
-test('WR-DS3 开关开启：同步成功写节流标记，5 分钟内不重复', async () => {
+test('WR-DS3 开关开启：同步成功写节流标记，10 分钟内不重复', async () => {
   scenario({ scopeState: true });
   let stored = 0;
   global.getApp = () => ({ globalData: { loggedIn: true, userInfo: { settings: {} } } }); // 老用户缺字段＝开
@@ -203,4 +203,64 @@ test('WR-DS3 开关开启：同步成功写节流标记，5 分钟内不重复',
   const second = await syncDailySteps();
   assert.deepEqual(second, { ok: false, reason: 'throttled' });
   assert.equal(current.calls.post, 1, '节流窗口内不再打上报');
+});
+
+/* -------------------- 前后台守卫 与 10 分钟节流（2026-11-14） -------------------- */
+
+test('WR-DS4 退到后台（appVisible=false）：不取步数，连 login 都不发', async () => {
+  scenario({ scopeState: true });
+  global.getApp = () => ({ globalData: { loggedIn: true, userInfo: { settings: {} }, appVisible: false } });
+  global.wx.getStorageSync = () => 0;
+
+  assert.equal(isAppHidden(), true);
+  const r = await syncDailySteps();
+  assert.deepEqual(r, { ok: false, reason: 'hidden' });
+  assert.equal(current.calls.login, 0, '后台态不发 wx.login');
+  assert.equal(current.calls.getWeRunData, 0, '后台态不取微信步数');
+  assert.equal(current.calls.post, 0, '后台态不上报');
+});
+
+test('WR-DS5 隐藏态直接拦在 syncWeRunSteps：已授权也不取数；回到前台立即恢复', async () => {
+  scenario({ scopeState: true });
+  const appState = { globalData: { loggedIn: true, userInfo: { settings: {} }, appVisible: false } };
+  global.getApp = () => appState;
+  global.wx.getStorageSync = () => 0;
+
+  const hidden = await syncWeRunSteps();
+  assert.deepEqual(hidden, { ok: false, reason: 'hidden' });
+  assert.equal(current.calls.getWeRunData, 0);
+
+  // 回前台（app.onShow 会把标记置回 true）
+  appState.globalData.appVisible = true;
+  assert.equal(isAppHidden(), false);
+  const ok = await syncWeRunSteps();
+  assert.equal(ok.ok, true);
+  assert.equal(current.calls.getWeRunData, 1, '回到前台照常取数');
+});
+
+test('WR-DS6 节流窗口是 10 分钟：9 分钟时仍节流，11 分钟后重新同步', async () => {
+  scenario({ scopeState: true });
+  const realNow = Date.now;
+  let stored = 0;
+  global.getApp = () => ({ globalData: { loggedIn: true, userInfo: { settings: {} } } }); // appVisible 缺省＝前台
+  global.wx.getStorageSync = (k) => (k === 'werun_daily_synced_at' ? stored : '');
+  global.wx.setStorageSync = (k, v) => {
+    if (k === 'werun_daily_synced_at') stored = v;
+  };
+
+  const first = await syncDailySteps();
+  assert.equal(first.ok, true);
+  assert.equal(current.calls.post, 1);
+
+  // 9 分钟后：仍在 10 分钟窗口内
+  Date.now = () => stored + 9 * 60 * 1000;
+  assert.deepEqual(await syncDailySteps(), { ok: false, reason: 'throttled' });
+  assert.equal(current.calls.post, 1, '9 分钟不该再打上报');
+
+  // 11 分钟后：窗口已过，重新同步
+  Date.now = () => stored + 11 * 60 * 1000;
+  const third = await syncDailySteps();
+  assert.equal(third.ok, true);
+  assert.equal(current.calls.post, 2, '11 分钟后重新同步');
+  Date.now = realNow;
 });

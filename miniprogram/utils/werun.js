@@ -17,6 +17,21 @@ const SCOPE_WERUN = 'scope.werun';
 /** 并发去重：积分页 onLoad/onShow/下拉刷新会连发，只留第一趟 */
 let inFlight = null;
 
+/**
+ * 小程序是否在后台（app.onHide 置 false）。
+ * 没有 App 实例（单测/非页面上下文）或标记缺失时一律按「在前台」处理，不阻断原有链路。
+ */
+function isAppHidden() {
+  try {
+    if (typeof getApp !== 'function') return false;
+    const app = getApp();
+    const visible = app && app.globalData ? app.globalData.appVisible : undefined;
+    return visible === false;
+  } catch (e) {
+    return false; // getApp 不可用/App 未初始化：当作前台，不吞掉同步
+  }
+}
+
 /** callback 风格 API → Promise */
 function promisify(fn, options = {}) {
   return new Promise((resolve, reject) => {
@@ -79,9 +94,14 @@ async function fetchAndReport() {
  * @param {object} [opts]
  * @param {boolean} [opts.requestAuth=false] 不满足前置条件时是否允许拉起弹窗（隐私/授权）
  * @returns {Promise<{ok: true, syncedDays: number, days?: Array}|{ok: false, reason: string, message?: string}>}
- *   reason: busy / privacy / privacy-denied / scope / denied / disabled / failed
+ *   reason: hidden / busy / privacy / privacy-denied / scope / denied / disabled / failed
  */
 async function syncWeRunSteps({ requestAuth = false } = {}) {
+  // 后台态不主动取步数（onHide 之后任何续跑的链路都在这里被拦下，不碰 login/取数）
+  if (isAppHidden()) {
+    if (isDebugEnv()) console.info('[werun] 阻断同步：小程序在后台（onHide 之后不发 login / 不取步数）');
+    return { ok: false, reason: 'hidden' };
+  }
   if (inFlight) return { ok: false, reason: 'busy' };
   inFlight = (async () => {
     try {
@@ -146,9 +166,9 @@ function isDailyStepSyncOn() {
   return !settings || settings.dailyStepSync !== false;
 }
 
-/** 同一趟小程序会话回到前台会反复触发 onShow；5 分钟内不重复打同步接口 */
+/** 同一趟小程序会话回到前台会反复触发 onShow；10 分钟内不重复打同步接口（原 5 分钟，2026-11-14 调宽） */
 const DAILY_SYNC_KEY = 'werun_daily_synced_at';
-const DAILY_SYNC_INTERVAL = 5 * 60 * 1000;
+const DAILY_SYNC_INTERVAL = 10 * 60 * 1000;
 
 function syncedRecently() {
   try {
@@ -156,6 +176,64 @@ function syncedRecently() {
   } catch (e) {
     return false;
   }
+}
+
+/**
+ * 调试用状态快照（真机 vConsole 里能看到每次判定的依据）：
+ * 前台与否、距上次同步多少分钟、阈值多少分钟。
+ */
+function debugState() {
+  let last = 0;
+  try {
+    last = Number(wx.getStorageSync(DAILY_SYNC_KEY) || 0);
+  } catch (e) {
+    last = 0;
+  }
+  const intervalMin = Math.round(DAILY_SYNC_INTERVAL / 60000);
+  const minutesAgo = last > 0 ? (Date.now() - last) / 60000 : -1;
+  return {
+    visible: !isAppHidden(),
+    lastSyncAt: last,
+    minutesAgo: Math.round(minutesAgo * 10) / 10,
+    intervalMin,
+  };
+}
+
+/**
+ * 调试日志开关：只在开发版/真机调试打印（正式版静默，体验版也静默——
+ * 需要看日志时用「真机调试」或开发版扫码即可）。2026-11-14 真机验证后收敛。
+ */
+function isDebugEnv() {
+  try {
+    const info = wx.getAccountInfoSync && wx.getAccountInfoSync();
+    const env = info && info.miniProgram ? info.miniProgram.envVersion : '';
+    if (!env) return true; // 拿不到环境信息（如 mock/测试）按开发态处理
+    return env === 'develop';
+  } catch (e) {
+    return true;
+  }
+}
+
+/** 日志序号：真机验证时用来区分「同一次切换被多个入口各判一次」和「两次切换」 */
+let logSeq = 0;
+/** 上一次决策日志的时间与内容（3 秒内同样内容不再重复打，避免 app.onShow + 页面 onShow 刷双行） */
+let lastLog = { at: 0, reason: '', line: '' };
+
+/** 一行式日志：时间戳 + 序号 + 判定依据（前缀统一 [werun]；仅开发版打印） */
+function logDecision(action, reason, extra = '') {
+  if (!isDebugEnv()) return;
+  const st = debugState();
+  const ago = st.minutesAgo < 0 ? '从未同步' : `距上次 ${st.minutesAgo} 分钟`;
+  const ts = new Date().toTimeString().slice(0, 8);
+  const line = `[werun] ${ts} #${logSeq + 1} ${action} reason=${reason} 前台=${st.visible} ${ago} 阈值=${st.intervalMin}分钟${extra}`;
+  // 同一次前后台切换里，app.onShow 与页面 onShow 会先后各判一次：3 秒内同 reason 合并成一行
+  if (reason === lastLog.reason && Date.now() - lastLog.at < 3000) {
+    lastLog.at = Date.now();
+    return;
+  }
+  logSeq += 1;
+  lastLog = { at: Date.now(), reason, line };
+  console.info(line);
 }
 
 function markSynced() {
@@ -168,21 +246,43 @@ function markSynced() {
 
 /**
  * 设置页开关开启时的「每日同步」：进小程序/回前台时静默跑一趟。
- * 未登录、开关关闭、5 分钟内已同步过 → 直接返回，不打扰。
+ * 未登录、开关关闭、退到后台、10 分钟内已同步过 → 直接返回，不打扰。
  * 关闭后只有活动详情页（进行中且用到步数）会主动同步。
  */
 async function syncDailySteps() {
   const app = getApp();
-  if (!app || !app.globalData || !app.globalData.loggedIn) return { ok: false, reason: 'guest' };
-  if (!isDailyStepSyncOn()) return { ok: false, reason: 'off' };
-  if (syncedRecently()) return { ok: false, reason: 'throttled' };
+  if (!app || !app.globalData || !app.globalData.loggedIn) {
+    logDecision('跳过每日同步', 'guest');
+    return { ok: false, reason: 'guest' };
+  }
+  if (!isDailyStepSyncOn()) {
+    logDecision('跳过每日同步', 'off');
+    return { ok: false, reason: 'off' };
+  }
+  if (isAppHidden()) {
+    logDecision('跳过每日同步', 'hidden');
+    return { ok: false, reason: 'hidden' };
+  }
+  if (syncedRecently()) {
+    logDecision('跳过每日同步', 'throttled');
+    return { ok: false, reason: 'throttled' };
+  }
+  if (isDebugEnv()) console.info('[werun] 开始同步步数');
   const r = await syncWeRunSteps();
-  if (r.ok) markSynced();
+  if (r.ok) {
+    markSynced();
+    if (isDebugEnv()) console.info(`[werun] 同步完成：${r.syncedDays} 天`);
+  } else {
+    if (isDebugEnv()) console.info(`[werun] 同步结束未成功：reason=${r.reason}`, r.message || '');
+  }
   return r;
 }
 
 module.exports = {
   syncWeRunSteps,
+  isAppHidden,
+  isDebugEnv,
+  debugState,
   getWeRunAuthState,
   openWeRunSetting,
   isDailyStepSyncOn,

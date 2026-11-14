@@ -54,7 +54,7 @@ Page({
     }
     if (seq !== this._seq) return;
     this.setData({ loggedIn: true });
-    // 设置页开关开启时：进页补一次最新步数（5 分钟节流；关闭/未授权时自己短路）
+    // 设置页开关开启时：进页补一次最新步数（10 分钟节流；关闭/未授权/退到后台时自己短路）
     await syncDailySteps().catch(() => {});
     if (seq !== this._seq) return;
     // 概况/明细全量，时间档只驱动柱状图；变化卡固定近 30 天 vs 前 30 天

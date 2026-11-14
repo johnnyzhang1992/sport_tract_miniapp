@@ -4,7 +4,7 @@ const { getToken, setToken, clearToken, getProfileGuideDone, setProfileGuideDone
 const { setAdFreeUntil } = require('./utils/ad-free');
 const { refreshAdSlots } = require('./utils/ad-slots');
 const adCap = require('./utils/ad-cap');
-const { syncDailySteps } = require('./utils/werun');
+const { syncDailySteps, isDebugEnv } = require('./utils/werun');
 
 App({
   globalData: {
@@ -14,6 +14,7 @@ App({
     profileGuideAsked: false, // 完善资料引导本次会话是否已弹过
     fpDirty: false, // 足迹数据被别的页改过（列表页新增/编辑/删除）：tab 页 onShow 据此补拉
     homeAdAllowed: true, // 本次冷启动是否还能展示首页广告（每日 3 次上限，见 utils/ad-cap）
+    appVisible: true, // 小程序是否在前台：切后台（onHide）后为 false，步数同步等主动请求据此跳过
     api, // 网络层挂全局（分包页面无法 require 主包 JS，经 getApp() 访问）
   },
 
@@ -70,10 +71,25 @@ App({
   },
 
   onShow() {
+    // 带序号的日志：真机上用来数「onShow 到底触发了几次」（重复打印时能区分同帧重入/两次切换）
+    const showSeq = (this._showSeq = (this._showSeq || 0) + 1);
+    if (isDebugEnv()) {
+      console.info(`[app] onShow #${showSeq} appVisible=${this.globalData.appVisible}`);
+      if (this.globalData.appVisible === false) console.info('[app] 回到前台 → 恢复步数同步判定');
+    }
+    this.globalData.appVisible = true;
     // 检测未保存的运动（保存失败/中途退出时数据在 storage，提供恢复入口）
     this.checkPendingSummary();
-    // 回到前台再按 5 分钟节流补一趟步数（开关关闭 / 未登录 / 未授权都静默跳过）
+    // 回到前台再按 10 分钟节流补一趟步数（开关关闭 / 未登录 / 未授权 / 不在前台都静默跳过）
     syncDailySteps().catch(() => {});
+  },
+
+  onHide() {
+    // 切到后台：标记不在前台。微信步数只在用户进入小程序时更新（官方口径），
+    // 后台期间再去取没有意义，还会白跑授权/网络链路（2026-11-14 用户要求）
+    this.globalData.appVisible = false;
+    const hideSeq = (this._hideSeq = (this._hideSeq || 0) + 1);
+    if (isDebugEnv()) console.info(`[app] onHide #${hideSeq} → 暂停微信步数同步`);
   },
 
   /**
