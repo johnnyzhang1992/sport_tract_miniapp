@@ -162,12 +162,18 @@ Page({
       first: '首次达成', week: '坚持一周', habit: '习惯养成',
       x2: '200%完成目标', x3: '300%完成目标', x4: '400%完成目标', x5: '500%完成目标',
       'rec-dist': '距离纪录', 'rec-dur': '时长纪录', streak: '最坚持', ring: '合上圆环', goal: '完成目标',
-      'perfect-week-all': '完美周·全能', 'perfect-week-single': '完美周·单项',
+      'perfect-week-all': '完美周·全能',
+      'perfect-week-distance': '完美周·距离',
+      'perfect-week-duration': '完美周·时长',
+      'perfect-week-count': '完美周·次数',
     };
     const badgeOf = (t) => {
       if (t.group === 'plan') return { cls: 'b-plan', badgeText: String(t.tier) };
       if (t.key === 'perfect-week-all') return { cls: 'b-hex b-week-all', badgeText: '🌟' };
-      if (t.key === 'perfect-week-single') return { cls: 'b-hex b-week-single', badgeText: '✨' };
+      // 单项完美周按项区分形状/配色（2026-11-14）：距离=盾、时长=六边、次数=圆章
+      if (t.key === 'perfect-week-distance') return { cls: 'b-shield b-week-distance', badgeText: '📏' };
+      if (t.key === 'perfect-week-duration') return { cls: 'b-hex b-week-duration', badgeText: '⏱️' };
+      if (t.key === 'perfect-week-count') return { cls: 'b-ring b-week-count', badgeText: '🔢' };
       const map = { 'rec-dist': 'b-shield b-dist', 'rec-dur': 'b-hex b-dur', streak: 'b-hex b-streak', ring: 'b-ring', goal: 'b-goal' };
       const prefix = Object.keys(map).find((k) => t.key.indexOf(k) === 0);
       return { cls: prefix ? map[prefix] : 'b-plan', badgeText: String(t.tier) };
@@ -256,7 +262,7 @@ Page({
     } else if (t.group === 'goal') {
       detailLines.push(`已完成运动 ${t.cur} 次`);
     } else if (t.group === 'week') {
-      detailLines.push(`已获得 ${t.cur} 个完美周`);
+      detailLines.push(`已获得 ${t.cur} 个${t.key === 'perfect-week-all' ? '完美周（三项全达成）' : t.label.replace('完美周·', '「') + '」完美周'}`);
     } else {
       detailLines.push(`已达成 ${t.cur} 次 · 目标 ${t.tier} 次`);
     }

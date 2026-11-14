@@ -528,8 +528,16 @@
 .b-week-all {
   background: linear-gradient(145deg, #fb7185, #e11d48);
 }
-.b-week-single {
-  background: linear-gradient(145deg, #a3e635, #4d7c0f);
+/* 单项完美周：距离/时长/次数各一色，形状沿用盾/六边/圆章 */
+.b-week-distance {
+  background: linear-gradient(145deg, #fca5a5, #dc2626);
+}
+.b-week-duration {
+  background: linear-gradient(145deg, #86efac, #15803d);
+}
+.b-week-count {
+  background: linear-gradient(145deg, #7dd3fc, #0284c7);
+  border: none;
 }
 /* 未解锁：淡彩同款（完整形状 + 15% 饱和度），中央数字白色照常清晰 */
 .trophy-locked .trophy-badge-wrap {
