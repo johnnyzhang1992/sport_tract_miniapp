@@ -387,16 +387,17 @@
   box-sizing: border-box;
   margin-right: 2%;
   min-width: 0;
-  margin-bottom: 8rpx;
+  margin-bottom: 12rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 14rpx 2rpx 12rpx;
+  /* 卡内纵向节奏恒定（2026-11-14 用户要求）：上内边距 = 徽章→名称 = 名称→第三行 = 12rpx */
+  padding: 12rpx 4rpx;
   background: #f7f8fa;
   border-radius: 14rpx;
 }
 .trophy-label {
-  margin-top: 12rpx;
+  margin-top: 0; /* 间距由 badge-wrap 的 margin-bottom 统一给，避免两处叠加 */
   max-width: 100%;
   font-size: 20rpx;
   font-weight: 600;
@@ -474,7 +475,7 @@
    不再是白线稿/灰度（那会让占多数的未解锁章看起来像坏掉的占位符） */
 .trophy-badge-wrap {
   position: relative; /* 尺寸由内部徽章决定（合上圆环 136rpx / 普通章 96rpx） */
-  margin-bottom: 8rpx;
+  margin-bottom: 12rpx; /* 与卡内其它纵向间距同一档，不再和 label 的 margin-top 叠加 */
 }
 .trophy-badge {
   width: 96rpx;
@@ -522,8 +523,50 @@
   border: 5rpx solid #d4af37;
   box-sizing: border-box;
 }
-.b-goal {
-  background: linear-gradient(145deg, #60a5fa, #2563eb);
+/* 累计里程：圆角方牌 + 底部道路虚线（「路程」意象；唯一方形徽章，一眼区分于盾/六边/圆章） */
+.b-total-dist {
+  background: linear-gradient(145deg, #60a5fa, #1d4ed8);
+  border-radius: 24rpx;
+  position: relative;
+  overflow: hidden;
+}
+.b-total-dist::after {
+  content: '';
+  position: absolute;
+  left: 12rpx;
+  right: 12rpx;
+  bottom: 13rpx;
+  height: 5rpx;
+  border-radius: 3rpx;
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.92) 0 9rpx,
+    rgba(255, 255, 255, 0) 9rpx 18rpx
+  );
+}
+/* 数字上提，给底部道路让位 */
+.b-total-dist .badge-center {
+  transform: translateY(-6rpx);
+}
+
+/* 累计时长：表盘（圆形 + 12 个刻度环，conic-gradient 挖环——与月历三环同一套渲染手段） */
+.b-total-dur {
+  background: linear-gradient(145deg, #fdba74, #ea580c);
+  border-radius: 50%;
+  position: relative;
+}
+.b-total-dur::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: repeating-conic-gradient(
+    from -0.8deg,
+    rgba(255, 255, 255, 0.9) 0deg 1.6deg,
+    rgba(255, 255, 255, 0) 1.6deg 30deg
+  );
+  -webkit-mask: radial-gradient(circle, transparent 0 33rpx, #000 33rpx 39rpx, transparent 39rpx);
+  mask: radial-gradient(circle, transparent 0 33rpx, #000 33rpx 39rpx, transparent 39rpx);
 }
 .b-week-all {
   background: linear-gradient(145deg, #fb7185, #e11d48);
@@ -592,12 +635,21 @@
   text-shadow: none;
 }
 
+/* 第三行容器：三种状态（进度条 / 获取日期 / 获得次数）共用同一高度与上间距 */
+.trophy-foot {
+  width: 100%;
+  height: 20rpx; /* = 日期/次数文案行高，进度条在其中垂直居中 */
+  margin-top: 12rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 .trophy-count {
-  margin-top: 6rpx;
   font-size: 20rpx;
   font-weight: 600;
   color: #2b6cf6;
   font-variant-numeric: tabular-nums;
+  line-height: 20rpx;
 }
 .trophy-locked .trophy-count {
   color: #8a93a6;
@@ -606,7 +658,7 @@
 /* 第三行进度条（未获得的奖杯）：浅底轨道 + 品牌蓝填充 */
 .trophy-progress {
   width: 82%; /* 不贴卡片边：左右留白并居中 */
-  margin: 6rpx auto 0;
+  margin: 0;
   height: 10rpx;
   background: #e5e9f0;
   border-radius: 5rpx;

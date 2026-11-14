@@ -154,12 +154,15 @@
             </view>
           </view>
           <text class="trophy-label">{{item.label}}</text>
-          <!-- 第三行三态：未获得=进度条；获得一次=获取日期；获得多次=次数 -->
-          <view class="trophy-progress" wx:if="{{item.earnedCount === 0}}">
-            <view class="trophy-progress-fill" style="width: {{item.pct}}%;"></view>
+          <!-- 第三行三态：未获得=进度条；获得一次=获取日期；获得多次=次数。
+               统一装进定高容器 → 三态卡面高度一致，卡内纵向间距从上到下恒定 -->
+          <view class="trophy-foot">
+            <view class="trophy-progress" wx:if="{{item.earnedCount === 0}}">
+              <view class="trophy-progress-fill" style="width: {{item.pct}}%;"></view>
+            </view>
+            <text class="trophy-count" wx:elif="{{item.earnedCount === 1}}">{{item.earnDateText}}</text>
+            <text class="trophy-count" wx:else>获得 {{item.earnedCount}} 次</text>
           </view>
-          <text class="trophy-count" wx:elif="{{item.earnedCount === 1}}">{{item.earnDateText}}</text>
-          <text class="trophy-count" wx:else>获得 {{item.earnedCount}} 次</text>
         </view>
       </view>
     </block>

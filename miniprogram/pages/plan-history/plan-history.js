@@ -156,12 +156,16 @@ Page({
       return `${(Math.round((s2 / 3600) * 10) / 10).toFixed(1)} 小时`;
     };
     // 分组展示：组序固定，组内保持后端顺序
-    const TROPHY_GROUP_TITLES = { plan: '里程碑', record: '新纪录', streak: '最坚持', rings: '合上圆环', goal: '完成目标', week: '完美周' };
+    const TROPHY_GROUP_TITLES = {
+      plan: '里程碑', record: '新纪录', streak: '最坚持', rings: '合上圆环',
+      'total-distance': '累计里程', 'total-duration': '累计时长', week: '完美周',
+    };
     // 徽章视觉：系列 → 形状/主题 class + 徽章中央文字（档位数）；数量以气泡压在徽章上（Apple 奖章形态）
     const SHORT_LABELS = {
       first: '首次达成', week: '坚持一周', habit: '习惯养成',
       x2: '200%完成目标', x3: '300%完成目标', x4: '400%完成目标', x5: '500%完成目标',
-      'rec-dist': '距离纪录', 'rec-dur': '时长纪录', streak: '最坚持', ring: '合上圆环', goal: '完成目标',
+      'rec-dist': '距离纪录', 'rec-dur': '时长纪录', streak: '最坚持', ring: '合上圆环',
+      'total-dist': '累计里程', 'total-dur': '累计时长',
       'perfect-week-all': '完美周·全能',
       'perfect-week-distance': '完美周·距离',
       'perfect-week-duration': '完美周·时长',
@@ -174,7 +178,11 @@ Page({
       if (t.key === 'perfect-week-distance') return { cls: 'b-shield b-week-distance', badgeText: '📏' };
       if (t.key === 'perfect-week-duration') return { cls: 'b-hex b-week-duration', badgeText: '⏱️' };
       if (t.key === 'perfect-week-count') return { cls: 'b-ring b-week-count', badgeText: '🔢' };
-      const map = { 'rec-dist': 'b-shield b-dist', 'rec-dur': 'b-hex b-dur', streak: 'b-hex b-streak', ring: 'b-ring', goal: 'b-goal' };
+      const map = {
+        'rec-dist': 'b-shield b-dist', 'rec-dur': 'b-hex b-dur', streak: 'b-hex b-streak', ring: 'b-ring',
+        // 累计里程=方牌、累计时长=表盘：形状全部由自己的类定义（不能挂 b-shield/b-hex，clip-path 会裁掉装饰）
+        'total-dist': 'b-total-dist', 'total-dur': 'b-total-dur',
+      };
       const prefix = Object.keys(map).find((k) => t.key.indexOf(k) === 0);
       return { cls: prefix ? map[prefix] : 'b-plan', badgeText: String(t.tier) };
     };
@@ -259,8 +267,10 @@ Page({
       detailLines.push(`目前连续 ${(rec && rec.streak.current) || 0} 天`);
     } else if (t.group === 'rings') {
       detailLines.push(`已合上圆环 ${t.cur} 次`);
-    } else if (t.group === 'goal') {
-      detailLines.push(`已完成运动 ${t.cur} 次`);
+    } else if (t.group === 'total-distance') {
+      detailLines.push(`已累计 ${t.valueText || `${t.cur} km`}`);
+    } else if (t.group === 'total-duration') {
+      detailLines.push(`已累计 ${t.valueText || `${t.cur} 小时`}`);
     } else if (t.group === 'week') {
       detailLines.push(`已获得 ${t.cur} 个${t.key === 'perfect-week-all' ? '完美周（三项全达成）' : t.label.replace('完美周·', '「') + '」完美周'}`);
     } else {
