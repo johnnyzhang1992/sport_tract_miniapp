@@ -16,7 +16,6 @@ Page({
     loggedIn: false,
     loading: false,
     unreadCount: 0, // 未读通知数（0=不显示角标）
-    badgeEarned: 0, // 已获得徽章数（0=不显示角标）
     isMember: false, // 头像右下角会员徽标（付费会员订单口径，不含免广告卡）
     // 签到条（登录后显示）：未签点击直接签到，已签点击进积分页
     signin: { loaded: false, signedToday: false, streakDay: 0, nextReward: 0, balance: null },
@@ -28,7 +27,6 @@ Page({
     this.setData({ showYearReport: new Date().getMonth() === 11 });
     this.refreshUser();
     this.loadUnread();
-    this.loadBadgeCount();
   },
 
   onPullDownRefresh() {
@@ -40,37 +38,6 @@ Page({
     try {
       const res = await api.get('/notifications/summary');
       this.setData({ unreadCount: (res && res.unreadCount) || 0 });
-    } catch (e) {
-      // 静默
-    }
-  },
-
-  /**
-   * 已获得徽章数：给快捷入口挂角标。
-   * 走轻量接口 /plan/badges/count（服务端 5 分钟缓存），端上再叠 10 分钟本地缓存：
-   * 「我的」页是高频入口，没必要每次都问；失败静默（不挂角标，绝不影响我的页本身）。
-   */
-  async loadBadgeCount() {
-    const CACHE_KEY = 'badgeEarnedCacheV1';
-    const TTL = 10 * 60 * 1000;
-    try {
-      const cached = wx.getStorageSync(CACHE_KEY);
-      if (cached && cached.at && Date.now() - cached.at < TTL) {
-        this.setData({ badgeEarned: cached.earned || 0 });
-        return;
-      }
-    } catch (e) {
-      // 读不到缓存就当没有
-    }
-    try {
-      const res = await api.get('/plan/badges/count');
-      const earned = (res && res.earned) || 0;
-      this.setData({ badgeEarned: earned });
-      try {
-        wx.setStorageSync(CACHE_KEY, { at: Date.now(), earned });
-      } catch (e) {
-        // 存不下只意味着下次多请求一次
-      }
     } catch (e) {
       // 静默
     }

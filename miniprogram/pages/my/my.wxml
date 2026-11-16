@@ -64,7 +64,6 @@
     <view class="quick-item" hover-class="quick-item-hover" hover-stay-time="80" bindtap="goBadges">
       <view class="quick-icon-wrap">
         <image class="quick-icon" src="/assets/icons/lucide-medal.png" mode="aspectFit" />
-        <view class="quick-badge" wx:if="{{badgeEarned > 0}}">{{badgeEarned}}</view>
       </view>
       <view class="quick-label">徽章</view>
     </view>
