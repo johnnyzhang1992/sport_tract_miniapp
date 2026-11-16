@@ -33,7 +33,8 @@
     "pages/member-orders/member-orders",
     "pages/operator/operator",
     "pages/photos/photos",
-    "pages/plan-history/plan-history"
+    "pages/plan-history/plan-history",
+    "pages/badges/badges"
   ],
   "window": {
     "navigationBarBackgroundColor": "#ffffff",

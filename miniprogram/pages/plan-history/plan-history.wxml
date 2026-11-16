@@ -116,62 +116,35 @@
     <view class="sum-totals">{{summary.totalsText}}</view>
   </view>
 
-  <!-- 里程碑奖杯（docs/21 改版）：卡面=图标+名称+当前次数，分区展示；点击进详情半屏 -->
-  <view class="card trophy-card" wx:if="{{summary && summary.trophyGroups.length}}">
+  <!-- 我的运动徽章（计划类）：2026-11-16 起计划页只展示「依赖运动计划」的徽章
+       （里程碑 / 合上圆环 / 完美周，共 16 座）；运动数据类（新纪录 / 最坚持 / 累计 / 分类型）
+       全部去「我的徽章」页看，避免这里被 119 座冲垮。 -->
+  <view class="card trophy-card" wx:if="{{summary && summary.planTotal > 0}}">
     <view class="sum-title-row">
-      <text class="sum-title">里程碑奖杯</text>
+      <text class="sum-title">我的运动徽章</text>
+      <text class="trophy-total"><text class="trophy-total-num">{{summary.planEarned}}</text> / {{summary.planTotal}}</text>
     </view>
-    <block wx:for="{{summary.trophyGroups}}" wx:key="key" wx:for-item="grp">
-      <view class="trophy-group-title">{{grp.title}}</view>
-      <view class="trophy-grid">
-        <view
-          class="trophy-item {{item.unlocked ? '' : 'trophy-locked'}}"
-          wx:for="{{grp.items}}"
-          wx:key="key"
-          data-key="{{item.key}}"
-          hover-class="trophy-item-hover"
-          hover-stay-time="80"
-          bindtap="onTrophyTap"
-        >
-          <!-- 徽章：外层挂数量气泡（不被形状裁切），内层裁形状 + 档位数字印中央；
-               未解锁 = 淡彩同款（形状完整可辨），不再是白线稿 -->
-          <view class="trophy-badge-wrap">
-            <block wx:if="{{grp.key === 'rings'}}">
-              <!-- 合上圆环：嵌套三环（首页三环配色 青外/绿中/红内，深色间隔） -->
-              <view class="ringbadge-o">
-                <view class="ringbadge-g">
-                  <view class="ringbadge-r">
-                    <view class="ringbadge-core">
-                      <text class="badge-center">{{item.badgeText}}</text>
-                    </view>
-                  </view>
-                </view>
-              </view>
-            </block>
-            <view wx:else class="trophy-badge {{item.cls}}">
-              <text class="badge-center">{{item.badgeText}}</text>
-            </view>
-          </view>
-          <text class="trophy-label">{{item.label}}</text>
-          <!-- 第三行三态：未获得=进度条；获得一次=获取日期；获得多次=次数。
-               统一装进定高容器 → 三态卡面高度一致，卡内纵向间距从上到下恒定 -->
-          <view class="trophy-foot">
-            <view class="trophy-progress" wx:if="{{item.earnedCount === 0}}">
-              <view class="trophy-progress-fill" style="width: {{item.pct}}%;"></view>
-            </view>
-            <text class="trophy-count" wx:elif="{{item.earnedCount === 1}}">{{item.earnDateText}}</text>
-            <text class="trophy-count" wx:else>获得 {{item.earnedCount}} 次</text>
-          </view>
-        </view>
-      </view>
-    </block>
+    <!-- 徽章墙：已获得汇总 + 计划类分区（组件与「我的徽章」页共用） -->
+    <badge-wall
+      trophies="{{summary.trophies}}"
+      groups="{{summary.badgeGroups}}"
+      category="plan"
+      empty-text="完成每日计划即可解锁第一座徽章"
+      bind:select="onTrophySelect"
+    />
+    <!-- 入口：去「我的徽章」看全部 119 座（含新纪录/最坚持/累计/分运动类型） -->
+    <view class="badge-more" hover-class="badge-more-hover" hover-stay-time="80" bindtap="goAllBadges">
+      <text class="badge-more-text">查看全部徽章</text>
+      <text class="badge-more-sub">运动数据 · 分运动类型</text>
+      <text class="badge-more-arrow">›</text>
+    </view>
   </view>
 
-  <!-- 奖杯详情半屏：点击奖杯卡打开 -->
+  <!-- 徽章详情半屏：点击徽章卡打开 -->
   <view class="trophy-sheet-mask" wx:if="{{trophyDetail}}" bindtap="closeTrophyDetail">
     <view class="trophy-sheet" catchtap="noop">
       <view class="trophy-badge-wrap trophy-sheet-badge">
-        <block wx:if="{{trophyDetail.group === 'rings'}}">
+        <block wx:if="{{trophyDetail.isRing}}">
           <view class="ringbadge-o">
             <view class="ringbadge-g">
               <view class="ringbadge-r">
@@ -188,6 +161,8 @@
       </view>
       <text class="trophy-sheet-label">{{trophyDetail.label}}</text>
       <text class="trophy-sheet-state {{trophyDetail.unlocked ? '' : 'trophy-sheet-state-off'}}">{{trophyDetail.unlocked ? '已解锁' : '未解锁'}}</text>
+      <!-- 全站名次（2026-11-16）：按首次解锁日排名，同一天并列同名次 -->
+      <text class="trophy-sheet-rank" wx:if="{{trophyDetail.unlocked && trophyDetail.rank > 0}}">第 {{trophyDetail.rank}} 位获得此徽章的迹路者</text>
       <text class="trophy-sheet-desc">{{trophyDetail.desc}}</text>
       <view class="trophy-sheet-progress" wx:for="{{trophyDetail.detailLines}}" wx:key="*this">{{item}}</view>
     </view>

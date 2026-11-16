@@ -1,0 +1,77 @@
+<!-- 我的徽章：全部徽章（计划类 + 运动数据类 + 分运动类型） -->
+<view class="page">
+  <!-- 顶部总览：已获得 / 全部 -->
+  <view class="card hero-card" wx:if="{{data}}">
+    <view class="hero-row">
+      <view class="hero-main">
+        <text class="hero-num">{{data.earned}}</text>
+        <text class="hero-total">/ {{data.total}}</text>
+      </view>
+      <text class="hero-cap">已获得徽章</text>
+    </view>
+    <!-- 分类概览：计划 / 数据 各自的数量 -->
+    <view class="hero-split">
+      <view class="hero-split-item" wx:for="{{data.categories}}" wx:key="key">
+        <text class="hero-split-num">{{item.earned}}<text class="hero-split-total">/{{item.total}}</text></text>
+        <text class="hero-split-cap">{{item.title}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 分类切换：全部 / 运动计划 / 运动数据 -->
+  <view class="filter-bar" wx:if="{{data}}">
+    <view
+      class="filter-item {{activeFilter === item.key ? 'filter-item-on' : ''}}"
+      wx:for="{{filters}}"
+      wx:key="key"
+      data-key="{{item.key}}"
+      bindtap="onFilterTap"
+    >{{item.label}}</view>
+  </view>
+
+  <!-- 徽章墙：与计划页同一组件 -->
+  <view class="card badge-card" wx:if="{{shown.length}}">
+    <view class="sum-title-row">
+      <text class="sum-title">{{activeFilter === 'all' ? '全部徽章' : (activeFilter === 'plan' ? '运动计划徽章' : '运动数据徽章')}}</text>
+      <text class="trophy-total"><text class="trophy-total-num">{{shownEarned}}</text> / {{shownTotal}}</text>
+    </view>
+    <badge-wall
+      trophies="{{shown}}"
+      groups="{{data.groups}}"
+      category="all"
+      empty-text="还没有获得徽章"
+      bind:select="onSelect"
+    />
+  </view>
+
+  <view class="empty" wx:if="{{loading}}">加载中…</view>
+  <view class="empty" wx:elif="{{failed}}">加载失败，下拉刷新重试</view>
+
+  <!-- 徽章详情半屏 -->
+  <view class="trophy-sheet-mask" wx:if="{{trophyDetail}}" bindtap="closeTrophyDetail">
+    <view class="trophy-sheet" catchtap="noop">
+      <view class="trophy-badge-wrap trophy-sheet-badge">
+        <block wx:if="{{trophyDetail.isRing}}">
+          <view class="ringbadge-o">
+            <view class="ringbadge-g">
+              <view class="ringbadge-r">
+                <view class="ringbadge-core">
+                  <text class="badge-center">{{trophyDetail.badgeText}}</text>
+                </view>
+              </view>
+            </view>
+          </view>
+        </block>
+        <view wx:else class="trophy-badge {{trophyDetail.cls}} {{trophyDetail.typeIcon ? 'has-type-icon' : ''}}">
+          <image wx:if="{{trophyDetail.typeIcon}}" class="badge-type-icon" src="{{trophyDetail.typeIcon}}" mode="aspectFit" />
+          <text class="badge-center">{{trophyDetail.badgeText}}</text>
+        </view>
+      </view>
+      <text class="trophy-sheet-label">{{trophyDetail.label}}</text>
+      <text class="trophy-sheet-state {{trophyDetail.unlocked ? '' : 'trophy-sheet-state-off'}}">{{trophyDetail.unlocked ? '已解锁' : '未解锁'}}</text>
+      <text class="trophy-sheet-rank" wx:if="{{trophyDetail.unlocked && trophyDetail.rank > 0}}">第 {{trophyDetail.rank}} 位获得此徽章的迹路者</text>
+      <text class="trophy-sheet-desc">{{trophyDetail.desc}}</text>
+      <view class="trophy-sheet-progress" wx:for="{{trophyDetail.detailLines}}" wx:key="*this">{{item}}</view>
+    </view>
+  </view>
+</view>

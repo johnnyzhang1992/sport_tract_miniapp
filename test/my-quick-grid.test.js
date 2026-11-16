@@ -23,7 +23,7 @@ function quickBlock() {
   return wxml.slice(start, end);
 }
 
-test('QG1 快捷卡四等分：消息/积分/会员/设置，顺序固定', () => {
+test('QG1 快捷卡五等分：消息/积分/徽章/会员/设置，顺序固定', () => {
   const block = quickBlock();
   const labels = [];
   const re = />([^<>{}]+)</g;
@@ -32,10 +32,12 @@ test('QG1 快捷卡四等分：消息/积分/会员/设置，顺序固定', () =
     const t = m[1].trim();
     if (t) labels.push(t);
   }
-  assert.deepEqual(labels, ['消息', '积分', '会员', '设置']);
-  assert.equal((block.match(/class="quick-item"/g) || []).length, 4, '四列等分');
+  // 2026-11-16 新增「徽章」入口（排在积分之后、会员之前）
+  assert.deepEqual(labels, ['消息', '积分', '徽章', '会员', '设置']);
+  assert.equal((block.match(/class="quick-item"/g) || []).length, 5, '五列等分');
   assert.match(block, /bindtap="goNotifications"[\s\S]*>消息</);
   assert.match(block, /bindtap="goPoints"[\s\S]*>积分</);
+  assert.match(block, /bindtap="goBadges"[\s\S]*>徽章</);
   assert.match(block, /bindtap="goMember"[\s\S]*>会员</);
   assert.match(block, /bindtap="goSettings"[\s\S]*>设置</);
 });

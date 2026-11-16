@@ -46,7 +46,7 @@
     </view>
   </view>
 
-  <!-- 快捷入口：消息 / 积分 / 会员 / 设置（四等分） -->
+  <!-- 快捷入口：消息 / 积分 / 徽章 / 会员 / 设置（五等分） -->
   <view class="card quick-card">
     <view class="quick-item" hover-class="quick-item-hover" hover-stay-time="80" bindtap="goNotifications">
       <view class="quick-icon-wrap">
@@ -60,6 +60,13 @@
         <image class="quick-icon" src="/assets/icons/lucide-coins.png" mode="aspectFit" />
       </view>
       <view class="quick-label">积分</view>
+    </view>
+    <view class="quick-item" hover-class="quick-item-hover" hover-stay-time="80" bindtap="goBadges">
+      <view class="quick-icon-wrap">
+        <image class="quick-icon" src="/assets/icons/lucide-medal.png" mode="aspectFit" />
+        <view class="quick-badge" wx:if="{{badgeEarned > 0}}">{{badgeEarned}}</view>
+      </view>
+      <view class="quick-label">徽章</view>
     </view>
     <view class="quick-item" hover-class="quick-item-hover" hover-stay-time="80" bindtap="goMember">
       <view class="quick-icon-wrap">

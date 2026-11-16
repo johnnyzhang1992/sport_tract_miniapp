@@ -1,0 +1,84 @@
+<!-- 徽章墙：已获得汇总 + 分区网格（计划页 / 我的徽章页共用） -->
+<view class="badge-wall">
+  <!-- 已获得：按获取日期倒序，4 列网格与下方分区同款 -->
+  <view class="earned-section" wx:if="{{showEarned && view.earnedCount > 0}}">
+    <view class="earned-head">
+      <text class="earned-title">{{earnedTitle}}</text>
+      <text class="earned-dot">·</text>
+      <text class="earned-count">{{view.earnedCount}} 座</text>
+    </view>
+    <view class="trophy-grid">
+      <view
+        class="trophy-item earned-item"
+        wx:for="{{view.earnedList}}"
+        wx:key="key"
+        data-key="{{item.key}}"
+        hover-class="trophy-item-hover"
+        hover-stay-time="80"
+        bindtap="onTapItem"
+      >
+        <view class="trophy-badge-wrap">
+          <view wx:if="{{item.isRing}}" class="ringbadge-o">
+            <view class="ringbadge-g">
+              <view class="ringbadge-r">
+                <view class="ringbadge-core">
+                  <text class="badge-center">{{item.badgeText}}</text>
+                </view>
+              </view>
+            </view>
+          </view>
+          <view wx:else class="trophy-badge {{item.cls}} {{item.typeIcon ? 'has-type-icon' : ''}}">
+            <!-- 分运动类型徽章：该类型小图标在上、档位数字在下（白色变体，彩色章面上可读） -->
+            <image wx:if="{{item.typeIcon}}" class="badge-type-icon" src="{{item.typeIcon}}" mode="aspectFit" />
+            <text class="badge-center">{{item.badgeText}}</text>
+          </view>
+        </view>
+        <text class="earned-label">{{item.shortLabel}}</text>
+        <text class="earned-date">{{item.earnDateText}}</text>
+      </view>
+    </view>
+  </view>
+  <view class="earned-empty" wx:elif="{{showEarned && view.totalCount > 0}}">{{emptyText}}</view>
+
+  <!-- 分区网格：标题与顺序由服务端下发 -->
+  <block wx:for="{{view.groups}}" wx:key="key" wx:for-item="grp">
+    <view class="trophy-group-title">{{grp.title}}</view>
+    <view class="trophy-grid">
+      <view
+        class="trophy-item {{item.unlocked ? '' : 'trophy-locked'}}"
+        wx:for="{{grp.items}}"
+        wx:key="key"
+        data-key="{{item.key}}"
+        hover-class="trophy-item-hover"
+        hover-stay-time="80"
+        bindtap="onTapItem"
+      >
+        <view class="trophy-badge-wrap">
+          <view wx:if="{{item.isRing}}" class="ringbadge-o">
+            <view class="ringbadge-g">
+              <view class="ringbadge-r">
+                <view class="ringbadge-core">
+                  <text class="badge-center">{{item.badgeText}}</text>
+                </view>
+              </view>
+            </view>
+          </view>
+          <view wx:else class="trophy-badge {{item.cls}} {{item.typeIcon ? 'has-type-icon' : ''}}">
+            <!-- 分运动类型徽章：类型图标在上、档位数字在下 -->
+            <image wx:if="{{item.typeIcon}}" class="badge-type-icon" src="{{item.typeIcon}}" mode="aspectFit" />
+            <text class="badge-center">{{item.badgeText}}</text>
+          </view>
+        </view>
+        <text class="trophy-label">{{item.label}}</text>
+        <!-- 第三行三态：未获得=进度条；获得一次=日期；获得多次=次数（定高容器保证卡面高度一致） -->
+        <view class="trophy-foot">
+          <view class="trophy-progress" wx:if="{{item.earnedCount === 0}}">
+            <view class="trophy-progress-fill" style="width: {{item.pct}}%;"></view>
+          </view>
+          <text class="trophy-count" wx:elif="{{item.earnedCount === 1}}">{{item.earnDateText}}</text>
+          <text class="trophy-count" wx:else>获得 {{item.earnedCount}} 次</text>
+        </view>
+      </view>
+    </view>
+  </block>
+</view>

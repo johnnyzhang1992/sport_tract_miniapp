@@ -373,6 +373,33 @@
   margin-top: 8rpx;
   padding: 18rpx 24rpx 20rpx;
 }
+/* 「查看全部徽章」入口：贴在徽章墙底部，指向 /pages/badges */
+.badge-more {
+  display: flex;
+  align-items: center;
+  margin-top: 16rpx;
+  padding: 20rpx 24rpx;
+  background: #f7f8fa;
+  border-radius: 14rpx;
+}
+.badge-more-hover {
+  background: #eef1f6;
+}
+.badge-more-text {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+.badge-more-sub {
+  margin-left: 12rpx;
+  font-size: 22rpx;
+  color: #8a93a6;
+}
+.badge-more-arrow {
+  margin-left: auto;
+  font-size: 30rpx;
+  color: #c0c6d0;
+}
 .trophy-grid {
   display: flex;
   flex-wrap: wrap;
@@ -414,6 +441,7 @@
   font-weight: 600;
   color: #667080;
 }
+
 .trophy-sheet-mask {
   position: fixed;
   inset: 0;
@@ -441,22 +469,29 @@
   color: #1f2329;
 }
 .trophy-sheet-state {
-  margin-top: 6rpx;
+  margin-top: 4rpx;
   font-size: 24rpx;
   color: #15804f;
 }
 .trophy-sheet-state-off {
   color: #8a93a6;
 }
+/* 全站名次（「第 N 位获得此徽章的迹路者」）：已解锁态下压一行灰字，位于描述之上 */
+.trophy-sheet-rank {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: #8a93a6;
+  font-variant-numeric: tabular-nums;
+}
 .trophy-sheet-desc {
-  margin-top: 20rpx;
+  margin-top: 12rpx;
   font-size: 26rpx;
   color: #4e5969;
   text-align: center;
   line-height: 1.5;
 }
 .trophy-sheet-progress {
-  margin-top: 24rpx;
+  margin-top: 16rpx;
   font-size: 26rpx;
   font-weight: 600;
   color: #2b6cf6;

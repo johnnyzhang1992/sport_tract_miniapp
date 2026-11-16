@@ -105,3 +105,29 @@ test('PT3 seen 为空/未传不炸', () => {
   const picked = prompts.pickNewTrophies([T('goal-100')], undefined);
   assert.equal(picked.length, 1);
 });
+
+/* 2026-11-16 徽章分大类：计划页只恭喜「计划类」，避免把运动数据类徽章弹在计划页
+   （实测 bug：计划页弹出了「徒步·运动次数·10次」，但该徽章只在「我的徽章」页展示） */
+test('PT4 category=plan：只挑计划类徽章，运动数据类不弹', () => {
+  const trophies = [
+    T('first', { category: 'plan' }),
+    T('walk-count-10', { category: 'data', shortLabel: '徒步次数' }),
+    T('ring-100', { category: 'plan' }),
+  ];
+  const picked = prompts.pickNewTrophies(trophies, [], 'plan');
+  assert.deepEqual(picked.map((t) => t.key), ['first', 'ring-100']);
+});
+
+test('PT5 category 不传时保持旧行为（全部挑）', () => {
+  const trophies = [T('first', { category: 'plan' }), T('walk-count-10', { category: 'data' })];
+  assert.equal(prompts.pickNewTrophies(trophies, []).length, 2);
+});
+
+test('PT6 缺 category 字段的老数据不被误杀', () => {
+  const picked = prompts.pickNewTrophies([T('legacy', {})], [], 'plan');
+  assert.equal(picked.length, 1, '没有 category 的徽章照常挑选');
+});
+
+test('PT7 分运动类型分组有专属恭喜文案（不再落到通用兜底）', () => {
+  assert.ok(prompts.TROPHY_COPY['activity-type'], '缺少 activity-type 文案');
+});

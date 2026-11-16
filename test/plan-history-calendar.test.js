@@ -76,11 +76,13 @@ test('PHC1 月历装载：cells 补齐整行、pct 归一、达成与今天标�
           { key: 'week', label: '坚持一周', desc: '达成 7 次', unlocked: true, cur: 8, need: 7 },
           { key: 'habit', label: '习惯养成', desc: '达成 20 次', unlocked: false, cur: 8, need: 20 },
         ],
+        // 2026-11-16 配置化：展示元数据（shortLabel/shape/groupTitle/badgeText/detailText）
+        // 由后端下发，前端不再维护映射表——这里按真实 API 契约造数据
         trophies: [
-          { key: 'first', label: '首次达成', desc: '完成 1 次目标', icon: '🥇', unlocked: true, cur: 8, tier: 1, group: 'plan', earnedCount: 1, earnDateText: '2026-10-20', pct: 100 },
-          { key: 'week', label: '坚持一周', desc: '达成 7 次', icon: '📅', unlocked: true, cur: 8, tier: 7, group: 'plan', earnedCount: 1, earnDateText: '2026-10-26', pct: 100 },
-          { key: 'habit', label: '习惯养成', desc: '达成 20 次', icon: '💪', unlocked: false, cur: 8, tier: 20, group: 'plan', earnedCount: 0, earnDateText: '', pct: 40 },
-          { key: 'rec-dist-100', label: '新距离记录·100次', desc: '刷新单日运动距离纪录 100 次', icon: '📏', unlocked: false, cur: 2, tier: 100, group: 'record', valueText: '8.20 km', dateText: '2026-11-01', earnedCount: 0, earnDateText: '', pct: 2 },
+          { key: 'first', label: '首次达成', shortLabel: '首次达成', shape: 'plan', groupTitle: '里程碑', badgeText: '1', detailText: '已达成 8 次 · 目标 1 次', detailLines: [], desc: '完成 1 次目标', icon: '🥇', unlocked: true, cur: 8, tier: 1, group: 'plan', earnedCount: 1, earnDateText: '2026-10-20', pct: 100 },
+          { key: 'week', label: '坚持一周', shortLabel: '坚持一周', shape: 'plan', groupTitle: '里程碑', badgeText: '7', detailText: '已达成 8 次 · 目标 7 次', detailLines: [], desc: '达成 7 次', icon: '📅', unlocked: true, cur: 8, tier: 7, group: 'plan', earnedCount: 1, earnDateText: '2026-10-26', pct: 100 },
+          { key: 'habit', label: '习惯养成', shortLabel: '习惯养成', shape: 'plan', groupTitle: '里程碑', badgeText: '20', detailText: '已达成 8 次 · 目标 20 次', detailLines: [], desc: '达成 20 次', icon: '💪', unlocked: false, cur: 8, tier: 20, group: 'plan', earnedCount: 0, earnDateText: '', pct: 40 },
+          { key: 'rec-dist-100', label: '新距离记录·100次', shortLabel: '距离纪录', shape: 'dist', groupTitle: '新纪录', badgeText: '100', detailText: '还差 98 次刷新距离纪录', detailLines: [], desc: '刷新单日运动距离纪录 100 次', icon: '📏', unlocked: false, cur: 2, tier: 100, group: 'record', valueText: '8.20 km', dateText: '2026-11-01', earnedCount: 0, earnDateText: '', pct: 2 },
         ],
       });
     }
@@ -138,18 +140,25 @@ test('PHC1 月历装载：cells 补齐整行、pct 归一、达成与今天标�
   assert.equal(p.data.summary.trophies[2].earnedCount, 0, '习惯养成未获得');
   assert.equal(p.data.summary.trophies[2].pct, Math.round((8 / 20) * 100), '未获得 → 进度条百分比 cur/tier');
   assert.equal(p.data.summary.trophies[3].unlocked, false, '未解锁标记');
-  assert.equal(p.data.summary.trophyGroups.length, 2, '分组：里程碑 + 新纪录');
-  assert.deepEqual(p.data.summary.trophyGroups.map((g) => g.title), ['里程碑', '新纪录']);
-  assert.equal(p.data.summary.trophyGroups[1].items[0].earnedCount, 0, '新纪录卡未获得 → 进度条');
-  // 徽章字段名必须与 wxml 绑定一致（曾叫 text 导致中央档位数字整墙不显示）
+  // 分组由 badge-wall 组件负责（页面只下发扁平表 + 分组元数据）
+  assert.equal(p.data.summary.badgeGroups.length, 2, '分组元数据：里程碑 + 新纪录');
+  assert.deepEqual(p.data.summary.badgeGroups.map((g) => g.title), ['里程碑', '新纪录']);
+  // 徽章中央文字由服务端 badgeText 决定（曾叫 text 导致整墙不显示数字）
   assert.equal(p.data.summary.trophies[3].badgeText, '100', '记录型徽章中央印档位数');
-  assert.equal(p.data.summary.trophyGroups[0].items[0].badgeText, '1', '里程碑徽章中央印需要次数');
-  // wxml 绑定路径必须指向 summary.trophyGroups（曾错写成顶层 trophyGroups 导致奖杯区整块消失）
+  assert.equal(p.data.summary.trophies[0].badgeText, '1', '里程碑徽章中央印需要次数');
+  assert.ok(p.data.summary.trophies[0].cls, '每座徽章带好形状样式类（前端派生）');
+  // 2026-11-16 起徽章墙抽成 badge-wall 组件，计划页只负责传数据：
+  //   - 徽章区按 plan 分类计数决定是否渲染（运动数据类已搬到「我的徽章」页）
+  //   - 组件拿 summary.trophies + summary.badgeGroups，category="plan"
   const trophyWxml = require('fs').readFileSync(
     require('path').join(__dirname, '../miniprogram/pages/plan-history/plan-history.wxml'), 'utf8',
   );
-  assert.ok(trophyWxml.includes('wx:if="{{summary && summary.trophyGroups.length}}"'), '奖杯区 wx:if 绑定 summary.trophyGroups');
-  assert.ok(trophyWxml.includes('wx:for="{{summary.trophyGroups}}"'), '奖杯分组循环绑定 summary.trophyGroups');
+  assert.ok(trophyWxml.includes('summary.planTotal > 0'), '徽章区按计划类总数决定是否渲染');
+  assert.ok(trophyWxml.includes('<badge-wall'), '徽章墙改用 badge-wall 组件');
+  assert.ok(trophyWxml.includes('trophies="{{summary.trophies}}"'), '组件接收 summary.trophies');
+  assert.ok(trophyWxml.includes('groups="{{summary.badgeGroups}}"'), '组件接收 summary.badgeGroups');
+  assert.ok(trophyWxml.includes('category="plan"'), '计划页只显示计划类徽章');
+  assert.ok(trophyWxml.includes('bindtap="goAllBadges"'), '带「查看全部徽章」入口');
   assert.equal(p.data.hasPlan, true, '有计划 → 右上角显示「更改计划」');
 });
 

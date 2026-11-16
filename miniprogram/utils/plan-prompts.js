@@ -35,6 +35,7 @@ const TROPHY_COPY = {
   'total-distance': '累计里程达到新档位，每一步都算数。',
   'total-duration': '累计运动时长达到新档位，时间看得见。',
   week: '收获一个完美周！这一周的计划全部兑现。',
+  'activity-type': '某类运动又上了一个台阶，这项技能越来越熟练了。',
   // 四座完美周（全能/距离/时长/次数）共用 group=week 的文案，卡面名称会带上具体项
 };
 
@@ -64,10 +65,16 @@ function pickNewMilestones(milestones, seenKeys) {
  * 挑出「新解锁」的奖杯（docs/21 新增 27 座，含合上圆环/完成目标/完美周等）。
  * 与里程碑同款规则：unlocked 且没看过；返回保持服务端顺序（低→高、稀有度递增），
  * 调用方取最后一个即最值得恭喜的一座。
+ * category：只挑某一大类（计划页传 'plan'，避免把运动数据类徽章弹在计划页）
  */
-function pickNewTrophies(trophies, seenKeys) {
+function pickNewTrophies(trophies, seenKeys, category) {
   const seen = new Set(seenKeys || []);
-  return (trophies || []).filter((t) => t && t.unlocked && !seen.has(t.key));
+  return (trophies || []).filter((t) => {
+    if (!t || !t.unlocked || seen.has(t.key)) return false;
+    // 2026-11-16 徽章分大类：计划页只恭喜「计划类」，运动数据类去「我的徽章」页看
+    if (category && t.category && t.category !== category) return false;
+    return true;
+  });
 }
 
 /**

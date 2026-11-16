@@ -2,6 +2,7 @@
   "navigationBarTitleText": "运动计划",
   "enablePullDownRefresh": true,
   "usingComponents": {
+    "badge-wall": "/components/badge-wall/badge-wall",
     "plan-edit-sheet": "/components/plan-edit-sheet/plan-edit-sheet"
   }
 }
