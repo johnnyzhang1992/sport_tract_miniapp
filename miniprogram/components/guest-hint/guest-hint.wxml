@@ -1,0 +1,9 @@
+<!-- 未登录引导：全项目唯一实现（2026-11-17） -->
+<view class="guest {{compact ? 'guest-compact' : ''}}">
+  <image class="guest-icon" src="{{icon}}" mode="aspectFit" />
+  <view class="guest-title">登录后查看你的{{feature}}</view>
+  <view class="guest-sub">{{tip || '运动记录需要登录才能保存和展示'}}</view>
+  <view class="guest-btn" hover-class="guest-btn-hover" hover-stay-time="80" bindtap="onTapLogin">
+    微信一键登录
+  </view>
+</view>

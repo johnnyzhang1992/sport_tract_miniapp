@@ -1,0 +1,59 @@
+/* 未登录引导：全项目唯一实现（2026-11-17）。
+   改这里 = 所有页面的游客态一起变，不要再在页面里重定义。 */
+.guest {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 24rpx;
+  padding: 80rpx 40rpx;
+  background: #fff;
+  border-radius: 16rpx;
+}
+
+/* 紧凑：嵌在已有卡片里时用（减少上下留白） */
+.guest-compact {
+  margin: 0;
+  padding: 48rpx 32rpx;
+}
+
+.guest-icon {
+  width: 96rpx;
+  height: 96rpx;
+  opacity: 0.5;
+}
+
+.guest-title {
+  margin-top: 24rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+
+.guest-sub {
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: #8a93a6;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.guest-btn {
+  margin-top: 40rpx;
+  padding: 20rpx 64rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #fff;
+  background: #2b6cf6;
+  border-radius: 999rpx;
+}
+
+.guest-btn-hover {
+  opacity: 0.85;
+}
+
+/* 紧凑模式按钮尺寸收敛一点 */
+.guest-compact .guest-btn {
+  margin-top: 28rpx;
+  padding: 16rpx 48rpx;
+  font-size: 26rpx;
+}
