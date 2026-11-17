@@ -120,3 +120,55 @@ test('IDX-P2 已登录仍正常请求并装载计划卡（防止守卫写宽了�
   assert.deepEqual(apiCalls, ['/plan/current'], `应请求一次，实际：${JSON.stringify(apiCalls)}`);
   assert.ok(p.data.planCard && p.data.planCard.plan, '登录态应装载计划卡');
 });
+
+/* 时序（2026-11-17）：冷启动时静默登录是异步的，而 loadPlan 走 nextTick 批次，
+   可能赶在登录完成之前执行。原实现直接读 globalData.loggedIn 会误判成游客，
+   导致「运动计划卡有时加载不出来」。现在必须先 await 静默登录再判断。 */
+test('IDX-P3 静默登录未完成时：loadPlan 等待登录后仍能装载计划卡', async () => {
+  planResponse = {
+    plan: { targets: { distanceM: 3000, durationMin: 30, count: 1 } },
+    progress: { distanceM: 1500, durationSec: 600, count: 1 },
+    today: { distanceM: 1500, durationSec: 600 },
+    rings: [{ pct: 0.5 }],
+  };
+  // 模拟：有 token 但还没登录完（loggedIn=false），login() 稍后把它置 true
+  let loggedIn = false;
+  let loginCalls = 0;
+  global.getApp = () => ({
+    hasSession: () => true,
+    globalData: { get loggedIn() { return loggedIn; } },
+    login: () => {
+      loginCalls += 1;
+      return new Promise((r) => setTimeout(() => { loggedIn = true; r(); }, 30));
+    },
+  });
+  try {
+    const p = makePage();
+    await p.loadPlan(); // 必须内部 await 登录，否则 assert 会看到 planCard=null
+    await flush();
+    assert.equal(loginCalls, 1, '应发起一次静默登录');
+    assert.ok(p.data.planCard && p.data.planCard.plan, '登录完成后应装载计划卡');
+  } finally {
+    global.getApp = () => ({ hasSession: () => true, globalData: appGlobalData });
+  }
+});
+
+test('IDX-P4 没有本地 token（真游客）：不调 login、不发请求', async () => {
+  let loginCalls = 0;
+  global.getApp = () => ({
+    hasSession: () => false,
+    globalData: { loggedIn: false },
+    login: () => { loginCalls += 1; return Promise.resolve(); },
+  });
+  apiCalls.length = 0;
+  try {
+    const p = makePage();
+    await p.loadPlan();
+    await flush();
+    assert.equal(loginCalls, 0, '真游客不该触发登录');
+    assert.deepEqual(apiCalls, [], '真游客不该发请求');
+    assert.equal(p.data.planCard, null);
+  } finally {
+    global.getApp = () => ({ hasSession: () => true, globalData: appGlobalData });
+  }
+});

@@ -280,8 +280,24 @@ Page({
 
   /** 运动计划卡：拉计划与当期进度；有计划 → 准备三环数据并绘制；无计划 → 引导卡 */
   async loadPlan() {
+    /*
+     * 先等静默登录落定，再判断登录态（2026-11-17 修「运动计划卡有时加载不出来」）。
+     *
+     * 原来的写法直接读 globalData.loggedIn：冷启动时 onLaunch 的静默登录是异步的，
+     * 而 loadPlan 走 nextTick 批次执行，很可能**赶在登录完成之前**跑到这里，
+     * 于是把「已注册用户」误判成游客直接 return —— 计划卡就空着，且没有重试机会。
+     * app.login() 是幂等的（复用同一个 loginPromise），这里 await 不会重复发请求。
+     */
+    const app = getApp();
+    if (app.hasSession() && !app.globalData.loggedIn) {
+      try {
+        await app.login();
+      } catch (e) {
+        console.warn('静默登录失败', e);
+      }
+    }
     // 游客态不请求：/plan/current 需要登录，未登录必然 401（控制台报错 + 白发一次请求）
-    if (!getApp().globalData.loggedIn) {
+    if (!app.globalData.loggedIn) {
       this.setData({ planCard: null });
       return;
     }
