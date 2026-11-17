@@ -25,6 +25,8 @@ Page({
     },
     saving: false,
     loggedIn: false, // 登录态（决定是否展示退出登录入口）
+    /** 游客态（2026-11-17）：需登录的设置项与保存按钮隐藏，只保留纯前端的运动类型设置 */
+    notLoggedIn: false,
     photoQuota: null, // 照片额度用量（used/limit/remaining/percent/isMember），来自 /member/entitlements
   },
 
@@ -62,33 +64,36 @@ Page({
     wx.navigateTo({ url: '/pages/photos/photos' });
   },
 
-  /** 退出登录：清本地令牌回游客态（云端数据保留，重新登录可同步） */
-  logout() {
-    wx.showModal({
-      title: '退出登录',
-      content: '退出后清空本地登录状态，你的运动数据仍保留在云端，重新登录即可同步回来。',
-      confirmText: '退出',
-      confirmColor: '#e34d59',
-      success: (res) => {
-        if (!res.confirm) return;
-        getApp().logout();
-        wx.showToast({ title: '已退出登录', icon: 'success' });
-        setTimeout(() => wx.switchTab({ url: '/pages/my/my' }), 600);
-      },
-    });
-  },
-
   async loadSettings() {
+    // 游客态不请求：/users/me 需要登录，未登录必然 401（控制台报错 + 白发一次请求）
+    const app = getApp();
+    if (app.hasSession() && !app.globalData.loggedIn) {
+      try {
+        await app.login();
+      } catch (e) {
+        console.warn('静默登录失败', e);
+      }
+    }
+    if (!app.hasSession() || !app.globalData.loggedIn) {
+      this.setData({ loggedIn: false, notLoggedIn: true });
+      return;
+    }
     try {
       const user = await api.get('/users/me');
       this.setData({
         loggedIn: true, // 能拉到资料即已登录（游客态接口 401）
+        notLoggedIn: false,
         settings: Object.assign(
           { unit: 'metric', highAccuracy: true, showBodyData: true, showSportData: true, privacyMode: false, kmAnnounce: true, dailyStepSync: true },
           user.settings,
         ),
       });
     } catch (e) {
+      // 401 = 会话失效：按游客态处理，不当成加载失败
+      if (e && (e.statusCode === 401 || e.code === 401)) {
+        this.setData({ loggedIn: false, notLoggedIn: true });
+        return;
+      }
       console.error('加载设置失败', e);
       this.setData({ loggedIn: false });
     }
@@ -170,13 +175,31 @@ Page({
   },
 
 
-
   /** 打开隐私政策 */
+  /** 游客态点「微信一键登录」：登录成功后原地拉一次设置 */
+  goLogin() {
+    getApp()
+      .login()
+      .then(() => this.loadSettings())
+      .catch((e) => wx.showToast({ title: (e && e.message) || '登录失败，请重试', icon: 'none' }));
+  },
+
+  /** 登录后回到本页自动补拉 */
+  onShow() {
+    const app = getApp();
+    if (this.data.notLoggedIn && app.globalData.loggedIn) this.loadSettings();
+  },
+
   openPrivacy() {
     wx.navigateTo({ url: '/pages/privacy/privacy' });
   },
 
   async save() {
+    // 游客态保存无意义（按钮已隐藏，这里是兜底，防止其它路径触发）
+    if (this.data.notLoggedIn) {
+      this.goLogin();
+      return;
+    }
     if (this.data.saving) return;
     this.setData({ saving: true });
     try {

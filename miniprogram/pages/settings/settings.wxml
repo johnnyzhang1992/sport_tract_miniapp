@@ -33,6 +33,18 @@
     </view>
   </view>
 
+  <!-- 游客态（2026-11-17）：需登录的设置项与保存按钮隐藏；
+       运动类型显示/排序是纯前端配置，游客照常可用，所以不整页遮挡 -->
+  <guest-hint
+    wx:if="{{notLoggedIn}}"
+    feature="设置"
+    icon="/assets/icons/lucide-settings.png"
+    tip="以下设置需要登录后才能保存"
+    bind:login="goLogin"
+  />
+
+  <!-- 以下均需登录 -->
+  <block wx:if="{{!notLoggedIn}}">
   <!-- 高精度定位 -->
   <view class="card switch-row">
     <view class="switch-info">
@@ -109,16 +121,13 @@
     <view class="link-arrow">›</view>
   </view>
 
-  <!-- 退出登录（仅登录态展示） -->
-  <view class="card logout-row" wx:if="{{loggedIn}}" hover-class="logout-row-hover" bindtap="logout">
-    <text>退出登录</text>
-  </view>
-
   <t-button
     theme="primary"
     size="large"
     block
     loading="{{saving}}"
     bind:tap="save"
+    wx:if="{{!notLoggedIn}}"
   >保存</t-button>
+  </block>
 </view>

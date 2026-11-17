@@ -52,7 +52,14 @@ global.wx = {
 };
 let pageDef = null;
 global.Page = (d) => { pageDef = d; };
-global.getApp = () => ({ globalData: { userInfo: null }, logout: () => {} });
+// loadSettings 会先查会话（游客态不请求 /users/me）
+const appGlobalData = { userInfo: null, loggedIn: true };
+global.getApp = () => ({
+  globalData: appGlobalData,
+  hasSession: () => true,
+  login: () => Promise.resolve(),
+  logout: () => {},
+});
 require('../miniprogram/pages/settings/settings.js');
 assert.ok(pageDef, 'settings.js 应通过 Page() 交出页面对象');
 
@@ -113,4 +120,49 @@ test('SPM4 showSportData 字段随 settings 往返：老用户已关的值保存
   p.onPrivacyModeChange({ detail: { value: true } });
   await p.save();
   assert.equal(apiPuts[0].body.settings.showSportData, false, '往返不把老用户的关闭值重置为 true');
+});
+
+/* 游客态（2026-11-17）：/users/me 需要登录，未登录不该请求；
+   保存按钮与需登录的设置项隐藏，纯前端的运动类型设置保留。 */
+test('SPM20 游客态：不请求 /users/me，标记 notLoggedIn，保存被拦截', async () => {
+  apiGets = [];
+  apiPuts = [];
+  appGlobalData.loggedIn = false;
+  try {
+    const p = boot();
+    await p.loadSettings();
+    assert.deepEqual(apiGets, [], '游客态不该请求任何接口');
+    assert.equal(p.data.notLoggedIn, true);
+    assert.equal(p.data.loggedIn, false);
+
+    await p.save();
+    assert.deepEqual(apiPuts, [], '游客态保存不该发 PUT');
+  } finally {
+    appGlobalData.loggedIn = true;
+  }
+});
+
+test('SPM21 游客态 WXML：需登录卡片与保存按钮被 !notLoggedIn 包住，运动类型卡片不受影响', () => {
+  const w = read('miniprogram/pages/settings/settings.wxml');
+  assert.ok(w.includes('<guest-hint'), '应使用 guest-hint 组件');
+  assert.ok(w.includes('wx:if="{{!notLoggedIn}}"'), '需登录区块应有 notLoggedIn 守卫');
+  // 运动类型卡片在守卫之前（游客可用）
+  const typeIdx = w.indexOf('运动类型显示');
+  const guardIdx = w.indexOf('wx:if="{{!notLoggedIn}}"');
+  assert.ok(typeIdx > 0 && typeIdx < guardIdx, '运动类型设置应在游客可用区（守卫之前）');
+  // 保存按钮受守卫
+  const saveIdx = w.indexOf('>保存</t-button>');
+  const saveTag = w.slice(w.lastIndexOf('<t-button', saveIdx), saveIdx);
+  assert.ok(saveTag.includes('wx:if="{{!notLoggedIn}}"'), '保存按钮游客态必须隐藏');
+});
+
+test('SPM22 登录后恢复正常：拉一次 /users/me 并清掉 notLoggedIn', async () => {
+  apiGets = [];
+  appGlobalData.loggedIn = true;
+  const p = boot();
+  p.data.notLoggedIn = true;
+  await p.loadSettings();
+  assert.deepEqual(apiGets, ['/users/me']);
+  assert.equal(p.data.notLoggedIn, false);
+  assert.equal(p.data.loggedIn, true);
 });
