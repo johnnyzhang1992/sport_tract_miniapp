@@ -61,15 +61,16 @@ function badge(key, group, category, opts = {}) {
 const GROUPS = [
   { key: 'plan', title: '里程碑', category: 'plan' },
   { key: 'rings', title: '合上圆环', category: 'plan' },
-  { key: 'record', title: '新纪录', category: 'data' },
+  { key: 'streak', title: '最坚持', category: 'data' },
   { key: 'activity-type', title: '分运动类型', category: 'data' },
 ];
 
 const SAMPLE = [
   badge('first', 'plan', 'plan', { unlocked: true, earnDateText: '2026-10-01' }),
   badge('ring-100', 'rings', 'plan', { shape: 'ring' }),
-  badge('rec-dist-100', 'record', 'data', { shape: 'dist', unlocked: true, earnDateText: '2026-11-01' }),
-  badge('rec-dur-100', 'record', 'data', { shape: 'dur' }),
+  // 2026-11-17：「新纪录」整组下线，fixture 改用仍存在的最坚持 / 分类型系列
+  badge('streak-100', 'streak', 'data', { shape: 'streak', unlocked: true, earnDateText: '2026-11-01' }),
+  badge('walk-dur-10', 'activity-type', 'data', { shape: 'dur' }),
   badge('run-dist-50', 'activity-type', 'data', { shape: 'dist', unlocked: true, earnDateText: '2026-09-01' }),
 ];
 
@@ -82,37 +83,37 @@ test('BW1 category=plan 只渲染计划类徽章，且分组只含计划分组',
 test('BW2 category=all 渲染全部，分组顺序按服务端 groups', () => {
   const c = bootComponent({ trophies: SAMPLE, groups: GROUPS, category: 'all' });
   assert.equal(c.data.view.totalCount, 5);
-  assert.deepEqual(c.data.view.groups.map((g) => g.title), ['里程碑', '合上圆环', '新纪录', '分运动类型']);
+  assert.deepEqual(c.data.view.groups.map((g) => g.title), ['里程碑', '合上圆环', '最坚持', '分运动类型']);
 });
 
 test('BW3 已获得：按获取日期倒序（最新在前）', () => {
   const c = bootComponent({ trophies: SAMPLE, groups: GROUPS, category: 'all' });
-  assert.deepEqual(c.data.view.earnedList.map((t) => t.key), ['rec-dist-100', 'first', 'run-dist-50']);
+  assert.deepEqual(c.data.view.earnedList.map((t) => t.key), ['streak-100', 'first', 'run-dist-50']);
   assert.equal(c.data.view.earnedCount, 3);
 });
 
 test('BW4 未知形状兜底成圆牌，不会白框', () => {
   const c = bootComponent({
-    trophies: [badge('x', 'record', 'data', { shape: 'never-seen' })],
+    trophies: [badge('x', 'streak', 'data', { shape: 'never-seen' })],
     groups: GROUPS,
   });
-  const item = c.data.view.groups.find((g) => g.key === 'record').items[0];
+  const item = c.data.view.groups.find((g) => g.key === 'streak').items[0];
   assert.equal(item.cls, 'b-plan');
 });
 
 test('BW4b 缺 groups 时按 trophies 出现顺序自建分组（不白屏）', () => {
   const c = bootComponent({
-    trophies: [badge('a', 'record', 'data'), badge('b', 'plan', 'plan')],
+    trophies: [badge('a', 'streak', 'data'), badge('b', 'plan', 'plan')],
   });
-  assert.deepEqual(c.data.view.groups.map((g) => g.key), ['record', 'plan']);
+  assert.deepEqual(c.data.view.groups.map((g) => g.key), ['streak', 'plan']);
 });
 
 test('BW5 合上圆环用嵌套三环造型（isRing 标记）', () => {
   const c = bootComponent({ trophies: SAMPLE, groups: GROUPS, category: 'all' });
   const ringGroup = c.data.view.groups.find((g) => g.key === 'rings');
   assert.equal(ringGroup.items[0].isRing, true);
-  const recGroup = c.data.view.groups.find((g) => g.key === 'record');
-  assert.equal(recGroup.items[0].isRing, false);
+  const streakGroup = c.data.view.groups.find((g) => g.key === 'streak');
+  assert.equal(streakGroup.items[0].isRing, false);
 });
 
 test('BW6 点击抛 select 事件带 key（不自己开弹窗）', () => {
@@ -216,7 +217,7 @@ test('BP1 装载：拿到总览 + 分类切换默认全部', async () => {
   assert.equal(p.data.data.total, 5);
   assert.equal(p.data.activeFilter, 'all');
   assert.equal(p.data.shownTotal, 5);
-  assert.equal(p.data.shownEarned, 3, 'first / rec-dist-100 / run-dist-50 已解锁');
+  assert.equal(p.data.shownEarned, 3, 'first / streak-100 / run-dist-50 已解锁');
 });
 
 test('BP2 切换分类只过滤徽章列表', async () => {
@@ -229,7 +230,7 @@ test('BP2 切换分类只过滤徽章列表', async () => {
   assert.ok(p.data.shown.every((t) => t.category === 'plan'));
   p.onFilterTap({ currentTarget: { dataset: { key: 'data' } } });
   assert.equal(p.data.shownTotal, 3);
-  assert.equal(p.data.shownEarned, 2, '数据类里 rec-dist-100 / run-dist-50 已解锁');
+  assert.equal(p.data.shownEarned, 2, '数据类里 streak-100 / run-dist-50 已解锁');
   assert.ok(p.data.shown.every((t) => t.category === 'data'));
 });
 
@@ -251,8 +252,8 @@ test('BP4 详情半屏：文案来自服务端 detailText/detailLines', async ()
   nextResponse = () => Promise.resolve(OVERVIEW);
   const p = bootPage();
   await p.fetch();
-  p.onSelect({ detail: { key: 'rec-dist-100' } });
-  assert.equal(p.data.trophyDetail.key, 'rec-dist-100');
+  p.onSelect({ detail: { key: 'streak-100' } });
+  assert.equal(p.data.trophyDetail.key, 'streak-100');
   assert.deepEqual(p.data.trophyDetail.detailLines, ['已达成 1 次 · 目标 1 次']);
   p.closeTrophyDetail();
   assert.equal(p.data.trophyDetail, null);
@@ -263,8 +264,8 @@ test('BP4b 详情半屏徽章带形状样式（曾因缺 cls 导致弹窗里徽�
   const p = bootPage();
   await p.fetch();
   // 服务端不下发 cls（形状→CSS 是前端的事），页面必须自己翻译
-  p.onSelect({ detail: { key: 'rec-dist-100' } });
-  assert.equal(p.data.trophyDetail.cls, 'b-shield b-dist', '盾形徽章要有形状类');
+  p.onSelect({ detail: { key: 'streak-100' } });
+  assert.equal(p.data.trophyDetail.cls, 'b-hex b-streak', '六边形徽章要有形状类');
   assert.ok(p.data.trophyDetail.badgeText, '要有中央文字');
   assert.equal(p.data.trophyDetail.isRing, false);
 
@@ -273,8 +274,8 @@ test('BP4b 详情半屏徽章带形状样式（曾因缺 cls 导致弹窗里徽�
   assert.equal(p.data.trophyDetail.cls, 'b-ring');
   assert.equal(p.data.trophyDetail.isRing, true, '合环用嵌套三环');
 
-  // 时长纪录六边形
-  p.onSelect({ detail: { key: 'rec-dur-100' } });
+  // 分类型时长六边形
+  p.onSelect({ detail: { key: 'walk-dur-10' } });
   assert.equal(p.data.trophyDetail.cls, 'b-hex b-dur', '六边形徽章要有形状类');
 });
 

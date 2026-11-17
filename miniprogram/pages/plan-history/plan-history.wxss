@@ -524,12 +524,6 @@
   color: #2b6cf6;
   font-variant-numeric: tabular-nums;
 }
-.trophy-sheet-record {
-  margin-top: 8rpx;
-  font-size: 24rpx;
-  color: #667080;
-}
-
 /* ── 奖杯徽章（docs/21 v3）：外层挂数量气泡（不进 clip-path，不会被形状裁切），
    内层形状 + 中央档位数（白色粗字，可读性优先）。
    未解锁 = 淡彩同款：同形状同构图，饱和度压到 15%——「完整但一眼没拿到」，

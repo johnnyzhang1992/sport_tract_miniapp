@@ -84,7 +84,7 @@ test('PHC1 月历装载：cells 补齐整行、pct 归一、达成与今天标�
           { key: 'first', label: '首次达成', shortLabel: '首次达成', shape: 'plan', groupTitle: '里程碑', badgeText: '1', detailText: '已达成 8 次 · 目标 1 次', detailLines: [], desc: '完成 1 次目标', icon: '🥇', unlocked: true, cur: 8, tier: 1, group: 'plan', earnedCount: 1, earnDateText: '2026-10-20', pct: 100 },
           { key: 'week', label: '坚持一周', shortLabel: '坚持一周', shape: 'plan', groupTitle: '里程碑', badgeText: '7', detailText: '已达成 8 次 · 目标 7 次', detailLines: [], desc: '达成 7 次', icon: '📅', unlocked: true, cur: 8, tier: 7, group: 'plan', earnedCount: 1, earnDateText: '2026-10-26', pct: 100 },
           { key: 'habit', label: '习惯养成', shortLabel: '习惯养成', shape: 'plan', groupTitle: '里程碑', badgeText: '20', detailText: '已达成 8 次 · 目标 20 次', detailLines: [], desc: '达成 20 次', icon: '💪', unlocked: false, cur: 8, tier: 20, group: 'plan', earnedCount: 0, earnDateText: '', pct: 40 },
-          { key: 'rec-dist-100', label: '新距离记录·100次', shortLabel: '距离纪录', shape: 'dist', groupTitle: '新纪录', badgeText: '100', detailText: '还差 98 次刷新距离纪录', detailLines: [], desc: '刷新单日运动距离纪录 100 次', icon: '📏', unlocked: false, cur: 2, tier: 100, group: 'record', valueText: '8.20 km', dateText: '2026-11-01', earnedCount: 0, earnDateText: '', pct: 2 },
+          { key: 'streak-100', label: '坚持运动·100天', shortLabel: '最坚持', shape: 'streak', groupTitle: '最坚持', badgeText: '100', detailText: '还差 98 天连续运动', detailLines: [], desc: '连续运动 100 天', icon: '🔥', unlocked: false, cur: 2, tier: 100, group: 'streak', valueText: '2 天', dateText: '', earnedCount: 0, earnDateText: '', pct: 2 },
         ],
       });
     }
@@ -143,8 +143,8 @@ test('PHC1 月历装载：cells 补齐整行、pct 归一、达成与今天标�
   assert.equal(p.data.summary.trophies[2].pct, Math.round((8 / 20) * 100), '未获得 → 进度条百分比 cur/tier');
   assert.equal(p.data.summary.trophies[3].unlocked, false, '未解锁标记');
   // 分组由 badge-wall 组件负责（页面只下发扁平表 + 分组元数据）
-  assert.equal(p.data.summary.badgeGroups.length, 2, '分组元数据：里程碑 + 新纪录');
-  assert.deepEqual(p.data.summary.badgeGroups.map((g) => g.title), ['里程碑', '新纪录']);
+  assert.equal(p.data.summary.badgeGroups.length, 2, '分组元数据：里程碑 + 最坚持');
+  assert.deepEqual(p.data.summary.badgeGroups.map((g) => g.title), ['里程碑', '最坚持']);
   // 徽章中央文字由服务端 badgeText 决定（曾叫 text 导致整墙不显示数字）
   assert.equal(p.data.summary.trophies[3].badgeText, '100', '记录型徽章中央印档位数');
   assert.equal(p.data.summary.trophies[0].badgeText, '1', '里程碑徽章中央印需要次数');

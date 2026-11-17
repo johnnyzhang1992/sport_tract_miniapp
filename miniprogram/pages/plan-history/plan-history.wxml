@@ -122,7 +122,7 @@
   </view>
 
   <!-- 我的运动徽章（计划类）：2026-11-16 起计划页只展示「依赖运动计划」的徽章
-       （里程碑 / 合上圆环 / 完美周，共 16 座）；运动数据类（新纪录 / 最坚持 / 累计 / 分类型）
+       （里程碑 / 合上圆环 / 完美周，共 15 座）；运动数据类（最坚持 / 累计里程 / 累计时长 / 分类型）
        全部去「我的徽章」页看，避免这里被 119 座冲垮。 -->
   <view class="card trophy-card" wx:if="{{summary && summary.planTotal > 0}}">
     <view class="sum-title-row">
@@ -137,7 +137,7 @@
       empty-text="完成每日计划即可解锁第一座徽章"
       bind:select="onTrophySelect"
     />
-    <!-- 入口：去「我的徽章」看全部 119 座（含新纪录/最坚持/累计/分运动类型） -->
+    <!-- 入口：去「我的徽章」看全部 111 座（含最坚持/累计/分运动类型；「新纪录」组已于 2026-11-17 下线） -->
     <view class="badge-more" hover-class="badge-more-hover" hover-stay-time="80" bindtap="goAllBadges">
       <text class="badge-more-text">查看全部徽章</text>
       <text class="badge-more-sub">运动数据 · 分运动类型</text>
