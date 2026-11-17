@@ -112,19 +112,63 @@ cd ../sport_track_api && npm run dev
 
 > 依赖更新后重跑构建脚本即可；`miniprogram_npm` 不入库（gitignore）。
 
-### 图片资源（加图必看）
+### 图片资源压缩（加图必看）
 
-微信「代码质量」有硬性规则 **图片和音频资源不超过 200 K**，超了直接判“未通过”。
-新增/替换图片后跑一次：
+微信「代码质量」扫描有硬性规则 **图片和音频资源不超过 200 K**，超了直接判「未通过」。
+整个 `miniprogram/` 下所有 png/jpg 都在统计范围内（排除 `miniprogram_npm`）。
+
+#### 什么时候跑
+
+**新增或替换任何图片后**，提交前跑一次：
 
 ```bash
-npm run optimize:images   # PNG 走 pngquant 量化，JPEG 过大的重压质量
-npm run check:images      # 只检查是否超 200K（退出码 1 = 超标，可接 CI）
+npm run optimize:images   # 压缩
+npm run check:images      # 只检查，退出码 1 = 超标
 ```
 
-脚本**不会**改图片尺寸——分辨率该多大由使用场景决定，擅自缩小会糊。
-遇到尺寸明显过大的图它会提示，由人工判断（例：分享海报里的小程序码按 44px 绘制，
-132px 就够，曾经放了 258px 白占 15KB）。
+`check:images` 可以接 CI 或 pre-commit。想让它强制生效，把 `npm test` 改成
+`"pretest": "npm run check:images"` 即可（当前没这么做，是怕本机没装 pngquant 时阻断测试）。
+
+#### 脚本做了什么
+
+| 类型 | 处理 |
+|---|---|
+| PNG | `pngquant --quality=70-92` 有损量化（调色板化，人眼几乎不可辨） |
+| JPEG | 超过 15KB 的按 `quality=88` + progressive 重存 |
+| 两者 | `--skip-if-larger`：压不小就保留原图，避免「越压越大」 |
+
+**脚本不改图片尺寸**——分辨率该多大由使用场景决定，擅自缩小会糊。
+对边长 > 512px 的图它只**提示**，由人工判断。
+
+#### 尺寸要按实际用途定（脚本管不了）
+
+最容易被忽略的一块。判断方法：看这张图在界面上实际画多大，再乘以最高导出倍率。
+
+> 真实案例：`assets/app_code.jpg`（分享海报里的小程序码）原本是 `258×258`，
+> 但海报里只按 **44px** 绘制，最高 3 倍导出 = **132px** 就够。
+> 改成 132px 后 22KB → 7.2KB，视觉完全无损。
+> 当前分辨率配置见 `utils/poster-layout.js` 的 `exportScale`。
+
+#### 优先删，而不是压
+
+压到极限也别留没用的图。查引用时注意**动态拼接的路径**，静态 grep 搜不到，误删会破图：
+
+| 动态图标 | 拼接位置 |
+|---|---|
+| `activity-<id>-white.png` | `utils/badge-shape.js` |
+| `fp-cat-<key>[-chip].png` | `config/index.js` |
+| `rank-medal-1~3.png` | `pages/leaderboard/leaderboard.js`、`werun-board.js` |
+
+#### 历史
+
+2026-11-17 首次触发该规则：总量 245KB（超限）。处理过程与结果：
+
+| 动作 | 节省 |
+|---|---|
+| 删 `assets/items/`（商品图走服务端 `imageUrl`，本地两张无用） | -54 KB |
+| `app_code.jpg` 258px → 132px | -14.8 KB |
+| pngquant 全量重压 | -52 KB |
+| **合计** | **245 KB → 124 KB（-49%）** |
 
 ## 目录结构
 
