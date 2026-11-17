@@ -112,6 +112,20 @@ cd ../sport_track_api && npm run dev
 
 > 依赖更新后重跑构建脚本即可；`miniprogram_npm` 不入库（gitignore）。
 
+### 图片资源（加图必看）
+
+微信「代码质量」有硬性规则 **图片和音频资源不超过 200 K**，超了直接判“未通过”。
+新增/替换图片后跑一次：
+
+```bash
+npm run optimize:images   # PNG 走 pngquant 量化，JPEG 过大的重压质量
+npm run check:images      # 只检查是否超 200K（退出码 1 = 超标，可接 CI）
+```
+
+脚本**不会**改图片尺寸——分辨率该多大由使用场景决定，擅自缩小会糊。
+遇到尺寸明显过大的图它会提示，由人工判断（例：分享海报里的小程序码按 44px 绘制，
+132px 就够，曾经放了 258px 白占 15KB）。
+
 ## 目录结构
 
 ```
@@ -120,7 +134,8 @@ sport_track_miniapp/
 ├── scripts/
 │   ├── build-tdesign.sh       # tdesign 按需重建（组件+依赖；结尾自动裁剪 icon.wxss）
 │   ├── tree-shake-icons.mjs   # 图标样式裁剪：扫描业务代码 + 组件库内部用法，按需保留（112KB→~1KB）
-│   └── build-echarts.sh       # echarts 按需构建（地图模块，996KB→496KB）
+│   ├── build-echarts.sh       # echarts 按需构建（地图模块，996KB→496KB）
+│   └── optimize-images.sh     # 图片压缩 + 「≤200K」合规检查（见下）
 ├── miniprogram/
 │   ├── app.js                 # 静默登录 + 隐私引导 + api 挂 globalData
 │   ├── app.json               # 页面/tabBar/分包/权限声明/requiredBackgroundModes

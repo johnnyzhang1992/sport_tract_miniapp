@@ -5,7 +5,9 @@
   "private": true,
   "scripts": {
     "test": "node --test",
-    "prune-icons": "node scripts/tree-shake-icons.mjs"
+    "prune-icons": "node scripts/tree-shake-icons.mjs",
+    "optimize:images": "bash scripts/optimize-images.sh",
+    "check:images": "bash scripts/optimize-images.sh --check"
   },
   "dependencies": {
     "@rollup/plugin-node-resolve": "^16.0.3",
