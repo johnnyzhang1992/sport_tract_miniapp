@@ -10,8 +10,10 @@ const assert = require('node:assert/strict');
 
 let planResponse = null;
 let shouldFail = false;
+const apiCalls = [];
 const fakeApi = {
   get(p) {
+    apiCalls.push(p);
     if (p === '/plan/current') {
       if (shouldFail) return Promise.reject(new Error('down'));
       return Promise.resolve(planResponse);
@@ -25,7 +27,9 @@ require.cache[apiPath] = { id: apiPath, filename: apiPath, loaded: true, exports
 global.wx = { nextTick: (cb) => cb(), getSystemInfoSync: () => ({ pixelRatio: 2 }), showToast: () => {} };
 let pageDef = null;
 global.Page = (d) => { pageDef = d; };
-global.getApp = () => ({ hasSession: () => true, globalData: {} });
+// loggedIn 默认 true：loadPlan 会先判断登录态（游客不请求 /plan/current）
+const appGlobalData = { loggedIn: true };
+global.getApp = () => ({ hasSession: () => true, globalData: appGlobalData });
 require('../miniprogram/pages/index/index.js');
 
 function makePage() {
@@ -83,4 +87,36 @@ test('IP3 接口失败：静默保持上一帧，不把卡片打空', async () =
   await p.loadPlan();
   await flush();
   assert.ok(p.data.planCard && p.data.planCard.periodText === '每日', '失败不清空卡片');
+});
+
+/* 游客态（2026-11-17）：/plan/current 需要登录，未登录请求必然 401。
+   首页不该在游客态发这次请求（控制台报错 + 白跑一次）。 */
+test('IDX-P1 游客态不请求 /plan/current，且 planCard 置 null', async () => {
+  appGlobalData.loggedIn = false;
+  apiCalls.length = 0;
+  try {
+    const p = makePage();
+    await p.loadPlan();
+    await flush();
+    assert.equal(apiCalls.length, 0, `游客态不该发起请求，实际：${apiCalls.join(',')}`);
+    assert.equal(p.data.planCard, null, '游客态计划卡应为空（wxml 渲染引导）');
+  } finally {
+    appGlobalData.loggedIn = true;
+  }
+});
+
+test('IDX-P2 已登录仍正常请求并装载计划卡（防止守卫写宽了）', async () => {
+  shouldFail = false; // IP3 残留了失败开关
+  planResponse = {
+    plan: { targets: { distanceM: 3000, durationMin: 30, count: 1 } },
+    progress: { distanceM: 1500, durationSec: 600, count: 1 },
+    today: { distanceM: 1500, durationSec: 600 },
+    rings: [{ pct: 0.5 }],
+  };
+  const p = makePage();
+  apiCalls.length = 0;
+  await p.loadPlan();
+  await flush();
+  assert.deepEqual(apiCalls, ['/plan/current'], `应请求一次，实际：${JSON.stringify(apiCalls)}`);
+  assert.ok(p.data.planCard && p.data.planCard.plan, '登录态应装载计划卡');
 });

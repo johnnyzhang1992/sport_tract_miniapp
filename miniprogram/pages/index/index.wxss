@@ -14,7 +14,7 @@
   font-weight: 500; /* 与其他标题统一 */
 }
 .welcome-sub {
-  margin-top: 8rpx;
+  margin-top: 0;
 }
 .section-title {
   font-size: 28rpx;

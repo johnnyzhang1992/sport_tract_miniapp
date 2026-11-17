@@ -280,6 +280,11 @@ Page({
 
   /** 运动计划卡：拉计划与当期进度；有计划 → 准备三环数据并绘制；无计划 → 引导卡 */
   async loadPlan() {
+    // 游客态不请求：/plan/current 需要登录，未登录必然 401（控制台报错 + 白发一次请求）
+    if (!getApp().globalData.loggedIn) {
+      this.setData({ planCard: null });
+      return;
+    }
     try {
       const d = await api.get('/plan/current');
       if (!d || !d.plan) {
