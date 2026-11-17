@@ -282,3 +282,34 @@ test('AS16 接口 401（会话失效）也按游客态处理', async () => {
     fakeApi.get = origGet;
   }
 });
+
+/* 隐私与政策（2026-11-17 从设置页移来）：放在账号与安全最下方，游客也能看 */
+test('AS17 隐私与政策卡片在最下方，且在游客守卫之外（游客也能看）', () => {
+  const w = read('pages/account-security/account-security.wxml');
+  assert.ok(w.includes('隐私与政策'), '应有隐私与政策入口');
+  // 位置：在注销卡之后
+  assert.ok(w.indexOf('policy-card"') > w.indexOf('danger-card"'), '隐私卡片应在注销卡下方');
+  // 不在 block wx:else 内 → 游客可见（block 结束标签应出现在 policy-card 之前）
+  const blockEnd = w.indexOf('</block>');
+  assert.ok(blockEnd > 0 && blockEnd < w.indexOf('policy-card"'), '隐私卡片应放在 block 之外（游客也能看）');
+});
+
+test('AS18 点击隐私卡片跳到隐私政策页', () => {
+  const captured = [];
+  const origNav = global.wx.navigateTo;
+  global.wx.navigateTo = (o) => captured.push(o.url);
+  try {
+    const p = boot();
+    p.openPrivacy();
+    assert.deepEqual(captured, ['/pages/privacy/privacy']);
+  } finally {
+    global.wx.navigateTo = origNav;
+  }
+});
+
+test('AS19 设置页不再有隐私政策入口（已迁走）', () => {
+  const w = read('pages/settings/settings.wxml');
+  const js = read('pages/settings/settings.js');
+  assert.ok(!w.includes('隐私政策'), '设置页不该再有隐私政策卡片');
+  assert.ok(!/openPrivacy/.test(js), '设置页不该再有 openPrivacy');
+});

@@ -153,5 +153,10 @@ Page({
     }
   },
 
+  /** 隐私与政策（2026-11-17 从设置页移来） */
+  openPrivacy() {
+    wx.navigateTo({ url: '/pages/privacy/privacy' });
+  },
+
   noop() {},
 });

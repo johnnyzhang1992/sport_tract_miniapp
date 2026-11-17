@@ -34,6 +34,16 @@ for d in $DEPS; do
   fi
 done
 
+# 裁剪运行时用不到的东西（2026-11-17）：
+#   1. .d.ts 类型声明 —— 小程序运行时不读，纯体积（约 52KB）
+#   2. common/shared 下 calendar/color-picker/qrcode —— 项目未使用这些组件（约 33KB）
+# 注意 badge/image/loading/overlay/sticky 虽然 UI 里没直接写，但被 avatar/cell/popup/tabs
+# **间接依赖**，不能删（删了组件编译报错）。
+find "$DST" -name "*.d.ts" -delete
+rm -rf "$DST/tdesign-miniprogram/common/shared/calendar" \
+       "$DST/tdesign-miniprogram/common/shared/color-picker" \
+       "$DST/tdesign-miniprogram/common/shared/qrcode"
+
 echo "✅ tdesign 按需构建完成：$(du -sh "$DST" | cut -f1)"
 
 # 裁剪 tdesign 图标样式：删除 icon.wxss 中未使用的图标类（112KB → ~0.8KB）

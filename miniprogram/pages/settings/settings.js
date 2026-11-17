@@ -175,7 +175,6 @@ Page({
   },
 
 
-  /** 打开隐私政策 */
   /** 游客态点「微信一键登录」：登录成功后原地拉一次设置 */
   goLogin() {
     getApp()
@@ -188,10 +187,6 @@ Page({
   onShow() {
     const app = getApp();
     if (this.data.notLoggedIn && app.globalData.loggedIn) this.loadSettings();
-  },
-
-  openPrivacy() {
-    wx.navigateTo({ url: '/pages/privacy/privacy' });
   },
 
   async save() {

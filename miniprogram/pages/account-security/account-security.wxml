@@ -28,7 +28,18 @@
       注销账号
     </view>
   </view>
+
   </block>
+
+  <!-- 隐私与政策（2026-11-17 从设置页移来）：游客也能看，放在 block 之外 -->
+  <view class="card policy-card" hover-class="policy-card-hover" hover-stay-time="80" bindtap="openPrivacy">
+    <view class="policy-main">
+      <view class="policy-title">隐私与政策</view>
+      <view class="policy-desc">查看我们如何收集与使用您的信息</view>
+    </view>
+    <view class="policy-arrow">›</view>
+  </view>
+
 
   <!-- 注销二次确认：输入当前昵称 -->
   <view class="sheet-mask" wx:if="{{confirmVisible}}" bindtap="closeDeactivate">
