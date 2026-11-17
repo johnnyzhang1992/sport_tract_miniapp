@@ -69,8 +69,11 @@
       </view>
       <text class="trophy-sheet-label">{{trophyDetail.label}}</text>
       <text class="trophy-sheet-state {{trophyDetail.unlocked ? '' : 'trophy-sheet-state-off'}}">{{trophyDetail.unlocked ? '已解锁' : '未解锁'}}</text>
-      <text class="trophy-sheet-rank" wx:if="{{trophyDetail.unlocked && trophyDetail.rank > 0}}">第 {{trophyDetail.rank}} 位获得此徽章的迹路者</text>
-      <text class="trophy-sheet-desc">{{trophyDetail.desc}}</text>
+      <!-- 获得信息（2026-11-17）：年月 · 第 N 位获得 · 共 N 人；文案由后端拼好，两页共用不漂移 -->
+      <!-- 获得信息：已解锁=年月·第N位·共N人；未解锁=全站已有N人获得（文案由后端拼） -->
+      <view class="trophy-sheet-earned" wx:if="{{trophyDetail.earnedText}}">{{trophyDetail.earnedText}}</view>
+      <!-- 拿不到获得信息时才退回描述（如全站确实还没人获得） -->
+      <text class="trophy-sheet-desc" wx:else>{{trophyDetail.desc}}</text>
       <view class="trophy-sheet-progress" wx:for="{{trophyDetail.detailLines}}" wx:key="*this">{{item}}</view>
     </view>
   </view>

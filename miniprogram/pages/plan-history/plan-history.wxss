@@ -476,9 +476,9 @@
 .trophy-sheet-state-off {
   color: #8a93a6;
 }
-/* 全站名次（「第 N 位获得此徽章的迹路者」）：已解锁态下压一行灰字，位于描述之上 */
-.trophy-sheet-rank {
-  margin-top: 8rpx;
+/* 获得信息（「2026年11月 · 第 3 位获得 · 共 12 人」）：已解锁态下压一行灰字 */
+.trophy-sheet-earned {
+  margin-top: 10rpx;
   font-size: 24rpx;
   color: #8a93a6;
   font-variant-numeric: tabular-nums;

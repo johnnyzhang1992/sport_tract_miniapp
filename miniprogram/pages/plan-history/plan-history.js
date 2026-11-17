@@ -223,6 +223,7 @@ Page({
       dateText: t.dateText || '',
       detailText: t.detailText || '',
       detailLines: t.detailLines || [],
+      earnedText: t.earnedText || '',
       activityLabel: t.activityLabel || '',
       activityIconId: t.activityIconId || '',
       // 前端派生：形状 → 样式类、白色类型图标、是否三环分支
