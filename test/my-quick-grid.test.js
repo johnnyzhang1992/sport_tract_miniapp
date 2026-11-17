@@ -50,12 +50,12 @@ test('QG2 未读角标跟消息入口搬到快捷卡', () => {
   assert.ok(js.includes("api.get('/notifications/summary')"), '未读数仍要拉');
 });
 
-test('QG3 下方菜单移除四入口，只留轨迹合集/足迹/数据导入/数据导出', () => {
+test('QG3 下方菜单：轨迹合集/足迹/数据导入/数据导出 + 账号与安全（2026-11-17 新增）', () => {
   const start = wxml.indexOf('<t-cell-group');
   const end = wxml.indexOf('</t-cell-group>', start);
   const menu = wxml.slice(start, end);
   const titles = [...menu.matchAll(/(?:^|\s)title="([^"]+)"/g)].map((m) => m[1]);
-  assert.deepEqual(titles, ['轨迹合集', '足迹', '数据导入', '数据导出']);
+  assert.deepEqual(titles, ['轨迹合集', '足迹', '数据导入', '数据导出', '账号与安全']);
   for (const old of ['我的积分', '会员中心', '消息中心', '设置']) {
     assert.ok(!menu.includes(`title="${old}"`), `菜单不应再有${old}`);
   }

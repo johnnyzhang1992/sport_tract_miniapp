@@ -12,6 +12,7 @@
     "pages/stats/stats",
     "pages/profile/profile",
     "pages/settings/settings",
+    "pages/account-security/account-security",
     "pages/privacy/privacy",
     "pages/overview/overview",
     "pages/import/import",

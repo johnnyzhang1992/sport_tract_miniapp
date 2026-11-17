@@ -49,7 +49,7 @@ const CATEGORIES = {
 };
 
 /** 地图页浮层按钮用的字形（黑色透明底，按钮白底由 CSS 给；search 覆盖掉早期的灰版资产） */
-const PLAIN = ['store', 'medal', 'sliders-horizontal', 'plus', 'search', 'layers', 'pencil', 'trash-2', 'map-pinned', 'building-2', 'bell', 'trending-up', 'trending-down', 'minus', 'clock', 'mountain', 'flame', 'pin', 'image', 'coins', 'gem', 'footprints'];
+const PLAIN = ['store', 'medal', 'sliders-horizontal', 'plus', 'search', 'layers', 'pencil', 'trash-2', 'map-pinned', 'building-2', 'bell', 'trending-up', 'trending-down', 'minus', 'clock', 'mountain', 'flame', 'pin', 'image', 'coins', 'gem', 'footprints', 'shield-check'];
 /** 会员页头权益图标：浅蓝渐变底上用品牌蓝字形，出 -blue 变体（image-blue 已有同色资产） */
 const BLUE_PLAIN = ['ban', 'download', 'bell', 'gem'];
 /** 逐字形的额外内缩（CSS px，SIZE=96 口径）：lucide 各家字形在 24 网格里占位不同，

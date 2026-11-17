@@ -189,6 +189,11 @@ Page({
     wx.navigateTo({ url: '/pages/export/export' });
   },
 
+  /** 账号与安全（2026-11-17）：退出登录 + 注销账号 */
+  goAccountSecurity() {
+    wx.navigateTo({ url: '/pages/account-security/account-security' });
+  },
+
 
   /** 足迹地图（2026-11-04 从 tabBar 移到个人中心） */
   goFootprints() {

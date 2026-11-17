@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "账号与安全",
+  "usingComponents": {
+    "guest-hint": "/components/guest-hint/guest-hint"
+  }
+}

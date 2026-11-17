@@ -1,0 +1,158 @@
+/* 账号与安全（2026-11-17）：两张卡 + 注销确认半屏 */
+.container {
+  min-height: 100vh;
+  padding: 24rpx;
+  box-sizing: border-box;
+}
+
+.card {
+  background: #fff;
+  border-radius: 16rpx;
+  margin-bottom: 24rpx;
+  overflow: hidden;
+}
+
+/* 卡片内容：标题在上、说明居中、按钮在下（不再用「整行可点 + 右箭头」的列表样式，
+   危险操作需要明确的按钮边界，减少误触） */
+.action-card,
+.danger-card {
+  padding: 32rpx 28rpx;
+}
+
+.action-title,
+.danger-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+/* 注销是危险操作：标题用告警红 */
+.danger-title {
+  color: #c02a30;
+}
+
+.action-desc,
+.danger-desc {
+  margin-top: 14rpx;
+  font-size: 26rpx;
+  color: #8a93a6;
+  line-height: 1.65;
+}
+.danger-desc {
+  color: #5a6373;
+}
+/* 说明里强调「永久删除」「无法恢复」 */
+.danger-em {
+  color: #c02a30;
+  font-weight: 600;
+}
+
+.action-btn,
+.danger-btn {
+  margin-top: 28rpx;
+  height: 84rpx;
+  line-height: 84rpx;
+  text-align: center;
+  border-radius: 999rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+/* 退出登录：中性描边按钮（不是危险色，与注销区分开） */
+.action-btn {
+  background: #f2f3f5;
+  color: #1f2329;
+}
+.action-btn-hover {
+  opacity: 0.8;
+}
+/* 注销：危险红实心 */
+.danger-btn {
+  background: #e34d59;
+  color: #fff;
+}
+.danger-btn-hover {
+  opacity: 0.85;
+}
+
+/* ── 注销确认半屏 ───────────────────────────── */
+.sheet-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: flex-end;
+}
+.sheet {
+  width: 100%;
+  background: #fff;
+  border-radius: 24rpx 24rpx 0 0;
+  padding: 36rpx 32rpx calc(32rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+}
+.sheet-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #1f2329;
+  text-align: center;
+}
+.sheet-body {
+  margin-top: 20rpx;
+  font-size: 26rpx;
+  color: #5a6373;
+  line-height: 1.6;
+}
+/* 需要输入的昵称单独一行展示，避免用户对着长段落找 */
+.sheet-target {
+  margin-top: 16rpx;
+  padding: 16rpx 20rpx;
+  background: #f7f8fa;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1f2329;
+  text-align: center;
+  word-break: break-all;
+}
+.sheet-input {
+  margin-top: 20rpx;
+  height: 88rpx;
+  padding: 0 24rpx;
+  border: 2rpx solid #e5e7eb;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  color: #1f2329;
+}
+.sheet-input-ph {
+  color: #b8bec9;
+}
+.sheet-error {
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: #c02a30;
+}
+.sheet-actions {
+  display: flex;
+  gap: 20rpx;
+  margin-top: 32rpx;
+}
+.sheet-btn {
+  flex: 1;
+  height: 88rpx;
+  line-height: 88rpx;
+  text-align: center;
+  border-radius: 999rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+.sheet-btn-cancel {
+  background: #f2f3f5;
+  color: #4e5969;
+}
+.sheet-btn-danger {
+  background: #e34d59;
+  color: #fff;
+}
+/* 不满足条件时的禁用外观（保留可点，点了给提示，比纯灰更容易理解为什么不能提交） */
+.sheet-btn-disabled {
+  opacity: 0.45;
+}

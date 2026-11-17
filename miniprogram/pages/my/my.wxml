@@ -119,6 +119,10 @@
       <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-share.png" mode="aspectFit" />
       <view slot="right-icon" class="link-arrow">›</view>
     </t-cell>
+    <t-cell title="账号与安全" t-class-left="cell-left" t-class-title="cell-title" bind:click="goAccountSecurity">
+      <image slot="left-icon" class="cell-icon" src="/assets/icons/lucide-shield-check.png" mode="aspectFit" />
+      <view slot="right-icon" class="link-arrow">›</view>
+    </t-cell>
   </t-cell-group>
 
   <view class="text-muted version-tip">小迹一下 @小小梦工场</view>

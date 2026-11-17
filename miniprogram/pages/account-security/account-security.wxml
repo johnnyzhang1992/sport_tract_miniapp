@@ -1,0 +1,60 @@
+<view class="container">
+  <!-- 游客态：退出登录与注销都需要登录，整页换成登录引导 -->
+  <guest-hint
+    wx:if="{{notLoggedIn}}"
+    feature="账号与安全"
+    icon="/assets/icons/lucide-shield-check.png"
+    tip="退出登录与注销账号需要登录后才能操作"
+    bind:login="goLogin"
+  />
+
+  <block wx:else>
+  <!-- 退出登录：与注销卡同一套「说明在上、按钮在下」的布局 -->
+  <view class="card action-card">
+    <view class="action-title">退出登录</view>
+    <view class="action-desc">清空本地登录状态，云端数据保留，重新登录即可同步回来。</view>
+    <view class="action-btn" hover-class="action-btn-hover" hover-stay-time="80" bindtap="logout">
+      退出登录
+    </view>
+  </view>
+
+  <!-- 注销账号：说明在上、按钮在下（危险操作不用「可点击整行」的样式，避免误触） -->
+  <view class="card danger-card">
+    <view class="danger-title">注销账号</view>
+    <view class="danger-desc">
+      注销后将<b class="danger-em">永久删除</b>你的全部数据：运动轨迹、运动计划与徽章记录、积分与兑换记录、足迹、照片记录、体重记录、通知等，且<b class="danger-em">无法恢复</b>。同一微信再次进入将是全新账号。请谨慎操作。
+    </view>
+    <view class="danger-btn" hover-class="danger-btn-hover" hover-stay-time="80" bindtap="openDeactivate">
+      注销账号
+    </view>
+  </view>
+  </block>
+
+  <!-- 注销二次确认：输入当前昵称 -->
+  <view class="sheet-mask" wx:if="{{confirmVisible}}" bindtap="closeDeactivate">
+    <view class="sheet" catchtap="noop">
+      <view class="sheet-title">确认注销账号</view>
+      <view class="sheet-body">
+        此操作将永久删除你的全部运动数据且无法恢复。请输入当前昵称以确认：
+      </view>
+      <view class="sheet-target">{{nickname || '（未设置昵称，请输入「注销」）'}}</view>
+      <input
+        class="sheet-input"
+        value="{{confirmInput}}"
+        placeholder="{{nickname ? '输入当前昵称' : '输入「注销」'}}"
+        placeholder-class="sheet-input-ph"
+        maxlength="40"
+        bindinput="onConfirmInput"
+        disabled="{{submitting}}"
+      />
+      <view class="sheet-error" wx:if="{{confirmError}}">{{confirmError}}</view>
+      <view class="sheet-actions">
+        <view class="sheet-btn sheet-btn-cancel {{submitting ? 'sheet-btn-disabled' : ''}}" bindtap="closeDeactivate">取消</view>
+        <view
+          class="sheet-btn sheet-btn-danger {{confirmOk && !submitting ? '' : 'sheet-btn-disabled'}}"
+          bindtap="submitDeactivate"
+        >{{submitting ? '注销中…' : '确认注销'}}</view>
+      </view>
+    </view>
+  </view>
+</view>
