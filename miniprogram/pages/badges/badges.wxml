@@ -1,5 +1,13 @@
 <!-- 我的徽章：全部徽章（计划类 + 运动数据类 + 分运动类型） -->
 <view class="page">
+  <!-- 游客态（2026-11-17）：徽章数据需要登录；未登录不报错，给一块登录引导 -->
+  <view class="guest-card" wx:if="{{notLoggedIn}}">
+    <image class="guest-icon" src="/assets/icons/lucide-medal.png" mode="aspectFit" />
+    <view class="guest-title">登录后查看我的徽章</view>
+    <view class="guest-sub">运动记录与徽章成就需要登录才能保存和展示</view>
+    <view class="guest-btn" hover-class="guest-btn-hover" hover-stay-time="80" bindtap="goLogin">微信一键登录</view>
+  </view>
+
   <!-- 顶部总览：已获得 / 全部 -->
   <view class="card hero-card" wx:if="{{data}}">
     <view class="hero-row">
@@ -44,8 +52,8 @@
     />
   </view>
 
-  <view class="empty" wx:if="{{loading}}">加载中…</view>
-  <view class="empty" wx:elif="{{failed}}">加载失败，下拉刷新重试</view>
+  <view class="empty" wx:if="{{loading && !notLoggedIn}}">加载中…</view>
+  <view class="empty" wx:elif="{{failed && !notLoggedIn}}">加载失败，下拉刷新重试</view>
 
   <!-- 徽章详情半屏 -->
   <view class="trophy-sheet-mask" wx:if="{{trophyDetail}}" bindtap="closeTrophyDetail">
@@ -69,11 +77,16 @@
       </view>
       <text class="trophy-sheet-label">{{trophyDetail.label}}</text>
       <text class="trophy-sheet-state {{trophyDetail.unlocked ? '' : 'trophy-sheet-state-off'}}">{{trophyDetail.unlocked ? '已解锁' : '未解锁'}}</text>
-      <!-- 获得信息（2026-11-17）：年月 · 第 N 位获得 · 共 N 人；文案由后端拼好，两页共用不漂移 -->
-      <!-- 获得信息：已解锁=年月·第N位·共N人；未解锁=全站已有N人获得（文案由后端拼） -->
-      <view class="trophy-sheet-earned" wx:if="{{trophyDetail.earnedText}}">{{trophyDetail.earnedText}}</view>
-      <!-- 拿不到获得信息时才退回描述（如全站确实还没人获得） -->
-      <text class="trophy-sheet-desc" wx:else>{{trophyDetail.desc}}</text>
+      <!-- 获得信息（2026-11-17，文案全部由后端 earnedText/rankText/totalText 拼好，两页共用）：
+           已解锁 → 「2026年9月 · 第 2 位获得此徽章的迹路者」+「6 位迹路者获得」；
+           未解锁 → 只有「7 位迹路者获得」（让用户知道这枚章有多稀有）。-->
+      <view class="trophy-sheet-earned" wx:if="{{trophyDetail.earnedText || trophyDetail.rankText || trophyDetail.totalText}}">
+        <text class="earned-line" wx:if="{{trophyDetail.earnedText || trophyDetail.rankText}}">{{trophyDetail.earnedText}}<text class="earned-sep" wx:if="{{trophyDetail.earnedText && trophyDetail.rankText}}"> · </text>{{trophyDetail.rankText}}</text>
+        <text class="earned-line" wx:if="{{trophyDetail.totalText}}">{{trophyDetail.totalText}}</text>
+      </view>
+      <!-- 三段都为空（全站还没人获得）才退回描述。用显式条件而不是 wx:else：
+           wx:else 必须紧跟 wx:if，中间夹注释在部分基础库上会失效 -->
+      <text class="trophy-sheet-desc" wx:if="{{!trophyDetail.earnedText && !trophyDetail.rankText && !trophyDetail.totalText}}">{{trophyDetail.desc}}</text>
       <view class="trophy-sheet-progress" wx:for="{{trophyDetail.detailLines}}" wx:key="*this">{{item}}</view>
     </view>
   </view>

@@ -76,6 +76,8 @@ Page({
     y: 0,
     m: 0,
     monthText: '',
+    /** 游客态：/plan/* 需要登录；未登录不报错，展示登录引导（2026-11-17） */
+    notLoggedIn: false,
     weekHead: ['一', '二', '三', '四', '五', '六', '日'],
     /** 画布上的日期格：{ date, day, out, today, pct:[a,b,c], done, hasData } */
     cells: [],
@@ -102,6 +104,13 @@ Page({
   },
 
   onShow() {
+    const app = getApp();
+    const logged = !!(app && app.globalData && app.globalData.loggedIn) || !!(app && app.hasSession && app.hasSession());
+    // 游客态：登录后回到本页要拉一次数据（否则停在登录引导上）
+    if (this.data.notLoggedIn) {
+      if (logged) this.load();
+      return;
+    }
     // 从半屏/其他页回来：历史进度可能变化，静默重拉并重绘
     if (this._loaded) this.load();
   },
@@ -130,6 +139,21 @@ Page({
     const { y, m } = this.data;
     const month = `${y}-${String(m).padStart(2, '0')}`;
     this.setData({ loading: true, failed: false });
+    // 游客态：/plan/* 全部需要登录；不请求、不报错，展示登录引导
+    // （与首页/我的页一致：已注册用户先静默恢复会话，真游客直接给引导）
+    const app = getApp();
+    if (app.hasSession() && !app.globalData.loggedIn) {
+      try {
+        await app.login();
+      } catch (e) {
+        console.warn('静默登录失败', e);
+      }
+    }
+    if (!app.hasSession() || !app.globalData.loggedIn) {
+      this.setData({ loading: false, notLoggedIn: true, failed: false, current: null, summary: null, hasPlan: false });
+      return;
+    }
+    this.setData({ notLoggedIn: false });
     try {
       // 并行拉当前周期进度（概况卡用），失败不影响月历
       const [res, cur, sum] = await Promise.all([
@@ -224,6 +248,8 @@ Page({
       detailText: t.detailText || '',
       detailLines: t.detailLines || [],
       earnedText: t.earnedText || '',
+      rankText: t.rankText || '',
+      totalText: t.totalText || '',
       activityLabel: t.activityLabel || '',
       activityIconId: t.activityIconId || '',
       // 前端派生：形状 → 样式类、白色类型图标、是否三环分支
@@ -496,5 +522,51 @@ Page({
 
   onRetry() {
     this.load();
+  },
+
+  /** 游客态点击「去登录」 */
+  goLogin() {
+    getApp()
+      .login()
+      .then(() => this.load())
+      .catch((e) => wx.showToast({ title: (e && e.message) || '登录失败，请重试', icon: 'none' }));
+  },
+
+  /* ── 分享（2026-11-17）──────────────────────────────
+     计划页是「养成」类页面，分享文案突出连续与达成率最有说服力；
+     没有计划时退化为通用文案，不至于分享一张空页。
+     不传 imageUrl：微信自动截取当前页（月历三环本身就是好封面）。 */
+
+  /**
+   * 分享文案（2026-11-17）：
+   *   只用正向指标——连续达成天数、计划类徽章进度。
+   *   **达成率一律不展示**（0% 像失败总结，高百分比又像炫耀，都不是好标题）。
+   *   什么指标都没有时退化为通用文案，不硬凑数字。
+   */
+  _shareTitle() {
+    const sx = this.data.summary;
+    if (!sx || !this.data.hasPlan) return '小迹一下 · 运动计划';
+    const cards = sx.cards || [];
+    const streak = Number((cards.find((c) => c.key === 'streak') || {}).num) || 0;
+    const parts = [];
+    if (streak > 0) parts.push(`已连续 ${streak} 天达成`);
+    if (sx.planEarned > 0) parts.push(`已点亮 ${sx.planEarned} 座计划徽章`);
+    if (!parts.length) return '小迹一下 · 运动计划';
+    return `我的运动计划 · ${parts.join(' · ')}`;
+  },
+
+  onShareAppMessage() {
+    return {
+      title: this._shareTitle(),
+      path: '/pages/plan-history/plan-history',
+    };
+  },
+
+  /** 分享到朋友圈（单页模式） */
+  onShareTimeline() {
+    return {
+      title: this._shareTitle(),
+      query: '',
+    };
   },
 });

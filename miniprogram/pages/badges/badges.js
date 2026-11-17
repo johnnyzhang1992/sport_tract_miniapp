@@ -25,6 +25,8 @@ Page({
   data: {
     loading: true,
     failed: false,
+    /** 游客态：不请求接口，展示登录引导（与首页/我的页同一套取舍） */
+    notLoggedIn: false,
     filters: FILTERS,
     activeFilter: 'all',
     /** 服务端：{ total, earned, categories, groups, trophies }（activityTypes 只在统计页用，本页不展示） */
@@ -43,13 +45,49 @@ Page({
     this.fetch().finally(() => wx.stopPullDownRefresh());
   },
 
+  /** 从其它页面回来（如去「我的」页登录后）：登录态变了就重新拉 */
+  onShow() {
+    const app = getApp();
+    const logged = !!(app.globalData.loggedIn || app.hasSession());
+    if (logged && this.data.notLoggedIn) this.fetch();
+  },
+
+  /** 游客态点击「去登录」：直接拉起登录，成功后原地刷新 */
+  goLogin() {
+    const app = getApp();
+    app
+      .login()
+      .then(() => this.fetch())
+      .catch((e) => wx.showToast({ title: (e && e.message) || '登录失败，请重试', icon: 'none' }));
+  },
+
   async fetch() {
     this.setData({ loading: true, failed: false });
+    // 游客态：/plan/badges 需要登录（401），不请求、不报错，直接展示登录引导。
+    // 已注册用户（本地有 token）先静默恢复会话，与首页/我的页一致。
+    const app = getApp();
+    if (app.hasSession() && !app.globalData.loggedIn) {
+      try {
+        await app.login();
+      } catch (e) {
+        console.warn('静默登录失败', e);
+      }
+    }
+    if (!app.hasSession() || !app.globalData.loggedIn) {
+      this.setData({ loading: false, notLoggedIn: true, data: null });
+      return;
+    }
+    this.setData({ notLoggedIn: false });
     try {
       const data = await api.get('/plan/badges');
       this.setData({ data, loading: false });
       this.applyFilter(this.data.activeFilter);
     } catch (e) {
+      // 401 = 会话失效/未登录：按游客态处理，不显示「加载失败」吓人
+      if (e && (e.statusCode === 401 || e.code === 401)) {
+        this.setData({ loading: false, notLoggedIn: true, data: null });
+        return;
+      }
       this.setData({ loading: false, failed: true });
     }
   },
@@ -99,4 +137,29 @@ Page({
 
   /** 半屏内容区拦截冒泡 */
   noop() {},
+
+  /* ── 分享（2026-11-17）──────────────────────────────
+     分享文案带上已获得数，让接收方一眼看出进度；朋友圈走单页模式（进入后仅展示内容）。
+     不传 imageUrl 时微信会自动截取当前页面，徽章墙本身就是最好的封面。 */
+
+  onShareAppMessage() {
+    const d = this.data.data || {};
+    const earned = d.earned || 0;
+    const total = d.total || 0;
+    return {
+      title: total > 0 ? `我的运动徽章 · 已点亮 ${earned}/${total} 座` : '我的运动徽章',
+      path: '/pages/badges/badges',
+    };
+  },
+
+  /** 分享到朋友圈（单页模式） */
+  onShareTimeline() {
+    const d = this.data.data || {};
+    const earned = d.earned || 0;
+    const total = d.total || 0;
+    return {
+      title: total > 0 ? `我的运动徽章 · 已点亮 ${earned}/${total} 座` : '我的运动徽章',
+      query: '',
+    };
+  },
 });

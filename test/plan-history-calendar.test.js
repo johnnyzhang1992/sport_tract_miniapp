@@ -5,7 +5,7 @@
  * - 点击格子跳单日详情；「更改计划」跳计划设置页。
  * 运行：node --test test/plan-history-calendar.test.js
  */
-const { test } = require('node:test');
+const { after, test } = require('node:test');
 const assert = require('node:assert/strict');
 
 let apiCalls = [];
@@ -29,8 +29,10 @@ global.wx = {
 };
 let pageDef = null;
 global.Page = (d) => { pageDef = d; };
-const appGlobalData = {};
-global.getApp = () => ({ hasSession: () => true, globalData: appGlobalData });
+// 默认视为已登录（游客态另有专门用例）；计划页 load() 会读 loggedIn
+const appGlobalData = { loggedIn: true };
+// 计划页 load() 先查会话（游客态展示登录引导），故桩要带 login 与 loggedIn
+global.getApp = () => ({ hasSession: () => true, globalData: appGlobalData, login: () => Promise.resolve() });
 
 require('../miniprogram/pages/plan-history/plan-history.js');
 const historyDef = pageDef;
@@ -400,3 +402,56 @@ test('PHC10 当期达成：当天首次进页弹一次；同周期再进不弹�
   assert.equal(modals.length, 2, '未达成不弹');
 });
 
+
+/* 分享（2026-11-17）：计划页要支持「发送给 / 分享到朋友圈」，
+   标题只用正向指标（连续达成 / 计划徽章进度），**不展示达成率**（0% 像失败总结）。 */
+test('PHC11 支持分享，且标题不含达成率', async () => {
+  assert.equal(typeof historyDef.onShareAppMessage, 'function', '缺 onShareAppMessage');
+  assert.equal(typeof historyDef.onShareTimeline, 'function', '缺 onShareTimeline');
+
+  const p = boot(historyDef);
+  // 造一个「达成率 0%、连续 0、无徽章」的最差情况
+  p.data.summary = { cards: [{ key: 'rate', num: '0%' }, { key: 'streak', num: '0' }], planEarned: 0 };
+  p.data.hasPlan = true;
+  const r = historyDef.onShareAppMessage.call(p);
+  assert.ok(!r.title.includes('达成率'), `标题不该出现达成率：${r.title}`);
+  assert.ok(!r.title.includes('0%'), `标题不该出现 0%：${r.title}`);
+  assert.equal(r.path, '/pages/plan-history/plan-history');
+});
+
+test('PHC12 有连续达成时标题体现连续天数；达成率再高也不出现', () => {
+  const p = boot(historyDef);
+  p.data.summary = { cards: [{ key: 'rate', num: '80%' }, { key: 'streak', num: '12' }], planEarned: 3 };
+  p.data.hasPlan = true;
+  const r = historyDef.onShareTimeline.call(p);
+  assert.ok(r.title.includes('已连续 12 天达成'), `应体现连续天数：${r.title}`);
+  assert.ok(r.title.includes('已点亮 3 座计划徽章'), `应体现徽章进度：${r.title}`);
+  assert.ok(!r.title.includes('达成率'), `达成率一律不展示：${r.title}`);
+});
+
+test('PHC13 无计划时分享标题退化为通用文案，不炸', () => {
+  const p = boot(historyDef);
+  p.data.summary = null;
+  p.data.hasPlan = false;
+  assert.equal(historyDef.onShareAppMessage.call(p).title, '小迹一下 · 运动计划');
+  assert.equal(historyDef.onShareTimeline.call(p).title, '小迹一下 · 运动计划');
+});
+
+/* 游客态（2026-11-17）：/plan/* 需要登录，未登录不能显示「加载失败」 */
+test('PHC14 游客访问：不请求接口、不显示加载失败，展示登录引导', async () => {
+  const p = boot(historyDef);
+  let called = 0;
+  const origGet = fakeApi.get;
+  const origLogin = appGlobalData.loggedIn;
+  appGlobalData.loggedIn = false;
+  fakeApi.get = () => { called += 1; return Promise.resolve({}); };
+  try {
+    await historyDef.load.call(p);
+    assert.equal(called, 0, '游客态不该请求 /plan/*');
+    assert.equal(p.data.notLoggedIn, true, '应标记游客态');
+    assert.equal(p.data.failed, false, '不该显示「加载失败」');
+  } finally {
+    fakeApi.get = origGet;
+    appGlobalData.loggedIn = origLogin;
+  }
+});

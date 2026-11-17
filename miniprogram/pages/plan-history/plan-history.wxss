@@ -185,13 +185,57 @@
   color: #86909c;
 }
 
+/* 游客态登录引导 */
+.guest-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 24rpx;
+  padding: 80rpx 40rpx;
+  background: #fff;
+  border-radius: 16rpx;
+}
+.guest-icon {
+  width: 96rpx;
+  height: 96rpx;
+  opacity: 0.5;
+}
+.guest-title {
+  margin-top: 24rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+.guest-sub {
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: #8a93a6;
+  text-align: center;
+  line-height: 1.5;
+}
+.guest-btn {
+  margin-top: 40rpx;
+  padding: 20rpx 64rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #fff;
+  background: #2b6cf6;
+  border-radius: 999rpx;
+}
+.guest-btn-hover {
+  opacity: 0.85;
+}
+
 .state {
   padding: 80rpx 0;
   text-align: center;
   font-size: 26rpx;
 }
 .retry {
-  display: inline-block;
+  display: block;
+  width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
   margin-top: 16rpx;
   padding: 10rpx 32rpx;
   border-radius: 999rpx;
@@ -460,28 +504,52 @@
   align-items: center;
 }
 .trophy-sheet-badge {
-  margin-bottom: 12rpx;
+  /* 间距全部由下一行（.trophy-sheet-label）的 margin-top 提供，这里不再叠加，
+     否则徽章→标题会是其它行间距的两倍 */
+  margin-bottom: 0;
+  /* 弹窗里的徽章放大 1.5 倍（2026-11-17 视觉焦点）：用 transform 而非改 width/height，
+     布局尺寸仍是 96rpx，缩放溢出的部分靠下方 margin-top 吸收，不会把其它行推开 */
+  transform: scale(1.5);
+  transform-origin: center center;
+  /* scale 以中心为原点，上下各溢出 1/4 自身高度：
+     普通徽章 96rpx → 24rpx；合上圆环的三环是 136rpx → 34rpx。
+     按最大者留白，保证两种形状都不压标题、不贴顶边。 */
+  padding-top: 34rpx;
+  padding-bottom: 34rpx;
 }
 .trophy-sheet-label {
-  margin-top: 12rpx;
+  margin-top: 12rpx; /* 与下方各行统一 */
   font-size: 32rpx;
   font-weight: 700;
   color: #1f2329;
 }
 .trophy-sheet-state {
-  margin-top: 4rpx;
+  margin-top: 12rpx; /* 与下方各行统一 */
   font-size: 24rpx;
   color: #15804f;
 }
 .trophy-sheet-state-off {
   color: #8a93a6;
 }
-/* 获得信息（「2026年11月 · 第 3 位获得 · 共 12 人」）：已解锁态下压一行灰字 */
+/* 获得信息（2026-11-17）：一整行展示，不拆行 */
 .trophy-sheet-earned {
-  margin-top: 10rpx;
+  margin-top: 12rpx; /* 与上下各行统一 */
   font-size: 24rpx;
   color: #8a93a6;
   font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+/* 两句各占一行：行间距与其它各行一致（12rpx），不靠 line-height 撑开 */
+.earned-line {
+  display: block;
+  line-height: 1.4;
+}
+.earned-line + .earned-line {
+  margin-top: 12rpx;
+}
+/* 年月与名次之间的间隔符 */
+.earned-sep {
+  color: #c8ced8;
 }
 .trophy-sheet-desc {
   margin-top: 12rpx;
@@ -491,7 +559,7 @@
   line-height: 1.5;
 }
 .trophy-sheet-progress {
-  margin-top: 16rpx;
+  margin-top: 12rpx; /* 与上方各行统一 */
   font-size: 26rpx;
   font-weight: 600;
   color: #2b6cf6;

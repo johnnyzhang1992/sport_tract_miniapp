@@ -161,11 +161,16 @@
       </view>
       <text class="trophy-sheet-label">{{trophyDetail.label}}</text>
       <text class="trophy-sheet-state {{trophyDetail.unlocked ? '' : 'trophy-sheet-state-off'}}">{{trophyDetail.unlocked ? '已解锁' : '未解锁'}}</text>
-      <!-- 获得信息（2026-11-17）：年月 · 第 N 位获得 · 共 N 人；文案由后端拼好，与「我的徽章」页一致 -->
-      <!-- 获得信息：已解锁=年月·第N位·共N人；未解锁=全站已有N人获得（文案由后端拼） -->
-      <view class="trophy-sheet-earned" wx:if="{{trophyDetail.earnedText}}">{{trophyDetail.earnedText}}</view>
-      <!-- 拿不到获得信息时才退回描述（如全站确实还没人获得） -->
-      <text class="trophy-sheet-desc" wx:else>{{trophyDetail.desc}}</text>
+      <!-- 获得信息（2026-11-17，文案全部由后端 earnedText/rankText/totalText 拼好，两页共用）：
+           已解锁 → 「2026年9月 · 第 2 位获得此徽章的迹路者」+「6 位迹路者获得」；
+           未解锁 → 只有「7 位迹路者获得」（让用户知道这枚章有多稀有）。-->
+      <view class="trophy-sheet-earned" wx:if="{{trophyDetail.earnedText || trophyDetail.rankText || trophyDetail.totalText}}">
+        <text class="earned-line" wx:if="{{trophyDetail.earnedText || trophyDetail.rankText}}">{{trophyDetail.earnedText}}<text class="earned-sep" wx:if="{{trophyDetail.earnedText && trophyDetail.rankText}}"> · </text>{{trophyDetail.rankText}}</text>
+        <text class="earned-line" wx:if="{{trophyDetail.totalText}}">{{trophyDetail.totalText}}</text>
+      </view>
+      <!-- 三段都为空（全站还没人获得）才退回描述。用显式条件而不是 wx:else：
+           wx:else 必须紧跟 wx:if，中间夹注释在部分基础库上会失效 -->
+      <text class="trophy-sheet-desc" wx:if="{{!trophyDetail.earnedText && !trophyDetail.rankText && !trophyDetail.totalText}}">{{trophyDetail.desc}}</text>
       <view class="trophy-sheet-progress" wx:for="{{trophyDetail.detailLines}}" wx:key="*this">{{item}}</view>
     </view>
   </view>
@@ -174,7 +179,15 @@
   <!-- 创建/更改计划半屏 -->
   <plan-edit-sheet visible="{{sheetVisible}}" plan="{{planForSheet}}" bind:close="closePlanSheet" bind:saved="onPlanSaved" />
 
-  <view wx:if="{{failed}}" class="state">
+  <!-- 游客态（2026-11-17）：计划数据需要登录 -->
+  <view wx:if="{{notLoggedIn}}" class="guest-card">
+    <image class="guest-icon" src="/assets/icons/lucide-calendar.png" mode="aspectFit" />
+    <view class="guest-title">登录后查看运动计划</view>
+    <view class="guest-sub">计划进度与徽章成就需要登录才能保存和展示</view>
+    <view class="guest-btn" hover-class="guest-btn-hover" hover-stay-time="80" bindtap="goLogin">微信一键登录</view>
+  </view>
+
+  <view wx:elif="{{failed}}" class="state">
     <text class="text-muted">加载失败</text>
     <view class="retry" bindtap="onRetry">重试</view>
   </view>

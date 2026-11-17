@@ -4,7 +4,7 @@
  * - 页面：分类切换、详情半屏文案来自服务端、空态/失败态、只展示徽章不展示类型统计
  * 运行：node --test test/badges-page.test.js
  */
-const { test } = require('node:test');
+const { test, after } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -170,6 +170,17 @@ global.wx = { stopPullDownRefresh() {}, navigateTo() {} };
 
 require('../miniprogram/pages/badges/badges.js');
 
+/** 默认登录态桩：页面 fetch 会先查会话；用例可按需覆盖 */
+const ORIG_GET_APP = global.getApp;
+global.getApp = () => ({
+  globalData: { loggedIn: true },
+  hasSession: () => true,
+  login: () => Promise.resolve(),
+});
+after(() => {
+  global.getApp = ORIG_GET_APP;
+});
+
 function bootPage() {
   const p = Object.assign({}, pageDef);
   p.data = JSON.parse(JSON.stringify(pageDef.data));
@@ -300,4 +311,76 @@ test('BP6 页面已注册到 app.json 且组件挂载正确', () => {
   assert.equal(pageJson.usingComponents['badge-wall'], '/components/badge-wall/badge-wall');
   const planJson = JSON.parse(fs.readFileSync(path.join(__dirname, '../miniprogram/pages/plan-history/plan-history.json'), 'utf8'));
   assert.equal(planJson.usingComponents['badge-wall'], '/components/badge-wall/badge-wall', '计划页也挂载同一组件');
+});
+/* 分享（2026-11-17）：微信侧「分享给朋友 / 分享到朋友圈」入口依赖这两个钩子存在，
+   少了任何一个，右上角菜单里的对应项就是灰的（实测踩过）。 */
+test('BP7 支持分享给朋友：标题带已获得进度', async () => {
+  nextResponse = () => Promise.resolve(OVERVIEW);
+  const p = bootPage();
+  await p.fetch();
+  assert.equal(typeof pageDef.onShareAppMessage, 'function', '缺 onShareAppMessage 会导致「发送给」不可用');
+  const r = pageDef.onShareAppMessage.call(p);
+  assert.match(r.title, /我的运动徽章 · 已点亮 3\/5 座/, `标题应带进度：${r.title}`);
+  assert.equal(r.path, '/pages/badges/badges');
+});
+
+test('BP8 支持分享到朋友圈：标题同样带进度', async () => {
+  assert.equal(typeof pageDef.onShareTimeline, 'function', '缺 onShareTimeline 会导致「分享到朋友圈」不可用');
+  nextResponse = () => Promise.resolve(OVERVIEW);
+  const p = bootPage();
+  await p.fetch();
+  const r = pageDef.onShareTimeline.call(p);
+  assert.match(r.title, /我的运动徽章 · 已点亮 3\/5 座/);
+  assert.equal(r.query, '', '单页模式不需要查询参数');
+});
+
+test('BP9 数据未加载时分享不炸（标题退化为无进度版本）', () => {
+  const p = bootPage();
+  // 未 fetch，data.data 为 null
+  const r1 = pageDef.onShareAppMessage.call(p);
+  assert.equal(r1.title, '我的运动徽章');
+  const r2 = pageDef.onShareTimeline.call(p);
+  assert.equal(r2.title, '我的运动徽章');
+});
+
+/* 游客态（2026-11-17）：/plan/badges 需要登录（401），未登录不能显示「加载失败」。
+   页面应先判断会话，直接展示登录引导，且不发起请求。 */
+
+test('BP10 游客访问：不请求接口、不显示加载失败，展示登录引导', async () => {
+  const p = bootPage();
+  let called = 0;
+  global.getApp = () => ({
+    globalData: { loggedIn: false },
+    hasSession: () => false,
+    login: () => Promise.resolve(),
+  });
+  const orig = nextResponse;
+  nextResponse = () => { called += 1; return Promise.resolve(OVERVIEW); };
+  try {
+    await p.fetch();
+    assert.equal(called, 0, '游客态不该发起 /plan/badges 请求');
+    assert.equal(p.data.notLoggedIn, true, '应标记游客态');
+    assert.equal(p.data.failed, false, '不该显示「加载失败」');
+    assert.equal(p.data.loading, false);
+  } finally {
+    nextResponse = orig;
+  }
+});
+
+test('BP11 接口返回 401（会话过期）也按游客态处理，不是加载失败', async () => {
+  const p = bootPage();
+  global.getApp = () => ({
+    globalData: { loggedIn: true },
+    hasSession: () => true,
+    login: () => Promise.resolve(),
+  });
+  const orig = nextResponse;
+  nextResponse = () => Promise.reject(Object.assign(new Error('未授权'), { statusCode: 401 }));
+  try {
+    await p.fetch();
+    assert.equal(p.data.notLoggedIn, true, '401 应识别为游客态');
+    assert.equal(p.data.failed, false, '不该显示「加载失败」');
+  } finally {
+    nextResponse = orig;
+  }
 });
