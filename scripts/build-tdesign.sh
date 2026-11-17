@@ -34,12 +34,18 @@ for d in $DEPS; do
   fi
 done
 
-# 裁剪运行时用不到的东西（2026-11-17）：
-#   1. .d.ts 类型声明 —— 小程序运行时不读，纯体积（约 52KB）
-#   2. common/shared 下 calendar/color-picker/qrcode —— 项目未使用这些组件（约 33KB）
-# 注意 badge/image/loading/overlay/sticky 虽然 UI 里没直接写，但被 avatar/cell/popup/tabs
-# **间接依赖**，不能删（删了组件编译报错）。
+# 裁剪运行时用不到的东西（2026-11-17，依据开发者工具「代码依赖分析」报告逐项核实）：
+#   1. .d.ts 类型声明 —— 小程序运行时不读（≈52KB）
+#   2. common/shared 下 calendar/color-picker/qrcode —— 项目未用这些组件（≈33KB）
+#   3. 各组件下的 index.js + type.js —— 命令式 API 入口（dialog.confirm() 这类），
+#      项目全用声明式 <t-dialog>/<t-popup>，组件自身 js/json 均不引用它们（≈104KB）
+#
+# ⚠️ 不要删 badge/image/loading/overlay/sticky：UI 里虽没直接写 t-badge 等，
+#    但被 avatar/cell/button/popup/tabs **间接依赖**，删了组件编译报错。
+# ⚠️ 也不要删 marked/dayjs/tinycolor2：它们是 tdesign 声明的依赖，删了可能影响
+#    未来重建（当前虽无引用，但体积由依赖完整性保证，避免升级组件库时踩坑）。
 find "$DST" -name "*.d.ts" -delete
+find "$DST/tdesign-miniprogram" -mindepth 2 -maxdepth 2 \( -name "index.js" -o -name "type.js" \) -delete
 rm -rf "$DST/tdesign-miniprogram/common/shared/calendar" \
        "$DST/tdesign-miniprogram/common/shared/color-picker" \
        "$DST/tdesign-miniprogram/common/shared/qrcode"
