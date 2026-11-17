@@ -2,6 +2,7 @@
   "navigationBarTitleText": "我的徽章",
   "enablePullDownRefresh": true,
   "usingComponents": {
-    "badge-wall": "/components/badge-wall/badge-wall"
+    "badge-wall": "/components/badge-wall/badge-wall",
+    "guest-hint": "/components/guest-hint/guest-hint"
   }
 }

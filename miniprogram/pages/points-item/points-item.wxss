@@ -11,6 +11,7 @@
   color: #8a93a6;
 }
 
+/* 可点击状态（加载失败重试用） */
 .state-tap {
   color: #2b6cf6;
 }

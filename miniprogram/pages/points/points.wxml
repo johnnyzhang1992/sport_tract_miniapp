@@ -104,7 +104,13 @@
       </view>
     </view>
   </block>
-  <view wx:else class="empty" bindtap="onLoginTap">登录后查看积分</view>
+  <!-- 兜底支（原为 wx:else）：未加载/未失败/未登录 才显示游客引导，失败态不能落到这里 -->
+  <guest-hint
+    wx:elif="{{!loggedIn}}"
+    feature="积分"
+    icon="/assets/icons/lucide-coins.png"
+    bind:login="onLoginTap"
+  />
 
   <!-- 签到月历半屏：数据与请求都在本页，组件只渲染与发事件。
        streak 首帧是 undefined（signin 初始为空对象），喂给 Number 属性会触发类型告警，绑定处兜底成 0 -->

@@ -4,6 +4,7 @@
   "backgroundTextStyle": "dark",
   "usingComponents": {
     "signin-calendar": "/components/signin-calendar/signin-calendar",
-    "ad-template": "/components/ad-template/ad-template"
+    "ad-template": "/components/ad-template/ad-template",
+    "guest-hint": "/components/guest-hint/guest-hint"
   }
 }

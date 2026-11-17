@@ -1,10 +1,12 @@
 <view class="page">
-  <block wx:if="{{!loggedIn}}">
-    <view class="state-block" bindtap="onTapGate">
-      <view class="state-text">登录后查看会员</view>
-      <view class="state-link">点这里登录</view>
-    </view>
-  </block>
+  <!-- 游客态：统一走 components/guest-hint（2026-11-17） -->
+  <guest-hint
+    wx:if="{{!loggedIn}}"
+    feature="会员权益"
+    icon="/assets/icons/member-badge.png"
+    tip="会员权益与订阅状态需要登录才能查看"
+    bind:login="onTapGate"
+  />
 
   <block wx:elif="{{loading}}">
     <view class="state-block">加载中…</view>

@@ -7,7 +7,6 @@
   font-display: swap;
 }
 
-
 .badge-wall {
   /* 组件根：外壳（卡片背景/内边距）由使用方的页面容器提供 */
   display: block;
@@ -333,7 +332,6 @@
 
 /* 锁定的合上圆环不用滤镜降饱和（红会糊成棕、绿会糊成灰绿）——直接给干净的灰阶同心环 */
 
-
 /* 合上圆环徽章：物理嵌套三环（box-shadow / radial-gradient 在该环境 WXSS 里不渲染，
    嵌套 view 是保真方案）；青外 → 绿中 → 红内，深色间隔，中心深底白字档位数 */
 .ringbadge-o {
@@ -412,7 +410,6 @@
   background: #2b6cf6;
   border-radius: 5rpx;
 }
-
 
 /* ── 页面专属样式（我的徽章） ────────────────────────── */
 .page {
@@ -533,46 +530,6 @@
 /* 徽章卡片外壳 */
 .badge-card {
   padding: 18rpx 24rpx 20rpx;
-}
-
-/* 游客态登录引导（2026-11-17）：徽章数据需要登录，未登录不报错 */
-.guest-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 80rpx 40rpx;
-  background: #fff;
-  border-radius: 16rpx;
-}
-.guest-icon {
-  width: 96rpx;
-  height: 96rpx;
-  opacity: 0.5;
-}
-.guest-title {
-  margin-top: 24rpx;
-  font-size: 30rpx;
-  font-weight: 600;
-  color: #1f2329;
-}
-.guest-sub {
-  margin-top: 12rpx;
-  font-size: 24rpx;
-  color: #8a93a6;
-  text-align: center;
-  line-height: 1.5;
-}
-.guest-btn {
-  margin-top: 40rpx;
-  padding: 20rpx 64rpx;
-  font-size: 28rpx;
-  font-weight: 600;
-  color: #fff;
-  background: #2b6cf6;
-  border-radius: 999rpx;
-}
-.guest-btn-hover {
-  opacity: 0.85;
 }
 
 .empty {

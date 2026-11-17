@@ -1,7 +1,12 @@
 <view class="page">
   <view wx:if="{{loading}}" class="state">加载中…</view>
   <view wx:elif="{{failed}}" class="state state-tap" bindtap="onRetry">加载失败，点击重试</view>
-  <view wx:elif="{{!loggedIn}}" class="state state-tap" bindtap="onLoginTap">登录后查看积分明细</view>
+  <guest-hint
+    wx:if="{{!loggedIn}}"
+    feature="积分明细"
+    icon="/assets/icons/lucide-coins.png"
+    bind:login="onLoginTap"
+  />
   <block wx:else>
     <view class="card">
       <!-- 卡头（2026-10-26 去色块）：余额并入首卡，与积分主页同款手法 -->

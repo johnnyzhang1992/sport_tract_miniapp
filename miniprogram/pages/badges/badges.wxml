@@ -1,12 +1,13 @@
 <!-- 我的徽章：全部徽章（计划类 + 运动数据类 + 分运动类型） -->
 <view class="page">
-  <!-- 游客态（2026-11-17）：徽章数据需要登录；未登录不报错，给一块登录引导 -->
-  <view class="guest-card" wx:if="{{notLoggedIn}}">
-    <image class="guest-icon" src="/assets/icons/lucide-medal.png" mode="aspectFit" />
-    <view class="guest-title">登录后查看我的徽章</view>
-    <view class="guest-sub">运动记录与徽章成就需要登录才能保存和展示</view>
-    <view class="guest-btn" hover-class="guest-btn-hover" hover-stay-time="80" bindtap="goLogin">微信一键登录</view>
-  </view>
+  <!-- 游客态：统一走 components/guest-hint（2026-11-17） -->
+  <guest-hint
+    wx:if="{{notLoggedIn}}"
+    feature="徽章成就"
+    icon="/assets/icons/lucide-medal.png"
+    tip="运动记录与徽章成就需要登录才能保存和展示"
+    bind:login="goLogin"
+  />
 
   <!-- 顶部总览：已获得 / 全部 -->
   <view class="card hero-card" wx:if="{{data}}">

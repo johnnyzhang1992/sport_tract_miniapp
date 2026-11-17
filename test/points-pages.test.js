@@ -227,7 +227,9 @@ test('PP3 游客进页：不弹登录、不发请求，展示登录引导', asyn
   assert.deepEqual(calls(), []);
   assert.equal(p.data.loggedIn, false);
   assert.equal(p.data.loading, false);
-  assert.ok(read('miniprogram/pages/points/points.wxml').includes('登录后查看积分'));
+  // 2026-11-17 统一：游客引导改为 guest-hint 组件（文案由 feature 拼出「登录后查看你的积分」）
+  assert.ok(read('miniprogram/pages/points/points.wxml').includes('<guest-hint'));
+  assert.ok(read('miniprogram/pages/points/points.wxml').includes('feature="积分"'));
 });
 
 test('PP4 登录用户进页：只读一次汇总并映射余额/cells 七格/任务/道具卡', async () => {
@@ -558,11 +560,18 @@ test('PP33 登录用户汇总失败：显示重试块（不是游客引导），
     '失败分支必须排在已登录内容之前',
   );
 
-  // 游客引导必须挂在 wx:else（即 未加载/未失败/未登录 之后的兜底支）
-  const guestIdx = wxml.indexOf('登录后查看积分');
-  const guestTag = wxml.slice(wxml.lastIndexOf('<view', guestIdx), guestIdx);
-  assert.ok(guestTag.includes('wx:else'), '游客引导只能是兜底支，失败态不能落到这里');
-  assert.ok(!guestTag.includes('failed'), '失败态不能与游客引导同支');
+  // 游客引导只能是最后兜底支（wx:elif="{{!loggedIn}}"）：失败态不能同时落进来
+  const guestIdx = wxml.indexOf('<guest-hint');
+  assert.ok(guestIdx > 0, '缺少 guest-hint 游客引导');
+  const guestTag = wxml.slice(guestIdx, wxml.indexOf('/>', guestIdx));
+  assert.ok(
+    guestTag.includes('wx:elif="{{!loggedIn}}"'),
+    '游客引导必须排在 failed/loggedIn 之后做兜底（用 wx:elif，不能用 wx:if）',
+  );
+  assert.ok(
+    wxml.indexOf('wx:elif="{{failed}}"') < guestIdx,
+    '失败分支必须排在游客引导之前',
+  );
 
   // 点重试重新拉汇总并恢复
   summaryRespond = () => Promise.resolve(summaryFixture());
@@ -741,7 +750,8 @@ test('PP14 明细页游客：不弹登录不发请求；点引导登录成功后
   assert.deepEqual(calls(), []);
   assert.equal(p.data.loggedIn, false);
   assert.equal(p.data.loading, false);
-  assert.ok(read('miniprogram/pages/points-records/points-records.wxml').includes('登录后查看积分明细'));
+  assert.ok(read('miniprogram/pages/points-records/points-records.wxml').includes('<guest-hint'));
+  assert.ok(read('miniprogram/pages/points-records/points-records.wxml').includes('feature="积分明细"'));
 
   loginAnswer = true;
   appLoggedIn = true;
@@ -1207,9 +1217,11 @@ test('PP39 商品详情页按 ?key= 取商品：免广告卡走自己的兑换�
   // wxml：兑换说明是 notes 循环，补签文案按 isMakeup 二选一
   const wxml = read(ITEM_WXML);
   assert.ok(wxml.includes('wx:for="{{item.notes}}"'), '兑换说明按服务端 notes 循环');
+  // 2026-11-17 统一为 guest-hint 组件后，分流仍在（通过 feature 体现）：
+  // 补签卡 →「登录后查看你的补签卡」，普通商品 →「登录后查看你的积分兑换」
   assert.ok(
-    wxml.includes("{{isMakeup ? '登录后兑换补签卡' : '登录后兑换'}}"),
-    '游客态文案按 isMakeup 分流：非补签商品读「登录后兑换」',
+    wxml.includes("feature=\"{{isMakeup ? '补签卡' : '积分兑换'}}\""),
+    '游客态文案按 isMakeup 分流：非补签商品与补签卡要能区分',
   );
 });
 
@@ -1289,7 +1301,9 @@ test('PP28 兑换记录页：游客不请求、空态文案、失败可重试', 
   assert.deepEqual(calls(), []);
   assert.equal(p.data.loggedIn, false);
   assert.equal(p.data.loading, false);
-  assert.ok(read(EX_WXML).includes('登录后查看兑换记录'));
+  // 统一为 guest-hint 组件（2026-11-17）
+  assert.ok(read(EX_WXML).includes('<guest-hint'));
+  assert.ok(read(EX_WXML).includes('feature="积分兑换记录"'));
 
   loginAnswer = true;
   appLoggedIn = true;

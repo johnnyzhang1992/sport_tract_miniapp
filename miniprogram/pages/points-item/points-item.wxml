@@ -2,7 +2,13 @@
   <view wx:if="{{loading}}" class="state">加载中…</view>
   <view wx:elif="{{failed}}" class="state state-tap" bindtap="onRetry">加载失败，点击重试</view>
   <!-- 商品由 ?key= 决定，游客态拿不到商品时按老口径（补签卡）出文案 -->
-  <view wx:elif="{{!loggedIn}}" class="state state-tap" bindtap="onLoginTap">{{isMakeup ? '登录后兑换补签卡' : '登录后兑换'}}</view>
+  <!-- 游客态文案按 isMakeup 分流：补签卡说「登录后兑换补签卡」，普通商品说「登录后兑换」 -->
+<guest-hint
+  wx:if="{{!loggedIn}}"
+  feature="{{isMakeup ? '补签卡' : '积分兑换'}}"
+  icon="/assets/icons/lucide-coins.png"
+  bind:login="onLoginTap"
+/>
   <block wx:elif="{{item}}">
     <!-- 商品头（2026-10-28）：白底 hero 带，名称/副题在左、道具图放大在右；缺图回落首字方块 -->
     <view class="hero">

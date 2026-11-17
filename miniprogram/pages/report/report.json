@@ -1,6 +1,7 @@
 {
   "navigationBarTitleText": "运动报告",
   "usingComponents": {
-    "stat-chart": "/components/stat-chart/stat-chart"
+    "stat-chart": "/components/stat-chart/stat-chart",
+    "guest-hint": "/components/guest-hint/guest-hint"
   }
 }
