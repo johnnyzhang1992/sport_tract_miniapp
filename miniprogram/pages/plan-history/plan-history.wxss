@@ -185,47 +185,6 @@
   color: #86909c;
 }
 
-/* 游客态登录引导 */
-.guest-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin: 24rpx;
-  padding: 80rpx 40rpx;
-  background: #fff;
-  border-radius: 16rpx;
-}
-.guest-icon {
-  width: 96rpx;
-  height: 96rpx;
-  opacity: 0.5;
-}
-.guest-title {
-  margin-top: 24rpx;
-  font-size: 30rpx;
-  font-weight: 600;
-  color: #1f2329;
-}
-.guest-sub {
-  margin-top: 12rpx;
-  font-size: 24rpx;
-  color: #8a93a6;
-  text-align: center;
-  line-height: 1.5;
-}
-.guest-btn {
-  margin-top: 40rpx;
-  padding: 20rpx 64rpx;
-  font-size: 28rpx;
-  font-weight: 600;
-  color: #fff;
-  background: #2b6cf6;
-  border-radius: 999rpx;
-}
-.guest-btn-hover {
-  opacity: 0.85;
-}
-
 .state {
   padding: 80rpx 0;
   text-align: center;
@@ -691,7 +650,6 @@
 }
 
 /* 锁定的合上圆环不用滤镜降饱和（红会糊成棕、绿会糊成灰绿）——直接给干净的灰阶同心环 */
-
 
 /* 合上圆环徽章：物理嵌套三环（box-shadow / radial-gradient 在该环境 WXSS 里不渲染，
    嵌套 view 是保真方案）；青外 → 绿中 → 红内，深色间隔，中心深底白字档位数 */

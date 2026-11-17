@@ -404,8 +404,16 @@ Page({
     this.setData({ selectedDate: '', selected: null });
   },
 
-  /** 右上角：打开「创建/更改计划」半屏（不再跳页面） */
+  /**
+   * 右上角：打开「创建/更改计划」半屏（不再跳页面）。
+   * 游客态直接拉起登录：否则会弹出可编辑面板、点「保存计划」才失败，体验割裂（2026-11-17）。
+   * （入口本身在 WXML 里对游客隐藏，这里是兜底，防止其它路径进来。）
+   */
   openPlanSheet() {
+    if (this.data.notLoggedIn) {
+      this.goLogin();
+      return;
+    }
     this.setData({ sheetVisible: true });
   },
 

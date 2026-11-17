@@ -455,3 +455,44 @@ test('PHC14 游客访问：不请求接口、不显示加载失败，展示登�
     appGlobalData.loggedIn = origLogin;
   }
 });
+
+/* 游客态不能打开计划编辑面板（2026-11-17）：
+   WXML 里入口已隐藏，这里守 JS 兜底——即使从别的路径调用也不能弹出「保存必失败」的面板。 */
+test('PHC15 游客调用 openPlanSheet：转为拉登录，不打开半屏', () => {
+  const p = boot(historyDef);
+  p.data.notLoggedIn = true;
+  let loginCalled = 0;
+  p.goLogin = () => { loginCalled += 1; };
+  historyDef.openPlanSheet.call(p);
+  assert.equal(p.data.sheetVisible, false, '游客态不该打开计划半屏');
+  assert.equal(loginCalled, 1, '应转为拉登录');
+});
+
+test('PHC16 已登录调用 openPlanSheet：正常打开半屏', () => {
+  const p = boot(historyDef);
+  p.data.notLoggedIn = false;
+  historyDef.openPlanSheet.call(p);
+  assert.equal(p.data.sheetVisible, true);
+});
+
+/* 模板广告（2026-11-17）：计划页在「记录数据概况」上方挂一个广告位。
+   unit-id 由后台 adSlots 下发，端上只写 key；展示与否由 ad-template 组件判定
+   （未免广告期 / 后台在架 / 有库存），页面不自己判断。 */
+test('PHC17 计划页挂了 ad-template，位置在「记录数据概况」卡片之前', () => {
+  const fsx = require('node:fs');
+  const pathx = require('node:path');
+  const rd = (p) => fsx.readFileSync(pathx.join(__dirname, '..', p), 'utf8');
+  const wxml = rd('miniprogram/pages/plan-history/plan-history.wxml');
+  assert.ok(wxml.includes('<ad-template'), '应有 ad-template');
+  assert.ok(wxml.includes('adslot="plan_history"'), '广告位 key 应为 plan_history');
+  const adIdx = wxml.indexOf('<ad-template');
+  // 按卡片 class 定位（不能搜「记录数据概况」字样——广告上方的注释里也写了这个词）
+  const sumIdx = wxml.indexOf('class="card sum-card"');
+  assert.ok(adIdx > 0 && sumIdx > adIdx, '广告应在「记录数据概况」卡片上方');
+
+  const json = JSON.parse(rd('miniprogram/pages/plan-history/plan-history.json'));
+  assert.ok(
+    (json.usingComponents || {})['ad-template'],
+    '页面 json 必须注册 ad-template（否则不渲染）',
+  );
+});

@@ -5,7 +5,8 @@
     <view class="month-nav" bindtap="prevMonth">‹</view>
     <view class="month-title">{{monthText}}</view>
     <view class="month-nav" bindtap="nextMonth">›</view>
-    <view class="month-right" bindtap="openPlanSheet">{{hasPlan ? '更改计划' : '创建计划'}}</view>
+    <!-- 游客态不显示「创建/更改计划」：未登录保存必失败，入口本身就是个陷阱 -->
+    <view class="month-right" wx:if="{{!notLoggedIn}}" bindtap="openPlanSheet">{{hasPlan ? '更改计划' : '创建计划'}}</view>
   </view>
 
   <!-- 月历：日期数字 + 三个 CSS 环（conic-gradient + mask），点某格看当日详情 -->
@@ -102,6 +103,10 @@
     <view class="cur-remain">{{current.remainText}}</view>
   </view>
 
+  <!-- 模板广告（2026-11-17）：放在「记录数据概况」上方；unit-id 由后台 adSlots 下发，
+       未免广告期 / 后台下架 / 无库存时整块不渲染（不留空白） -->
+  <ad-template adslot="plan_history" />
+
   <!-- 记录数据概况：已完成周期 / 达成次数 / 达成率 / 连续达成 + 累计 -->
   <view class="card sum-card" wx:if="{{summary}}">
     <view class="sum-title-row">
@@ -179,13 +184,14 @@
   <!-- 创建/更改计划半屏 -->
   <plan-edit-sheet visible="{{sheetVisible}}" plan="{{planForSheet}}" bind:close="closePlanSheet" bind:saved="onPlanSaved" />
 
-  <!-- 游客态（2026-11-17）：计划数据需要登录 -->
-  <view wx:if="{{notLoggedIn}}" class="guest-card">
-    <image class="guest-icon" src="/assets/icons/lucide-calendar.png" mode="aspectFit" />
-    <view class="guest-title">登录后查看运动计划</view>
-    <view class="guest-sub">计划进度与徽章成就需要登录才能保存和展示</view>
-    <view class="guest-btn" hover-class="guest-btn-hover" hover-stay-time="80" bindtap="goLogin">微信一键登录</view>
-  </view>
+  <!-- 游客态：统一走 components/guest-hint（2026-11-17） -->
+  <guest-hint
+    wx:if="{{notLoggedIn}}"
+    feature="运动计划"
+    icon="/assets/icons/lucide-calendar.png"
+    tip="计划进度与徽章成就需要登录才能保存和展示"
+    bind:login="goLogin"
+  />
 
   <view wx:elif="{{failed}}" class="state">
     <text class="text-muted">加载失败</text>

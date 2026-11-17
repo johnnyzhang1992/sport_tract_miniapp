@@ -3,6 +3,8 @@
   "enablePullDownRefresh": true,
   "usingComponents": {
     "badge-wall": "/components/badge-wall/badge-wall",
-    "plan-edit-sheet": "/components/plan-edit-sheet/plan-edit-sheet"
+    "plan-edit-sheet": "/components/plan-edit-sheet/plan-edit-sheet",
+    "guest-hint": "/components/guest-hint/guest-hint",
+    "ad-template": "/components/ad-template/ad-template"
   }
 }
