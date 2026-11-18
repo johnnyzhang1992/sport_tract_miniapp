@@ -258,7 +258,8 @@ Page({
         } catch (e) {
           console.error('登录失败', e);
           loading.hide();
-          wx.showToast({ title: '登录失败，请重试', icon: 'none' });
+          // 透传后端具体原因（微信侧错误如 code 过期/appid 配置错，用户与排查都看得见），与其余登录入口一致
+          wx.showToast({ title: (e && e.message) || '登录失败，请重试', icon: 'none' });
         } finally {
           loading.hide();
         }
