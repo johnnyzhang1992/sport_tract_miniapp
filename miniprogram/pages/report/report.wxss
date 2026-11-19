@@ -563,3 +563,24 @@
   line-height: 1;
 }
 
+
+/* 计划·徽章行：汇总卡底部轻量入口（与年度报告入口同风格） */
+.plan-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16rpx;
+  padding-top: 14rpx;
+  border-top: 1rpx solid #f0f0f0;
+}
+.plan-line-text {
+  font-size: 24rpx;
+  color: #666;
+}
+.plan-line-hover {
+  opacity: 0.7;
+}
+.plan-line-arrow {
+  font-size: 28rpx;
+  color: #bbb;
+}

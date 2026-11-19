@@ -30,8 +30,8 @@ const POSTER = {
   PREVIEW_MIN_VIEW_H: 240, // 小屏兜底：视口不低于此值
 };
 
-/** 年度报告海报：现有总评+月度图之后，再按「运动类型汇总 / 最佳记录 / 今年新解锁」三段自适应加高。
- *  三段都全量展示（有多少行画多少行），段标题、行高、段间距与 year-report.js 的绘制逐项对齐。 */
+/** 年度报告海报：现有总评+月度图之后，再按「运动类型汇总 / 最佳记录 / 运动计划 / 今年新解锁」各段自适应加高。
+ *  各段全量展示（有多少行画多少行），段标题、行高、段间距与 year-report.js 的绘制逐项对齐。 */
 const YEAR_POSTER = {
   BASE_H: 402, // 顶部品牌带+总距离+四格数据卡+月度柱状图（含月份标签）的固定高度
   SECTION_TITLE_H: 6,
@@ -42,8 +42,8 @@ const YEAR_POSTER = {
 
 const toCount = (v) => (Number.isFinite(v) && v > 0 ? Math.floor(v) : 0);
 
-function yearPosterHeight({ typeCount, bestCount, milestoneCount } = {}) {
-  const counts = [toCount(typeCount), toCount(bestCount), toCount(milestoneCount)];
+function yearPosterHeight({ typeCount, bestCount, milestoneCount, planCount } = {}) {
+  const counts = [toCount(typeCount), toCount(bestCount), toCount(milestoneCount), toCount(planCount)];
   let height = YEAR_POSTER.BASE_H;
   let drawn = 0;
   counts.forEach((n) => {

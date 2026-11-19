@@ -56,6 +56,42 @@
       </view>
     </view>
 
+    <!-- 运动计划：年度达成 + 徽章解锁 -->
+    <view class="card" wx:if="{{planReport}}">
+      <view class="section-title">运动计划</view>
+      <view class="plan-row">
+        <view class="plan-item">
+          <view class="plan-num">{{planReport.plan.snapshotDays}}</view>
+          <view class="plan-label">计划天数</view>
+        </view>
+        <view class="plan-item">
+          <view class="plan-num">{{planReport.plan.achievedDays}}</view>
+          <view class="plan-label">全达成天数</view>
+        </view>
+        <view class="plan-item">
+          <view class="plan-num">{{planReport.plan.achievedRate}}%</view>
+          <view class="plan-label">达成率</view>
+        </view>
+        <view class="plan-item">
+          <view class="plan-num">{{planReport.plan.bestStreak}}天</view>
+          <view class="plan-label">最长连续</view>
+        </view>
+      </view>
+      <view class="plan-badge-line">今年解锁徽章 {{planReport.badges.unlockedInRange}} 座 · 累计 {{planReport.badges.unlockedTotal}}/{{planReport.badges.total}} 座</view>
+
+      <!-- 今年解锁的徽章明细（2026-11-19）：只列清单，不做点击详情 —— 年报是回顾，不是管理页 -->
+      <view class="year-badges" wx:if="{{planReport.badges.unlockedList.length}}">
+        <view class="year-badge" wx:for="{{planReport.badges.unlockedList}}" wx:key="key">
+          <view class="yb-face {{item.cls}} {{item.typeIcon ? 'yb-has-icon' : ''}}">
+            <image wx:if="{{item.typeIcon}}" class="yb-icon" src="{{item.typeIcon}}" mode="aspectFit" />
+            <text class="yb-text">{{item.badgeText}}</text>
+          </view>
+          <text class="yb-label">{{item.shortLabel}}</text>
+          <text class="yb-date">{{item.dateText}}</text>
+        </view>
+      </view>
+    </view>
+
     <!-- 月度分解 -->
     <view class="card">
       <view class="section-title">月度运动距离（公里）</view>

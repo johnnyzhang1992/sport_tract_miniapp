@@ -5,6 +5,8 @@
  * 支持保存 canvas 海报到相册
  */
 const api = require('../../services/api');
+// 徽章形状 → 样式类 / 类型图标：与徽章墙共用一份（utils/badge-shape.js）
+const { shapeClassOf, typeIconOf } = require('../../utils/badge-shape.js');
 const config = require('../../config/index');
 const loading = require('../../utils/loading');
 const { formatDuration } = require('../../utils/format');
@@ -58,6 +60,7 @@ Page({
     summary: null, // { count, distanceKm, durationText, activeDays, elevationGain, calories }
     chartData: [], // 月度距离 [{label:'1月', value:km}]
     step: null, // 微信步数概况（全年总/日均/记录天数）
+    planReport: null, // 运动计划年度达成 + 徽章解锁（/plan/report）
     stepChartData: [], // 月度步数 [{label:'1月', value:step}]
     typeSummary: [], // 分类型汇总（各类型总距离/总时长/次数）
     highlights: [], // 最佳记录 [{ key, label, value, sub, id }]
@@ -109,16 +112,32 @@ Page({
     this.setData({ loading: true });
     try {
       const r = this.yearRange(this.data.year);
-      const [o, milestones, stepReport] = await Promise.all([
+      const [o, milestones, stepReport, planReport] = await Promise.all([
         api.get(`/overview?from=${r.from}&to=${r.to}&lean=1`), // 年度报告只用元数据，走精简模式
         api.get(`/stats/year-milestones?year=${this.data.year}`).catch(() => null),
         api.get(`/werun/report?from=${r.from}&to=${r.to}`).catch(() => null), // 步数失败不影响年度报告
+        api.get(`/plan/report?from=${r.from}&to=${r.to}`).catch(() => null), // 计划/徽章失败不影响年度报告
       ]);
       const tracks = o.tracks || [];
       const patch = this.buildReport(tracks, o);
       const stepMonths = buildStepMonths(stepReport && stepReport.months, 'short');
       patch.step = buildStepSummary(stepReport && stepReport.overview);
       patch.stepChartData = stepMonths.data;
+      // 计划/徽章：区间内既无计划也无新解锁时不展示整卡
+      // 徽章明细补展示字段（2026-11-19）：形状类/类型图标/短日期，WXML 直接用。
+      // 服务端只给语义数据（shape/activityIconId），样式映射仍归前端（utils/badge-shape.js）。
+      if (planReport && planReport.badges && Array.isArray(planReport.badges.unlockedList)) {
+        planReport.badges.unlockedList = planReport.badges.unlockedList.map((b) => ({
+          ...b,
+          cls: shapeClassOf(b.shape),
+          typeIcon: typeIconOf(b),
+          dateText: (b.earnDateText || '').slice(5), // 'MM-DD'：年报里年份是上下文，不用重复
+        }));
+      }
+      patch.planReport =
+        planReport && (planReport.plan.snapshotDays > 0 || planReport.badges.unlockedInRange > 0)
+          ? planReport
+          : null;
       // 步数纪录并入「最佳记录」：无轨迹可跳，id 留空
       patch.highlights = (patch.highlights || []).concat(
         buildStepRecords(stepReport).map((rec) => ({ ...rec, id: '' })),
@@ -300,6 +319,7 @@ Page({
       typeCount: this.data.typeSummary.length,
       bestCount: this.data.highlights.length,
       milestoneCount: this.data.milestones.length,
+      planCount: this.data.planReport ? 2 : 0,
     });
     this.setData({
       posterVisible: true,
@@ -473,6 +493,23 @@ Page({
         ctx.fillText(`${h.value} · ${h.sub}`, W - 24, cy + 13);
       });
       y += this.data.highlights.length * YEAR_POSTER.ROW_H;
+    }
+
+    if (this.data.planReport) {
+      const pr = this.data.planReport;
+      startSection('运动计划');
+      const planRows = [
+        `计划 ${pr.plan.snapshotDays} 天 · 全达成 ${pr.plan.achievedDays} 天 · 达成率 ${pr.plan.achievedRate}% · 最长连续 ${pr.plan.bestStreak} 天`,
+        `解锁徽章 ${pr.badges.unlockedInRange} 座 · 累计 ${pr.badges.unlockedTotal}/${pr.badges.total} 座`,
+      ];
+      planRows.forEach((text, i) => {
+        const cy = y + i * YEAR_POSTER.ROW_H;
+        ctx.textAlign = 'left';
+        ctx.fillStyle = ink;
+        ctx.font = '9px sans-serif';
+        ctx.fillText(ellipsize(ctx, text, W - 24 * 2), 24, cy + 13);
+      });
+      y += planRows.length * YEAR_POSTER.ROW_H;
     }
 
     if (this.data.milestones.length) {

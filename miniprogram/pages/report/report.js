@@ -106,6 +106,7 @@ Page({
     dateView: 'table', // 日期汇总形态：table 表 / chart 柱状图
     dateChartData: [], // 日期汇总柱状图数据（距离 km）
     step: null, // 微信步数概况（总/日均/最多步数日/记录天数）
+    planReport: null, // 本期计划达成 + 徽章解锁（/plan/report；「全部」维度不取
     stepChartData: [], // 月度步数柱状图数据
     stepChartSlot: 28, // 月标签留位（跨年用完整 YYYY/MM）
     showStepChart: false, // 周/月周期只有 1 根柱，不画趋势
@@ -214,6 +215,11 @@ Page({
   /** 打开年度运动报告（全年回顾 + 海报） */
   goYearReport() {
     wx.navigateTo({ url: '/pages/year-report/year-report' });
+  },
+
+  /** 计划·徽章行 → 运动计划页（看月历/奖杯墙） */
+  goPlanPage() {
+    wx.navigateTo({ url: '/pages/plan-history/plan-history' });
   },
 
   /** 查询参数：全部用 range，其余用精确 epoch ms 区间（后端按自然周期查）；报告页只需元数据，走 lean 模式
@@ -483,10 +489,15 @@ Page({
       // 上一周期数据（"全部"无对比）；步数失败不影响运动报告
       const prevReq = prevQuery ? api.get(`/overview?${prevQuery}`).catch(() => null) : Promise.resolve(null);
       const stepReq = api.get(`/werun/report${this.buildStepQuery()}`).catch(() => null);
-      const [overview, prevOverview, stepReport] = await Promise.all([
+      // 计划/徽章行：与步数同一周期区间（「全部」维度不取）；失败不影响报告
+      const planReq = this._period
+        ? api.get(`/plan/report?from=${this._period.from}&to=${this._period.to}`).catch(() => null)
+        : Promise.resolve(null);
+      const [overview, prevOverview, stepReport, planReport] = await Promise.all([
         api.get(`/overview?${this.buildOverviewQuery()}`),
         prevReq,
         stepReq,
+        planReq,
       ]);
       if (seq !== this._fetchSeq) return;
       // 日期汇总改由后端按东八区分桶下发（避免前端日期运算出错）
@@ -515,6 +526,10 @@ Page({
         dateSummaryTitle: ds.title,
         dateBucketLabel: ds.label,
         step: buildStepSummary(stepReport && stepReport.overview),
+        planReport:
+          planReport && (planReport.plan.snapshotDays > 0 || planReport.badges.unlockedInRange > 0)
+            ? planReport
+            : null,
         stepChartData: stepMonths.data,
         stepChartSlot: stepMonths.labelSlot,
         showStepChart: this.data.activeRange === 'year' || this.data.activeRange === 'all',

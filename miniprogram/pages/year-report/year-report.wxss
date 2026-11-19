@@ -1,3 +1,6 @@
+/* 徽章形状 + 配色：与徽章墙共用一份（年报要列出今年解锁的徽章，章面要和徽章页一致） */
+@import '../../styles/badge-shape.wxss';
+
 .container {
   padding: 24rpx;
   padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
@@ -86,6 +89,35 @@
   margin-top: 4rpx;
   font-size: 22rpx;
   color: #999;
+}
+
+/* 运动计划：四格达成数据 + 徽章解锁行（风格与步数卡一致） */
+.plan-row {
+  display: flex;
+  margin-top: 4rpx;
+}
+.plan-item {
+  flex: 1;
+  text-align: center;
+}
+.plan-num {
+  font-size: 34rpx;
+  font-weight: 600;
+  color: #2b6cf6;
+  line-height: 1.3;
+}
+.plan-label {
+  margin-top: 4rpx;
+  font-size: 22rpx;
+  color: #999;
+}
+.plan-badge-line {
+  margin-top: 16rpx;
+  padding-top: 14rpx;
+  border-top: 1rpx solid #f0f0f0;
+  font-size: 24rpx;
+  color: #666;
+  text-align: center;
 }
 
 /* 高光时刻 */
@@ -286,4 +318,68 @@
   font-size: 24rpx;
   color: #999;
   flex-shrink: 0;
+}
+
+/* ── 今年解锁的徽章明细（2026-11-19）─────────────────────────
+   年报是回顾页：只列已解锁的，不做点击/未解锁占位。
+   尺寸比徽章墙小一档（88rpx vs 96rpx）——这里是"清单"，不是主展示区。 */
+.year-badges {
+  margin-top: 20rpx;
+  padding-top: 20rpx;
+  border-top: 1rpx dashed #eee;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20rpx 0;
+}
+.year-badge {
+  width: 25%; /* 一行 4 个，与徽章墙同节奏 */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+/* 章面：尺寸由这里定，形状/配色来自 badge-shape.wxss */
+.yb-face {
+  width: 88rpx;
+  height: 88rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+/* 分运动类型：图标在上、数字在下（与徽章墙同一构图，见 2026-11-16 的调整） */
+.yb-face.yb-has-icon {
+  justify-content: flex-end;
+  padding-bottom: 6rpx;
+  box-sizing: border-box;
+}
+.yb-icon {
+  width: 26rpx;
+  height: 26rpx;
+  margin-bottom: 3rpx;
+}
+.yb-text {
+  font-family: 'TrophyDigits', 'DIN Alternate', 'Bebas Neue', sans-serif;
+  font-size: 36rpx; /* 88rpx 章面适配，比徽章墙的 44rpx 小一档 */
+  color: #fff;
+  line-height: 1;
+  text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.35);
+}
+.yb-has-icon .yb-text {
+  font-size: 30rpx;
+}
+.yb-label {
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  color: #1f2329;
+  text-align: center;
+  line-height: 1.3;
+  padding: 0 6rpx;
+}
+.yb-date {
+  margin-top: 4rpx;
+  font-size: 20rpx;
+  color: #a8b0bd;
+  font-variant-numeric: tabular-nums;
 }

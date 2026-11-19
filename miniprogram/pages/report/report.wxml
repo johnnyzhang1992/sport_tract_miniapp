@@ -85,6 +85,16 @@
         <view class="sum-label">日均 km</view>
       </view>
     </view>
+    <!-- 计划·徽章：本期计划达成与新解锁徽章（有数据才显示，点击进运动计划页） -->
+    <view
+      class="plan-line"
+      wx:if="{{planReport}}"
+      hover-class="plan-line-hover"
+      bindtap="goPlanPage"
+    >
+      <text class="plan-line-text">计划达成 {{planReport.plan.achievedDays}}/{{planReport.plan.snapshotDays}} 天 · 解锁徽章 {{planReport.badges.unlockedInRange}} 座</text>
+      <text class="plan-line-arrow">›</text>
+    </view>
   </view>
 
   <!-- 微信步数：所选周期的步数概况；周/月只有 1 根月柱，不画趋势 -->
