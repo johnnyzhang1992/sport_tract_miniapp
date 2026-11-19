@@ -168,11 +168,38 @@ function shareExportFile(filePath, fileName) {
   });
 }
 
-/** 两步连做（简单调用方用） */
+/**
+ * 删除本地中转文件（静默，失败忽略——文件可能已被系统接管/已删）。
+ * USER_DATA_PATH 配额 200MB：导出 zip 动辄几十 MB，微信不会自动清理，
+ * 不删的话反复导出会把配额吃满，之后 writeFileSync 全部报「文件写入失败」。
+ */
+function removeLocalFile(filePath) {
+  try {
+    wx.getFileSystemManager().unlink({ filePath, fail: () => {} });
+  } catch (e) {
+    // unlink 本身抛错（路径非法等）同样忽略：清理失败不该影响主流程
+  }
+}
+
+/**
+ * 两步连做（简单调用方用）。
+ * 分享结束（无论成功/取消/失败）后**延迟 10s 删除本地中转文件**（2026-11-19）：
+ *   - 延迟是给系统分享链路留缓冲——success 回调时文件可能还在被微信面板/目标应用读取；
+ *   - 10s 后用户早已离开分享面板，删除无感；
+ *   - 取消/失败同样删：用户取消说明不需要了，重导会生成新文件（文件名带时间戳，留着只会堆积）。
+ * 走 export.js 自定义流程的调用方（自己拿 filePath 做后续动作）不经过这里，各自负责删除。
+ */
 async function downloadAndShare(apiPath, fileName) {
   const filePath = await downloadExport(apiPath, fileName);
-  await shareExportFile(filePath, fileName);
-  return filePath;
+  try {
+    await shareExportFile(filePath, fileName);
+    setTimeout(() => removeLocalFile(filePath), 10_000);
+    return filePath;
+  } catch (err) {
+    // 分享取消/失败：立即删（用户重导会生成新文件；留着只会堆积吃配额）
+    removeLocalFile(filePath);
+    throw err;
+  }
 }
 
 /** 运动记录 CSV 导出（时间档/自定义 + 类型） */
@@ -207,8 +234,48 @@ function exportPhotosZip(opts) {
   );
 }
 
+/**
+ * 启动清理（2026-11-19）：扫 USER_DATA_PATH 下本工具导出的遗留文件，删 1 小时前的。
+ * 挂在导出页 onLoad：把老用户已经堆积的中转文件扫掉（分享过/忘记分享的都在内）。
+ * 只删认识的名字（运动记录_/微信步数_/足迹记录_/照片导出_/轨迹导出_ 前缀 + 当天/旧时间戳），
+ * 刚下载还没分享完的（1 小时内）不动，防止把进行中的导出误删。
+ */
+function cleanupStaleExports(now = Date.now()) {
+  const PREFIXES = ['运动记录_', '微信步数_', '足迹记录_', '照片导出_', '轨迹导出_'];
+  const HOUR = 3600_000;
+  try {
+    const fsm = wx.getFileSystemManager();
+    fsm.readdir({
+      dirPath: wx.env.USER_DATA_PATH,
+      success: (res) => {
+        for (const name of res.files || []) {
+          if (!PREFIXES.some((p) => name.startsWith(p))) continue;
+          // 文件名时间戳 'YYYYMMDD-HHmmss' → 与 now 比；解析失败按最老处理（1 小时阈值内不误删进行中的）
+          const m = name.match(/_(\d{8})-(\d{6})\./);
+          let ageMs = Infinity;
+          if (m) {
+            const [d, t] = [m[1], m[2]];
+            const ts = Date.parse(
+              `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}T${t.slice(0, 2)}:${t.slice(2, 4)}:${t.slice(4, 6)}+08:00`,
+            );
+            if (Number.isFinite(ts)) ageMs = now - ts;
+          }
+          if (ageMs >= HOUR) {
+            fsm.unlink({ filePath: `${wx.env.USER_DATA_PATH}/${name}`, fail: () => {} });
+          }
+        }
+      },
+      fail: () => {},
+    });
+  } catch (e) {
+    // 清理失败静默：它只是卫生措施，不该影响导出页可用性
+  }
+}
+
 module.exports = {
   GPX_MAX_ITEMS,
+  cleanupStaleExports,
+  removeLocalFile,
   exportFootprintCsv,
   exportPhotosZip,
   EXPORT_RANGES,

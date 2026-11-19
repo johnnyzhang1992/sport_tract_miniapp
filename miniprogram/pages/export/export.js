@@ -5,6 +5,7 @@ const config = require('../../config/index');
 const { ensureLogin } = require('../../utils/login-gate');
 const {
   EXPORT_RANGES, buildExportQuery, buildStepExportQuery, fileStamp, downloadExport, shareExportFile,
+  removeLocalFile, cleanupStaleExports,
 } = require('../../utils/export-file');
 
 /** 「单次上限」类错误的固定标志：这类消息必须整句读完才能照做，不能用 toast（会被截断） */
@@ -54,6 +55,8 @@ Page({
   },
 
   onShow() {
+    // 卫生清理：扫掉历史遗留的导出中转文件（1 小时前的才删，不影响进行中的导出）
+    cleanupStaleExports();
     const token = storage.getToken();
     const loggedIn = !!(token && token.accessToken);
     this.setData({ loggedIn, today: bjDate(Date.now()) });
@@ -183,8 +186,13 @@ Page({
     try {
       await shareExportFile(filePath, fileName);
       wx.showToast({ title: '已导出', icon: 'success' });
+      // 分享结束延迟 10s 删本地中转（USER_DATA_PATH 配额 200MB，微信不自动清理；
+      // 延迟给系统分享链路留缓冲——与 utils/export-file.js 同一口径）
+      setTimeout(() => removeLocalFile(filePath), 10_000);
     } catch (err) {
       wx.showToast({ title: (err && err.message) || '分享未完成', icon: 'none' });
+      // 取消/失败：重导会生成新文件（文件名带时间戳），立即删中转
+      removeLocalFile(filePath);
     } finally {
       this.setData({ busy: '' });
     }

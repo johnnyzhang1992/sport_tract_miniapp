@@ -112,3 +112,56 @@ test('EF6 fileStamp：东八区 YYYYMMDD-HHmmss', () => {
   assert.equal(fileStamp(NOW), '20261101-120000');
   assert.equal(fileStamp(Date.UTC(2026, 10, 1, 15, 59, 5)), '20261101-235905', 'UTC 15:59 = 东八区次日 23:59');
 });
+
+/* ── 中转文件清理（2026-11-19）：downloadAndShare 延迟删 + cleanupStaleExports 启动扫 ── */
+
+test('EF4 cleanupStaleExports：只删认识的前缀且 ≥1 小时旧的，刚下载的不动', () => {
+  const deleted = [];
+  const now = Date.parse('2026-11-01T12:00:00+08:00');
+  const stamp = (ms) => {
+    const d = new Date(ms + 8 * 3600000);
+    const p = (n) => String(n).padStart(2, '0');
+    return `${d.getUTCFullYear()}${p(d.getUTCMonth() + 1)}${p(d.getUTCDate())}-${p(d.getUTCHours())}${p(d.getUTCMinutes())}${p(d.getUTCSeconds())}`;
+  };
+  const files = [
+    `照片导出_${stamp(now - 2 * 3600000)}.zip`, // 2 小时前 → 删
+    `轨迹导出_${stamp(now - 30 * 60000)}.zip`, // 30 分钟前 → 保留（可能在分享中）
+    `运动记录_${stamp(now - 25 * 3600000)}.csv`, // 25 小时前 → 删
+    '随手记.txt', // 不认识的前缀 → 不删
+    `照片导出_格式坏.png`, // 无时间戳 → ageMs=Infinity → 删（老垃圾）
+    '别的文件_20260101-000000.zip', // 同样前缀撞上？不——前缀不匹配 → 不删
+  ];
+  global.wx = {
+    env: { USER_DATA_PATH: '/mock/user' },
+    getFileSystemManager: () => ({
+      readdir: ({ success }) => success({ files }),
+      unlink: ({ filePath }) => deleted.push(filePath),
+    }),
+  };
+  const { cleanupStaleExports } = require('../miniprogram/utils/export-file.js');
+  cleanupStaleExports(now);
+  // readdir 是同步回调，unlink 也是同步记录
+  const names = deleted.map((p) => p.split('/').pop());
+  assert.ok(names.includes(files[0]), '2 小时前的照片包应删');
+  assert.ok(names.includes(files[2]), '25 小时前的 CSV 应删');
+  assert.ok(names.includes(files[4]), '无时间戳的老垃圾应删（ageMs 兜底 Infinity）');
+  assert.ok(!names.includes(files[1]), '30 分钟内的不动');
+  assert.ok(!names.includes(files[3]), '非导出前缀不删');
+  assert.equal(deleted.length, 3, `应恰好删 3 个，实际 ${JSON.stringify(names)}`);
+});
+
+test('EF5 removeLocalFile：静默删除（unlink 抛错也不炸）', () => {
+  const calls = [];
+  global.wx = {
+    getFileSystemManager: () => ({
+      unlink: ({ filePath }) => {
+        calls.push(filePath);
+        if (filePath.includes('boom')) throw new Error('路径非法');
+      },
+    }),
+  };
+  const { removeLocalFile } = require('../miniprogram/utils/export-file.js');
+  removeLocalFile('/mock/user/ok.zip');
+  assert.doesNotThrow(() => removeLocalFile('/mock/user/boom.zip'), 'unlink 同步抛错要被吞掉');
+  assert.equal(calls.length, 2);
+});
