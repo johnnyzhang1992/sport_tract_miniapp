@@ -130,6 +130,9 @@ Page({
         planReport.badges.unlockedList = planReport.badges.unlockedList.map((b) => ({
           ...b,
           cls: shapeClassOf(b.shape),
+          // 合环组：外层 wxml 用 group === 'rings' 走三环分支（与徽章墙 isRingBadge 同口径）；
+          // 兼容旧服务端不下发 group 的场景（按 shape==='ring' 推断，徽章墙 historically 如此）
+          isRing: b.group === 'rings' || (!b.group && b.shape === 'ring'),
           typeIcon: typeIconOf(b),
           dateText: (b.earnDateText || '').slice(5), // 'MM-DD'：年报里年份是上下文，不用重复
         }));

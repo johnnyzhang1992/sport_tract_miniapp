@@ -128,3 +128,48 @@
 .has-type-icon .badge-center {
   font-size: 36rpx;
 }
+
+/* 合上圆环徽章：物理嵌套三环（2026-11-19 从 badge-wall.wxss 移入公共文件——
+   年报也要渲染三环造型，样式只有一处定义。青外 → 绿中 → 红内，中心深底白字档位数。
+   尺寸按 96rpx 章面基准（136rpx 外环），年报 88rpx 章面用 .yb-face 内覆盖收一档。 */
+.ringbadge-o {
+  width: 136rpx;
+  height: 136rpx;
+  border-radius: 50%;
+  background: #1ad4e0; /* 次数青（外环） */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ringbadge-g {
+  width: 116rpx;
+  height: 116rpx;
+  border-radius: 50%;
+  background: #ffffff; /* 环间间隔：白让三环更清爽 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ringbadge-r {
+  width: 104rpx;
+  height: 104rpx;
+  border-radius: 50%;
+  background: #92e82a; /* 时间绿（中环） */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ringbadge-core {
+  width: 92rpx;
+  height: 92rpx;
+  border-radius: 50%;
+  background: #fa114f; /* 距离红（内环） */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ringbadge-core .badge-center {
+  color: #fff;
+  font-size: 26rpx;
+  text-shadow: none;
+}
