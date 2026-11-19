@@ -681,13 +681,21 @@ Page({
           wx.shareFileMessage({
             filePath: path,
             fileName: `activity-${this.data.id}.gpx`,
-            success: () => {},
+            // 结束后延迟 10s 删本地中转（USER_DATA_PATH 配额 200MB，微信不自动清理；
+            // 延迟给系统分享链路留缓冲——与 utils/export-file.js 同一口径）
+            success: () => setTimeout(() => {
+              try { fs.unlink({ filePath: path, fail: () => {} }); } catch (e) { /* 忽略 */ }
+            }, 10_000),
             fail: () => {
               wx.showModal({
                 title: '导出失败',
                 content: '无法调起分享，请将文件保存到手机后通过文件传输助手发送',
                 showCancel: false,
               });
+              // 用户取消面板：文件留着意义不大（重导会重写同一路径），延迟删
+              setTimeout(() => {
+                try { fs.unlink({ filePath: path, fail: () => {} }); } catch (e) { /* 忽略 */ }
+              }, 10_000);
             },
           });
         } else {
