@@ -184,30 +184,12 @@
 /* 分运动类型徽章（2026-11-16）：类型小图标在上、档位数字在下，
    读作「这类运动，到了这个数」。不用 :has / 兄弟选择器（基础库支持不稳），
    直接靠 flex 纵向排。 */
-.badge-type-icon {
-  width: 26rpx;
-  height: 26rpx;
-  margin-bottom: 3rpx;
-  opacity: 0.95;
-  flex: none;
-}
+/* badge-center / badge-type-icon / has-type-icon 的基础样式已移入公共文件
+   styles/badge-shape.wxss（年报也用它），这里只留徽章墙自己的布局微调。 */
 /* 有图标时整组上移 8rpx，让「数字+图标」的组合在章面上居中 */
 .trophy-badge.has-type-icon {
   justify-content: center;
   padding-bottom: 4rpx;
-}
-/* 类型章的中央数字缩一号，给图标挪出高度 */
-.trophy-badge.has-type-icon .badge-center {
-  font-size: 36rpx;
-}
-.badge-center {
-  font-family: 'TrophyDigits', 'DIN Alternate', 'Bebas Neue', sans-serif;
-  font-size: 44rpx; /* Bebas 瘦高，加大才占满章面 */
-  font-weight: normal; /* 字体本身粗壮，合成加粗反而发糊 */
-  color: #fff;
-  text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.35);
-  line-height: 1;
-  letter-spacing: 1rpx;
 }
 /* 形状 + 配色见公共文件（年报页也用它列已解锁徽章） */
 @import '../../styles/badge-shape.wxss';

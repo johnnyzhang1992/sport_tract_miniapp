@@ -8,8 +8,9 @@
  * 约定（给使用方）：
  *   - 章面容器加 `b-<shape>`（大写形状名由 utils/badge-shape.js 的 shapeClassOf 给出）
  *   - 中央数字用 class="badge-center"
- *   - 分运动类型的图标用 class="badge-type-icon"
- * 本文件只负责「长什么样」，尺寸由使用方决定（徽章墙 96rpx，年报 88rpx）。
+ *   - 分运动类型的图标用 class="badge-type-icon"，且容器加 `has-type-icon`
+ * 本文件负责「长什么样」+ 章面内部元素的基础样式（字体/颜色/图标构图）；
+ * **尺寸**由使用方决定（徽章墙 96rpx、年报 88rpx），使用方按需覆盖 font-size 等。
  */
 
 /* 形状 */
@@ -102,4 +103,28 @@
 .b-week-count {
   background: linear-gradient(145deg, #7dd3fc, #0284c7);
   border: none;
+}
+
+/* ── 章面内部元素（2026-11-19 从 badge-wall.wxss 移入，供年报复用）── */
+/* 中央数字：档位数 / 百分比 / emoji，白色粗体，可读性优先 */
+.badge-center {
+  font-family: 'TrophyDigits', 'DIN Alternate', 'Bebas Neue', sans-serif;
+  font-size: 44rpx; /* Bebas 瘦高，加大才占满章面（96rpx 基准，使用方可覆盖） */
+  font-weight: normal; /* 字体本身粗壮，合成加粗反而发糊 */
+  color: #fff;
+  text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.35);
+  line-height: 1;
+  letter-spacing: 1rpx;
+}
+/* 分运动类型的白色小图标：叠在彩色章面上才看得清 */
+.badge-type-icon {
+  width: 26rpx;
+  height: 26rpx;
+  margin-bottom: 3rpx;
+  opacity: 0.95;
+  flex: none;
+}
+/* 带图标时数字缩一号，给图标挪出高度（容器需同时具备 has-type-icon） */
+.has-type-icon .badge-center {
+  font-size: 36rpx;
 }

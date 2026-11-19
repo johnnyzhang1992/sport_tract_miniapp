@@ -348,26 +348,19 @@
   position: relative;
   overflow: hidden;
 }
-/* 分运动类型：图标在上、数字在下（与徽章墙同一构图，见 2026-11-16 的调整） */
-.yb-face.yb-has-icon {
-  justify-content: flex-end;
-  padding-bottom: 6rpx;
-  box-sizing: border-box;
+/* 内部元素沿用组件类名（badge-center / badge-type-icon），
+   这里只按 88rpx 章面收一档尺寸；其余（字体、颜色、阴影、图标构图）全部来自
+   styles/badge-shape.wxss 与 badge-wall 的既有规则，不重复定义。 */
+.yb-face .badge-center {
+  font-size: 36rpx; /* 组件是 44rpx（96rpx 章面），这里小一档 */
 }
-.yb-icon {
-  width: 26rpx;
-  height: 26rpx;
-  margin-bottom: 3rpx;
-}
-.yb-text {
-  font-family: 'TrophyDigits', 'DIN Alternate', 'Bebas Neue', sans-serif;
-  font-size: 36rpx; /* 88rpx 章面适配，比徽章墙的 44rpx 小一档 */
-  color: #fff;
-  line-height: 1;
-  text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.35);
-}
-.yb-has-icon .yb-text {
+.yb-face.has-type-icon .badge-center {
   font-size: 30rpx;
+}
+.yb-face .badge-type-icon {
+  width: 24rpx;
+  height: 24rpx;
+  margin-bottom: 2rpx;
 }
 .yb-label {
   margin-top: 10rpx;

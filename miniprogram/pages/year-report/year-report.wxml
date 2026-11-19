@@ -82,9 +82,12 @@
       <!-- 今年解锁的徽章明细（2026-11-19）：只列清单，不做点击详情 —— 年报是回顾，不是管理页 -->
       <view class="year-badges" wx:if="{{planReport.badges.unlockedList.length}}">
         <view class="year-badge" wx:for="{{planReport.badges.unlockedList}}" wx:key="key">
-          <view class="yb-face {{item.cls}} {{item.typeIcon ? 'yb-has-icon' : ''}}">
-            <image wx:if="{{item.typeIcon}}" class="yb-icon" src="{{item.typeIcon}}" mode="aspectFit" />
-            <text class="yb-text">{{item.badgeText}}</text>
+          <!-- 内部类名与 badge-wall 保持一致（badge-center / badge-type-icon / has-type-icon）：
+               这样 styles/badge-shape.wxss 里针对中央数字的规则（如累计里程数字上提）能直接生效，
+               不必在年报再抄一遍。尺寸由外层 .yb-face 覆盖。 -->
+          <view class="yb-face {{item.cls}} {{item.typeIcon ? 'has-type-icon' : ''}}">
+            <image wx:if="{{item.typeIcon}}" class="badge-type-icon" src="{{item.typeIcon}}" mode="aspectFit" />
+            <text class="badge-center">{{item.badgeText}}</text>
           </view>
           <text class="yb-label">{{item.shortLabel}}</text>
           <text class="yb-date">{{item.dateText}}</text>
