@@ -199,52 +199,6 @@
   opacity: 0.45;
 }
 
-/* 锁定的合上圆环不用滤镜降饱和（红会糊成棕、绿会糊成灰绿）——直接给干净的灰阶同心环 */
-
-
-/* 合上圆环徽章：物理嵌套三环（box-shadow / radial-gradient 在该环境 WXSS 里不渲染，
-   嵌套 view 是保真方案）；青外 → 绿中 → 红内，深色间隔，中心深底白字档位数 */
-.ringbadge-o {
-  width: 136rpx;
-  height: 136rpx;
-  border-radius: 50%;
-  background: #1ad4e0; /* 次数青（外环） */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.ringbadge-g {
-  width: 116rpx;
-  height: 116rpx;
-  border-radius: 50%;
-  background: #ffffff; /* 环间间隔：原深色 #111827 太沉，改白让三环更清爽（2026-11-16） */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.ringbadge-r {
-  width: 104rpx;
-  height: 104rpx;
-  border-radius: 50%;
-  background: #92e82a; /* 时间绿（中环） */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.ringbadge-core {
-  width: 92rpx;
-  height: 92rpx;
-  border-radius: 50%;
-  background: #fa114f; /* 距离红（内环） */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.ringbadge-core .badge-center {
-  color: #fff;
-  font-size: 26rpx;
-  text-shadow: none;
-}
 
 /* 第三行容器：三种状态（进度条 / 获取日期 / 获得次数）共用同一高度与上间距 */
 .trophy-foot {

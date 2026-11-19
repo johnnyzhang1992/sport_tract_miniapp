@@ -141,3 +141,36 @@ test('RP-B3 计划接口失败：年度报告主体照常', async () => {
     require.cache[apiPath].exports.get = realGet;
   }
 });
+
+/* ------------------------- 合环徽章三环（2026-11-19 review 补） ------------------------- */
+
+test('RP-R1 年报合环徽章走三环分支：isRing 由 group 判定，与徽章墙同口径', () => {
+  const w = read('miniprogram/pages/year-report/year-report.wxml');
+  // 三环结构（ringbadge-o > g > r > core）与单章分支并存
+  assert.match(w, /wx:if="\{\{item\.isRing\}\}"[^]*ringbadge-o/);
+  assert.match(w, /wx:else[^]*yb-face \{\{item\.cls\}\}/);
+  const js = read('miniprogram/pages/year-report/year-report.js');
+  // 与 utils/badge-shape.js 的 isRingBadge 同口径：group === 'rings'（+ 无 group 旧服务端的 shape 兜底）
+  assert.match(js, /group === 'rings'/);
+  assert.match(js, /b\.shape === 'ring'/, '旧服务端兼容：无 group 时按 shape 兜底');
+});
+
+test('RP-R2 ringbadge 三环样式在公共文件（badge-wall 与年报共用，不双份）', () => {
+  const shared = read('miniprogram/styles/badge-shape.wxss');
+  assert.match(shared, /\.ringbadge-o \{/, '公共文件要有三环样式');
+  assert.match(shared, /ringbadge-core \.badge-center/, '内环白字规则也要在');
+  const wall = read('miniprogram/components/badge-wall/badge-wall.wxss');
+  assert.ok(!/\.ringbadge-o \{/.test(wall), '徽章墙不能再留一份三环样式（会双份漂移）');
+  const yr = read('miniprogram/pages/year-report/year-report.wxss');
+  assert.match(yr, /\.yb-face-ring \.ringbadge-o \{/, '年报要在 88rpx 章面下收一档尺寸');
+  // 两边都 @import 公共文件
+  assert.match(read('miniprogram/components/badge-wall/badge-wall.wxss'), /@import.*badge-shape\.wxss/);
+  assert.match(read('miniprogram/pages/year-report/year-report.wxss'), /@import.*badge-shape\.wxss/);
+});
+
+test('RP-R3 isRingBadge 与年报 isRing 口径一致（import 共享，防止再漂移）', () => {
+  const util = read('miniprogram/utils/badge-shape.js');
+  assert.match(util, /group === 'rings'/);
+  const yr = read('miniprogram/pages/year-report/year-report.js');
+  assert.match(yr, /group === 'rings'/);
+});

@@ -376,3 +376,30 @@
   color: #a8b0bd;
   font-variant-numeric: tabular-nums;
 }
+
+/* 合环组（rings）的三环在 88rpx 章面收一档（badge-shape.wxss 基准是 136rpx/96rpx 章面，
+   比例 136/96 ≈ 1.42 → 88 章面下外环 124rpx，其余按原比例缩）。 */
+.yb-face-ring {
+  width: 124rpx;
+  height: 124rpx;
+  overflow: visible; /* 三环不用裁边（单章 clip-path 才需要） */
+}
+.yb-face-ring .ringbadge-o {
+  width: 124rpx;
+  height: 124rpx;
+}
+.yb-face-ring .ringbadge-g {
+  width: 106rpx;
+  height: 106rpx;
+}
+.yb-face-ring .ringbadge-r {
+  width: 95rpx;
+  height: 95rpx;
+}
+.yb-face-ring .ringbadge-core {
+  width: 84rpx;
+  height: 84rpx;
+}
+.yb-face-ring .ringbadge-core .badge-center {
+  font-size: 24rpx;
+}
