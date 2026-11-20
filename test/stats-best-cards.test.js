@@ -67,7 +67,8 @@ test('最佳记录末尾追加两条步数纪录：最多步数日 / 步数最�
   assert.equal(stepCards[0].id, '', '没有轨迹可跳');
   assert.equal(stepCards[0].icon, '/assets/icons/lucide-footprints.png');
   assert.equal(stepCards[1].heldText, '2026年2月');
-  assert.equal(stepCards[1].icon, '/assets/icons/lucide-calendar-blue.png');
+  // 2026-11-20：改用与同排其它纪录同色（#1f2329）的日历，不再是 -blue 变体
+  assert.equal(stepCards[1].icon, '/assets/icons/lucide-calendar.png');
 });
 
 test('没有运动 PB 但有步数：最佳记录仍返回步数卡；两者都没有则整块隐藏', () => {
@@ -152,4 +153,28 @@ test('同一时刻的纪录按类别兜底排序，顺序稳定', () => {
   });
   const labels = best.bestCards.map((c) => c.label);
   assert.deepEqual(labels, ['表现分', '5 公里 PB', '最远距离'], '同时刻按 表现分>PB>指标 排');
+});
+
+/* 「全部纪录」是一排并列的卡，图标必须是同一个颜色，
+   否则某一张用了 -blue/-red 变体会非常跳（2026-11-20 踩过）。
+   这里直接读 PNG 的主色像素做比对，而不是只看文件名——文件名改成黑的但图还是蓝的也算不过。 */
+test('全部纪录各卡图标同色（都走 #1f2329），不混入彩色变体', () => {
+  const DAY = 86400000;
+  const now = Date.now();
+  const best = pageDef.decorateBest({
+    maxPerfScoreByType: [{ id: 'a', type: 'running', perfScore: 200, startTime: now - DAY }],
+    fastestDistanceByKm: [{ id: 'b', type: 'running', km: 5, sec: 1800, startTime: now - 2 * DAY }],
+    maxDistanceByType: [{ id: 'c', type: 'running', distance: 5000, startTime: now - 3 * DAY }],
+    minPaceByType: [], maxDurationByType: [], maxElevationByType: [],
+  });
+  const stepTracked = require('../miniprogram/utils/step-report-view.js')
+    .buildStepRecords({ overview: { syncedDays: 3, bestStep: 22000, bestDate: '2026-11-19' }, bestMonth: { step: 99000, month: '2026-11' } });
+  const icons = [...best.bestCards, ...stepTracked].map((c) => c.icon).filter(Boolean);
+  assert.ok(icons.length > 0);
+  for (const p of icons) {
+    assert.ok(!/-blue|-red|-green|activity-.*-white/.test(p), `纪录卡不该用彩色变体：${p}`);
+  }
+  // 步数两张必须用普通（黑）图标
+  assert.equal(stepTracked[0].icon, '/assets/icons/lucide-footprints.png');
+  assert.equal(stepTracked[1].icon, '/assets/icons/lucide-calendar.png');
 });

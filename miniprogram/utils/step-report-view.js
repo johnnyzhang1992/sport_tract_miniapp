@@ -6,7 +6,8 @@
 const { formatCompactCn } = require('./format.js');
 
 const ICON_DAY = '/assets/icons/lucide-footprints.png';
-const ICON_MONTH = '/assets/icons/lucide-calendar-blue.png';
+// 与同排其它纪录图标同色（#1f2329）：原先用 -blue 变体，在一排黑色图标里很跳（2026-11-20）
+const ICON_MONTH = '/assets/icons/lucide-calendar.png';
 
 /** 'YYYY-MM-DD' → 'YYYY/MM/DD'（全站日期分隔符） */
 /** 'YYYY-MM-DD' → 该日 00:00（东八区）的时间戳；解析失败返回 0（排序时沉底） */

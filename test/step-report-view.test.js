@@ -87,7 +87,8 @@ test('SRV-4 两条纪录：文案、完整日期/中文月份、复用现有图�
       label: '步数最多月份',
       value: '1.2万 步',
       sub: '2026年2月',
-      icon: '/assets/icons/lucide-calendar-blue.png',
+      // 与同排其它纪录图标同色（#1f2329）：原为 -blue 变体，在一排黑图标里很跳（2026-11-20）
+      icon: '/assets/icons/lucide-calendar.png',
       at: Date.parse('2026-02-01T00:00:00+08:00'),
     },
   ]);
