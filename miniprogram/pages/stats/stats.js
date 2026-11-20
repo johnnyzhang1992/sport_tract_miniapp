@@ -355,6 +355,7 @@ Page({
       icon: r.icon,
       typeLabel: '微信步数',
       heldText: r.sub,
+      at: r.at || 0, // 刷新时间（步数纪录用日期换算），参与统一倒序
     }));
     if (!b) return stepCards.length ? { bestCards: stepCards } : null;
     const { formatDuration, formatPaceParts } = require('../../utils/format');
@@ -366,19 +367,19 @@ Page({
     // 表现分（最高，按类型；社区逆向估算非官方 ITRA 分）
     (b.maxPerfScoreByType || []).forEach((r) => {
       if (!(r.perfScore > 0)) return;
-      cards.push({ key: `pi${cards.length}`, id: r.id, label: '表现分', value: `${r.perfScore} ${perfLevel(r.perfScore)}`, icon: iconOf(r.type), typeLabel: typeLabelOf(r.type), heldText: heldTextOf(r.startTime) });
+      cards.push({ key: `pi${cards.length}`, id: r.id, label: '表现分', value: `${r.perfScore} ${perfLevel(r.perfScore)}`, icon: iconOf(r.type), typeLabel: typeLabelOf(r.type), heldText: heldTextOf(r.startTime), at: Number(r.startTime) || 0 });
     });
     // 距离里程碑 PB（服务端只下发当前纪录）：5 公里 PB / 10 公里 PB …
     (b.fastestDistanceByKm || [])
       .slice()
       .sort((a, b2) => a.km - b2.km || a.type.localeCompare(b2.type))
-      .forEach((r) => cards.push({ key: `pb${cards.length}`, id: r.id, label: `${r.km} 公里 PB`, value: formatDuration(r.sec), icon: iconOf(r.type), typeLabel: typeLabelOf(r.type), heldText: heldTextOf(r.startTime) }));
+      .forEach((r) => cards.push({ key: `pb${cards.length}`, id: r.id, label: `${r.km} 公里 PB`, value: formatDuration(r.sec), icon: iconOf(r.type), typeLabel: typeLabelOf(r.type), heldText: heldTextOf(r.startTime), at: Number(r.startTime) || 0 }));
     // 各类型 4 项指标
     const byType = {};
     const put = (rows, label, valFn) => {
       (rows || []).forEach((r) => {
         if (!byType[r.type]) byType[r.type] = [];
-        byType[r.type].push({ label, value: valFn(r), id: r.id, typeLabel: typeLabelOf(r.type), heldText: heldTextOf(r.startTime) });
+        byType[r.type].push({ label, value: valFn(r), id: r.id, typeLabel: typeLabelOf(r.type), heldText: heldTextOf(r.startTime), at: Number(r.startTime) || 0 });
       });
     };
     put(b.maxDistanceByType, '最远距离', (r) => `${(r.distance / 1000).toFixed(1)}km`);
@@ -388,7 +389,15 @@ Page({
     Object.keys(byType)
       .sort()
       .forEach((t) => byType[t].forEach((c) => cards.push({ key: `m${cards.length}`, ...c, icon: iconOf(t) })));
-    return { bestCards: cards.concat(stepCards) };
+    /*
+     * 排序（2026-11-20 改为「最近刷新」）：原来按类别顺序拼接（表现分→PB→各类型指标→步数），
+     * 同类纪录被拆散、也看不出哪条是刚刷新的。现在统一按纪录达成时间倒序——
+     * 用户打开「全部纪录」最想看的就是「最近破了什么」。
+     * 同一时刻按类别先后兜底（表现分 > PB > 指标 > 步数），保证顺序稳定不抖动。
+     */
+    const rankOf = (c) => (c.label === '表现分' ? 0 : String(c.label).includes('PB') ? 1 : c.typeLabel === '微信步数' ? 3 : 2);
+    const all = [...cards, ...stepCards].sort((a, b) => (b.at - a.at) || (rankOf(a) - rankOf(b)) || a.label.localeCompare(b.label));
+    return { bestCards: all };
   },
 
   /** 趋势维度切换 */

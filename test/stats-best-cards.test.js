@@ -106,3 +106,50 @@ test('累计概览：时长转小时/天，爬升与千卡加千分位', () => {
   assert.equal(d.total.elevationGainText, '5,472');
   assert.equal(d.total.caloriesText, '16,982');
 });
+
+/* 排序（2026-11-20 改为「最近刷新」）：
+   原来按类别顺序拼接（表现分→PB→各类型指标→步数），同类纪录被拆散，
+   也看不出哪条刚刷新。现在统一按纪录达成时间倒序。 */
+test('全部纪录按最近刷新倒序：跨类别混排', () => {
+  const DAY = 86400000;
+  const now = Date.now();
+  const best = pageDef.decorateBest({
+    maxPerfScoreByType: [
+      { id: 'a', type: 'running', perfScore: 275, startTime: now - 38 * DAY }, // 较旧
+      { id: 'b', type: 'hiking', perfScore: 229, startTime: now - 61 * DAY }, // 更旧
+    ],
+    fastestDistanceByKm: [
+      { id: 'c', type: 'hiking', km: 5, sec: 3522, startTime: now - 1 * DAY }, // 最新
+      { id: 'd', type: 'walking', km: 5, sec: 2685, startTime: now - 28 * DAY },
+    ],
+    maxDistanceByType: [{ id: 'e', type: 'hiking', distance: 15500, startTime: now - 311 * DAY }],
+    minPaceByType: [{ id: 'f', type: 'hiking', fastestKm: 584, startTime: now - 79 * DAY }],
+    maxDurationByType: [],
+    maxElevationByType: [{ id: 'g', type: 'hiking', elevationGain: 625, startTime: now - 60 * DAY }],
+  });
+
+  const ats = best.bestCards.map((c) => c.at);
+  assert.ok(ats.every((t) => typeof t === 'number' && t > 0), '每张卡都要带 at');
+  const sorted = [...ats].sort((a, b) => b - a);
+  assert.deepEqual(ats, sorted, '必须按时间倒序');
+
+  // 最新的一条（5 公里 PB · 徒步，1 天前）排第一
+  assert.equal(best.bestCards[0].label, '5 公里 PB');
+  assert.equal(best.bestCards[0].typeLabel, '徒步');
+  // 最旧的（最远距离 · 徒步，311 天前）沉底
+  assert.equal(best.bestCards[best.bestCards.length - 1].label, '最远距离');
+});
+
+test('同一时刻的纪录按类别兜底排序，顺序稳定', () => {
+  const t = Date.now() - 1000;
+  const best = pageDef.decorateBest({
+    maxPerfScoreByType: [{ id: 'a', type: 'running', perfScore: 200, startTime: t }],
+    fastestDistanceByKm: [{ id: 'b', type: 'running', km: 5, sec: 1800, startTime: t }],
+    maxDistanceByType: [{ id: 'c', type: 'running', distance: 5000, startTime: t }],
+    minPaceByType: [],
+    maxDurationByType: [],
+    maxElevationByType: [],
+  });
+  const labels = best.bestCards.map((c) => c.label);
+  assert.deepEqual(labels, ['表现分', '5 公里 PB', '最远距离'], '同时刻按 表现分>PB>指标 排');
+});

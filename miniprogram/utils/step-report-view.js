@@ -9,6 +9,14 @@ const ICON_DAY = '/assets/icons/lucide-footprints.png';
 const ICON_MONTH = '/assets/icons/lucide-calendar-blue.png';
 
 /** 'YYYY-MM-DD' → 'YYYY/MM/DD'（全站日期分隔符） */
+/** 'YYYY-MM-DD' → 该日 00:00（东八区）的时间戳；解析失败返回 0（排序时沉底） */
+function dayStartOf(date) {
+  const m = /^(\d{4})-(\d{2})(?:-(\d{2}))?$/.exec(String(date || ''));
+  if (!m) return 0;
+  const ts = Date.parse(`${m[1]}-${m[2]}-${m[3] || '01'}T00:00:00+08:00`);
+  return Number.isFinite(ts) ? ts : 0;
+}
+
 function slashDate(date) {
   return String(date || '').replace(/-/g, '/');
 }
@@ -59,6 +67,9 @@ function buildStepRecords(report) {
   const o = report && report.overview;
   if (!o || !(o.syncedDays > 0)) return [];
   const out = [];
+  // at：可排序的时间戳（2026-11-20）。步数纪录只有日期/月份字符串，
+  // 但「全部纪录」要按最近刷新倒序统一排序，所以这里补一个 epoch ms，
+  // 与轨迹纪录的 startTime 同口径（东八区自然日/月的起点）。
   if (o.bestStep > 0 && o.bestDate) {
     out.push({
       key: 'step-day',
@@ -66,6 +77,7 @@ function buildStepRecords(report) {
       value: `${formatCompactCn(o.bestStep)} 步`,
       sub: slashDate(o.bestDate),
       icon: ICON_DAY,
+      at: dayStartOf(o.bestDate),
     });
   }
   const bm = report.bestMonth;
@@ -76,6 +88,7 @@ function buildStepRecords(report) {
       value: `${formatCompactCn(bm.step)} 步`,
       sub: monthCn(bm.month),
       icon: ICON_MONTH,
+      at: dayStartOf(`${bm.month}-01`),
     });
   }
   return out;

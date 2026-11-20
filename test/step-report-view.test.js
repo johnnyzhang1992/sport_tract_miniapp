@@ -79,6 +79,8 @@ test('SRV-4 两条纪录：文案、完整日期/中文月份、复用现有图�
       value: '1.2万 步',
       sub: '2026/02/10',
       icon: '/assets/icons/lucide-footprints.png',
+      // at：可排序时间戳（2026-11-20 为「全部纪录」按最近刷新倒序而加）
+      at: Date.parse('2026-02-10T00:00:00+08:00'),
     },
     {
       key: 'step-month',
@@ -86,6 +88,7 @@ test('SRV-4 两条纪录：文案、完整日期/中文月份、复用现有图�
       value: '1.2万 步',
       sub: '2026年2月',
       icon: '/assets/icons/lucide-calendar-blue.png',
+      at: Date.parse('2026-02-01T00:00:00+08:00'),
     },
   ]);
   assert.equal(monthCn('2026-02'), '2026年2月');
